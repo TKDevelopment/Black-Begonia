@@ -7,8 +7,8 @@ const targetPath = './src/environments/environment.prod.ts';
 
 const envConfigFile = `
     export const environment = {
-        production: '${process.env['production']}',
-        bypassAuth: '${process.env['bypassAuth']}',
+        production: true,
+        bypassAuth: false,
         supabaseUrl: '${process.env['SUPABASE_URL']}',
         supabaseKey: '${process.env['SUPABASE_KEY']}',
         googleClientId: '${process.env['GOOGLE_CLIENT_ID']}',
