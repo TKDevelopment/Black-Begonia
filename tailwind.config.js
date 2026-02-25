@@ -22,9 +22,14 @@ module.exports = {
           '0%': { opacity: '0', transform: 'translateY(-40px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        marquee: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(120%)' },
+        },
       },
       animation: {
         fadeDown: 'fadeDown 1s ease-out forwards',
+        marquee: 'marquee 45s linear infinite',
       },
     },
   },
