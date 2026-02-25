@@ -15,6 +15,7 @@ module.exports = {
         forum: ['"Forum"', ...defaultTheme.fontFamily.serif],
         roboto: ['"Roboto"', ...defaultTheme.fontFamily.sans],
         lora: ['"Lora"', ...defaultTheme.fontFamily.serif],
+        noto: ['"Noto Serif JP"', ...defaultTheme.fontFamily.serif],
       }
     },
   },

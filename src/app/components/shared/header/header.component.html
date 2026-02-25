@@ -3,11 +3,32 @@
       px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10
       flex flex-col md:flex-row items-center justify-between"
     >
-    <div></div>
+    <div class="w-full md:w-auto flex items-center justify-between 2xl:py-2">
+      <img src="" alt="">
+      
+      <!-- Mobile hamburger -->
+      <button
+        class="md:hidden text-gray-600 p-2"
+        type="button"
+        (click)="toggleMenu()"
+        aria-label="Toggle menu"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="black"
+          stroke-width="2"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
 
     <div class="hidden md:flex items-center
       space-x-6 lg:space-x-10 xl:space-x-14
-      text-sm lg:text-base xl:text-lg font-nav text-gray-600"
+      text-sm lg:text-base xl:text-lg font-forum text-gray-600"
     >
       <div routerLink="/" class="hover:text-[#f89b95] hover:cursor-pointer">HOME</div>
       <div routerLink="/about" class="hover:text-[#f89b95] hover:cursor-pointer">ABOUT</div>
@@ -21,7 +42,7 @@
     <div class="hidden md:flex items-center space-x-3 lg:space-x-4">
       <a
         href="https://www.facebook.com/blackbegoniaflorist/"
-        class="hover:text-[#de8c86]"
+        class="hover:text-[#f89b95]"
       >
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -31,7 +52,7 @@
           />
         </svg>
       </a>
-      <a href="https://www.instagram.com/blackbegoniaflorist/" class="hover:text-[#fdcbc7]">
+      <a href="https://www.instagram.com/blackbegoniaflorist/" class="hover:text-[#f89b95]">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path
           fill-rule="evenodd"
@@ -41,6 +62,18 @@
         </svg>
       </a>
     </div>
-    
+  </div>
+
+  <!-- Mobile menu -->
+  <div *ngIf="menuOpen" class="md:hidden font-forum">
+    <div class="mobile-menu bg-slate-200 text-gray-600 text-sm space-y-3 px-4 pb-4">
+      <a routerLink="/" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">HOME</a>
+      <a routerLink="/about" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">ABOUT</a>
+      <a routerLink="/services" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">SERVICES</a>
+      <a routerLink="/testimonials" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">TESTIMONIALS</a>
+      <a routerLink="/portfolio" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">PORTFOLIO</a>
+      <a routerLink="/workshops" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">WORKSHOPS</a>
+      <a routerLink="/inquiries" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">INQUIRY</a>
+    </div>
   </div>
 </section>
