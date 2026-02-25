@@ -2,6 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-*:not(input):not(textarea) {
+*:not(input):not(textarea):not([contenteditable="true"]) {
   caret-color: transparent;
 }

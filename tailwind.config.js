@@ -1,5 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-const { keyframes } = require('@angular/animations');
 const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
