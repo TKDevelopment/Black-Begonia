@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+*:not(input):not(textarea) {
+  caret-color: transparent;
+}

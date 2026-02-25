@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+const { keyframes } = require('@angular/animations');
 const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
@@ -16,7 +17,16 @@ module.exports = {
         roboto: ['"Roboto"', ...defaultTheme.fontFamily.sans],
         lora: ['"Lora"', ...defaultTheme.fontFamily.serif],
         noto: ['"Noto Serif JP"', ...defaultTheme.fontFamily.serif],
-      }
+      },
+      keyframes: {
+        fadeDown: {
+          '0%': { opacity: '0', transform: 'translateY(-40px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        fadeDown: 'fadeDown 1s ease-out forwards',
+      },
     },
   },
   plugins: [],
