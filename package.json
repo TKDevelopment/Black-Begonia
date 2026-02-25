@@ -7,11 +7,11 @@
     "start": "ng serve",
     "prebuild": "ts-node set-env.cts",
     "build": "ng build",
-    "build:prod": "ng build --configuration production",
+    "build:prod": "ng build --configuration prod",
     "critical:install": "npm install --no-save critical",
     "critical:extract": "echo \"critical:extract disabled\"",
     "postbuild": "",
-    "watch": "ng build --watch --configuration development",
+    "watch": "ng build --watch --configuration dev",
     "test": "ng test"
   },
   "private": true,
