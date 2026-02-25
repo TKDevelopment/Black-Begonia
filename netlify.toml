@@ -1,5 +1,5 @@
 [build]
-  publish = "dist/rudbeckia-website/browser"
+  publish = "dist/black-begonia/browser"
   command = "node set-env.cts && ng build --configuration production"
 
 [[headers]]
