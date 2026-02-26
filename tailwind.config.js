@@ -16,6 +16,8 @@ module.exports = {
         roboto: ['"Roboto"', ...defaultTheme.fontFamily.sans],
         lora: ['"Lora"', ...defaultTheme.fontFamily.serif],
         noto: ['"Noto Serif JP"', ...defaultTheme.fontFamily.serif],
+        cormorant: ['"Cormorant Garamond"', ...defaultTheme.fontFamily.serif],
+        lavishly: ['"Lavishly Yours"', ...defaultTheme.fontFamily.serif]
       },
       keyframes: {
         fadeDown: {
