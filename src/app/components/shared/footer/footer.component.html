@@ -1,8 +1,8 @@
-<section class="bg-slate-200 md:py-4 2xl:py-8">
-  <div class="flex justify-between md:px-8 2xl:px-16">
+<section class="bg-slate-200 md:py-4 xl:py-8">
+  <div class="flex justify-between md:px-8 xl:px-16">
     <div class="hidden md:flex items-center
       space-x-6 lg:space-x-10 xl:space-x-14
-      text-sm lg:text-base 2xl:text-lg font-noto text-gray-600"
+      text-sm lg:text-base xl:text-lg font-noto text-gray-600"
     >
       <div routerLink="/" class="hover:text-[#f89b95] hover:cursor-pointer">HOME</div>
       <div routerLink="/about" class="hover:text-[#f89b95] hover:cursor-pointer">ABOUT</div>
@@ -38,15 +38,15 @@
     </div>
   </div>
 
-  <div class="text-right font-oswald md:px-8 2xl:px-16 md:mt-4 2xl:mt-8">
-    <p class="text-7xl md:text-8xl 2x:text-9xl font-forum transition-colors duration-1000 hover:text-[#ea938c]">BLACK BEGONIA</p>
-    <p class="md:text-lg 2xl:text-xl font-thin mb-1 2xl:mb-2">LUXURY FINE ART FLORAL DESIGN FOR WEDDINGS & EVENTS</p>
-    <p class="md:text-lg 2xl:text-xl font-thin">NARRAGANSETT BAY AREA</p>
+  <div class="text-right font-oswald md:px-8 xl:px-16 md:mt-4 xl:mt-8">
+    <p class="text-7xl md:text-8xl 2xl:text-9xl font-forum transition-colors duration-1000 hover:text-[#ea938c]">BLACK BEGONIA</p>
+    <p class="md:text-lg xl:text-xl font-thin mb-1 xl:mb-2">LUXURY FINE ART FLORAL DESIGN FOR WEDDINGS & EVENTS</p>
+    <p class="md:text-lg xl:text-xl font-thin">NARRAGANSETT BAY AREA</p>
   </div>
 
-  <hr class="border-black my-2 2xl:my-4">
+  <hr class="border-black my-2 xl:my-4">
 
-  <div class="overflow-hidden whitespace-nowrap font-noto text-sm md:text-lg 2xl:text-xl">
+  <div class="overflow-hidden whitespace-nowrap font-noto text-sm md:text-lg xl:text-xl">
     <div class="inline-block animate-marquee">
       <h2 class="inline-block">
         <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorist/" target="_blank">FOLLOW ON INSTAGRAM</a>
@@ -71,7 +71,7 @@
     <button
       type="button"
       (click)="scrollGallery(-1)"
-      class="absolute left-2 top-1/2 -translate-y-1/2 z-10 md:h-8 md:w-8 2xl:h-10 2xl:w-10 rounded-full bg-slate-500/50 text-white hidden md:flex items-center md:justify-center hover:bg-slate-500 transition"
+      class="absolute left-2 top-1/2 -translate-y-1/2 z-10 md:h-8 md:w-8 xl:h-10 xl:w-10 rounded-full bg-slate-500/50 text-white hidden md:flex items-center md:justify-center hover:bg-slate-500 transition"
       aria-label="Scroll left"
     >
       <svg
@@ -91,7 +91,7 @@
     <button
       type="button"
       (click)="scrollGallery(1)"
-      class="absolute right-2 top-1/2 -translate-y-1/2 z-10 md:h-8 md:w-8 2xl:h-10 2xl:w-10 rounded-full bg-slate-500/50 text-white hidden md:flex items-center md:justify-center hover:bg-slate-500 transition"
+      class="absolute right-2 top-1/2 -translate-y-1/2 z-10 md:h-8 md:w-8 xl:h-10 xl:w-10 rounded-full bg-slate-500/50 text-white hidden md:flex items-center md:justify-center hover:bg-slate-500 transition"
       aria-label="Scroll right"
     >
       <svg
@@ -112,18 +112,18 @@
       #gallery
       class="overflow-x-auto scroll-smooth whitespace-nowrap no-scrollbar px-14"
     >
-      <div class="inline-flex gap-2 2xl:gap-4 md:py-2 2xl:py-5">
+      <div class="inline-flex gap-2 xl:gap-4 md:py-2 xl:py-5">
         <!-- Placeholder tiles (replace with your images later) -->
         <div
           *ngFor="let item of galleryItems"
-          class="md:h-[200px] md:w-[200px] 2xl:h-[250px] 2xl:w-[250px] flex-shrink-0 rounded-xl bg-slate-200/80 border border-slate-300 overflow-hidden"
+          class="md:h-[200px] md:w-[200px] xl:h-[250px] xl:w-[250px] flex-shrink-0 rounded-xl bg-slate-200/80 border border-slate-300 overflow-hidden"
         >
           <!-- Placeholder content -->
           <div class="h-full w-full flex items-center justify-center text-slate-500 font-noto">
             <img
               [src]="item.url"
               alt=""
-              class="h-[250px] w-[250px] object-cover"
+              class="md:h-[200px] md:w-[200px] xl:h-[250px] xl:w-[250px] object-cover"
             />
           </div>
         </div>
@@ -131,5 +131,5 @@
     </div>
   </div>
 
-  <div class="text-right font-oswald font-thin md:text-sm 2xl:text-lg md:px-8 2xl:px-16">BLACK BEGONIA FLORALS 2026 | SITE DESIGN BY TK DEVWORKS</div>
+  <div class="text-right font-oswald font-thin md:text-sm xl:text-lg md:px-8 xl:px-16">BLACK BEGONIA FLORALS 2026 | SITE DESIGN BY TK DEVWORKS</div>
 </section>
