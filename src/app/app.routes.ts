@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { PublicLayoutComponent } from './layouts/public-layout/public-layout.component';
 import { LandingComponent } from './components/public/landing/landing.component';
 import { AboutComponent } from './components/public/about/about.component';
-import { ServiceComponent } from './components/public/service/service.component';
 import { PrivacyPolicyComponent } from './components/public/privacy-policy/privacy-policy.component';
 import { TermsAndConditionsComponent } from './components/public/terms-and-conditions/terms-and-conditions.component';
 import { WorkshopsComponent } from './components/public/workshops/workshops.component';
@@ -26,7 +25,9 @@ import { SubmitReviewComponent } from './components/view/submit-review/submit-re
 import { DeclineProposalComponent } from './components/view/decline-proposal/decline-proposal.component';
 import { PaymentComponent } from './components/view/payment/payment.component';
 import { GeneralInquiriesComponent } from './components/public/general-inquiries/general-inquiries.component';
-import { EventInquiriesComponent } from './components/public/event-inquiries/event-inquiries.component';
+import { WeddingInquiriesComponent } from './components/public/wedding-inquiries/wedding-inquiries.component';
+import { GeneralServicesComponent } from './components/public/general-services/general-services.component';
+import { WeddingServicesComponent } from './components/public/wedding-services/wedding-services.component';
 
 export const routes: Routes = [
     {
@@ -38,8 +39,9 @@ export const routes: Routes = [
             { path: 'portfolio', component: PortfolioComponent },
             { path: 'inquiries', component: InquiriesComponent },
             { path: 'inquiries/general', component: GeneralInquiriesComponent },
-            { path: 'inquiries/events', component: EventInquiriesComponent },
-            { path: 'services', component: ServiceComponent },
+            { path: 'inquiries/weddings', component: WeddingInquiriesComponent },
+            { path: 'services/weddings', component: WeddingServicesComponent },
+            { path: 'services/general', component: GeneralServicesComponent },
             { path: 'workshops', component: WorkshopsComponent },
             { path: 'testimonials', component: TestimonialsComponent },
             { path: 'login', component:LoginComponent },
