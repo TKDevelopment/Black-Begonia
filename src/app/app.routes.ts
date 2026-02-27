@@ -25,6 +25,8 @@ import { PaymentCancelComponent } from './components/view/payment-cancel/payment
 import { SubmitReviewComponent } from './components/view/submit-review/submit-review.component';
 import { DeclineProposalComponent } from './components/view/decline-proposal/decline-proposal.component';
 import { PaymentComponent } from './components/view/payment/payment.component';
+import { GeneralInquiriesComponent } from './components/public/general-inquiries/general-inquiries.component';
+import { EventInquiriesComponent } from './components/public/event-inquiries/event-inquiries.component';
 
 export const routes: Routes = [
     {
@@ -35,6 +37,8 @@ export const routes: Routes = [
             { path: 'about', component: AboutComponent },
             { path: 'portfolio', component: PortfolioComponent },
             { path: 'inquiries', component: InquiriesComponent },
+            { path: 'inquiries/general', component: GeneralInquiriesComponent },
+            { path: 'inquiries/events', component: EventInquiriesComponent },
             { path: 'services', component: ServiceComponent },
             { path: 'workshops', component: WorkshopsComponent },
             { path: 'testimonials', component: TestimonialsComponent },
