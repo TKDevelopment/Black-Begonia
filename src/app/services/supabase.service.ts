@@ -3,10 +3,6 @@ import { Injectable } from '@angular/core';
 import { createClient, Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 
-declare global {
-  interface Window { supabase?: SupabaseClient }
-}
-
 type CalendarStatus =
   | 'accepted'
   | 'client review'
@@ -51,25 +47,39 @@ type DateRange = { from?: string; to?: string };
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient;
 
   constructor() {
-    if (!window.supabase) {
-      window.supabase = createClient(
-        environment['supabaseUrl'] as string,
-        environment['supabaseKey'] as string,
-        {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-          },
-        }
+    // ✅ Prefer explicit anon key naming. Keep a fallback for your existing env key name.
+    const supabaseUrl = (environment as any).supabaseUrl as string | undefined;
+    const supabaseAnonKey = ((environment as any).supabaseAnonKey as string | undefined)
+
+    console.log('SupabaseAnonKey:', supabaseAnonKey);
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      // Fail fast so you don't get silent 401/RLS issues
+      throw new Error(
+        `[SupabaseService] Missing environment variables.
+        Expected environment.supabaseUrl and environment.supabaseAnonKey (or supabaseKey fallback).
+        Got supabaseUrl=${!!supabaseUrl}, anonKey=${!!supabaseAnonKey}`
       );
-    } else {
-      console.warn('Using cached Supabase instance');
     }
 
-    this.supabase = window.supabase!;
+    this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+      // Optional: add schema if you use non-public
+      // db: { schema: 'public' },
+    });
+
+    // Optional debug (comment out once confirmed)
+    // console.log('[SupabaseService] Initialized', {
+    //   url: supabaseUrl,
+    //   anonKeyPrefix: supabaseAnonKey.slice(0, 12),
+    // });
   }
 
   getClient(): SupabaseClient {
@@ -94,7 +104,7 @@ export class SupabaseService {
     return data.session;
   }
 
-  async signOut() {
+  async signOut(): Promise<void> {
     try {
       const { error } = await this.supabase.auth.signOut();
       localStorage.removeItem('google_access_token');
@@ -105,17 +115,12 @@ export class SupabaseService {
   }
 
   async hasAccess(): Promise<boolean> {
-    // A valid session is the clearest indicator of access
     const session = await this.getSession();
     return !!session;
   }
 
-  /**
-   * Fetch accepted/active events for the calendar.
-   * Optional date range lets you limit what you sync (e.g., current year only).
-   */
   async fetchEventsForCalendar(
-    range: DateRange = {}, 
+    range: DateRange = {},
     statuses: CalendarStatus[] = DEFAULT_CALENDAR_STATUSES
   ): Promise<CalendarEventRecord[]> {
     let query = this.supabase
@@ -135,12 +140,12 @@ export class SupabaseService {
       .in('status', statuses);
 
     if (range.from) query = query.gte('date', range.from);
-    if (range.to)   query = query.lte('date', range.to);
+    if (range.to) query = query.lte('date', range.to);
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('[Supabase] fetchActiveEventsForCalendar error', error);
+      console.error('[Supabase] fetchEventsForCalendar error', error);
       return [];
     }
 
@@ -149,6 +154,7 @@ export class SupabaseService {
       const clientName = client
         ? `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim() || 'Client'
         : 'Client';
+
       return {
         supabaseType: 'event',
         supabaseId: e.event_id,
@@ -165,10 +171,6 @@ export class SupabaseService {
     });
   }
 
-  /**
-   * Fetch installments for the calendar.
-   * Optional date range lets you limit what you sync by due_date.
-   */
   async fetchInstallmentsForCalendar(range: DateRange = {}): Promise<CalendarInstallmentRecord[]> {
     let query = this.supabase
       .from('installments')
@@ -182,7 +184,7 @@ export class SupabaseService {
       `);
 
     if (range.from) query = query.gte('due_date', range.from);
-    if (range.to)   query = query.lte('due_date', range.to);
+    if (range.to) query = query.lte('due_date', range.to);
 
     const { data, error } = await query;
 
@@ -196,6 +198,7 @@ export class SupabaseService {
       const clientName = client
         ? `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim() || 'Client'
         : 'Client';
+
       return {
         supabaseType: 'installment',
         supabaseId: i.installment_id,
@@ -203,7 +206,7 @@ export class SupabaseService {
         clientName,
         description: i.description ?? '',
         status: i.status ?? '',
-        date: i.due_date,                      // YYYY-MM-DD
+        date: i.due_date,
         amount: Number(i.amount ?? 0),
       };
     });

@@ -1,43 +1,207 @@
 <section>
-  <div class="flex">
+  <div class="flex min-h-[930px]">
+    
+    <!-- Image -->
     <div 
-      class="min-h-[860px] w-1/2 bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-100 transition-colors duration-500 flex flex-col justify-center"
+      class="w-1/2 bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-50 transition-colors duration-500 flex flex-col justify-center"
       style="background-image: url('assets/images/1000005148.jpg');"
     >
       <h1 class="bg-gray-300/50 backdrop-blur-lg p-6 text-center text-6xl font-cormorant mx-auto -translate-y-[200px] shadow-2xl">WEDDING & EVENTS <br> INQUIRIES</h1>
     </div>
-    <div class="w-1/2 items-center text-center px-32 my-auto">
-      <h1 class="font-cormorant text-6xl text-gray-600">Ready to work together?</h1>
-      <h3 class="font-cormorant text-3xl text-gray-600">We'd love to hear from you</h3>
-      <form [formGroup]="weddingInquiryForm" (ngSubmit)="onSubmit()">
-        <div class="grid grid-cols-2 gap-3 p-8 text-sm">
-          <input formControlName="firstName" type="text" placeholder="First Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="lastName" type="text" placeholder="Last Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="fianceFirstName" type="text" placeholder="Fiancé First Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="fianceLastName" type="text" placeholder="Fiancé Last Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="phone" type="tel" placeholder="Phone Number" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="email" type="email" placeholder="Email Address" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="eventDate" type="date" placeholder="Event Date" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
-          <input formControlName="ceremonyVenue" type="text" placeholder="Ceremony Venue" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
-          <input formControlName="receptionVenue" type="text" placeholder="Reception Venue" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
-          <input formControlName="budget" type="number" placeholder="Budget ($)" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <input formControlName="guests" type="number" placeholder="Estimated Guest Count" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-          <select formControlName="preferredContactMethod" type="text" placeholder="Preferred Contact Method" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
-            <option value="" disabled selected>Preferred Contact Method</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone</option>
-          </select>
-          <select formControlName="leadSource" type="text" placeholder="How Did You Hear About Us?" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
-            <option value="" disabled selected>How Did You Hear About Us?</option>
-            <option value="google">Google</option>
-            <option value="socialMedia">Social Media</option>
-            <option value="referral">Referral</option>
-            <option value="other">Other</option>
-          </select>
-          <textarea formControlName="notes" rows="5" placeholder="Your Message" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2"></textarea>
-          <button type="submit" [disabled]="weddingInquiryForm.invalid" class="bg-gray-800 text-white py-2 px-4  hover:bg-gray-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">Submit</button>
-        </div>
-      </form>
+
+    <!-- Form -->
+    <div class="w-1/2 bg-[#fefcfa] flex flex-col justify-center py-20">
+      <div class="items-center text-center px-32">
+        <h1 class="font-cormorant text-6xl text-[#ea938c]">Ready to work together?</h1>
+        <h3 class="font-cormorant text-3xl text-gray-600">We'd love to hear from you</h3>
+        <form [formGroup]="weddingInquiryForm" (ngSubmit)="onSubmit()">
+          <div class="grid grid-cols-2 gap-3 py-5 text-base font-cormorant text-black">
+            <p class="col-span-2 text-left text-gray-500">* Indicates a required field. All required fields must be filled in order to submit.</p>
+            <input formControlName="firstName" type="text" placeholder="First Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="lastName" type="text" placeholder="Last Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="fianceFirstName" type="text" placeholder="Fiancé First Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="fianceLastName" type="text" placeholder="Fiancé Last Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="phone" type="tel" placeholder="Phone Number *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="email" type="email" placeholder="Email Address *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <div class="col-span-2 flex justify-between">
+              <label for="eventDate" class="text-left w-1/6 my-auto text-lg text-gray-500">Wedding Date: *</label>
+              <input formControlName="eventDate" type="date" class="w-5/6 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                [ngClass]="
+                  weddingInquiryForm.get('eventDate')?.value
+                    ? 'text-black'
+                    : 'text-gray-400'
+                "
+              >
+            </div>
+            <input formControlName="ceremonyVenue" type="text" placeholder="Ceremony Venue" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="receptionVenue" type="text" placeholder="Reception Venue" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            
+            <div class="relative w-full">
+              <select
+                formControlName="budget"
+                class="appearance-none w-full bg-gray-50 border border-gray-300 px-2 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                [ngClass]="
+                  weddingInquiryForm.get('budget')?.value
+                    ? 'text-black'
+                    : 'text-gray-400'
+                "
+              >
+                <option value="" disabled>Budget *</option>
+                <option value="$2,000 + Tax">Our minimum is $2,000 + Tax</option>
+                <option value="$2,000-$5,000">$2,000-$5,000</option>
+                <option value="$5,000-$8,000">$5,000-$8,000</option>
+                <option value="$8,000-$10,000">$8,000-$10,000</option>
+                <option value="$10,000+">$10,000+</option>
+              </select>
+
+              <!-- Arrow Icon -->
+              <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <svg
+                  class="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            <input formControlName="guests" type="number" placeholder="Estimated Guest Count *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <div class="col-span-2 flex justify-between space-x-3">
+              <input formControlName="eventPlannerName" type="text" placeholder="Wedding Planner's Name" class="w-1/3 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+              <input formControlName="eventPlannerPhone" type="tel" placeholder="Planner's Phone" class="w-1/3 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+              <input formControlName="eventPlannerEmail" type="email" placeholder="Planner's Email" class="w-1/3 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            </div>
+            
+            <div class="relative w-full">
+              <select
+                formControlName="preferredContactMethod"
+                class="appearance-none w-full bg-gray-50 border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                [ngClass]="
+                  weddingInquiryForm.get('preferredContactMethod')?.value
+                    ? 'text-black'
+                    : 'text-gray-400'
+                "
+              >
+                <option value="" disabled>Preferred Contact Method *</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+              </select>
+
+              <!-- Arrow Icon -->
+              <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <svg
+                  class="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="relative w-full">
+              <select
+                formControlName="leadSource"
+                class="appearance-none w-full bg-gray-50 border border-gray-300 text-gray-400 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                [ngClass]="
+                  weddingInquiryForm.get('leadSource')?.value
+                    ? 'text-black'
+                    : 'text-gray-400'
+                "
+              >
+                <option value="" disabled>How Did You Hear About Us? *</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="google">Google</option>
+                <option value="pinterest">Pinterest</option>
+                <option value="the knot">The Knot</option>
+                <option value="wedding wire">Wedding Wire</option>
+                <option value="yelp">Yelp</option>
+                <option value="venue partner">Venue Partner</option>
+                <option value="bridal show">Bridal Show</option>
+                <option value="other">Other</option>
+              </select>
+
+              <!-- Arrow Icon -->
+              <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <svg
+                  class="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            <textarea formControlName="notes" rows="3" placeholder="Please write a personalized message detailing your dream wedding florals *" class="bg-gray-50 border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2"></textarea>
+            
+            <!-- Inspiration URLs -->
+            <div class="col-span-2">
+              <div class="flex items-center justify-between">
+                <label class="text-left text-lg text-gray-500">
+                  Inspiration Links (Pinterest / Instagram)
+                </label>
+
+                <button
+                  type="button"
+                  (click)="addInspirationUrl()"
+                  class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <span class="text-lg leading-none">+</span>
+                  Add inspiration link
+                </button>
+              </div>
+
+              <p class="mt-1 text-left text-sm text-gray-400">
+                Paste links to posts/boards that match your dream florals.
+              </p>
+
+              <div class="mt-3 space-y-2" formArrayName="inspirationUrls">
+                <div
+                  *ngFor="let ctrl of inspirationUrls.controls; let i = index"
+                  class="flex items-center gap-2"
+                >
+                  <div class="relative w-full">
+                    <input
+                      [formControlName]="i"
+                      type="url"
+                      placeholder="https://pinterest.com/pin/… or https://instagram.com/p/…"
+                      class="w-full border border-gray-300 bg-gray-50 px-2 py-1.5 pr-10 focus:outline-none focus:ring-2 focus:ring-gray-400 placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    (click)="removeInspirationUrl(i)"
+                    class="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                    [disabled]="inspirationUrls.length === 1"
+                    [ngClass]="inspirationUrls.length === 1 ? 'opacity-50 cursor-not-allowed' : ''"
+                    aria-label="Remove inspiration url"
+                    title="Remove"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <!-- optional inline validation hint -->
+                <p class="text-left text-sm text-rose-500"
+                  *ngIf="inspirationUrls.invalid && (weddingInquiryForm.touched || weddingInquiryForm.dirty)">
+                  One or more links looks invalid — include https://
+                </p>
+              </div>
+            </div>
+            
+            <button type="submit" [disabled]="weddingInquiryForm.invalid" class="bg-[#ea938c] text-white py-2 px-4  hover:bg-gray-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">Submit</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </section>  

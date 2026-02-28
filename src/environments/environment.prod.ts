@@ -2,7 +2,7 @@ export const environment = {
     production: true,
     bypassAuth: false,
     supabaseUrl: 'default',
-    supabaseKey: 'default',
+    supabaseAnonKey: 'default',
     googleClientId: 'default',
     googleApiKey: 'default'
 };
