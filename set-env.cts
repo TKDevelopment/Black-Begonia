@@ -10,7 +10,7 @@ const envConfigFile = `
         production: true,
         bypassAuth: false,
         supabaseUrl: '${process.env['SUPABASE_URL']}',
-        supabaseKey: '${process.env['SUPABASE_KEY']}',
+        supabaseAnonKey: '${process.env['SUPABASE_ANON_KEY']}',
         googleClientId: '${process.env['GOOGLE_CLIENT_ID']}',
         googleApiKey: '${process.env['GOOGLE_API_KEY']}',
     };
