@@ -1,6 +1,6 @@
 <section class="bg-[#fefcfa] shadow-[0_25px_50px_rgba(0,0,0,0.25)]">
   <div class="max-w-screen-4xl mx-auto
-      px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-3
+      px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10
       flex flex-col md:flex-row items-center justify-between"
     >
     <div class="w-full md:w-auto flex items-center justify-between">
@@ -28,11 +28,37 @@
 
     <div class="hidden md:flex items-center
       space-x-6 lg:space-x-10 xl:space-x-14
-      text-sm lg:text-base xl:text-lg 2xl:text-xl font-forum text-gray-600"
+      text-sm lg:text-base xl:text-lg 2xl:text-xl font-forum text-gray-600 tracking-wider"
     >
       <div routerLink="/" class="hover:text-[#f89b95] hover:cursor-pointer">HOME</div>
       <div routerLink="/about" class="hover:text-[#f89b95] hover:cursor-pointer">ABOUT</div>
-      <div routerLink="/services" class="hover:text-[#f89b95] hover:cursor-pointer">SERVICES</div>
+      
+      <div class="relative group py-3">
+        <div class="hover:text-[#f89b95] hover:cursor-pointer">SERVICES</div>
+
+        <div
+          class="absolute top-full -left-[61px] w-48 hidden text-center
+            pt-2 group-hover:block group-hover:animate-fadeDown z-50"
+        >
+          <!-- the actual dropdown panel -->
+          <div class="bg-white shadow-xl text-sm">
+            <div
+              routerLink="/services/weddings"
+              class="px-5 py-2 hover:bg-gray-50 hover:text-[#f89b95] cursor-pointer transition-colors tracking-widest"
+            >
+              WEDDINGS
+            </div>
+
+            <div
+              routerLink="/services/general"
+              class="px-5 py-2 hover:bg-gray-50 hover:text-[#f89b95] cursor-pointer transition-colors tracking-widest"
+            >
+              GENERAL EVENTS
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div routerLink="/testimonials" class="hover:text-[#f89b95] hover:cursor-pointer">TESTIMONIALS</div>
       <div routerLink="/portfolio" class="hover:text-[#f89b95] hover:cursor-pointer">PORTFOLIO</div>
       <div routerLink="/workshops" class="hover:text-[#f89b95] hover:cursor-pointer">WORKSHOPS</div>

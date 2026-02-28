@@ -1,12 +1,38 @@
 <section class="bg-[#fefcfa] py-4 md:py-5 2xl:py-8 shadow-[0_-20px_40px_rgba(0,0,0,0.25)]">
   <div class="flex justify-between px-4 md:px-8 2xl:px-16">
     <div class="hidden md:flex items-center
-      space-x-6 md:space-x-10 2xl:space-x-14
+      space-x-6 md:space-x-10 2xl:space-x-14 tracking-wider
       text-sm md:text-base 2xl:text-lg font-noto text-gray-600"
     >
       <div routerLink="/" class="hover:text-[#f89b95] hover:cursor-pointer">HOME</div>
       <div routerLink="/about" class="hover:text-[#f89b95] hover:cursor-pointer">ABOUT</div>
-      <div routerLink="/services" class="hover:text-[#f89b95] hover:cursor-pointer">SERVICES</div>
+      
+      <div class="relative group py-3">
+        <div class="hover:text-[#f89b95] hover:cursor-pointer">SERVICES</div>
+
+        <div
+          class="absolute top-full -left-[61px] w-48 hidden text-center
+            pt-2 group-hover:block group-hover:animate-fadeDown z-50"
+        >
+          <!-- the actual dropdown panel -->
+          <div class="bg-white shadow-xl text-sm">
+            <div
+              routerLink="/services/weddings"
+              class="px-5 py-2 hover:bg-gray-50 hover:text-[#f89b95] cursor-pointer transition-colors tracking-widest"
+            >
+              WEDDINGS
+            </div>
+
+            <div
+              routerLink="/services/general"
+              class="px-5 py-2 hover:bg-gray-50 hover:text-[#f89b95] cursor-pointer transition-colors tracking-widest"
+            >
+              GENERAL EVENTS
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div routerLink="/testimonials" class="hover:text-[#f89b95] hover:cursor-pointer">TESTIMONIALS</div>
       <div routerLink="/portfolio" class="hover:text-[#f89b95] hover:cursor-pointer">PORTFOLIO</div>
       <div routerLink="/workshops" class="hover:text-[#f89b95] hover:cursor-pointer">WORKSHOPS</div>
@@ -39,15 +65,15 @@
   </div>
 
   <div class="text-center md:text-right font-oswald md:px-8 2xl:px-16 md:mt-4 2xl:mt-8">
-    <p class="text-5xl md:text-8xl 2xl:text-9xl font-forum transition-colors duration-1000 hover:text-[#ea938c]">BLACK BEGONIA</p>
-    <p class="text-xs md:text-lg 2xl:text-xl font-thin mb-1 2xl:mb-2">LUXURY FINE ART FLORAL DESIGN FOR WEDDINGS & EVENTS</p>
+    <p class="text-5xl md:text-8xl 2xl:text-9xl font-forum transition-colors duration-1000 hover:text-[#ea938c] tracking-wider">BLACK BEGONIA</p>
+    <p class="text-xs md:text-lg 2xl:text-xl font-thin mb-1 2xl:mb-2 tracking-wide">LUXURY FINE ART FLORAL DESIGN FOR WEDDINGS & EVENTS</p>
     <p class="text-xs md:text-lg 2xl:text-xl font-thin">NARRAGANSETT BAY AREA</p>
   </div>
 
   <hr class="border-black my-2 md:my-3 2xl:my-4">
 
   <div class="overflow-hidden whitespace-nowrap font-noto text- md:text-lg 2xl:text-xl">
-    <div class="inline-block animate-marquee">
+    <div class="inline-block animate-marquee tracking-widest">
       <h2 class="inline-block">
         <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorist/" target="_blank">FOLLOW ON INSTAGRAM</a>
         &nbsp;&nbsp;|&nbsp;&nbsp;

@@ -50,12 +50,10 @@ export class SupabaseService {
   private readonly supabase: SupabaseClient;
 
   constructor() {
-    // ✅ Prefer explicit anon key naming. Keep a fallback for your existing env key name.
     const supabaseUrl = (environment as any).supabaseUrl as string | undefined;
     const supabaseAnonKey = ((environment as any).supabaseAnonKey as string | undefined)
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      // Fail fast so you don't get silent 401/RLS issues
       throw new Error(
         `[SupabaseService] Missing environment variables.
         Expected environment.supabaseUrl and environment.supabaseAnonKey (or supabaseKey fallback).
@@ -68,16 +66,11 @@ export class SupabaseService {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-      },
-      // Optional: add schema if you use non-public
-      // db: { schema: 'public' },
+      }
     });
 
-    // Optional debug (comment out once confirmed)
-    // console.log('[SupabaseService] Initialized', {
-    //   url: supabaseUrl,
-    //   anonKeyPrefix: supabaseAnonKey.slice(0, 12),
-    // });
+    console.log("Supabase: ", this.supabase);
+    console.log("Supabase Auth: ", this.supabase.auth);
   }
 
   getClient(): SupabaseClient {
