@@ -1,18 +1,43 @@
 <section>
   <div class="flex">
     <div 
-      class="min-h-[925px] w-1/2 bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-300 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-500 flex flex-col justify-center"
+      class="min-h-[860px] w-1/2 bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-100 transition-colors duration-500 flex flex-col justify-center"
       style="background-image: url('assets/images/1000005148.jpg');"
-      routerLink="/inquiries/events"
     >
       <h1 class="bg-gray-300/50 backdrop-blur-lg p-6 text-center text-6xl font-cormorant mx-auto -translate-y-[200px] shadow-2xl">WEDDING & EVENTS <br> INQUIRIES</h1>
     </div>
-    <div 
-      class="min-h-[925px] w-1/2 bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-300 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-500 flex flex-col justify-center"
-      style="background-image: url('assets/images/1000005149.jpg');"
-      routerLink="/inquiries/general"
-    >
-      <h1 class="bg-gray-300/50 backdrop-blur-lg p-6 text-center text-6xl font-cormorant mx-auto -translate-y-[200px] shadow-2xl">GENERAL INQUIRIES</h1>
+    <div class="w-1/2 items-center text-center px-32 my-auto">
+      <h1 class="font-cormorant text-6xl text-gray-600">Ready to work together?</h1>
+      <h3 class="font-cormorant text-3xl text-gray-600">We'd love to hear from you</h3>
+      <form [formGroup]="weddingInquiryForm" (ngSubmit)="onSubmit()">
+        <div class="grid grid-cols-2 gap-3 p-8 text-sm">
+          <input formControlName="firstName" type="text" placeholder="First Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="lastName" type="text" placeholder="Last Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="fianceFirstName" type="text" placeholder="Fiancé First Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="fianceLastName" type="text" placeholder="Fiancé Last Name" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="phone" type="tel" placeholder="Phone Number" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="email" type="email" placeholder="Email Address" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="eventDate" type="date" placeholder="Event Date" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
+          <input formControlName="ceremonyVenue" type="text" placeholder="Ceremony Venue" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
+          <input formControlName="receptionVenue" type="text" placeholder="Reception Venue" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
+          <input formControlName="budget" type="number" placeholder="Budget ($)" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <input formControlName="guests" type="number" placeholder="Estimated Guest Count" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <select formControlName="preferredContactMethod" type="text" placeholder="Preferred Contact Method" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
+            <option value="" disabled selected>Preferred Contact Method</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+          </select>
+          <select formControlName="leadSource" type="text" placeholder="How Did You Hear About Us?" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2">
+            <option value="" disabled selected>How Did You Hear About Us?</option>
+            <option value="google">Google</option>
+            <option value="socialMedia">Social Media</option>
+            <option value="referral">Referral</option>
+            <option value="other">Other</option>
+          </select>
+          <textarea formControlName="notes" rows="5" placeholder="Your Message" class="border border-gray-300  p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2"></textarea>
+          <button type="submit" [disabled]="weddingInquiryForm.invalid" class="bg-gray-800 text-white py-2 px-4  hover:bg-gray-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">Submit</button>
+        </div>
+      </form>
     </div>
   </div>
-</section>
+</section>  

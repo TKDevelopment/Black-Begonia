@@ -3,6 +3,8 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from './services/supabase.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,6 +16,6 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled'
       })
     ),
-    provideAnimations()
+    provideAnimations(),
   ]
 };
