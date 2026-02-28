@@ -10,7 +10,6 @@ import {
 import { ToastService } from '../../../services/toast.service';
 import { SeoService } from '../../../seo/seo.service';
 import { SupabaseService } from '../../../services/supabase.service';
-import { UUID } from 'crypto';
 
 type InquiryInsert = {
   inquiry_id: string;
