@@ -54,8 +54,6 @@ export class SupabaseService {
     const supabaseUrl = (environment as any).supabaseUrl as string | undefined;
     const supabaseAnonKey = ((environment as any).supabaseAnonKey as string | undefined)
 
-    console.log('SupabaseAnonKey:', supabaseAnonKey);
-
     if (!supabaseUrl || !supabaseAnonKey) {
       // Fail fast so you don't get silent 401/RLS issues
       throw new Error(
