@@ -1,19 +1,26 @@
 <section>
-  <div class="flex min-h-[930px] ">
-    <div class="w-1/2 bg-[#fefcfa] flex flex-col justify-center">
-      <div class="items-center text-center w-3/5 mx-auto">
-        <h1 class="font-cormorant text-6xl text-[#ea938c]">Ready to work together?</h1>
-        <h3 class="font-cormorant text-3xl text-gray-600">We'd love to hear from you</h3>
+  <div class="xl:flex xl:min-h-[930px]">
+    <div 
+      class="xl:w-1/2 min-h-[200px] md:min-h-[300px] bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-50 transition-colors duration-500 xl:hidden flex flex-col justify-center"
+      style="background-image: url('assets/images/1000005149.jpg');"
+    >
+      <h1 class="bg-gray-300/50 backdrop-blur-lg p-6 text-center text-3xl md:text-5xl 2xl:text-6xl font-cormorant mx-auto shadow-2xl xl:-translate-y-[150px] 2xl:-translate-y-[200px]">GENERAL INQUIRIES</h1>
+    </div>
+    
+    <div class="xl:w-1/2 bg-[#fefcfa] flex flex-col justify-center py-6 sm:py-12">
+      <div class="items-center text-center md:w-5/6 lg:w-4/5 xl:w-5/6 mx-4 md:mx-auto">
+        <h1 class="font-cormorant text-4xl sm:text-5xl 2xl:text-6xl text-[#ea938c]">Ready to work together?</h1>
+        <h3 class="font-cormorant text-2xl md:text-3xl text-gray-600">We'd love to hear from you</h3>
         <form [formGroup]="generalInquiryForm" (ngSubmit)="onSubmit()">
-          <div class="grid grid-cols-2 gap-3 py-5 text-base font-cormorant text-black">
-            <p class="col-span-2 text-left text-gray-500">* Indicates a required field. All required fields must be filled in order to submit.</p>
+          <div class="grid grid-cols-2 gap-2 sm:gap-3 py-5 text-base font-cormorant text-black">
+            <p class="col-span-2 text-xs sm:text-base text-left text-gray-600">* Indicates a required field. All required fields must be filled in order to submit.</p>
             <input formControlName="firstName" type="text" placeholder="First Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             <input formControlName="lastName" type="text" placeholder="Last Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             <input formControlName="phone" type="tel" placeholder="Phone Number *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             <input formControlName="email" type="email" placeholder="Email Address *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             
             <div class="col-span-2 flex justify-between">
-              <label for="eventDate" class="text-left w-1/6 my-auto text-lg text-gray-500">Event Date: *</label>
+              <label for="eventDate" class="text-left w-1/3 sm:w-1/5 my-auto text-gray-600 text-base sm:text-lg">Event Date: *</label>
               <input formControlName="eventDate" type="date" class="w-5/6 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
                 [ngClass]="
                   generalInquiryForm.get('eventDate')?.value
@@ -128,7 +135,7 @@
             
             <!-- Inspiration URLs -->
             <div class="col-span-2">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col sm:flex-row sm:justify-between text-left">
                 <label class="text-left text-lg text-gray-500">
                   Inspiration Links (Pinterest / Instagram)
                 </label>
@@ -136,14 +143,14 @@
                 <button
                   type="button"
                   (click)="addInspirationUrl()"
-                  class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  class="inline-flex items-center gap-2 max-w-[150px] sm:max-w-[180px] rounded-md border border-gray-300 bg-white px-2 sm:px-3 py-1 sm:py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <span class="text-lg leading-none">+</span>
                   Add inspiration link
                 </button>
               </div>
 
-              <p class="mt-1 text-left text-sm text-gray-400">
+              <p class="mt-4 sm:mt-0 text-left text-sm text-gray-400">
                 Paste links to posts/boards that match your dream florals.
               </p>
 
@@ -188,10 +195,10 @@
       </div>
     </div>
     <div 
-      class="w-1/2 bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-100 transition-colors duration-500 flex flex-col justify-center"
+      class="hidden xl:w-1/2 min-h-[200px] md:min-h-[300px] bg-no-repeat bg-cover bg-center bg-blend-multiply text-white bg-gray-50 transition-colors duration-500 xl:flex flex-col justify-center"
       style="background-image: url('assets/images/1000005149.jpg');"
     >
-      <h1 class="bg-gray-300/50 backdrop-blur-lg p-6 text-center text-6xl font-cormorant mx-auto -translate-y-[200px] shadow-2xl">GENERAL INQUIRIES</h1>
+      <h1 class="bg-gray-300/50 backdrop-blur-lg p-6 text-center text-3xl md:text-5xl 2xl:text-6xl font-cormorant mx-auto shadow-2xl xl:-translate-y-[150px] 2xl:-translate-y-[200px]">GENERAL INQUIRIES</h1>
     </div>
   </div>
 </section>

@@ -26,12 +26,12 @@ module.exports = {
         },
         marquee: {
           '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(120%)' },
+          '100%': { transform: 'translateX(100%)' },
         },
       },
       animation: {
         fadeDown: 'fadeDown 1s ease-out forwards',
-        marquee: 'marquee 45s linear infinite',
+        marquee: 'marquee 60s linear infinite',
       },
     },
   },
