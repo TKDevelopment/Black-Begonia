@@ -33,11 +33,12 @@ type InquiryInsert = {
 })
 export class GeneralInquiriesComponent {
   generalInquiryForm!: FormGroup;
-
   submitting = false;
   submitted = false;
   error: string | null = null;
   submittedInquiry: { inquiry_id: string } | null = null;
+  invalidTooltips: Record<string, 'hidden' | 'visible' | 'fading'> = {};
+  private tooltipTimers: Record<string, any> = {};
 
   constructor(
     private fb: FormBuilder,
@@ -45,9 +46,6 @@ export class GeneralInquiriesComponent {
     private toast: ToastService,
     private seo: SeoService
   ) {
-    // optional: if you use SeoService for this route, do it here.
-    // this.seo.setTitle('General Inquiries');
-
     this.generalInquiryForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z]+$/), Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z]+$/), Validators.minLength(2)]],
@@ -56,9 +54,13 @@ export class GeneralInquiriesComponent {
       serviceType: ['', Validators.required],
       eventDate: ['', Validators.required],
       preferredContactMethod: ['', Validators.required],
-      leadSource: ['', Validators.required],
-      notes: ['', [Validators.required, Validators.maxLength(500)]],
+      leadSource: [''],
+      notes: ['', Validators.maxLength(500)],
       inspirationUrls: this.fb.array([]),
+    });
+
+    this.requiredControlNames().forEach((name) => {
+      this.invalidTooltips[name] = 'hidden';
     });
 
     this.addInspirationUrl();
@@ -111,9 +113,51 @@ export class GeneralInquiriesComponent {
     return inquiryId;
   }
 
+  private requiredControlNames(): string[] {
+    return [
+      'firstName',
+      'lastName',
+      'phone',
+      'email',
+      'serviceType',
+      'eventDate',
+      'preferredContactMethod'
+    ];
+  }
+
+  private showInvalidTooltips(): void {
+    const names = this.requiredControlNames();
+
+    names.forEach((name) => {
+      const ctrl = this.generalInquiryForm.get(name);
+      if (!ctrl) return;
+
+      const isInvalid = ctrl.invalid;
+
+      if (isInvalid) {
+        this.invalidTooltips[name] = 'visible';
+
+        if (this.tooltipTimers[name]) clearTimeout(this.tooltipTimers[name]);
+
+        // after 3 seconds → start fade out
+        this.tooltipTimers[name] = setTimeout(() => {
+          this.invalidTooltips[name] = 'fading';
+
+          // remove from DOM after fade-out finishes
+          setTimeout(() => {
+            this.invalidTooltips[name] = 'hidden';
+          }, 400); // must match fadeOut duration
+        }, 3000);
+      } else {
+        this.invalidTooltips[name] = 'hidden';
+      }
+    });
+  }
+
   async onSubmit(): Promise<void> {
     if (this.generalInquiryForm.invalid) {
       this.generalInquiryForm.markAllAsTouched();
+      this.showInvalidTooltips();
       return;
     }
 
@@ -169,6 +213,7 @@ export class GeneralInquiriesComponent {
       this.submitted = true;
 
       this.generalInquiryForm.reset();
+      this.requiredControlNames().forEach((name) => (this.invalidTooltips[name] = 'hidden'));
       this.inspirationUrls.clear();
       this.addInspirationUrl();
 

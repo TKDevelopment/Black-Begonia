@@ -42,11 +42,12 @@ type InquiryInsert = {
 })
 export class WeddingInquiriesComponent {
   weddingInquiryForm!: FormGroup;
-
   submitting = false;
   submitted = false;
   error: string | null = null;
   submittedInquiry: { inquiry_id: string } | null = null;
+  invalidTooltips: Record<string, 'hidden' | 'visible' | 'fading'> = {};
+  private tooltipTimers: Record<string, any> = {};
 
   constructor(
     private fb: FormBuilder,
@@ -65,14 +66,18 @@ export class WeddingInquiriesComponent {
       ceremonyVenue: [''],
       receptionVenue: [''],
       budget: ['', Validators.required],
-      guests: ['', Validators.required],
+      guests: [''],
       eventPlannerName: [''],
       eventPlannerPhone: ['', Validators.pattern(/^(\+1\s?)?(\(?\d{3}\)?)[-\s.]?\d{3}[-\s.]?\d{4}$/)],
       eventPlannerEmail: ['', Validators.email],
       preferredContactMethod: ['', Validators.required],
-      leadSource: ['', Validators.required],
-      notes: ['', [Validators.required, Validators.maxLength(500)]],
+      leadSource: [''],
+      notes: ['', Validators.maxLength(500)],
       inspirationUrls: this.fb.array([]),
+    });
+
+    this.requiredControlNames().forEach((name) => {
+      this.invalidTooltips[name] = 'hidden';
     });
 
     this.addInspirationUrl();
@@ -124,9 +129,53 @@ export class WeddingInquiriesComponent {
     return inquiryId;
   }
 
+  private requiredControlNames(): string[] {
+    return [
+      'firstName',
+      'lastName',
+      'fianceFirstName',
+      'fianceLastName',
+      'phone',
+      'email',
+      'eventDate',
+      'budget',
+      'preferredContactMethod',
+    ];
+  }
+
+  private showInvalidTooltips(): void {
+    const names = this.requiredControlNames();
+
+    names.forEach((name) => {
+      const ctrl = this.weddingInquiryForm.get(name);
+      if (!ctrl) return;
+
+      const isInvalid = ctrl.invalid;
+
+      if (isInvalid) {
+        this.invalidTooltips[name] = 'visible';
+
+        if (this.tooltipTimers[name]) clearTimeout(this.tooltipTimers[name]);
+
+        // after 3 seconds → start fade out
+        this.tooltipTimers[name] = setTimeout(() => {
+          this.invalidTooltips[name] = 'fading';
+
+          // remove from DOM after fade-out finishes
+          setTimeout(() => {
+            this.invalidTooltips[name] = 'hidden';
+          }, 400); // must match fadeOut duration
+        }, 3000);
+      } else {
+        this.invalidTooltips[name] = 'hidden';
+      }
+    });
+  }
+
   async onSubmit(): Promise<void> {
     if (this.weddingInquiryForm.invalid) {
       this.weddingInquiryForm.markAllAsTouched();
+      this.showInvalidTooltips();
       return;
     }
 
@@ -190,6 +239,7 @@ export class WeddingInquiriesComponent {
       this.submitted = true;
 
       this.weddingInquiryForm.reset();
+      this.requiredControlNames().forEach((name) => (this.invalidTooltips[name] = 'hidden'));
       this.inspirationUrls.clear();
       this.addInspirationUrl();
 

@@ -17,34 +17,214 @@
         <form [formGroup]="weddingInquiryForm" (ngSubmit)="onSubmit()">
           <div class="grid grid-cols-2 gap-2 sm:gap-3 py-5 text-sm font-cormorant text-black">
             <p class="col-span-2 text-xs sm:text-base text-left text-gray-600">* Indicates a required field. All required fields must be filled in order to submit.</p>
-            <input formControlName="firstName" type="text" placeholder="First Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <input formControlName="lastName" type="text" placeholder="Last Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <input formControlName="fianceFirstName" type="text" placeholder="Fiancé First Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <input formControlName="fianceLastName" type="text" placeholder="Fiancé Last Name *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <input formControlName="phone" type="tel" placeholder="Phone Number *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <input formControlName="email" type="email" placeholder="Email Address *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             
-            <div class="col-span-2 flex justify-between">
-              <label for="eventDate" class="text-left w-1/3 lg:w-1/5 my-auto text-gray-600 text-base">Wedding Date: *</label>
-              <input formControlName="eventDate" type="date" class="w-2/3 lg:w-4/5 2x:w-5/6 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            <div class="relative">
+              <input
+                formControlName="firstName"
+                type="text"
+                placeholder="First Name *"
+                class="w-full border bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2"
                 [ngClass]="
-                  weddingInquiryForm.get('eventDate')?.value
-                    ? 'text-black'
-                    : 'text-gray-400'
+                  weddingInquiryForm.get('firstName')?.invalid && weddingInquiryForm.get('firstName')?.touched
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50'
+                    : 'border-gray-300 focus:ring-gray-400'
+                "
+              />
+
+              <div
+                *ngIf="invalidTooltips['firstName'] !== 'hidden'"
+                class="absolute -right-[58px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['firstName'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['firstName'] === 'fading'
+                }"
+              >
+                First name required
+              </div>
+            </div>
+
+            <div class="relative">
+              <input
+                formControlName="lastName"
+                type="text"
+                placeholder="Last Name *"
+                class="w-full border bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2"
+                [ngClass]="
+                  weddingInquiryForm.get('lastName')?.invalid && weddingInquiryForm.get('lastName')?.touched
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50'
+                    : 'border-gray-300 focus:ring-gray-400'
+                "
+              />
+              <div
+                *ngIf="invalidTooltips['lastName'] !== 'hidden'"
+                class="absolute -right-[57px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['lastName'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['lastName'] === 'fading'
+                }"
+              >
+                Last name required
+              </div>
+            </div>            
+            
+            <div class="relative">
+              <input
+                formControlName="fianceFirstName"
+                type="text"
+                placeholder="Fiancé First Name *"
+                class="w-full border bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2"
+                [ngClass]="
+                  weddingInquiryForm.get('fianceFirstName')?.invalid && weddingInquiryForm.get('fianceFirstName')?.touched
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50'
+                    : 'border-gray-300 focus:ring-gray-400'
+                "
+              />
+
+              <div
+                *ngIf="invalidTooltips['fianceFirstName'] !== 'hidden'"
+                class="absolute -right-[73px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['fianceFirstName'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['fianceFirstName'] === 'fading'
+                }"
+              >
+                Fiancé first name required
+              </div>
+            </div>
+
+            <div class="relative">
+              <input
+                formControlName="fianceLastName"
+                type="text"
+                placeholder="Fiancé Last Name *"
+                class="w-full border bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2"
+                [ngClass]="
+                  weddingInquiryForm.get('fianceLastName')?.invalid && weddingInquiryForm.get('fianceLastName')?.touched
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50'
+                    : 'border-gray-300 focus:ring-gray-400'
+                "
+              />
+              <div
+                *ngIf="invalidTooltips['fianceLastName'] !== 'hidden'"
+                class="absolute -right-[72px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['fianceLastName'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['fianceLastName'] === 'fading'
+                }"
+              >
+                Fiancé last name required
+              </div>
+            </div>
+
+            <div class="relative">
+              <input 
+                formControlName="phone" 
+                type="tel" 
+                placeholder="Phone Number *" 
+                class="w-full border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                [ngClass]="
+                  weddingInquiryForm.get('phone')?.invalid && weddingInquiryForm.get('phone')?.touched
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50'
+                    : 'border-gray-300 focus:ring-gray-400'
+                "
+              />
+              <div
+                *ngIf="invalidTooltips['phone'] !== 'hidden'"
+                class="absolute -right-[48px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['phone'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['phone'] === 'fading'
+                }"
+              >
+                Phone required
+              </div>
+            </div>
+            
+            <div class="relative">
+              <input 
+                formControlName="email" 
+                type="email" 
+                placeholder="Email Address *" 
+                class="w-full border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                [ngClass]="
+                  weddingInquiryForm.get('email')?.invalid && weddingInquiryForm.get('email')?.touched
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50'
+                    : 'border-gray-300 focus:ring-gray-400'
                 "
               >
+              <div
+                *ngIf="invalidTooltips['email'] !== 'hidden'"
+                class="absolute -right-[47px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['email'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['email'] === 'fading'
+                }"
+              >
+                Email required
+              </div>
             </div>
+
+            <div class="col-span-2 flex justify-between">
+              <label
+                for="eventDate"
+                class="text-left w-1/3 sm:w-1/5 my-auto text-gray-600 text-base sm:text-lg"
+              >
+                Event Date: *
+              </label>
+
+              <div class="relative w-5/6">
+                <input
+                  id="eventDate"
+                  formControlName="eventDate"
+                  type="date"
+                  class="w-full border bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2"
+                  [ngClass]="
+                    (weddingInquiryForm.get('eventDate')?.invalid && weddingInquiryForm.get('eventDate')?.touched)
+                      ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50 text-black'
+                      : (weddingInquiryForm.get('eventDate')?.value ? 'border-gray-300 focus:ring-gray-400 text-black' : 'border-gray-300 focus:ring-gray-400 text-gray-400')
+                  "
+                />
+
+                <div
+                  *ngIf="invalidTooltips['eventDate'] === 'visible' || invalidTooltips['eventDate'] === 'fading'"
+                  class="absolute -right-[58px] -top-2 -translate-y-full
+                        bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                        whitespace-nowrap z-50 pointer-events-none"
+                  [ngClass]="{
+                    'tooltip-fade-in': invalidTooltips['eventDate'] === 'visible',
+                    'tooltip-fade-out': invalidTooltips['eventDate'] === 'fading'
+                  }"
+                >
+                  Event date required
+                </div>
+              </div>
+            </div> 
+
             <input formControlName="ceremonyVenue" type="text" placeholder="Ceremony Venue" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             <input formControlName="receptionVenue" type="text" placeholder="Reception Venue" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             
             <div class="relative w-full">
               <select
                 formControlName="budget"
-                class="appearance-none w-full bg-gray-50 border border-gray-300 px-2 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                class="appearance-none w-full bg-gray-50 border px-2 py-1.5 pr-8 focus:outline-none focus:ring-2"
                 [ngClass]="
-                  weddingInquiryForm.get('budget')?.value
-                    ? 'text-black'
-                    : 'text-gray-400'
+                  (weddingInquiryForm.get('budget')?.invalid && weddingInquiryForm.get('budget')?.touched)
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50 text-black'
+                    : (weddingInquiryForm.get('budget')?.value
+                        ? 'border-gray-300 focus:ring-gray-400 text-black'
+                        : 'border-gray-300 focus:ring-gray-400 text-gray-400')
                 "
               >
                 <option value="" disabled>Budget *</option>
@@ -67,9 +247,23 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
+
+              <!-- Tooltip (right aligned) -->
+              <div
+                *ngIf="invalidTooltips['budget'] === 'visible' || invalidTooltips['budget'] === 'fading'"
+                class="absolute -right-[50px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['budget'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['budget'] === 'fading'
+                }"
+              >
+                Budget required
+              </div>
             </div>
 
-            <input formControlName="guests" type="number" placeholder="Estimated Guest Count *" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input formControlName="guests" type="number" placeholder="Estimated Guest Count" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             <div class="col-span-2 flex justify-between space-x-2 sm:space-x-3">
               <input formControlName="eventPlannerName" type="text" placeholder="Planner's Name" class="w-1/3 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
               <input formControlName="eventPlannerPhone" type="tel" placeholder="Planner's Phone" class="w-1/3 border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
@@ -79,11 +273,11 @@
             <div class="relative w-full">
               <select
                 formControlName="preferredContactMethod"
-                class="appearance-none w-full bg-gray-50 border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                class="appearance-none w-full bg-gray-50 border px-2 py-1.5 focus:outline-none focus:ring-2"
                 [ngClass]="
-                  weddingInquiryForm.get('preferredContactMethod')?.value
-                    ? 'text-black'
-                    : 'text-gray-400'
+                  (weddingInquiryForm.get('preferredContactMethod')?.invalid && weddingInquiryForm.get('preferredContactMethod')?.touched)
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50 text-black'
+                    : (weddingInquiryForm.get('preferredContactMethod')?.value ? 'border-gray-300 focus:ring-gray-400 text-black' : 'border-gray-300 focus:ring-gray-400 text-gray-400')
                 "
               >
                 <option value="" disabled>Preferred Contact Method *</option>
@@ -93,15 +287,22 @@
 
               <!-- Arrow Icon -->
               <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                <svg
-                  class="w-4 h-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
+              </div>
+
+              <div
+                *ngIf="invalidTooltips['preferredContactMethod'] === 'visible' || invalidTooltips['preferredContactMethod'] === 'fading'"
+                class="absolute -right-[93px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['preferredContactMethod'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['preferredContactMethod'] === 'fading'
+                }"
+              >
+                Preferred contact method required
               </div>
             </div>
 
@@ -115,7 +316,7 @@
                     : 'text-gray-400'
                 "
               >
-                <option value="" disabled>How Did You Hear About Us? *</option>
+                <option value="" disabled>How Did You Hear About Us?</option>
                 <option value="instagram">Instagram</option>
                 <option value="facebook">Facebook</option>
                 <option value="google">Google</option>
@@ -142,7 +343,7 @@
                 </svg>
               </div>
             </div>
-            <textarea formControlName="notes" rows="3" placeholder="Please write a personalized message detailing your dream wedding florals *" class="bg-gray-50 border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2"></textarea>
+            <textarea formControlName="notes" rows="3" placeholder="Please write a personalized message detailing your dream wedding florals" class="bg-gray-50 border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400 col-span-2"></textarea>
             
             <!-- Inspiration URLs -->
             <div class="col-span-2">
@@ -200,7 +401,7 @@
               </div>
             </div>
             
-            <button type="submit" [disabled]="weddingInquiryForm.invalid" class="bg-[#ea938c] text-white py-2 px-4  hover:bg-gray-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">Submit</button>
+            <button type="submit" class="bg-[#ea938c] text-white py-2 px-4  hover:bg-gray-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">Submit</button>
           </div>
         </form>
       </div>

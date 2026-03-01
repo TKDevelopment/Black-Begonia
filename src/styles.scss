@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  @keyframes tooltipFadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -100%);
+    }
+  }
+
+  @keyframes tooltipFadeOut {
+    from {
+      opacity: 1;
+      transform: translate(-50%, -100%);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+  }
+
+  .tooltip-fade-in {
+    animation: tooltipFadeIn 500ms ease-out forwards;
+  }
+
+  .tooltip-fade-out {
+    animation: tooltipFadeOut 500ms ease-in forwards;
+  }
+}
+
 *:not(input):not(textarea):not([contenteditable="true"]) {
   caret-color: transparent;
 }
