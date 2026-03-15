@@ -28,6 +28,7 @@ import { GeneralInquiriesComponent } from './components/public/general-inquiries
 import { WeddingInquiriesComponent } from './components/public/wedding-inquiries/wedding-inquiries.component';
 import { GeneralServicesComponent } from './components/public/general-services/general-services.component';
 import { WeddingServicesComponent } from './components/public/wedding-services/wedding-services.component';
+import { PortfolioDetailComponent } from './components/public/portfolio-detail/portfolio-detail.component';
 
 export const routes: Routes = [
     {
@@ -37,6 +38,7 @@ export const routes: Routes = [
             { path: '', component: LandingComponent },
             { path: 'about', component: AboutComponent },
             { path: 'portfolio', component: PortfolioComponent },
+            { path: 'portfolio/:slug', component: PortfolioDetailComponent },
             { path: 'inquiries', component: InquiriesComponent },
             { path: 'inquiries/general', component: GeneralInquiriesComponent },
             { path: 'inquiries/weddings', component: WeddingInquiriesComponent },

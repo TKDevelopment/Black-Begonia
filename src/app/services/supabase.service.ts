@@ -68,9 +68,6 @@ export class SupabaseService {
         detectSessionInUrl: true,
       }
     });
-
-    console.log("Supabase: ", this.supabase);
-    console.log("Supabase Auth: ", this.supabase.auth);
   }
 
   getClient(): SupabaseClient {

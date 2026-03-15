@@ -17,83 +17,29 @@
   <div class="text-center font-cormorant">
     <h1 class="text-7xl">Full Galleries</h1>
     <div class="max-w-screen-xl mx-auto grid grid-cols-3 auto-rows-[500px] gap-8 font-thin text-white py-8">
+
       <!-- Jason & Aurelia -->
-      <div 
-        style="background-image: url('assets/images/1000005134.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
+      <div
+        *ngFor="let gallery of galleries"
+        class="bg-no-repeat bg-cover bg-center cursor-pointer group"
+        [style.background-image]="'url(' + gallery.coverImage + ')'"
+        [routerLink]="['/portfolio', gallery.slug]"
       >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-center text-5xl">Jason & Aurelia</p>
-            <p class="text-xl text-right font-oswald tracking-widest">TPC STONEBRAE</p>
+        <div *ngIf="gallery.position == 'left'" class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+          <div class="p-6 h-full w-full flex flex-col justify-between">
+            <p class="text-center text-5xl">{{ gallery.coupleNames }}</p>
+            <p class="text-xl text-right font-oswald tracking-widest">{{ gallery.venue }}</p>
           </div>
         </div>
-      </div>
 
-      <!-- Siwei & Simon -->
-      <div 
-        style="background-image: url('assets/images/1000005131.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
+        <div *ngIf="gallery.position == 'center'" class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
           <div class="p-6 h-full w-full flex flex-col justify-center text-center">
             <p class="text-6xl">Siwei & Simon</p>
             <p class="text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
           </div>
         </div>
-      </div>
 
-      <!-- Eric & Madison -->
-      <div 
-        style="background-image: url('assets/images/1000005144.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-right text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-            <p class="text-left text-6xl">Eric & <br> Madison</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Jason & Aurelia -->
-      <div 
-        style="background-image: url('assets/images/1000005134.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-center text-5xl">Jason & Aurelia</p>
-            <p class="text-xl text-right font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Siwei & Simon -->
-      <div 
-        style="background-image: url('assets/images/1000005131.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-center text-center">
-            <p class="text-6xl">Siwei & Simon</p>
-            <p class="text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Eric & Madison -->
-      <div 
-        style="background-image: url('assets/images/1000005144.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
+        <div *ngIf="gallery.position == 'right'" class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
           <div class="p-6 h-full w-full flex flex-col justify-between ">
             <p class="text-right text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
             <p class="text-left text-6xl">Eric & <br> Madison</p>
@@ -112,92 +58,6 @@
           <p class="text-4xl text-[#ea938c]">Ready to get started?</p>
           <p class="text-xl">We'd love to hear from you!</p>
           <button routerLink="/inquiries" class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300">INQUIRE</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="max-w-screen-xl mx-auto grid grid-cols-3 auto-rows-[500px] gap-8 font-thin text-white py-8">
-      <!-- Jason & Aurelia -->
-      <div 
-        style="background-image: url('assets/images/1000005134.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-center text-5xl">Jason & Aurelia</p>
-            <p class="text-xl text-right font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Siwei & Simon -->
-      <div 
-        style="background-image: url('assets/images/1000005131.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-center text-center">
-            <p class="text-6xl">Siwei & Simon</p>
-            <p class="text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Eric & Madison -->
-      <div 
-        style="background-image: url('assets/images/1000005144.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-right text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-            <p class="text-left text-6xl">Eric & <br> Madison</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Jason & Aurelia -->
-      <div 
-        style="background-image: url('assets/images/1000005134.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-center text-5xl">Jason & Aurelia</p>
-            <p class="text-xl text-right font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Siwei & Simon -->
-      <div 
-        style="background-image: url('assets/images/1000005131.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-center text-center">
-            <p class="text-6xl">Siwei & Simon</p>
-            <p class="text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Eric & Madison -->
-      <div 
-        style="background-image: url('assets/images/1000005144.jpg')" 
-        class="bg-no-repeat bg-cover max-w-[400px] cursor-pointer group"
-        routerLink="/portfolio"
-      >
-        <div class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-right text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-            <p class="text-left text-6xl">Eric & <br> Madison</p>
-          </div>
         </div>
       </div>
     </div>
