@@ -12,9 +12,7 @@
 		<h2 class="text-4xl sm:text-6xl md:text-8xl 2xl:text-9xl -translate-y-[-99px] sm:-translate-y-[-62px] md:-translate-y-[-132px] 2xl:-translate-y-[-336px] text-white">WEDDING SERVICES</h2>
   </div>
 
-	<div class="min-h-[300px] my-10 bg-[#f3f1ee]"></div>
-
-  <section class="relative bg-[#f3f1ee] pt-32 overflow-hidden">
+  <section class="relative bg-[#f3f1ee] pt-32 my-10 overflow-hidden">
     
     <!-- The Experience Section -->
     <img src="assets\svgs\gray.svg" class="absolute right-0 top-[10px] rotate-[-90deg] opacity-25 max-h-[500px] pointer-events-none z-0" alt="">
@@ -28,6 +26,34 @@
         <button class="bg-white hover:bg-gray-50 px-6 py-4 border border-gray-600">THE CREATIVE PROCESS</button>
         <button class="bg-white hover:bg-gray-50 px-6 py-4 border border-gray-600">THE PACKAGES</button>
       </div>
+    </section>
+
+    <!-- Portfolio / Services / Contact -->
+    <section class="relative pt-40 overflow-hidden font-cormorant tracking-widest">
+      <img src="assets\svgs\gray.svg" class="absolute left-1/2 top-[60px] -translate-x-[-320px] opacity-25 max-h-[320px] -rotate-[-25deg] pointer-events-none z-10" alt="">
+      <img src="assets/svgs/gray.svg" alt="" class="pointer-events-none absolute left-1/2 -translate-x-[700px] top-[600px] -rotate-90 opacity-25 max-h-[500px] hidden lg:block">
+      <div class="flex justify-center">
+        <img 
+          class="h-[380px] translate-y-[109px] z-20" 
+          src="assets\images\472387620_1142989987399857_1332332708877575013_n (2).jpg" 
+          alt=""
+        >
+        <img 
+          class="max-h-[490px] border-[20px] border-gray-200 z-20"
+          src="assets\images\472626300_1142470360785153_8627018691935612026_n (2).jpg" 
+          alt=""
+        >
+        <img 
+          class="h-[430px] translate-y-[150px] z-20" 
+          src="assets\images\1000005148.jpg" 
+          alt=""
+        >
+      </div>
+      <img 
+        class="h-[520px] mx-auto border-[20px] border-white z-30 relative translate-y-[-50px]" 
+        src="assets\images\473032518_1147611050271084_8704592988378089709_n (2).jpg" 
+        alt=""
+      >
     </section>
 
     <!-- Creative Process Section -->
@@ -70,6 +96,14 @@
               <p class="font-cormorant italic text-[24px] leading-[1.9] text-[#6e655f]">
                 {{ current.description }}
               </p>
+
+              <button 
+                *ngIf="current.showInquiry"
+                routerLink="/inquiries"
+                class="px-5 py-2 border border-gray-500 font-cormorant hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-semibold mt-3"
+              >
+                INQUIRE
+              </button>
 
               <div class="mt-12 text-[24px] tracking-[0.2em] text-[#fba59fb1]">
                 {{ counter }}
@@ -135,7 +169,7 @@
     </section>
   </section>
 
-  <div class="mt-10 bg-[#f3f1ee] py-12 font-cormorant text-gray-600 text-center">
+  <div class="mt-10 bg-[#f3f1ee] py-16 font-cormorant text-gray-600 text-center">
     <p><i>See more</i></p>
     <h2 class="text-5xl text-[#fba59f]">VIEW OUR PORTFOLIO</h2>
     <button class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-semibold mt-3" routerLink="/portfolio">DESIGNS</button>
