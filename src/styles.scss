@@ -41,28 +41,6 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* stacked-sections */
-.stacked-wrapper {
-  --header-h: 88px;
-  --panel-h: 550px;
-  min-height: calc(var(--count) * var(--panel-h));
-}
-
-.stacked-panel {
-  position: sticky;
-  top: calc(var(--i) * var(--header-h));
-  height: var(--panel-h);
-  z-index: calc(100 + var(--i));
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.stacked-content {
-  flex: 1;
-  overflow: hidden; /* content “folds” away */
-}
-
 .carousel-fade {
   /* Fade out left/right edges at ~15% */
   -webkit-mask-image: linear-gradient(

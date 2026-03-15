@@ -58,116 +58,37 @@
     </div>
   </div>
 
-  <div class="stacked-wrapper" style="--count: 3;">
-    <!-- SECTION 1 -->
-    <section class="stacked-panel shadow-lg bg-[#b8a897]" style="--i: 0;">
-      <div class="mx-4 md:mx-[10%] 2xl:mx-[20%]">
-        <h2 class="font-cormorant text-6xl md:text-[80px] -translate-y-[-2px] tracking-wider hover:cursor-pointer transition-colors duration-500 pb-6 text-white hover:text-white/60">
-          SERVICES
-        </h2>
-      </div>
-
-      <div class="stacked-content mx-4 md:mx-[10%] 2xl:mx-[20%] text-white flex flex-col md:flex-row justify-between">
-        <div class="font-cormorant max-w-[500px] text-sm md:text-xl space-y-2 md:space-y-4">
-          <p class="text-sm md:text-2xl pb-2 md:pb-8 font-noto">From intimate gatherings to multi-day luxury events throughout the San Francisco Bay Area, explore your options for working together with us.</p>
-          <p class="hover:text-white/50 cursor-pointer" routerLink="/services/weddings">FULL SERVICE WEDDING FLOWERS</p>
-          <hr>
-          <p class="hover:text-white/50 cursor-pointer" routerLink="/services/general">CORPORATE & PRIVATE EVENTS</p>
-          <hr>
-          <p class="hover:text-white/50 cursor-pointer" routerLink="/workshops">WORKSHOPS & FLORAL EDUCATION</p>
-        </div>
-        
-        <div class="relative w-full flex items-center justify-center md:-translate-x-[-60px] md:-translate-y-[20px]">
-          <!-- Left button -->
-          <button
-            type="button"
-            (click)="prev()"
-            class="absolute left-10 md:left-16 z-20 h-8 w-8 rounded-full bg-white/40 text-white hover:bg-white/60 transition flex items-center justify-center"
-            aria-label="Previous"
-          >
-            <svg class="h-5 w-5 -translate-x-[1.5px] -translate-y-[-0.5px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <!-- Carousel viewport -->
-          <div class="relative w-[300px] h-[300px] md:w-[500px] md:h-[500px] overflow-hidden carousel-fade">
-            <!-- Track: center + peeks -->
-            <div class="absolute inset-0 flex items-center justify-center">
-              <!-- Left peek -->
-              <img
-                [src]="images[leftIndex]"
-                alt=""
-                class="absolute w-[250px] h-[250px] md:h-[350px] md:w-[350px] object-cover rounded-xl opacity-70"
-                [style.transform]="'translateX(-370px)'"
-              />
-
-              <!-- Center -->
-              <img
-                [src]="images[currentIndex]"
-                alt=""
-                class="relative z-20 w-[250px] h-[250px] md:h-[350px] md:w-[350px] object-cover rounded-xl shadow-xl"
-              />
-
-              <!-- Right peek -->
-              <img
-                [src]="images[rightIndex]"
-                alt=""
-                class="absolute w-[250px] h-[250px] md:h-[350px] md:w-[350px] object-cover rounded-xl opacity-70"
-                [style.transform]="'translateX(370px)'"
-              />
-            </div>
-          </div>
-
-          <!-- Right button -->
-          <button
-            type="button"
-            (click)="next()"
-            class="absolute right-10 md:right-16 z-20 h-8 w-8 rounded-full bg-white/40 text-white hover:bg-white/60 transition flex items-center justify-center"
-            aria-label="Next"
-          >
-            <svg class="h-5 w-5 -translate-x-[-1.5px] -translate-y-[-0.5px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 2 -->
-    <section class="stacked-panel shadow-lg bg-[#95a68f]" style="--i: 1;">
-      <div class="mx-4 md:mx-[10%] 2xl:mx-[20%]">
-        <h2 class="font-cormorant text-6xl md:text-[80px] -translate-y-[-2px] tracking-wider hover:cursor-pointer transition-colors duration-500 text-white hover:text-white/50">
-          PORTFOLIO
-        </h2>
-      </div>
-
-      <div class="stacked-content p-10 mx-4 md:mx-[10%] 2xl:mx-[20%] text-white/90">
-        <!-- placeholder gallery -->
-        <div class="grid grid-cols-4 gap-4">
-          <div class="aspect-square rounded-2xl bg-white/10 border border-white/15"></div>
-          <div class="aspect-square rounded-2xl bg-white/10 border border-white/15"></div>
-          <div class="aspect-square rounded-2xl bg-white/10 border border-white/15"></div>
-          <div class="aspect-square rounded-2xl bg-white/10 border border-white/15"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 3 -->
-    <section class="stacked-panel shadow-lg bg-[#9ca7d6]" style="--i: 2;">
-      <div class="mx-4 md:mx-[10%] 2xl:mx-[20%]">
-        <h2 class="font-cormorant text-6xl md:text-[80px] -translate-y-[-2px] tracking-wider hover:cursor-pointer transition-colors duration-500 text-white hover:text-white/50">
-          TESTIMONIALS
-        </h2>
-      </div>
-
-      <div class="stacked-content p-10 mx-4 md:mx-[10%] 2xl:mx-[20%] text-white/90">
-        <!-- placeholder CTA -->
-        <div class="rounded-2xl bg-white/10 border border-white/15 p-10">
-          Contact form / inquiry CTA goes here
-        </div>
-      </div>
-    </section>
+  <!-- Portfolio / Services / Contact -->
+  <div class="relative py-44 overflow-hidden font-cormorant tracking-widest">
+    <img src="assets\svgs\gray.svg" class="absolute left-1/2 top-[100px] -translate-x-[-320px] opacity-25 max-h-[320px] -rotate-[-25deg] pointer-events-none z-10" alt="">
+    <img src="assets/svgs/gray.svg" alt="" class="pointer-events-none absolute left-1/2 -translate-x-[700px] top-[640px] -rotate-90 opacity-25 max-h-[500px] hidden lg:block">
+    <div class="flex justify-center">
+      <h2 routerLink="/portfolio" class="-translate-x-[310px] -translate-y-[-80px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">1. PORTFOLIO</h2>
+      <h2 routerLink="/services/weddings" class="-translate-y-[20px] -translate-x-[-150px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">2. SERVICES</h2>
+      <h2 routerLink="/inquiries" class="-translate-y-[-650px] -translate-x-[-370px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">3. INQUIRIES</h2>
+    </div>
+    <div class="flex justify-center">
+      <img 
+        class="h-[380px] translate-y-[109px] z-20" 
+        src="assets\images\472387620_1142989987399857_1332332708877575013_n (2).jpg" 
+        alt=""
+      >
+      <img 
+        class="max-h-[490px] border-[20px] border-[#f3f1ee] z-20"
+        src="assets\images\472626300_1142470360785153_8627018691935612026_n (2).jpg" 
+        alt=""
+      >
+      <img 
+        class="h-[430px] translate-y-[150px] z-20" 
+        src="assets\images\1000005148.jpg" 
+        alt=""
+      >
+    </div>
+    <img 
+      class="h-[520px] mx-auto border-[20px] border-white z-30 relative translate-y-[-50px]" 
+      src="assets\images\473032518_1147611050271084_8704592988378089709_n (2).jpg" 
+      alt=""
+    >
   </div>
 
   <div class="bg-[#fefcfa] font-cormorant font-thin text-gray-600 text-base md:text-xl text-center pt-8 md:pt-10 2xl:pt-16 pb-5 md:pb-5 2xl:pb-8">
