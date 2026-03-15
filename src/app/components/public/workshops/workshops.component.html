@@ -12,5 +12,209 @@
 		<h2 class="text-5xl sm:text-6xl md:text-8xl 2xl:text-9xl -translate-y-[-92px] sm:-translate-y-[-62px] md:-translate-y-[-132px] 2xl:-translate-y-[-336px] text-white">WORKSHOPS</h2>
   </div>
 
-	<div class="min-h-[300px] my-10 bg-gray-100"></div>
+	<!-- Intro -->
+  <div class="px-6 py-16 md:px-12 lg:px-20">
+    <div class="max-w-7xl mx-auto text-center font-cormorant">
+      <h3 class="-translate-x-[400px] mb-6 text-2xl tracking-[0.2em] text-gray-600 font-thin">WORKSHOPS DESIGNED TO</h3>
+      <h3 class="font-lavishly h-[130px] text-9xl my-6 text-[#ff8880]/20">
+        gather,&nbsp;&nbsp; create,&nbsp;&nbsp; celebrate
+      </h3>
+      <p class="text-lg md:text-xl leading-relaxed text-center -translate-x-[-200px] text-gray-700 max-w-4xl mx-auto"><i>
+        From festive holiday centerpieces to cozy autumn arrangements and custom floral experiences
+        for private gatherings, Black Begonia workshops are designed to bring people together through
+        beautiful, seasonal design. Whether you're planning a hosted social event, a corporate gathering,
+        or a seasonal floral class, each workshop is thoughtfully curated to feel welcoming, creative,
+        and memorable.
+      </i></p>
+    </div>
+  </div>
+
+  <!-- Workshop Sections -->
+  <div class="px-6 py-28 md:px-12 lg:px-20 space-y-24 bg-[#fefcfa]">
+    <div
+      *ngFor="let section of workshopSections; let i = index"
+      class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
+    >
+      <!-- Text Left -->
+      <div *ngIf="!section.displayRight" class="font-cormorant text-right">
+        <p class="uppercase tracking-[0.35em] text-sm text-[#ea938c] mb-3">
+          Floral Workshop Experience
+        </p>
+
+        <h3 class="text-3xl md:text-5xl text-gray-800 mb-4">
+          {{ section.title }}
+        </h3>
+
+        <p class="text-lg md:text-xl italic text-gray-500 mb-5">
+          {{ section.subtitle }}
+        </p>
+
+        <p class="text-lg md:text-xl leading-relaxed text-gray-700 mb-8">
+          {{ section.description }}
+        </p>
+
+        <a
+          [routerLink]="section.inquiryLink"
+          class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+        >
+          Request More Information
+        </a>
+      </div>
+
+      <!-- Carousel Right -->
+      <div *ngIf="!section.displayRight" class="relative">
+        <div class="overflow-hidden bg-[#f3f1ee] p-3 md:p-4 shadow-lg">
+          <div class="relative w-full h-[300px] sm:h-[420px] lg:h-[650px]">
+            <!-- Current image -->
+            <img
+              [src]="section.images[section.currentIndex]"
+              [alt]="section.title"
+              class="carousel-image base-image"
+            />
+
+            <!-- Incoming image -->
+            <img
+              *ngIf="section.nextIndex !== null"
+              [src]="section.images[section.nextIndex]"
+              [alt]="section.title"
+              class="carousel-image incoming-image"
+              [class.crossfade-in]="section.isTransitioning"
+            />
+          </div>
+        </div>
+
+        <!-- Arrows -->
+        <button
+          (click)="prevSlide(section)"
+          class="absolute left-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          aria-label="Previous image"
+        >
+          ‹
+        </button>
+
+        <button
+          (click)="nextSlide(section)"
+          class="absolute right-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          aria-label="Next image"
+        >
+          ›
+        </button>
+
+        <!-- Dots -->
+        <div class="flex justify-center gap-2 mt-4">
+          <button
+            *ngFor="let image of section.images; let imgIndex = index"
+            (click)="goToSlide(section, imgIndex)"
+            class="w-3 h-3 rounded-full transition-all duration-200"
+            [ngClass]="
+              imgIndex === section.currentIndex
+                ? 'bg-[#ea938c]'
+                : 'bg-gray-300 hover:bg-gray-400'
+            "
+            [attr.aria-label]="'Go to slide ' + (imgIndex + 1)"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Carousel Left -->
+      <div *ngIf="section.displayRight" class="relative">
+        <div class="overflow-hidden bg-[#f3f1ee] p-3 md:p-4 shadow-lg">
+          <div class="relative w-full h-[300px] sm:h-[420px] lg:h-[650px]">
+            <!-- Current image -->
+            <img
+              [src]="section.images[section.currentIndex]"
+              [alt]="section.title"
+              class="carousel-image base-image"
+            />
+
+            <!-- Incoming image -->
+            <img
+              *ngIf="section.nextIndex !== null"
+              [src]="section.images[section.nextIndex]"
+              [alt]="section.title"
+              class="carousel-image incoming-image"
+              [class.crossfade-in]="section.isTransitioning"
+            />
+          </div>
+        </div>
+
+        <!-- Arrows -->
+        <button
+          (click)="prevSlide(section)"
+          class="absolute left-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          aria-label="Previous image"
+        >
+          ‹
+        </button>
+
+        <button
+          (click)="nextSlide(section)"
+          class="absolute right-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          aria-label="Next image"
+        >
+          ›
+        </button>
+
+        <!-- Dots -->
+        <div class="flex justify-center gap-2 mt-4">
+          <button
+            *ngFor="let image of section.images; let imgIndex = index"
+            (click)="goToSlide(section, imgIndex)"
+            class="w-3 h-3 rounded-full transition-all duration-200"
+            [ngClass]="
+              imgIndex === section.currentIndex
+                ? 'bg-[#ea938c]'
+                : 'bg-gray-300 hover:bg-gray-400'
+            "
+            [attr.aria-label]="'Go to slide ' + (imgIndex + 1)"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Text Right -->
+      <div *ngIf="section.displayRight" class="font-cormorant">
+        <p class="uppercase tracking-[0.35em] text-sm text-[#ea938c] mb-3">
+          Floral Workshop Experience
+        </p>
+
+        <h3 class="text-3xl md:text-5xl text-gray-800 mb-4">
+          {{ section.title }}
+        </h3>
+
+        <p class="text-lg md:text-xl italic text-gray-500 mb-5">
+          {{ section.subtitle }}
+        </p>
+
+        <p class="text-lg md:text-xl leading-relaxed text-gray-700 mb-8">
+          {{ section.description }}
+        </p>
+
+        <a
+          [routerLink]="section.inquiryLink"
+          class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+        >
+          Request More Information
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom CTA -->
+  <div class="bg-[#f3f1ee] mb-10 px-6 py-20 md:px-12 lg:px-20">
+    <div class="max-w-4xl mx-auto text-center font-cormorant">
+      <h3 class="text-3xl md:text-5xl text-[#ea938c] mb-5">
+        Interested in Hosting a Floral Workshop?
+      </h3>
+      <p class="text-lg md:text-2xl text-gray-700 leading-relaxed mb-8"><i>
+        We would love to learn more about your event, group, and vision. Reach out through our inquiry
+        page to start planning a custom workshop experience.
+      </i></p>
+      <a
+        routerLink="/inquiries/general"
+        class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+      >
+        Inquire Now
+      </a>
+    </div>
+  </div>
 </section>
