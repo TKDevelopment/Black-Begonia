@@ -123,6 +123,6 @@ export class WorkshopsComponent {
       section.currentIndex = newIndex;
       section.nextIndex = null;
       section.isTransitioning = false;
-    }, 500);
+    }, 300);
   }
 }
