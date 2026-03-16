@@ -22,7 +22,7 @@ export class PortfolioComponent {
     {
       slug: 'nathan-kirsten',
       coupleNames: 'Nate & Kirsten',
-      venue: 'TPC STONEBRAE',
+      venue: 'OCEAN CLIFF, NEWPORT',
       coverImage: 'assets/images/weddings/Kirsten-Nate/0598-OLAS-E89A9379.jpg',
       position: 'left'
     },
@@ -30,14 +30,14 @@ export class PortfolioComponent {
       slug: 'siwei-simon',
       coupleNames: 'Siwei & Simon',
       venue: 'TPC STONEBRAE',
-      coverImage: 'assets/images/1000005131.jpg',
+      coverImage: 'assets/images/weddings/Siwei+Simon/1000005231.jpg',
       position: 'center'
     },
     {
       slug: 'eric-madison',
       coupleNames: 'Eric & Madison',
       venue: 'TPC STONEBRAE',
-      coverImage: 'assets/images/1000005144.jpg',
+      coverImage: 'assets/images/weddings/Eric-Madison/1000005144.jpg',
       position: 'right'
     },
     {

@@ -1,16 +1,210 @@
 <section class="min-h-screen bg-white">
-  
-  <!-- Hero Slide -->
-  <div 
+  <!-- Hero -->
+  <div
     class="min-h-[250px] md:min-h-[350px] 2xl:min-h-[600px] bg-no-repeat bg-cover bg-[center_10%] sm:bg-[center_30%] bg-blend-multiply bg-gray-200 flex flex-col items-center font-cormorant text-white py-8"
-    style="background-image: url('assets/images/473441856_1147604270271762_4736518673784938733_n.jpg');"
+    style="background-image: url('assets/images/weddings/Matt-Kimberly/473441856_1147604270271762_4736518673784938733_n.jpg');"
   >
-		<div class="bg-white/80 backdrop-blur-sm p-3 sm:p-5 2xl:p-6 min-w-[350px] 2xl:min-w-[600px] text-center">
-			<h1 class="text-3xl sm:text-4xl 2xl:text-5xl tracking-widest font-semibold"><span class="text-black">BLACK</span> <span class="text-[#ea938c]"> BEGONIA</span></h1>
-			<h1 class="text-lg sm:text-xl 2xl:text-2xl tracking-widest text-gray-800"><i>F L O R A L &nbsp;&nbsp;&nbsp; D E S I G N S</i></h1>
-		</div>
-		<h2 class="text-4xl sm:text-6xl md:text-8xl 2xl:text-9xl -translate-y-[-99px] sm:-translate-y-[-62px] md:-translate-y-[-132px] 2xl:-translate-y-[-336px] text-white">TESTIMONIALS</h2>
+    <div class="bg-white/80 backdrop-blur-sm p-3 sm:p-5 2xl:p-6 min-w-[350px] 2xl:min-w-[600px] text-center">
+      <h1 class="text-3xl sm:text-4xl 2xl:text-5xl tracking-widest font-semibold">
+        <span class="text-black">BLACK</span>
+        <span class="text-[#ea938c]"> BEGONIA</span>
+      </h1>
+      <h1 class="text-lg sm:text-xl 2xl:text-2xl tracking-widest text-gray-800">
+        <i>F L O R A L &nbsp;&nbsp;&nbsp; D E S I G N S</i>
+      </h1>
+    </div>
+
+    <h2 class="text-4xl sm:text-6xl md:text-8xl 2xl:text-9xl -translate-y-[-99px] sm:-translate-y-[-62px] md:-translate-y-[-132px] 2xl:-translate-y-[-336px] text-white">
+      TESTIMONIALS
+    </h2>
   </div>
 
-	<div class="min-h-[300px] my-10 bg-gray-100"></div>
+  <!-- Intro -->
+  <section class="px-6 md:px-10 lg:px-16 py-16 md:py-24 bg-[#f7f4f1]">
+    <div class="max-w-[1400px] mx-auto grid lg:grid-cols-[1.1fr_.9fr] gap-12 items-center">
+      <div>
+        <p class="font-cormorant tracking-[0.35em] text-sm text-[#ea938c] mb-4">
+          KIND WORDS
+        </p>
+
+        <h2 class="font-cormorant text-4xl md:text-5xl lg:text-6xl text-gray-900 leading-tight mb-6">
+          Love notes from couples <br>
+          <span class="italic text-[#ea938c]">we’ve had the honor to design for</span>
+        </h2>
+
+        <p class="text-gray-600 text-lg leading-8 max-w-2xl">
+          Every celebration is personal, and so is every floral story we create. Here are a few
+          reflections from couples who trusted Black Begonia to bring beauty, romance, and intention
+          into one of the most meaningful days of their lives.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white p-6 shadow-sm border border-gray-100">
+          <div class="text-4xl font-cormorant text-[#ea938c] mb-2">100%</div>
+          <div class="tracking-[0.2em] text-xs text-gray-500 uppercase">Custom Design Approach</div>
+        </div>
+
+        <div class="bg-white p-6 shadow-sm border border-gray-100">
+          <div class="text-4xl font-cormorant text-[#ea938c] mb-2">1:1</div>
+          <div class="tracking-[0.2em] text-xs text-gray-500 uppercase">Personalized Planning</div>
+        </div>
+
+        <div class="bg-white p-6 shadow-sm border border-gray-100">
+          <div class="text-4xl font-cormorant text-[#ea938c] mb-2">Artful</div>
+          <div class="tracking-[0.2em] text-xs text-gray-500 uppercase">Romantic Styling</div>
+        </div>
+
+        <div class="bg-white p-6 shadow-sm border border-gray-100">
+          <div class="text-4xl font-cormorant text-[#ea938c] mb-2">Full</div>
+          <div class="tracking-[0.2em] text-xs text-gray-500 uppercase">Wedding Floral Experience</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials + CTA every 4 -->
+  <ng-container *ngFor="let testimonial of testimonials; let i = index">
+    <section
+      class="w-full min-h-[300px] bg-white border-t border-gray-100"
+      [ngClass]="i % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf8]'"
+    >
+      <div
+        class="grid grid-cols-1 lg:grid-cols-5 min-h-[300px]"
+        [ngClass]="i % 2 === 0 ? '' : 'lg:[&_.testimonial-image]:order-2 lg:[&_.testimonial-content]:order-1'"
+      >
+        <!-- Image -->
+        <div class="testimonial-image lg:col-span-2 min-h-[280px] max-h-[500px] lg:min-h-[300px] relative overflow-hidden">
+          <img
+            [src]="testimonial.image"
+            [alt]="testimonial.reviewer + ' testimonial image'"
+            class="w-full h-full object-cover"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
+        </div>
+
+        <!-- Content -->
+        <div class="testimonial-content lg:col-span-3 flex items-center px-6 sm:px-10 lg:px-14 py-10 lg:py-12">
+          <div class="max-w-3xl">
+            <div class="flex items-center gap-2 text-[#ea938c] mb-5">
+              <span *ngFor="let star of getStarArray(5)" class="text-xl">★</span>
+            </div>
+
+            <p class="text-xs tracking-[0.35em] text-gray-500 uppercase mb-4">
+              {{ testimonial.role }} <span *ngIf="testimonial.event">• {{ testimonial.event }}</span>
+            </p>
+
+            <h3 class="font-cormorant text-3xl sm:text-4xl lg:text-5xl text-gray-900 mb-5">
+              {{ testimonial.title }}
+            </h3>
+
+            <blockquote class="text-lg sm:text-xl leading-8 text-gray-600 italic mb-6">
+              “{{ testimonial.quote }}”
+            </blockquote>
+
+            <div class="w-16 h-[1px] bg-[#ea938c] mb-4"></div>
+
+            <p class="text-sm sm:text-base tracking-[0.2em] uppercase text-gray-800">
+              {{ testimonial.reviewer }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA after every 4 testimonials -->
+    <section
+      *ngIf="(i + 1) % 4 === 0"
+      class="relative min-h-[350px] md:min-h-[420px] overflow-hidden"
+    >
+      <div class="absolute inset-0">
+        <img
+          [src]="getCtaForGroup((i + 1) / 4 - 1).image"
+          alt="Call to action"
+          class="w-full h-full object-cover"
+        />
+        <div class="absolute inset-0 bg-black/45"></div>
+      </div>
+
+      <div class="relative z-10 max-w-5xl mx-auto px-6 md:px-10 py-20 md:py-24 text-center text-white">
+        <p class="tracking-[0.35em] text-xs sm:text-sm mb-4 text-[#f5c0bb]">
+          {{ getCtaForGroup((i + 1) / 4 - 1).eyebrow }}
+        </p>
+
+        <h3 class="font-cormorant text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight">
+          {{ getCtaForGroup((i + 1) / 4 - 1).heading }}
+        </h3>
+
+        <p class="max-w-3xl mx-auto text-base sm:text-lg leading-8 text-white/90 mb-8">
+          {{ getCtaForGroup((i + 1) / 4 - 1).text }}
+        </p>
+
+        <a
+          [routerLink]="getCtaForGroup((i + 1) / 4 - 1).buttonLink"
+          class="inline-flex items-center justify-center border border-white px-8 py-3 tracking-[0.25em] uppercase text-sm hover:bg-white hover:text-gray-900 transition-all duration-300"
+        >
+          {{ getCtaForGroup((i + 1) / 4 - 1).buttonText }}
+        </a>
+      </div>
+    </section>
+  </ng-container>
+
+  <!-- Closing Section -->
+  <section class="bg-[#f7f4f1] px-6 md:px-10 lg:px-16 py-20">
+    <div class="max-w-[1400px] mx-auto grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <p class="tracking-[0.35em] text-xs text-[#ea938c] uppercase mb-4">
+          Why couples choose us
+        </p>
+
+        <h2 class="font-cormorant text-4xl md:text-5xl text-gray-900 mb-6">
+          Floral design that feels <br>
+          <span class="italic text-[#ea938c]">special & deeply personal</span>
+        </h2>
+
+        <p class="text-gray-600 text-lg leading-8 mb-8">
+          We believe florals should do more than decorate a space — they should shape the feeling of
+          the day. Our work is rooted in romance, movement, texture, and thoughtful detail so that
+          every arrangement feels like a natural extension of your celebration.
+        </p>
+
+        <a
+          routerLink="/contact"
+          class="inline-flex items-center justify-center border border-gray-900 px-8 py-3 tracking-[0.25em] uppercase text-sm text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300"
+        >
+          Start Your Inquiry
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="bg-white p-8 border border-gray-100 shadow-sm">
+          <h3 class="font-cormorant text-3xl text-gray-900 mb-3">Intentional Design</h3>
+          <p class="text-gray-600 leading-7">
+            Every design is tailored to the couple, venue, palette, and feeling of the day.
+          </p>
+        </div>
+
+        <div class="bg-white p-8 border border-gray-100 shadow-sm">
+          <h3 class="font-cormorant text-3xl text-gray-900 mb-3">Refined Experience</h3>
+          <p class="text-gray-600 leading-7">
+            We bring calm communication, thoughtful planning, and beautiful execution.
+          </p>
+        </div>
+
+        <div class="bg-white p-8 border border-gray-100 shadow-sm">
+          <h3 class="font-cormorant text-3xl text-gray-900 mb-3">Romantic Aesthetic</h3>
+          <p class="text-gray-600 leading-7">
+            Soft movement, layered textures, and elegant floral storytelling define our work.
+          </p>
+        </div>
+
+        <div class="bg-white p-8 border border-gray-100 shadow-sm">
+          <h3 class="font-cormorant text-3xl text-gray-900 mb-3">Memorable Impact</h3>
+          <p class="text-gray-600 leading-7">
+            Our goal is to create floral moments your guests remember and your photos preserve forever.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 </section>

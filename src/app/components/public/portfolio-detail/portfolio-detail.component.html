@@ -1,1 +1,39 @@
-<p>portfolio-detail works!</p>
+<section *ngIf="gallery" class="min-h-screen bg-white font-cormorant">
+  <div
+    class="min-h-[300px] md:min-h-[600px] bg-cover bg-center flex items-end justify-center text-white"
+    [style.background-image]="'url(' + (gallery?.heroImage || gallery?.coverImage) + ')'"
+  >
+    <div class="w-full bg-black/40 text-center py-10 px-4">
+      <h1 class="text-5xl md:text-7xl">{{ gallery?.coupleNames }}</h1>
+      <p class="text-xl md:text-2xl font-oswald tracking-widest mt-2">{{ gallery?.venue }}</p>
+    </div>
+  </div>
+
+  <div class="max-w-screen-xl mx-auto px-6 py-12">
+    <div class="mb-8">
+      <p routerLink="/portfolio" class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200">
+        ← Back to Portfolio
+      </p>
+    </div>
+
+    <div class="max-w-3xl mx-auto text-center mb-12" *ngIf="gallery.description">
+      <p class="text-xl text-gray-700">{{ gallery?.description }}</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <img
+        *ngFor="let image of gallery.images"
+        [src]="image"
+        [alt]="gallery?.coupleNames"
+        class="w-full h-auto object-cover"
+        loading="lazy"
+      />
+    </div>
+
+    <div class="my-8">
+      <p routerLink="/portfolio" class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200">
+        ← Back to Portfolio
+      </p>
+    </div>
+  </div>
+</section>

@@ -26,13 +26,13 @@ export class FooterComponent {
     { url: 'assets/images/1000005140.jpg' },
     { url: 'assets/images/1000005141.jpg' },
     { url: 'assets/images/1000005142.jpg' },
-    { url: 'assets/images/1000005143.jpg' },
-    { url: 'assets/images/1000005144.jpg' },
-    { url: 'assets/images/1000005145.jpg' },
-    { url: 'assets/images/1000005146.jpg' },
+    { url: 'assets/images/weddings/Matt-Kimberly/1000005143.jpg' },
+    { url: 'assets/images/weddings/Eric-Madison/1000005144.jpg' },
+    { url: 'assets/images/weddings/Matt-Kimberly/1000005145.jpg' },
+    { url: 'assets/images/weddings/Matt-Kimberly/1000005146.jpg' },
     { url: 'assets/images/1000005147.jpg' },
-    { url: 'assets/images/1000005148.jpg' },
-    { url: 'assets/images/1000005149.jpg' },
+    { url: 'assets/images/weddings/Matt-Kimberly/1000005148.jpg' },
+    { url: 'assets/images/weddings/Siwei+Simon/1000005149.jpg' },
   ];
 
   scrollGallery(direction: 1 | -1) {

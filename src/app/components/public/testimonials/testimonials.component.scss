@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+section {
+  scroll-behavior: smooth;
+}
+
+blockquote {
+  quotes: "“" "”" "‘" "’";
+}
+
+img {
+  display: block;
+}
+
+/* Optional subtle polish */
+.testimonial-content,
+.testimonial-image img,
+a {
+  transition: all 0.35s ease;
+}
+
+.testimonial-image:hover img {
+  transform: scale(1.03);
+}
