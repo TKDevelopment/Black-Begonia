@@ -45,15 +45,15 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <img
             *ngFor="let image of gallery.images"
-            [src]="getTransformedImageUrl(image, 400, 40)"
-            [alt]="gallery.coupleNames"
+            [src]="image.thumbUrl"
+            [alt]="image.altText"
             class="w-full h-auto transition-all duration-700 ease-out"
-            [class.opacity-0]="!loadedImages[image]"
-            [class.opacity-100]="loadedImages[image]"
-            [class.scale-[0.98]]="!loadedImages[image]"
-            [class.scale-100]="loadedImages[image]"
+            [class.opacity-0]="!loadedImages[image.imageId]"
+            [class.opacity-100]="loadedImages[image.imageId]"
+            [class.scale-[0.98]]="!loadedImages[image.imageId]"
+            [class.scale-100]="loadedImages[image.imageId]"
             loading="lazy"
-            (load)="onImageLoad(image)"
+            (load)="onImageLoad(image.imageId)"
           />
         </div>
 

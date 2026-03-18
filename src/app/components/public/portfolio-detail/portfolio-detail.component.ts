@@ -10,6 +10,8 @@ interface PortfolioImage {
   alt_text: string | null;
   view_order: number;
   is_visible: boolean;
+  thumb_url: string;
+  full_url: string;
   created_at: string;
 }
 
@@ -23,6 +25,15 @@ interface PortfolioGalleryRecord {
   description: string | null;
 }
 
+interface PortfolioGalleryImageViewModel {
+  imageId: string;
+  imageUrl: string;
+  thumbUrl: string;
+  fullUrl: string;
+  altText: string;
+  viewOrder: number;
+}
+
 interface PortfolioGalleryViewModel {
   slug: string;
   coupleNames: string;
@@ -30,7 +41,7 @@ interface PortfolioGalleryViewModel {
   coverImage: string;
   heroImage?: string;
   description?: string;
-  images: string[];
+  images: PortfolioGalleryImageViewModel[];
 }
 
 @Component({
@@ -69,7 +80,7 @@ export class PortfolioDetailComponent implements OnInit {
       await this.loadGallery(slug);
 
       const elapsed = Date.now() - startTime;
-      const remaining = Math.max(1000 - elapsed, 0);
+      const remaining = Math.max(500 - elapsed, 0);
 
       setTimeout(() => {
         this.loading = false;
@@ -77,19 +88,8 @@ export class PortfolioDetailComponent implements OnInit {
     });
   }
 
-  getTransformedImageUrl(
-    originalUrl: string,
-    width: number,
-    quality: number
-  ): string {
-    return originalUrl.replace(
-      '/storage/v1/object/public/',
-      '/storage/v1/render/image/public/'
-    ) + `?width=${width}&resize=contain&quality=${quality}`;
-  }
-
-  onImageLoad(imageUrl: string): void {
-    this.loadedImages[imageUrl] = true;
+  onImageLoad(imageKey: string): void {
+    this.loadedImages[imageKey] = true;
   }
 
   private async loadGallery(slug: string): Promise<void> {
@@ -127,6 +127,8 @@ export class PortfolioDetailComponent implements OnInit {
           alt_text,
           view_order,
           is_visible,
+          thumb_url,
+          full_url,
           created_at
         `)
         .eq('gallery_id', galleryRecord.gallery_id)
@@ -160,7 +162,14 @@ export class PortfolioDetailComponent implements OnInit {
       coverImage: gallery.cover_image_url,
       heroImage: gallery.hero_image_url || gallery.cover_image_url,
       description: gallery.description || '',
-      images: images.map(img => img.image_url)
+      images: images.map(img => ({
+        imageId: img.image_id,
+        imageUrl: img.image_url,
+        thumbUrl: img.thumb_url,
+        fullUrl: img.full_url,
+        altText: img.alt_text || gallery.couple_names,
+        viewOrder: img.view_order
+      }))
     };
   }
 }
