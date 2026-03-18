@@ -30,12 +30,12 @@ export class TestimonialsComponent {
   testimonials: Testimonial[] = [
     {
       title: 'Exceeded every expectation',
-      reviewer: 'Matt & Kimberly',
+      reviewer: 'Emily & Tim',
       role: 'Wedding Clients',
-      event: 'Newport, Rhode Island',
+      event: 'MARGIN STREET INN, WESTERLY RI',
       quote:
         `Working with Black Begonia was one of the best decisions we made for our wedding. Every arrangement felt deeply intentional, romantic, and completely tailored to us. The floral designs elevated the entire atmosphere and made our day feel even more magical than we imagined.`,
-      image: 'assets/images/weddings/Matt-Kimberly/473441856_1147604270271762_4736518673784938733_n.jpg'
+      image: 'assets/images/website/1000005243.jpg'
     },
     {
       title: 'Elegant, thoughtful, unforgettable',
@@ -44,7 +44,7 @@ export class TestimonialsComponent {
       event: 'Coastal Celebration',
       quote:
         `Dear Becca, There are not enough words to express how perfect our flowers were on our wedding day. You were the only vender that came through for us. You were flawless. Thank you so much for everything. Your talent, attention to detail, knowledge, personality, just everything. We never had to worry about a thing. We appreciate you and everything you are accomplishing. Cheers to 2023 and your store!! You will do beautiful things.`,
-      image: 'assets/images/weddings/Kirsten-Nate/0513-OLAS-_Y8A4519.jpg'
+      image: 'assets/images/website/0513-OLAS-_Y8A4519.jpg'
     },
     {
       title: 'A designer with incredible vision',
@@ -53,7 +53,7 @@ export class TestimonialsComponent {
       event: 'Garden Wedding',
       quote:
         `The florals were breathtaking and felt like they belonged in a magazine. Every bouquet, centerpiece, and detail reflected so much care and creativity. I felt completely confident throughout the process, and the final result was more beautiful than I could have dreamed.`,
-      image: 'assets/images/1000005214.jpg'
+      image: 'assets/images/website/1000005214.jpg'
     },
     {
       title: 'So personal and beautifully curated',
@@ -62,7 +62,7 @@ export class TestimonialsComponent {
       event: 'Estate Wedding',
       quote:
         `Black Begonia made us feel heard, inspired, and taken care of from start to finish. The florals tied the whole day together and made every space feel warm, romantic, and elevated. We are still looking back at photos completely in awe.`,
-      image: 'assets/images/1000005237.jpg'
+      image: 'assets/images/website/1000005237.jpg'
     },
     {
       title: 'The details were beyond beautiful',
@@ -71,7 +71,7 @@ export class TestimonialsComponent {
       event: 'Classic Wedding',
       quote:
         `Every single floral element felt refined, intentional, and stunning. Rebecca has such a gift for pairing color, texture, and movement in a way that feels both luxurious and natural. I could not have asked for a more beautiful floral experience.`,
-      image: 'assets/images/472755947_1141939314171591_5484417455789170093_n.jpg'
+      image: 'assets/images/website/472755947_1141939314171591_5484417455789170093_n.jpg'
     },
     {
       title: 'Professional, calm, and artistic',
@@ -80,7 +80,7 @@ export class TestimonialsComponent {
       event: 'Private Venue Celebration',
       quote:
         `Not only was the work beautiful, but the experience of working together was so smooth and reassuring. We felt supported throughout the planning process, and the final floral styling brought such a romantic and elevated feeling to the day.`,
-      image: 'assets/images/weddings/Eric-Madison/1000005207.jpg'
+      image: 'assets/images/website/CK-186.jpg'
     }
   ];
 
@@ -92,7 +92,7 @@ export class TestimonialsComponent {
         `From intimate celebrations to full wedding floral styling, we create romantic, artful designs tailored to your story, palette, and setting.`,
       buttonText: 'Inquire Now',
       buttonLink: '/contact',
-      image: 'assets/images/Screen Shot 2022-12-13 at 1.39.45 PM.png'
+      image: 'assets/images/website/Screen Shot 2022-12-13 at 1.39.45 PM.png'
     },
     {
       eyebrow: 'VIEW MORE OF OUR WORK',

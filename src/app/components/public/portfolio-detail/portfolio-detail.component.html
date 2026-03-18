@@ -1,39 +1,71 @@
-<section *ngIf="gallery" class="min-h-screen bg-white font-cormorant">
-  <div
-    class="min-h-[300px] md:min-h-[600px] bg-cover bg-center flex items-end justify-center text-white"
-    [style.background-image]="'url(' + (gallery?.heroImage || gallery?.coverImage) + ')'"
-  >
-    <div class="w-full bg-black/40 text-center py-10 px-4">
-      <h1 class="text-5xl md:text-7xl">{{ gallery?.coupleNames }}</h1>
-      <p class="text-xl md:text-2xl font-oswald tracking-widest mt-2">{{ gallery?.venue }}</p>
-    </div>
+<section class="min-h-screen bg-white font-cormorant">
+  <div *ngIf="loading" class="min-h-screen flex items-center justify-center px-6">
+    <p class="text-2xl text-gray-600">Loading gallery...</p>
   </div>
 
-  <div class="max-w-screen-xl mx-auto px-6 py-12">
-    <div class="mb-8">
-      <p routerLink="/portfolio" class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200">
-        ← Back to Portfolio
-      </p>
-    </div>
-
-    <div class="max-w-3xl mx-auto text-center mb-12" *ngIf="gallery.description">
-      <p class="text-xl text-gray-700">{{ gallery?.description }}</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <img
-        *ngFor="let image of gallery.images"
-        [src]="image"
-        [alt]="gallery?.coupleNames"
-        class="w-full h-auto object-cover"
-        loading="lazy"
-      />
-    </div>
-
-    <div class="my-8">
-      <p routerLink="/portfolio" class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200">
+  <div *ngIf="!loading && errorMessage" class="min-h-screen flex items-center justify-center px-6">
+    <div class="text-center">
+      <p class="text-2xl text-red-600 mb-4">{{ errorMessage }}</p>
+      <p
+        routerLink="/portfolio"
+        class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200"
+      >
         ← Back to Portfolio
       </p>
     </div>
   </div>
+
+  <ng-container *ngIf="!loading && gallery">
+    <div class="animate-fade-in">
+      <div
+        class="min-h-[300px] md:min-h-[600px] lg:min-h-[925px] bg-cover bg-center flex flex-col items-start justify-between text-white"
+        [style.background-image]="'url(' + (gallery.heroImage || gallery.coverImage) + ')'"
+      >
+        <button routerLink="/portfolio" class="bg-white/60 text-gray-700 text-xl -translate-x-[-40px] -translate-y-[-30px] transition-colors duration-300 py-2 px-5 cursor-pointer rounded-full hover:bg-gray-100/80 hover:text-black">← Back to Portfolio</button>
+        <div class="w-full bg-black/40 text-center py-10 px-4">
+          <h1 class="text-5xl md:text-7xl">{{ gallery.coupleNames }}</h1>
+          <p class="text-xl md:text-2xl font-oswald tracking-widest mt-2">{{ gallery.venue | uppercase}}</p>
+        </div>
+      </div>
+
+      <div class="max-w-screen-xl mx-auto px-6 py-12">
+        <div class="mb-8">
+          <p
+            routerLink="/portfolio"
+            class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200"
+          >
+            ← Back to Portfolio
+          </p>
+        </div>
+
+        <div class="max-w-3xl mx-auto text-center mb-12" *ngIf="gallery.description">
+          <p class="text-xl text-gray-700">{{ gallery.description }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <img
+            *ngFor="let image of gallery.images"
+            [src]="getTransformedImageUrl(image, 400, 40)"
+            [alt]="gallery.coupleNames"
+            class="w-full h-auto transition-all duration-700 ease-out"
+            [class.opacity-0]="!loadedImages[image]"
+            [class.opacity-100]="loadedImages[image]"
+            [class.scale-[0.98]]="!loadedImages[image]"
+            [class.scale-100]="loadedImages[image]"
+            loading="lazy"
+            (load)="onImageLoad(image)"
+          />
+        </div>
+
+        <div class="my-8">
+          <p
+            routerLink="/portfolio"
+            class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200"
+          >
+            ← Back to Portfolio
+          </p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 </section>

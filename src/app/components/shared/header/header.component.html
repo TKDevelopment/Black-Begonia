@@ -4,7 +4,10 @@
       flex flex-col md:flex-row items-center justify-between"
     >
     <div class="w-full md:w-auto flex items-center justify-between">
-      <img routerLink="/" class="max-h-[45px] cursor-pointer" src="" alt="">
+      <div routerLink="/" class="text-center  cursor-pointer font-cormorant -translate-y-[-4px]">
+        <h1 class="text-2xl md:text-xl lg:text-2xl xl:text-3xl font-semibold">BLACK <span class="text-[#f89b95]">BEGONIA</span></h1>
+        <h2 class="text-sm md:text-xs lg:text-sm xl:text-base -translate-y-[9px] tracking-[0.2em]">FLORAL &nbsp;DESIGNS</h2>
+      </div>
       
       <!-- Mobile hamburger -->
       <button
@@ -26,7 +29,7 @@
       </button>
     </div>
 
-    <div class="hidden md:flex items-center space-x-6 lg:space-x-10 2xl:space-x-14 -translate-x-[-75px]
+    <div class="hidden md:flex items-center space-x-4 lg:space-x-5 xl:space-x-8 2xl:space-x-14 xl:-translate-x-[40px]
       text-sm lg:text-base xl:text-lg 2xl:text-xl font-forum text-gray-600 tracking-wider"
     >
       <div routerLink="/" class="hover:text-[#f89b95] hover:cursor-pointer">HOME</div>
@@ -90,8 +93,8 @@
   </div>
 
   <!-- Mobile menu -->
-  <div *ngIf="menuOpen" class="md:hidden font-forum">
-    <div class="mobile-menu bg-[#fefcf] text-gray-600 text-sm space-y-3 px-4 py-3">
+  <div *ngIf="menuOpen" class="md:hidden font-cormorant tracking-widest">
+    <div class="mobile-menu bg-[#fefcf] text-gray-600 text-base space-y-2 px-4 py-3">
       <a routerLink="/" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">HOME</a>
       <a routerLink="/about" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">ABOUT</a>
       <a routerLink="/services" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">SERVICES</a>

@@ -1,79 +1,128 @@
 <section class="min-h-screen bg-white">
-  
-  <!-- Hero Slide -->
-  <div 
-    class="min-h-[250px] md:min-h-[350px] 2xl:min-h-[600px] bg-no-repeat bg-cover bg-[center_30%] sm:bg-[center_50%] bg-blend-multiply flex flex-col items-center font-cormorant text-white py-8"
-    style="background-image: url('assets/images/1000005130.jpg');"
-  >
-		<div class="bg-white/80 backdrop-blur-sm p-3 sm:p-5 2xl:p-6 min-w-[350px] 2xl:min-w-[600px] text-center">
-			<h1 class="text-3xl sm:text-4xl 2xl:text-5xl tracking-widest font-semibold"><span class="text-black">BLACK</span> <span class="text-[#ea938c]"> BEGONIA</span></h1>
-			<h1 class="text-lg sm:text-xl 2xl:text-2xl tracking-widest text-gray-800"><i>F L O R A L &nbsp;&nbsp;&nbsp; D E S I G N S</i></h1>
-		</div>
-		<h2 class="text-5xl sm:text-6xl md:text-8xl 2xl:text-9xl -translate-y-[-91px] sm:-translate-y-[-62px] md:-translate-y-[-132px] 2xl:-translate-y-[-336px] text-white">PORTFOLIO</h2>
+  <!-- Loading -->
+  <div *ngIf="loading" class="min-h-screen flex items-center justify-center px-6">
+    <p class="text-2xl text-gray-600 font-cormorant">Loading portfolio...</p>
   </div>
 
-	<div class="min-h-[700px] my-10 bg-[#f3f1ee]"></div>
-
-  <div class="text-center font-cormorant">
-    <h1 class="text-7xl">Full Galleries</h1>
-    <div class="max-w-screen-xl mx-auto grid grid-cols-3 auto-rows-[500px] gap-8 font-thin text-white py-8">
-
-      <!-- Jason & Aurelia -->
-      <div
-        *ngFor="let gallery of galleries"
-        class="bg-no-repeat bg-cover bg-center cursor-pointer group"
-        [style.background-image]="'url(' + gallery.coverImage + ')'"
-        [routerLink]="['/portfolio', gallery.slug]"
-      >
-        <div *ngIf="gallery.position == 'left'" class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-          <div class="p-6 h-full w-full flex flex-col justify-between">
-            <p class="text-center text-5xl">{{ gallery.coupleNames }}</p>
-            <p class="text-xl text-right font-oswald tracking-widest">{{ gallery.venue }}</p>
-          </div>
-        </div>
-
-        <div *ngIf="gallery.position == 'center'" class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-center text-center">
-            <p class="text-6xl">Siwei & Simon</p>
-            <p class="text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-          </div>
-        </div>
-
-        <div *ngIf="gallery.position == 'right'" class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-          <div class="p-6 h-full w-full flex flex-col justify-between ">
-            <p class="text-right text-xl font-oswald tracking-widest">TPC STONEBRAE</p>
-            <p class="text-left text-6xl">Eric & <br> Madison</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="py-20 text-black bg-[#f3f1ee] text-right">
-      <div class="max-w-screen-xl mx-auto flex justify-between">
-        <div class="w-3/5">
-          <p class="text-lg">From the first time I chatted with Becca about our wedding, I knew she understood our vision with the florals and that she was a florist I could trust with bringing this vision to life. Becca was extremely attentive and reliable – whenever I had a random, one-off question, she was there to chat. On the wedding day, Becca went above and beyond. The florals were absolutely beautiful, and my bridal bouquet was everything I wanted and more. She even popped upstairs to the bridal suite to say hello before heading out – which was so nice to finally meet the famous “Becca” in person. If you’re getting married and in need of a florist, don’t hesitate on reaching out to Becca. When you hire vendors for a wedding, you want people you can trust – and Becca is that and so much more.</p>
-          <p class="font-oswald font-thin tracking-widest text-xl mt-3">- KAYLA F.</p>
-        </div>
-        <div class="w-2/5 flex flex-col justify-center items-center">
-          <p class="text-4xl text-[#ea938c]">Ready to get started?</p>
-          <p class="text-xl">We'd love to hear from you!</p>
-          <button routerLink="/inquiries" class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300">INQUIRE</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="py-20 text-black bg-[#f3f1ee] text-left">
-      <div class="max-w-screen-xl mx-auto flex justify-between">
-        <div class="w-2/5 flex flex-col justify-center items-center">
-          <p class="text-4xl text-[#ea938c]">Ready to get started?</p>
-          <p class="text-xl">We'd love to hear from you!</p>
-          <button routerLink="/inquiries" class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300">INQUIRE</button>
-        </div>
-        <div class="w-3/5">
-          <p class="text-xl">Becca was AMAZING to work with! She is so full of energy and clearly knows her stuff when it comes to different types of flowers and greenery. You can really see the vision come to life in her mind as she's talking to you about what you could do for your event. She was so great and I really enjoyed working with her! I can't thank her enough for all the work she did and how she brought the combination of her and mine's vision to life for my wedding day.</p>
-          <p class="font-oswald font-thin tracking-widest text-xl mt-3">- MARIA Z.</p>
-        </div>
-      </div>
+  <!-- Error -->
+  <div *ngIf="!loading && errorMessage" class="min-h-screen flex items-center justify-center px-6">
+    <div class="text-center">
+      <p class="text-2xl text-red-600 mb-4 font-cormorant">{{ errorMessage }}</p>
     </div>
   </div>
+
+  <!-- Content -->
+  <ng-container *ngIf="!loading && !errorMessage">
+    <!-- Hero Slide -->
+    <div
+      class="min-h-[200px] md:min-h-[350px] 2xl:min-h-[400px] bg-no-repeat bg-cover bg-[center_40%] bg-blend-multiply flex flex-col items-center font-cormorant text-white py-8"
+      style="background-image: url('assets/images/website/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg');"
+    >
+      <h2 class="text-4xl sm:text-7xl md:text-8xl 2xl:text-9xl -translate-y-[-137px] sm:-translate-y-[-160px] md:-translate-y-[-240px] 2xl:-translate-y-[-263px] text-white">
+        PORTFOLIO
+      </h2>
+    </div>
+
+    <section class="py-10">
+      <div class="flex flex-col items-center text-center font-body">
+        <p class="tracking-widest text-lg text-gray-500">EXPLORE OUR</p>
+        <h2 class="font-cormorant text-7xl">Featured Highlights</h2>
+        <p class="text-[10px] tracking-[0.2em] mt-3">OR SCROLL DOWN FOR FULL GALLERIES</p>
+
+        <div>
+          <img src="assets\images\website\1000005233.jpg" class="max-h-[600px] mt-7" alt="">
+        </div>
+
+        <p class="mt-10 font-thin text-base">We love to design with the highest quality seasonal flowers in loose, organic, asymmetric shapes <br> using the golden ratio for designs that feel effortless and natural yet visually <br> pleasing. Tiny floating blooms sparkle like jewelry and dance in the wind, adding <br> laciness to the edge of each arrangement.  Graceful curves bring a whimsical touch, and <br> we spend hours at market sourcing the right shade of each color!</p>
+        
+        <hr class="border-gray-400 border-[0.5px] w-[300px] mt-12">
+      </div>
+    </section>
+
+    <!-- Full galleries -->
+    <div class="text-center font-cormorant">
+      <h1 class="text-7xl">Full Galleries</h1>
+
+      <div class="max-w-screen-xl mx-auto py-8 px-6 lg:px-10">
+        <ng-container *ngFor="let chunk of galleryChunks; let i = index">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-[500px] gap-8 mb-10">
+            <ng-container *ngFor="let gallery of chunk; trackBy: trackByGallery">
+              <div
+                class="bg-no-repeat bg-cover bg-center cursor-pointer group"
+                [style.background-image]="'url(' + gallery.coverImage + ')'"
+                [routerLink]="['/portfolio', gallery.slug]"
+              >
+                <div
+                  *ngIf="gallery.position === 'left'"
+                  class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                >
+                  <div class="p-6 h-full w-full flex flex-col justify-between text-white">
+                    <p class="text-center text-5xl">{{ gallery.coupleNames }}</p>
+                    <p class="text-xl text-right font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
+                  </div>
+                </div>
+
+                <div
+                  *ngIf="gallery.position === 'center'"
+                  class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
+                >
+                  <div class="p-6 h-full w-full flex flex-col justify-center text-center text-white">
+                    <p class="text-6xl">{{ gallery.coupleNames }}</p>
+                    <p class="text-xl font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
+                  </div>
+                </div>
+
+                <div
+                  *ngIf="gallery.position === 'right'"
+                  class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
+                >
+                  <div class="p-6 h-full w-full flex flex-col justify-between text-white">
+                    <p class="text-right text-xl font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
+                    <p class="text-left text-6xl leading-tight">
+                      {{ gallery.coupleNames.split(' & ')[0] }} & <br />
+                      {{ gallery.coupleNames.split(' & ')[1] || '' }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <section
+            *ngIf="i < galleryChunks.length - 1"
+            class="relative left-1/2 right-1/2 w-screen -translate-x-1/2 py-20 text-black bg-[#f3f1ee] mb-10"
+          >
+            <div
+              class="max-w-screen-xl mx-auto px-6 lg:px-10 flex flex-col lg:flex-row justify-between gap-12"
+              [ngClass]="getCtaForGroup(i).align === 'left' ? 'lg:flex-row-reverse text-left' : 'text-right'"
+            >
+              <div class="lg:w-3/5">
+                <p class="text-lg lg:text-xl leading-9 italic text-gray-700">
+                  {{ getCtaForGroup(i).quote }}
+                </p>
+                <p class="font-oswald font-thin tracking-widest text-xl mt-3">
+                  - {{ getCtaForGroup(i).reviewer }}
+                </p>
+              </div>
+
+              <div class="lg:w-2/5 flex flex-col justify-center items-center">
+                <p class="text-4xl text-[#ea938c]">
+                  {{ getCtaForGroup(i).heading }}
+                </p>
+                <p class="text-xl text-gray-700">
+                  {{ getCtaForGroup(i).subheading }}
+                </p>
+                <button
+                  [routerLink]="getCtaForGroup(i).buttonLink"
+                  class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+                >
+                  {{ getCtaForGroup(i).buttonText }}
+                </button>
+              </div>
+            </div>
+          </section>
+        </ng-container>
+      </div>
+    </div>
+  </ng-container>
 </section>

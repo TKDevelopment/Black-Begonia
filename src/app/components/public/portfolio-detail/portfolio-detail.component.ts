@@ -1,8 +1,29 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { SupabaseService } from '../../../services/supabase.service';
 
-interface PortfolioGallery {
+interface PortfolioImage {
+  image_id: string;
+  gallery_id: string;
+  image_url: string;
+  alt_text: string | null;
+  view_order: number;
+  is_visible: boolean;
+  created_at: string;
+}
+
+interface PortfolioGalleryRecord {
+  gallery_id: string;
+  slug: string;
+  couple_names: string;
+  venue: string;
+  cover_image_url: string;
+  hero_image_url: string | null;
+  description: string | null;
+}
+
+interface PortfolioGalleryViewModel {
   slug: string;
   coupleNames: string;
   venue: string;
@@ -12,116 +33,134 @@ interface PortfolioGallery {
   images: string[];
 }
 
-const PORTFOLIO_GALLERIES: PortfolioGallery[] = [
-  {
-    slug: 'nathan-kirsten',
-    coupleNames: 'Nate & Kirsten',
-    venue: 'OCEAN CLIFF, NEWPORT',
-    coverImage: 'assets/images/weddings/Kirsten & Nate/0598-OLAS-E89A9379.jpg',
-    heroImage: 'assets/images/weddings/Kirsten-Nate/0295-OLAS-E89A8219.jpg',
-    description: 'A romantic floral celebration with soft, timeless textures.',
-    images: [
-      'assets/images/weddings/Kirsten-Nate/0216-OLAS-E89A7969.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0241-OLAS-E89A8036.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0324-OLAS-_Y8A4270.jpg',
-      'assets/images/weddings/Kirsten-Nate/0269-OLAS-E89A8144.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0270-OLAS-E89A8152.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0295-OLAS-E89A8219.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0325-OLAS-E89A8347.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0326-OLAS-E89A8349.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0327-OLAS-E89A8354.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0331-OLAS-E89A8368.jpg',
-      'assets/images/weddings/Kirsten-Nate/0332-OLAS-E89A8373.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0333-OLAS-_Y8A4276.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0329-OLAS-E89A8359.jpg',
-      'assets/images/weddings/Kirsten-Nate/0334-OLAS-_Y8A4277.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0337-OLAS-_Y8A4279.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0335-OLAS-E89A8378.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0336-OLAS-E89A8379.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0338-OLAS-E89A8382.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0339-OLAS-E89A8387.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0342-OLAS-E89A8397.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0393-OLAS-_Y8A4306.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0340-OLAS-E89A8390.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0483-OLAS-E89A8853.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0465-OLAS-E89A8772.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0504-OLAS-E89A8982.jpg',
-      'assets/images/weddings/Kirsten-Nate/0513-OLAS-_Y8A4519.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0594-OLAS-E89A9364.jpg',
-      'assets/images/weddings/Kirsten-Nate/0491-OLAS-E89A8905.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0590-OLAS-E89A9351.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0592-OLAS-E89A9358.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0598-OLAS-E89A9378.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0600-OLAS-_Y8A4733.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0615-OLAS-E89A9406.jpg', 
-      'assets/images/weddings/Kirsten-Nate/0604-OLAS-_Y8A4745.jpg',
-      'assets/images/weddings/Kirsten-Nate/0633-OLAS-E89A9458.jpg'
-    ]
-  },
-  {
-    slug: 'siwei-simon',
-    coupleNames: 'Siwei & Simon',
-    venue: 'TPC STONEBRAE',
-    coverImage: 'assets/images/1000005131.jpg',
-    heroImage: 'assets/images/weddings/Siwei+Simon/1000005227.jpg',
-    description: 'Elegant floral design with refined, modern styling.',
-    images: [
-      'assets/images/weddings/Siwei+Simon/1000005215.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005224.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005225.jpg',
-      'assets/images/weddings/Siwei+Simon/1000005209.jpg',
-      'assets/images/weddings/Siwei+Simon/1000005219.jpg',
-      'assets/images/weddings/Siwei+Simon/1000005223.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005218.jpg',  
-      'assets/images/weddings/Siwei+Simon/1000005220.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005221.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005216.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005222.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005229.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005231.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005232.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005233.jpg', 
-      'assets/images/weddings/Siwei+Simon/1000005235.jpg'
-    ]
-  },
-  {
-    slug: 'eric-madison',
-    coupleNames: 'Eric & Madison',
-    venue: 'TPC STONEBRAE',
-    coverImage: 'assets/images/weddings/Eric-Madison/1000005144.jpg',
-    heroImage: 'assets/images/weddings/Eric-Madison/1000005144.jpg',
-    description: 'Elegant floral design with refined, modern styling.',
-    images: [
-      'assets/images/weddings/Eric-Madison/1000005144.jpg',
-      'assets/images/weddings/Eric-Madison/1000005207.jpg',
-      'assets/images/weddings/Eric-Madison/1000005240.jpg',
-    ]
-  }
-];
-
 @Component({
   selector: 'app-portfolio-detail',
+  standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './portfolio-detail.component.html',
   styleUrl: './portfolio-detail.component.scss'
 })
-export class PortfolioDetailComponent {
-  gallery?: PortfolioGallery;
+export class PortfolioDetailComponent implements OnInit {
+  gallery?: PortfolioGalleryViewModel;
+  loading = true;
+  errorMessage = '';
+
+  loadedImages: Record<string, boolean> = {};
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private supabase: SupabaseService
   ) {}
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
+  async ngOnInit(): Promise<void> {
+    this.route.paramMap.subscribe(async params => {
       const slug = params.get('slug');
 
-      this.gallery = PORTFOLIO_GALLERIES.find(g => g.slug === slug);
-
-      if (!this.gallery) {
+      if (!slug) {
         this.router.navigate(['/portfolio']);
+        return;
       }
+
+      this.loading = true;
+
+      const startTime = Date.now();
+
+      await this.loadGallery(slug);
+
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(1000 - elapsed, 0);
+
+      setTimeout(() => {
+        this.loading = false;
+      }, remaining);
     });
+  }
+
+  getTransformedImageUrl(
+    originalUrl: string,
+    width: number,
+    quality: number
+  ): string {
+    return originalUrl.replace(
+      '/storage/v1/object/public/',
+      '/storage/v1/render/image/public/'
+    ) + `?width=${width}&resize=contain&quality=${quality}`;
+  }
+
+  onImageLoad(imageUrl: string): void {
+    this.loadedImages[imageUrl] = true;
+  }
+
+  private async loadGallery(slug: string): Promise<void> {
+    this.loading = true;
+    this.errorMessage = '';
+    this.loadedImages = {};
+
+    try {
+      const { data: galleryRecord, error: galleryError } = await this.supabase.getClient()
+        .from('portfolio_galleries')
+        .select(`
+          gallery_id,
+          slug,
+          couple_names,
+          venue,
+          cover_image_url,
+          hero_image_url,
+          description
+        `)
+        .eq('slug', slug)
+        .single();
+
+      if (galleryError || !galleryRecord) {
+        console.error('Error fetching gallery:', galleryError);
+        this.router.navigate(['/portfolio']);
+        return;
+      }
+
+      const { data: images, error: imagesError } = await this.supabase.getClient()
+        .from('portfolio_images')
+        .select(`
+          image_id,
+          gallery_id,
+          image_url,
+          alt_text,
+          view_order,
+          is_visible,
+          created_at
+        `)
+        .eq('gallery_id', galleryRecord.gallery_id)
+        .eq('is_visible', true)
+        .order('view_order', { ascending: true });
+
+      if (imagesError) {
+        console.error('Error fetching gallery images:', imagesError);
+        this.errorMessage = 'Failed to load gallery images.';
+        return;
+      }
+
+      this.gallery = this.mapGalleryToViewModel(
+        galleryRecord as PortfolioGalleryRecord,
+        (images ?? []) as PortfolioImage[]
+      );
+    } catch (error) {
+      console.error('Unexpected gallery load error:', error);
+      this.errorMessage = 'Failed to load gallery.';
+    }
+  }
+
+  private mapGalleryToViewModel(
+    gallery: PortfolioGalleryRecord,
+    images: PortfolioImage[]
+  ): PortfolioGalleryViewModel {
+    return {
+      slug: gallery.slug,
+      coupleNames: gallery.couple_names,
+      venue: gallery.venue,
+      coverImage: gallery.cover_image_url,
+      heroImage: gallery.hero_image_url || gallery.cover_image_url,
+      description: gallery.description || '',
+      images: images.map(img => img.image_url)
+    };
   }
 }
