@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../../services/supabase.service';
@@ -47,7 +47,7 @@ interface PortfolioGalleryViewModel {
 @Component({
   selector: 'app-portfolio-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, NgOptimizedImage],
   templateUrl: './portfolio-detail.component.html',
   styleUrl: './portfolio-detail.component.scss'
 })
@@ -80,7 +80,7 @@ export class PortfolioDetailComponent implements OnInit {
       await this.loadGallery(slug);
 
       const elapsed = Date.now() - startTime;
-      const remaining = Math.max(500 - elapsed, 0);
+      const remaining = Math.max(1000 - elapsed, 0);
 
       setTimeout(() => {
         this.loading = false;

@@ -1,128 +1,125 @@
 <section class="min-h-screen bg-white">
-  <!-- Loading -->
-  <div *ngIf="loading" class="min-h-screen flex items-center justify-center px-6">
-    <p class="text-2xl text-gray-600 font-cormorant">Loading portfolio...</p>
-  </div>
-
-  <!-- Error -->
-  <div *ngIf="!loading && errorMessage" class="min-h-screen flex items-center justify-center px-6">
-    <div class="text-center">
-      <p class="text-2xl text-red-600 mb-4 font-cormorant">{{ errorMessage }}</p>
-    </div>
-  </div>
-
   <!-- Content -->
-  <ng-container *ngIf="!loading && !errorMessage">
-    <!-- Hero Slide -->
-    <div
-      class="min-h-[200px] md:min-h-[350px] 2xl:min-h-[400px] bg-no-repeat bg-cover bg-[center_40%] bg-blend-multiply flex flex-col items-center font-cormorant text-white py-8"
-      style="background-image: url('assets/images/website/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg');"
-    >
-      <h2 class="text-4xl sm:text-7xl md:text-8xl 2xl:text-9xl -translate-y-[-137px] sm:-translate-y-[-160px] md:-translate-y-[-240px] 2xl:-translate-y-[-263px] text-white">
-        PORTFOLIO
-      </h2>
-    </div>
+  <div class="relative min-h-[200px] md:min-h-[350px] 2xl:min-h-[600px] overflow-hidden flex items-center justify-center font-cormorant text-white">
+    <!-- Hero Image -->
+    <img
+      ngSrc="assets\images\website\E+T-867.jpg"
+      priority
+      fill
+      sizes="100vw"
+      class="object-cover object-[center_40%] md:object-[center_58%]"
+      alt="Wedding floral arrangements"
+    />
 
-    <section class="py-10">
-      <div class="flex flex-col items-center text-center font-body">
-        <p class="tracking-widest text-lg text-gray-500">EXPLORE OUR</p>
-        <h2 class="font-cormorant text-7xl">Featured Highlights</h2>
-        <p class="text-[10px] tracking-[0.2em] mt-3">OR SCROLL DOWN FOR FULL GALLERIES</p>
+    <!-- Overlay (optional but recommended for readability) -->
+    <div class="absolute inset-0"></div>
 
-        <div>
-          <img src="assets\images\website\1000005233.jpg" class="max-h-[600px] mt-7" alt="">
-        </div>
+    <!-- Text -->
+    <h2 class="relative z-10 text-4xl sm:text-7xl md:text-8xl 2xl:text-[180px] 
+              -translate-y-[-137px] sm:-translate-y-[-160px] md:-translate-y-[-240px] 2xl:-translate-y-[-244px]">
+      PORTFOLIO
+    </h2>
+  </div>
 
-        <p class="mt-10 font-thin text-base">We love to design with the highest quality seasonal flowers in loose, organic, asymmetric shapes <br> using the golden ratio for designs that feel effortless and natural yet visually <br> pleasing. Tiny floating blooms sparkle like jewelry and dance in the wind, adding <br> laciness to the edge of each arrangement.  Graceful curves bring a whimsical touch, and <br> we spend hours at market sourcing the right shade of each color!</p>
-        
-        <hr class="border-gray-400 border-[0.5px] w-[300px] mt-12">
+  <section class="py-10">
+    <div class="flex flex-col items-center text-center font-body">
+      <p class="tracking-widest text-lg text-gray-500">EXPLORE OUR</p>
+      <h2 class="font-cormorant text-7xl">Featured Highlights</h2>
+      <p class="text-[10px] tracking-[0.2em] mt-3">OR SCROLL DOWN FOR FULL GALLERIES</p>
+
+      <div>
+        <img src="assets\images\website\1000005233.jpg" class="max-h-[600px] mt-7" alt="">
       </div>
-    </section>
 
-    <!-- Full galleries -->
-    <div class="text-center font-cormorant">
-      <h1 class="text-7xl">Full Galleries</h1>
+      <p class="mt-10 font-thin text-base">We love to design with the highest quality seasonal flowers in loose, organic, asymmetric shapes <br> using the golden ratio for designs that feel effortless and natural yet visually <br> pleasing. Tiny floating blooms sparkle like jewelry and dance in the wind, adding <br> laciness to the edge of each arrangement.  Graceful curves bring a whimsical touch, and <br> we spend hours at market sourcing the right shade of each color!</p>
+      
+      <hr class="border-gray-400 border-[0.5px] w-[300px] mt-12">
+    </div>
+  </section>
 
-      <div class="max-w-screen-xl mx-auto py-8 px-6 lg:px-10">
-        <ng-container *ngFor="let chunk of galleryChunks; let i = index">
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-[500px] gap-8 mb-10">
-            <ng-container *ngFor="let gallery of chunk; trackBy: trackByGallery">
-              <div
-                class="bg-no-repeat bg-cover bg-center cursor-pointer group"
-                [style.background-image]="'url(' + gallery.coverImage + ')'"
-                [routerLink]="['/portfolio', gallery.slug]"
-              >
-                <div
-                  *ngIf="gallery.position === 'left'"
-                  class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                >
-                  <div class="p-6 h-full w-full flex flex-col justify-between text-white">
-                    <p class="text-center text-5xl">{{ gallery.coupleNames }}</p>
-                    <p class="text-xl text-right font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
-                  </div>
-                </div>
+  <!-- Full galleries -->
+  <div class="text-center font-cormorant">
+    <h1 class="text-7xl">Full Galleries</h1>
 
-                <div
-                  *ngIf="gallery.position === 'center'"
-                  class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
-                >
-                  <div class="p-6 h-full w-full flex flex-col justify-center text-center text-white">
-                    <p class="text-6xl">{{ gallery.coupleNames }}</p>
-                    <p class="text-xl font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
-                  </div>
-                </div>
-
-                <div
-                  *ngIf="gallery.position === 'right'"
-                  class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
-                >
-                  <div class="p-6 h-full w-full flex flex-col justify-between text-white">
-                    <p class="text-right text-xl font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
-                    <p class="text-left text-6xl leading-tight">
-                      {{ gallery.coupleNames.split(' & ')[0] }} & <br />
-                      {{ gallery.coupleNames.split(' & ')[1] || '' }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </ng-container>
-          </div>
-
-          <section
-            *ngIf="i < galleryChunks.length - 1"
-            class="relative left-1/2 right-1/2 w-screen -translate-x-1/2 py-20 text-black bg-[#f3f1ee] mb-10"
-          >
+    <div class="max-w-screen-xl mx-auto py-8 px-6 lg:px-10">
+      <ng-container *ngFor="let chunk of galleryChunks; let i = index">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-[500px] gap-8 mb-10">
+          <ng-container *ngFor="let gallery of chunk; trackBy: trackByGallery">
             <div
-              class="max-w-screen-xl mx-auto px-6 lg:px-10 flex flex-col lg:flex-row justify-between gap-12"
-              [ngClass]="getCtaForGroup(i).align === 'left' ? 'lg:flex-row-reverse text-left' : 'text-right'"
+              class="bg-no-repeat bg-cover bg-center cursor-pointer group"
+              [style.background-image]="'url(' + gallery.coverImage + ')'"
+              [routerLink]="['/portfolio', gallery.slug]"
             >
-              <div class="lg:w-3/5">
-                <p class="text-lg lg:text-xl leading-9 italic text-gray-700">
-                  {{ getCtaForGroup(i).quote }}
-                </p>
-                <p class="font-oswald font-thin tracking-widest text-xl mt-3">
-                  - {{ getCtaForGroup(i).reviewer }}
-                </p>
+              <div
+                *ngIf="gallery.position === 'left'"
+                class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+              >
+                <div class="p-6 h-full w-full flex flex-col justify-between text-white">
+                  <p class="text-center text-5xl">{{ gallery.coupleNames }}</p>
+                  <p class="text-xl text-right font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
+                </div>
               </div>
 
-              <div class="lg:w-2/5 flex flex-col justify-center items-center">
-                <p class="text-4xl text-[#ea938c]">
-                  {{ getCtaForGroup(i).heading }}
-                </p>
-                <p class="text-xl text-gray-700">
-                  {{ getCtaForGroup(i).subheading }}
-                </p>
-                <button
-                  [routerLink]="getCtaForGroup(i).buttonLink"
-                  class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
-                >
-                  {{ getCtaForGroup(i).buttonText }}
-                </button>
+              <div
+                *ngIf="gallery.position === 'center'"
+                class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
+              >
+                <div class="p-6 h-full w-full flex flex-col justify-center text-center text-white">
+                  <p class="text-6xl">{{ gallery.coupleNames }}</p>
+                  <p class="text-xl font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
+                </div>
+              </div>
+
+              <div
+                *ngIf="gallery.position === 'right'"
+                class="w-full h-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
+              >
+                <div class="p-6 h-full w-full flex flex-col justify-between text-white">
+                  <p class="text-right text-xl font-oswald tracking-widest">{{ gallery.venue | uppercase }}</p>
+                  <p class="text-left text-6xl leading-tight">
+                    {{ gallery.coupleNames.split(' & ')[0] }} & <br />
+                    {{ gallery.coupleNames.split(' & ')[1] || '' }}
+                  </p>
+                </div>
               </div>
             </div>
-          </section>
-        </ng-container>
-      </div>
+          </ng-container>
+        </div>
+
+        <section
+          *ngIf="i < galleryChunks.length - 1"
+          class="relative left-1/2 right-1/2 w-screen -translate-x-1/2 py-20 text-black bg-[#f3f1ee] mb-10"
+        >
+          <div
+            class="max-w-screen-xl mx-auto px-6 lg:px-10 flex flex-col lg:flex-row justify-between gap-12"
+            [ngClass]="getCtaForGroup(i).align === 'left' ? 'lg:flex-row-reverse text-left' : 'text-right'"
+          >
+            <div class="lg:w-3/5">
+              <p class="text-lg lg:text-xl leading-9 italic text-gray-700">
+                {{ getCtaForGroup(i).quote }}
+              </p>
+              <p class="font-oswald font-thin tracking-widest text-xl mt-3">
+                - {{ getCtaForGroup(i).reviewer }}
+              </p>
+            </div>
+
+            <div class="lg:w-2/5 flex flex-col justify-center items-center">
+              <p class="text-4xl text-[#ea938c]">
+                {{ getCtaForGroup(i).heading }}
+              </p>
+              <p class="text-xl text-gray-700">
+                {{ getCtaForGroup(i).subheading }}
+              </p>
+              <button
+                [routerLink]="getCtaForGroup(i).buttonLink"
+                class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+              >
+                {{ getCtaForGroup(i).buttonText }}
+              </button>
+            </div>
+          </div>
+        </section>
+      </ng-container>
     </div>
-  </ng-container>
+  </div>
 </section>

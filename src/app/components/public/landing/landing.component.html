@@ -1,15 +1,32 @@
 <section class="min-h-screen">
   
-  <!-- Hero Slide -->
-  <div 
-    class="min-h-full bg-no-repeat bg-cover bg-center bg-blend-multiply bg-gray-300/50"
-    style="background-image: url('assets/images/website/1000005134.jpg');"
-  >
-    <div class="md:min-h-[800px] 2xl:min-h-[930px] py-8 px-4 md:py-16 text-slate-100 font-noto font-thin flex flex-col justify-between">
-      <img class="mx-auto max-h-[300px] md:max-h-[500px] 2xl:max-h-[600px] opacity-0 animate-fadeDown" src="assets/images/website/Black Begonia Logo 4.png" alt="">
+  <div class="relative min-h-full overflow-hidden">
+    <!-- Hero Image -->
+    <img
+      ngSrc="assets/images/website/1000005134.jpg"
+      priority
+      fill
+      class="object-cover object-center"
+      alt="Floral wedding hero"
+    />
+
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-gray-500/10"></div>
+
+    <!-- Content -->
+    <div class="relative z-10 md:min-h-[800px] 2xl:min-h-[930px] py-8 px-4 md:py-16 text-slate-100 font-noto font-thin flex flex-col justify-between">
+      <img
+        class="mx-auto max-h-[300px] md:max-h-[500px] 2xl:max-h-[600px] opacity-0 animate-fadeDown"
+        src="assets/images/website/Black Begonia Logo 4.png"
+        alt=""
+      />
       <div class="text-center space-y-1 md:space-y-4 py-5 md:py-7">
-        <p class="text-xl md:text-4xl 2xl:text-5xl text-[#fdcbc7] opacity-0 animate-fadeDown [animation-delay:300ms]">BOUTIQUE FLORAL ARTISTRY</p>
-        <p class="text-lg md:text-xl 2xl:text-3xl opacity-0 animate-fadeDown [animation-delay:600ms]">SERVICING SOUTHERN RI, NEWPORT, AND BEYOND</p>
+        <p class="text-xl md:text-4xl 2xl:text-5xl text-[#fdcbc7] opacity-0 animate-fadeDown [animation-delay:300ms]">
+          BOUTIQUE FLORAL ARTISTRY
+        </p>
+        <p class="text-lg md:text-xl 2xl:text-3xl opacity-0 animate-fadeDown [animation-delay:600ms]">
+          SERVICING SOUTHERN RI, NEWPORT, AND BEYOND
+        </p>
       </div>
     </div>
   </div>

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -22,7 +22,7 @@ interface CtaBlock {
 
 @Component({
   selector: 'app-testimonials',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, NgOptimizedImage],
   templateUrl: './testimonials.component.html',
   styleUrl: './testimonials.component.scss'
 })

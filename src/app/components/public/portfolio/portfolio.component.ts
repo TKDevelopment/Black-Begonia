@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SupabaseService } from '../../../services/supabase.service'; // update path if needed
@@ -43,7 +43,7 @@ interface PortfolioCtaBlock {
 @Component({
   selector: 'app-portfolio',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, NgOptimizedImage],
   templateUrl: './portfolio.component.html',
   styleUrl: './portfolio.component.scss'
 })

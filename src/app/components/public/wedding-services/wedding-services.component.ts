@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -22,7 +22,7 @@ type WeddingFaq = {
 
 @Component({
   selector: 'app-wedding-services',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, NgOptimizedImage],
   templateUrl: './wedding-services.component.html',
   styleUrl: './wedding-services.component.scss'
 })

@@ -1,10 +1,21 @@
 <section class="min-h-screen bg-white">
-  <!-- Hero -->
-  <div
-    class="min-h-[200px] md:min-h-[350px] 2xl:min-h-[400px] bg-no-repeat bg-cover bg-[center_40%] md:bg-[center_50%] bg-blend-multiply flex flex-col items-center font-cormorant text-white py-8"
-    style="background-image: url('assets/images/website/E+T-1269.jpg');"
-  >
-    <h2 class="text-4xl sm:text-7xl md:text-8xl 2xl:text-9xl -translate-y-[-137px] sm:-translate-y-[-160px] md:-translate-y-[-240px] 2xl:-translate-y-[-263px] text-white">
+  <div class="relative min-h-[200px] md:min-h-[350px] 2xl:min-h-[600px] overflow-hidden flex items-center justify-center font-cormorant text-white">
+    <!-- Hero Image -->
+    <img
+      ngSrc="assets/images/website/E+T-1269.jpg"
+      priority
+      fill
+      sizes="100vw"
+      class="object-cover object-[center_40%] md:object-[center_55%]"
+      alt="Wedding floral arrangements"
+    />
+
+    <!-- Overlay (optional but recommended for readability) -->
+    <div class="absolute inset-0"></div>
+
+    <!-- Text -->
+    <h2 class="relative z-10 text-4xl sm:text-7xl md:text-8xl 2xl:text-[180px] 
+              -translate-y-[-137px] sm:-translate-y-[-160px] md:-translate-y-[-240px] 2xl:-translate-y-[-244px]">
       TESTIMONIALS
     </h2>
   </div>
