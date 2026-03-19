@@ -20,59 +20,65 @@
     </h2>
   </div>
 
-	<!-- Intro -->
-  <div class="px-6 py-16 md:px-12 lg:px-20">
+  <!-- Intro -->
+  <div class="px-4 sm:px-6 md:px-10 lg:px-16 xl:px-20 py-10 sm:py-12 md:py-16 lg:py-20">
     <div class="max-w-7xl mx-auto text-center font-cormorant">
-      <h3 class="-translate-x-[400px] mb-6 text-2xl tracking-[0.2em] text-gray-600 font-thin">WORKSHOPS DESIGNED TO</h3>
-      <h3 class="font-lavishly h-[130px] text-9xl my-6 text-[#ff8880]/20">
-        gather,&nbsp;&nbsp; create,&nbsp;&nbsp; celebrate
+      <h3 class="mb-4 sm:mb-5 md:mb-6 text-sm sm:text-lg md:text-xl lg:text-2xl tracking-[0.15em] sm:tracking-[0.2em] text-gray-600 font-thin">
+        WORKSHOPS DESIGNED TO
       </h3>
-      <p class="text-lg md:text-xl leading-relaxed text-center -translate-x-[-200px] text-gray-700 max-w-4xl mx-auto"><i>
-        From festive holiday centerpieces to cozy autumn arrangements and custom floral experiences
-        for private gatherings, Black Begonia workshops are designed to bring people together through
-        beautiful, seasonal design. Whether you're planning a hosted social event, a corporate gathering,
-        or a seasonal floral class, each workshop is thoughtfully curated to feel welcoming, creative,
-        and memorable.
-      </i></p>
+
+      <h3 class="font-lavishly text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl leading-[1.1] my-4 sm:my-5 md:my-6 text-[#ff8880]/20">
+        gather,&nbsp; create,&nbsp; celebrate
+      </h3>
+
+      <p class="text-base sm:text-lg md:text-xl xl:text-[22px] leading-7 sm:leading-8 md:leading-9 text-center text-gray-700 max-w-xs sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto">
+        <i>
+          From festive holiday centerpieces to cozy autumn arrangements and custom floral experiences
+          for private gatherings, Black Begonia workshops are designed to bring people together through
+          beautiful, seasonal design. Whether you're planning a hosted social event, a corporate gathering,
+          or a seasonal floral class, each workshop is thoughtfully curated to feel welcoming, creative,
+          and memorable.
+        </i>
+      </p>
     </div>
   </div>
 
   <!-- Workshop Sections -->
-  <div class="px-6 py-28 md:px-12 lg:px-20 space-y-24 bg-[#fefcfa]">
+  <div class="px-4 sm:px-6 md:px-10 lg:px-16 xl:px-20 py-12 sm:py-16 md:py-20 lg:py-24 space-y-14 sm:space-y-16 md:space-y-20 lg:space-y-24 bg-[#fefcfa]">
     <div
       *ngFor="let section of workshopSections; let i = index"
-      class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center"
+      class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10 md:gap-12 lg:gap-16 xl:gap-20 items-center"
     >
       <!-- Text Left -->
-      <div *ngIf="!section.displayRight" class="font-cormorant text-right">
-        <p class="uppercase tracking-[0.35em] text-sm text-[#ea938c] mb-3">
+      <div *ngIf="!section.displayRight" class="font-cormorant text-center lg:text-right order-2 lg:order-1">
+        <p class="uppercase tracking-[0.22em] sm:tracking-[0.3em] md:tracking-[0.35em] text-[10px] sm:text-xs md:text-sm text-[#ea938c] mb-3">
           Floral Workshop Experience
         </p>
 
-        <h3 class="text-3xl md:text-5xl text-gray-800 mb-4">
+        <h3 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-gray-800 mb-4 leading-tight">
           {{ section.title }}
         </h3>
 
-        <p class="text-lg md:text-xl italic text-gray-500 mb-5">
+        <p class="text-base sm:text-lg md:text-xl xl:text-[22px] italic text-gray-500 mb-4 sm:mb-5 leading-7 sm:leading-8">
           {{ section.subtitle }}
         </p>
 
-        <p class="text-lg md:text-xl leading-relaxed text-gray-700 mb-8">
+        <p class="text-base sm:text-lg md:text-xl xl:text-[22px] leading-7 sm:leading-8 md:leading-9 text-gray-700 mb-6 sm:mb-8">
           {{ section.description }}
         </p>
 
         <a
           [routerLink]="section.inquiryLink"
-          class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+          class="inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-[0.16em] sm:tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300"
         >
           Request More Information
         </a>
       </div>
 
       <!-- Carousel Right -->
-      <div *ngIf="!section.displayRight" class="relative">
-        <div class="overflow-hidden bg-[#f3f1ee] p-3 md:p-4 shadow-lg">
-          <div class="relative w-full h-[300px] sm:h-[420px] lg:h-[650px]">
+      <div *ngIf="!section.displayRight" class="relative order-1 lg:order-2">
+        <div class="overflow-hidden bg-[#f3f1ee] p-2 sm:p-3 md:p-4 shadow-lg">
+          <div class="relative w-full h-[260px] sm:h-[340px] md:h-[440px] lg:h-[560px] xl:h-[650px]">
             <!-- Current image -->
             <img
               [src]="section.images[section.currentIndex]"
@@ -94,7 +100,7 @@
         <!-- Arrows -->
         <button
           (click)="prevSlide(section)"
-          class="absolute left-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          class="absolute left-3 sm:left-5 md:left-6 lg:left-8 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white/90 text-gray-800 w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full shadow-md flex items-center justify-center transition"
           aria-label="Previous image"
         >
           ‹
@@ -102,7 +108,7 @@
 
         <button
           (click)="nextSlide(section)"
-          class="absolute right-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          class="absolute right-3 sm:right-5 md:right-6 lg:right-8 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white/90 text-gray-800 w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full shadow-md flex items-center justify-center transition"
           aria-label="Next image"
         >
           ›
@@ -113,7 +119,7 @@
           <button
             *ngFor="let image of section.images; let imgIndex = index"
             (click)="goToSlide(section, imgIndex)"
-            class="w-3 h-3 rounded-full transition-all duration-200"
+            class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-200"
             [ngClass]="
               imgIndex === section.currentIndex
                 ? 'bg-[#ea938c]'
@@ -125,9 +131,9 @@
       </div>
 
       <!-- Carousel Left -->
-      <div *ngIf="section.displayRight" class="relative">
-        <div class="overflow-hidden bg-[#f3f1ee] p-3 md:p-4 shadow-lg">
-          <div class="relative w-full h-[300px] sm:h-[420px] lg:h-[650px]">
+      <div *ngIf="section.displayRight" class="relative order-1">
+        <div class="overflow-hidden bg-[#f3f1ee] p-2 sm:p-3 md:p-4 shadow-lg">
+          <div class="relative w-full h-[260px] sm:h-[340px] md:h-[440px] lg:h-[560px] xl:h-[650px]">
             <!-- Current image -->
             <img
               [src]="section.images[section.currentIndex]"
@@ -149,7 +155,7 @@
         <!-- Arrows -->
         <button
           (click)="prevSlide(section)"
-          class="absolute left-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          class="absolute left-3 sm:left-5 md:left-6 lg:left-8 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white/90 text-gray-800 w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full shadow-md flex items-center justify-center transition"
           aria-label="Previous image"
         >
           ‹
@@ -157,7 +163,7 @@
 
         <button
           (click)="nextSlide(section)"
-          class="absolute right-8 top-1/2 -translate-y-[30px] bg-white/60 hover:bg-white/80 text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+          class="absolute right-3 sm:right-5 md:right-6 lg:right-8 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white/90 text-gray-800 w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full shadow-md flex items-center justify-center transition"
           aria-label="Next image"
         >
           ›
@@ -168,7 +174,7 @@
           <button
             *ngFor="let image of section.images; let imgIndex = index"
             (click)="goToSlide(section, imgIndex)"
-            class="w-3 h-3 rounded-full transition-all duration-200"
+            class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-200"
             [ngClass]="
               imgIndex === section.currentIndex
                 ? 'bg-[#ea938c]'
@@ -180,26 +186,26 @@
       </div>
 
       <!-- Text Right -->
-      <div *ngIf="section.displayRight" class="font-cormorant">
-        <p class="uppercase tracking-[0.35em] text-sm text-[#ea938c] mb-3">
+      <div *ngIf="section.displayRight" class="font-cormorant text-center lg:text-left order-2">
+        <p class="uppercase tracking-[0.22em] sm:tracking-[0.3em] md:tracking-[0.35em] text-[10px] sm:text-xs md:text-sm text-[#ea938c] mb-3">
           Floral Workshop Experience
         </p>
 
-        <h3 class="text-3xl md:text-5xl text-gray-800 mb-4">
+        <h3 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-gray-800 mb-4 leading-tight">
           {{ section.title }}
         </h3>
 
-        <p class="text-lg md:text-xl italic text-gray-500 mb-5">
+        <p class="text-base sm:text-lg md:text-xl xl:text-[22px] italic text-gray-500 mb-4 sm:mb-5 leading-7 sm:leading-8">
           {{ section.subtitle }}
         </p>
 
-        <p class="text-lg md:text-xl leading-relaxed text-gray-700 mb-8">
+        <p class="text-base sm:text-lg md:text-xl xl:text-[22px] leading-7 sm:leading-8 md:leading-9 text-gray-700 mb-6 sm:mb-8">
           {{ section.description }}
         </p>
 
         <a
           [routerLink]="section.inquiryLink"
-          class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+          class="inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-[0.16em] sm:tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300"
         >
           Request More Information
         </a>
@@ -208,18 +214,22 @@
   </div>
 
   <!-- Bottom CTA -->
-  <div class="bg-[#f3f1ee] mb-10 px-6 py-20 md:px-12 lg:px-20">
+  <div class="bg-[#f3f1ee] mb-8 sm:mb-10 px-4 sm:px-6 md:px-10 lg:px-16 xl:px-20 py-12 sm:py-16 md:py-20">
     <div class="max-w-4xl mx-auto text-center font-cormorant">
-      <h3 class="text-3xl md:text-5xl text-[#ea938c] mb-5">
+      <h3 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-[#ea938c] mb-4 sm:mb-5 leading-tight">
         Interested in Hosting a Floral Workshop?
       </h3>
-      <p class="text-lg md:text-2xl text-gray-700 leading-relaxed mb-8"><i>
-        We would love to learn more about your event, group, and vision. Reach out through our inquiry
-        page to start planning a custom workshop experience.
-      </i></p>
+
+      <p class="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-700 leading-7 sm:leading-8 md:leading-9 mb-6 sm:mb-8 max-w-3xl mx-auto">
+        <i>
+          We would love to learn more about your event, group, and vision. Reach out through our inquiry
+          page to start planning a custom workshop experience.
+        </i>
+      </p>
+
       <a
         routerLink="/inquiries/general"
-        class="px-5 py-2 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-3 uppercase transition-all duration-300"
+        class="inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-[0.16em] sm:tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300"
       >
         Inquire Now
       </a>
