@@ -62,53 +62,108 @@
 
     <div class="max-w-screen-xl mx-auto py-6 sm:py-8 md:py-10 px-0 sm:px-2 lg:px-4">
       <ng-container *ngFor="let chunk of galleryChunks; let i = index">
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-[320px] sm:auto-rows-[380px] md:auto-rows-[420px] lg:auto-rows-[460px] xl:auto-rows-[500px] gap-5 sm:gap-6 md:gap-8 mb-8 sm:mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-[450px] sm:auto-rows-[380px] md:auto-rows-[420px] lg:auto-rows-[460px] xl:auto-rows-[500px] gap-5 sm:gap-6 md:gap-8 mb-8 sm:mb-10">
           <ng-container *ngFor="let gallery of chunk; trackBy: trackByGallery">
             <div
-              class="bg-no-repeat bg-cover bg-center cursor-pointer group min-h-[320px] sm:min-h-[380px] md:min-h-0"
+              class="relative bg-no-repeat bg-cover bg-center cursor-pointer group min-h-[320px] sm:min-h-[380px] md:min-h-0 overflow-hidden"
               [style.background-image]="'url(' + gallery.coverImage + ')'"
-              [routerLink]="['/portfolio', gallery.slug]"
+              (click)="onGalleryClick(gallery.slug)"
+              [class.pointer-events-none]="navigatingSlug === gallery.slug"
             >
+              <!-- Mobile + navigation feedback overlay -->
               <div
-                *ngIf="gallery.position === 'left'"
-                class="w-full h-full bg-black/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-700"
+                class="absolute inset-0 z-10 flex items-center justify-center bg-black/20 opacity-0 transition-all duration-300"
+                [class.opacity-100]="navigatingSlug === gallery.slug"
+                [class.bg-black\45]="navigatingSlug === gallery.slug"
               >
-                <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white">
-                  <p class="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight">
-                    {{ gallery.coupleNames }}
-                  </p>
-                  <p class="text-sm sm:text-base md:text-lg lg:text-xl text-right font-oswald tracking-[0.18em] sm:tracking-widest">
-                    {{ gallery.venue | uppercase }}
+                <div class="flex flex-col items-center text-white">
+                  <div class="h-8 w-8 rounded-full border-2 border-white/80 border-t-transparent animate-spin"></div>
+                  <p class="mt-3 text-xs sm:text-sm font-oswald tracking-[0.2em] uppercase">
+                    Opening Gallery
                   </p>
                 </div>
               </div>
 
               <div
-                *ngIf="gallery.position === 'center'"
-                class="w-full h-full bg-black/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-1000"
+                class="absolute inset-0 transition-all duration-300"
+                [class.scale-[0.985]]="navigatingSlug === gallery.slug"
+                [class.opacity-80]="navigatingSlug === gallery.slug"
               >
-                <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-center text-center text-white">
-                  <p class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight">
-                    {{ gallery.coupleNames }}
-                  </p>
-                  <p class="text-sm sm:text-base md:text-lg lg:text-xl font-oswald tracking-[0.18em] sm:tracking-widest mt-2">
-                    {{ gallery.venue | uppercase }}
-                  </p>
-                </div>
-              </div>
+                <div
+                  *ngIf="getDisplayPosition(gallery) === 'right'"
+                  class="w-full h-full bg-black/35 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-700"
+                >
+                  <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white"
+                    [class.opacity-0]="navigatingSlug === gallery.slug"
+                    [class.opacity-100]="navigatingSlug !== gallery.slug"
+                  >
+                    <div class="flex justify-start md:hidden">
+                      <span class="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-[10px] sm:text-xs font-oswald tracking-[0.18em] uppercase">
+                        Tap to view gallery
+                      </span>
+                    </div>
 
-              <div
-                *ngIf="gallery.position === 'right'"
-                class="w-full h-full bg-black/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-1000"
-              >
-                <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white">
-                  <p class="text-right text-sm sm:text-base md:text-lg lg:text-xl font-oswald tracking-[0.18em] sm:tracking-widest">
-                    {{ gallery.venue | uppercase }}
-                  </p>
-                  <p class="text-left text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight">
-                    {{ gallery.coupleNames.split(' & ')[0] }} & <br />
-                    {{ gallery.coupleNames.split(' & ')[1] || '' }}
-                  </p>
+                    <p class="text-center text-4xl md:text-5xl lg:text-6xl leading-tight">
+                      {{ gallery.coupleNames }}
+                    </p>
+
+                    <div class="flex flex-col items-end gap-2">
+                      <p class="text-sm sm:text-base md:text-lg lg:text-xl text-right font-oswald tracking-[0.18em] sm:tracking-widest">
+                        {{ gallery.venue | uppercase }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  *ngIf="getDisplayPosition(gallery) === 'center'"
+                  class="w-full h-full bg-black/35 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-1000"
+                >
+                  <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-center text-center text-white"
+                    [class.opacity-0]="navigatingSlug === gallery.slug"
+                    [class.opacity-100]="navigatingSlug !== gallery.slug"
+                  >
+                    <div class="mb-4 md:hidden flex justify-center">
+                      <span class="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-[10px] sm:text-xs font-oswald tracking-[0.18em] uppercase">
+                        Tap to view gallery
+                      </span>
+                    </div>
+
+                    <p class="text-4xl md:text-5xl lg:text-6xl leading-tight">
+                      {{ gallery.coupleNames }}
+                    </p>
+
+                    <p class="text-sm sm:text-base md:text-lg lg:text-xl font-oswald tracking-[0.18em] sm:tracking-widest mt-2">
+                      {{ gallery.venue | uppercase }}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  *ngIf="getDisplayPosition(gallery) === 'left'"
+                  class="w-full h-full bg-black/35 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-1000"
+                >
+                  <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white"
+                    [class.opacity-0]="navigatingSlug === gallery.slug"
+                    [class.opacity-100]="navigatingSlug !== gallery.slug"
+                  >
+                    <div class="flex justify-start md:hidden">
+                      <span class="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-[10px] sm:text-xs font-oswald tracking-[0.18em] uppercase">
+                        Tap to view gallery
+                      </span>
+                    </div>
+
+                    <p class="text-right text-sm sm:text-base md:text-lg lg:text-xl font-oswald tracking-[0.18em] sm:tracking-widest">
+                      {{ gallery.venue | uppercase }}
+                    </p>
+
+                    <div class="flex flex-col items-start gap-3">
+                      <p class="text-left text-4xl md:text-5xl lg:text-6xl leading-tight">
+                        {{ gallery.coupleNames.split(' & ')[0] }} & <br />
+                        {{ gallery.coupleNames.split(' & ')[1] || '' }}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
