@@ -66,16 +66,16 @@ export class TestimonialsComponent {
     },
     {
       title: 'The details were beyond beautiful',
-      reviewer: 'Olivia M.',
+      reviewer: 'Lindsay & Matt',
       role: 'Bride',
       event: 'Classic Wedding',
       quote:
-        `Every single floral element felt refined, intentional, and stunning. Rebecca has such a gift for pairing color, texture, and movement in a way that feels both luxurious and natural. I could not have asked for a more beautiful floral experience.`,
+        `I cannot say enough wonderful things about Becca and Black Begonia! Becca's attention to detail and willingness to hear out and execute my wedding day vision was beyond anything I could have imagined. She is sweet as can be and really went the extra mile. I cannot recommend her enough.`,
       image: 'assets/images/website/472755947_1141939314171591_5484417455789170093_n.jpg'
     },
     {
       title: 'Professional, calm, and artistic',
-      reviewer: 'Grace & Tyler',
+      reviewer: 'Kaeli & Chuck',
       role: 'Wedding Clients',
       event: 'Private Venue Celebration',
       quote:
