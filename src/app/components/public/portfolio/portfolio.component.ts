@@ -102,7 +102,7 @@ export class PortfolioComponent implements OnInit {
 
     setTimeout(() => {
       this.router.navigate(['/portfolio', slug]);
-    }, 400);
+    }, 2000);
   }
 
   async loadGalleries(): Promise<void> {
