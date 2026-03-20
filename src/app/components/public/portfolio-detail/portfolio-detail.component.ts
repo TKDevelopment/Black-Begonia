@@ -1,5 +1,5 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../../services/supabase.service';
 
@@ -57,6 +57,8 @@ export class PortfolioDetailComponent implements OnInit {
   errorMessage = '';
 
   loadedImages: Record<string, boolean> = {};
+  selectedImage: PortfolioGalleryImageViewModel | null = null;
+  isDesktop = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -65,6 +67,8 @@ export class PortfolioDetailComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
+    this.updateScreenSize();
+
     this.route.paramMap.subscribe(async params => {
       const slug = params.get('slug');
 
@@ -88,14 +92,49 @@ export class PortfolioDetailComponent implements OnInit {
     });
   }
 
+  @HostListener('window:resize')
+  onResize(): void {
+    this.updateScreenSize();
+
+    if (!this.isDesktop && this.selectedImage) {
+      this.closeImageModal();
+    }
+  }
+
   onImageLoad(imageKey: string): void {
     this.loadedImages[imageKey] = true;
+  }
+
+  openImageModal(image: PortfolioGalleryImageViewModel): void {
+    if (!this.isDesktop) {
+      return;
+    }
+
+    this.selectedImage = image;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeImageModal(): void {
+    this.selectedImage = null;
+    document.body.style.overflow = '';
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.selectedImage) {
+      this.closeImageModal();
+    }
+  }
+
+  private updateScreenSize(): void {
+    this.isDesktop = window.innerWidth >= 768;
   }
 
   private async loadGallery(slug: string): Promise<void> {
     this.loading = true;
     this.errorMessage = '';
     this.loadedImages = {};
+    this.closeImageModal();
 
     try {
       const { data: galleryRecord, error: galleryError } = await this.supabase.getClient()

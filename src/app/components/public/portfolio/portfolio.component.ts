@@ -1,7 +1,7 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { SupabaseService } from '../../../services/supabase.service'; // update path if needed
+import { Component, HostListener, OnInit } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { SupabaseService } from '../../../services/supabase.service';
 
 interface PortfolioGalleryRow {
   gallery_id: string;
@@ -52,8 +52,13 @@ export class PortfolioComponent implements OnInit {
   errorMessage = '';
   galleries: PortfolioGallery[] = [];
   heroImage = 'assets/images/weddings/Fizz-Frites/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg';
+  navigatingSlug: string | null = null;
+  isMobileOrSmall = false;
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private router: Router
+  ) {}
 
   ctaBlocks: PortfolioCtaBlock[] = [
     {
@@ -79,7 +84,25 @@ export class PortfolioComponent implements OnInit {
   ];
 
   async ngOnInit(): Promise<void> {
+    this.updateScreenMode();
     await this.loadGalleries();
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.updateScreenMode();
+  }
+
+  onGalleryClick(slug: string): void {
+    if (this.navigatingSlug) {
+      return;
+    }
+
+    this.navigatingSlug = slug;
+
+    setTimeout(() => {
+      this.router.navigate(['/portfolio', slug]);
+    }, 2000);
   }
 
   async loadGalleries(): Promise<void> {
@@ -144,6 +167,10 @@ export class PortfolioComponent implements OnInit {
     return pattern[index % pattern.length];
   }
 
+  getDisplayPosition(gallery: PortfolioGallery): 'left' | 'center' | 'right' {
+    return this.isMobileOrSmall ? 'center' : gallery.position;
+  }
+
   getCtaForGroup(groupIndex: number): PortfolioCtaBlock {
     return this.ctaBlocks[groupIndex % this.ctaBlocks.length];
   }
@@ -161,5 +188,9 @@ export class PortfolioComponent implements OnInit {
 
   trackByGallery(index: number, gallery: PortfolioGallery): string {
     return gallery.galleryId;
+  }
+
+  private updateScreenMode(): void {
+    this.isMobileOrSmall = window.innerWidth < 768;
   }
 }
