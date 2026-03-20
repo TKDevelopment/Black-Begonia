@@ -15,7 +15,24 @@ module.exports = {
         forum: ['"Forum"', ...defaultTheme.fontFamily.serif],
         roboto: ['"Roboto"', ...defaultTheme.fontFamily.sans],
         lora: ['"Lora"', ...defaultTheme.fontFamily.serif],
-      }
+        noto: ['"Noto Serif JP"', ...defaultTheme.fontFamily.serif],
+        cormorant: ['"Cormorant Garamond"', ...defaultTheme.fontFamily.serif],
+        lavishly: ['"Lavishly Yours"', ...defaultTheme.fontFamily.serif]
+      },
+      keyframes: {
+        fadeDown: {
+          '0%': { opacity: '0', transform: 'translateY(-40px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      animation: {
+        fadeDown: 'fadeDown 1s ease-out forwards',
+        marquee: 'marquee 60s linear infinite',
+      },
     },
   },
   plugins: [],

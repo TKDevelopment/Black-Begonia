@@ -1,6 +1,6 @@
 [build]
-  publish = "dist/rudbeckia-website/browser"
-  command = "node set-env.cts && ng build --configuration production"
+  publish = "dist/black-begonia/browser"
+  command = "node set-env.cts && ng build --configuration prod"
 
 [[headers]]
   for = "/*"
