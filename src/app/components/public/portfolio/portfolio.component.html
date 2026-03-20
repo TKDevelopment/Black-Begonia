@@ -74,7 +74,7 @@
               <div
                 class="absolute inset-0 z-10 flex items-center justify-center bg-black/20 opacity-0 transition-all duration-300"
                 [class.opacity-100]="navigatingSlug === gallery.slug"
-                [class.bg-black/45]="navigatingSlug === gallery.slug"
+                [class.bg-black\45]="navigatingSlug === gallery.slug"
               >
                 <div class="flex flex-col items-center text-white">
                   <div class="h-8 w-8 rounded-full border-2 border-white/80 border-t-transparent animate-spin"></div>
@@ -93,8 +93,7 @@
                   *ngIf="getDisplayPosition(gallery) === 'right'"
                   class="w-full h-full bg-black/35 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-700"
                 >
-                  <div
-                    class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white transition-opacity duration-200"
+                  <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white"
                     [class.opacity-0]="navigatingSlug === gallery.slug"
                     [class.opacity-100]="navigatingSlug !== gallery.slug"
                   >
@@ -120,8 +119,7 @@
                   *ngIf="getDisplayPosition(gallery) === 'center'"
                   class="w-full h-full bg-black/35 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-1000"
                 >
-                  <div
-                    class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-center text-center text-white transition-opacity duration-200"
+                  <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-center text-center text-white"
                     [class.opacity-0]="navigatingSlug === gallery.slug"
                     [class.opacity-100]="navigatingSlug !== gallery.slug"
                   >
@@ -145,8 +143,7 @@
                   *ngIf="getDisplayPosition(gallery) === 'left'"
                   class="w-full h-full bg-black/35 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-1000"
                 >
-                  <div
-                    class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white transition-opacity duration-200"
+                  <div class="p-4 sm:p-5 md:p-6 h-full w-full flex flex-col justify-between text-white"
                     [class.opacity-0]="navigatingSlug === gallery.slug"
                     [class.opacity-100]="navigatingSlug !== gallery.slug"
                   >
