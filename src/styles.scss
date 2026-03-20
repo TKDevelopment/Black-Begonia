@@ -1,1 +1,60 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes tooltipFadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -100%);
+    }
+  }
+
+  @keyframes tooltipFadeOut {
+    from {
+      opacity: 1;
+      transform: translate(-50%, -100%);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+  }
+
+  .tooltip-fade-in {
+    animation: tooltipFadeIn 500ms ease-out forwards;
+  }
+
+  .tooltip-fade-out {
+    animation: tooltipFadeOut 500ms ease-in forwards;
+  }
+}
+
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.carousel-fade {
+  /* Fade out left/right edges at ~15% */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 15%,
+    black 85%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 15%,
+    black 85%,
+    transparent 100%
+  );
+}

@@ -1,0 +1,80 @@
+<section class="min-h-screen bg-white font-cormorant">
+  <ng-container *ngIf="gallery">
+    <div class="animate-fade-in">
+      <!-- Hero -->
+      <div class="relative min-h-[260px] sm:min-h-[340px] md:min-h-[520px] lg:min-h-[720px] xl:min-h-[860px] 2xl:min-h-[925px] overflow-hidden flex flex-col justify-between text-white">
+        <!-- Hero Image -->
+        <img
+          [ngSrc]="gallery.heroImage || gallery.coverImage"
+          priority
+          fill
+          sizes="100vw"
+          class="object-cover object-center"
+          alt="Wedding floral gallery hero"
+        />
+
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-black/10"></div>
+
+        <!-- Top Bar -->
+        <div class="relative z-10 w-full flex justify-start px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-4 sm:pt-5 md:pt-6 lg:pt-8">
+          <button
+            routerLink="/portfolio"
+            class="bg-white/70 backdrop-blur-sm text-gray-700 text-sm sm:text-base md:text-lg transition-colors duration-300 py-2 sm:py-2.5 px-4 sm:px-5 md:px-6 cursor-pointer rounded-full hover:bg-gray-100/90 hover:text-black shadow-sm"
+          >
+            ← Back to Portfolio
+          </button>
+        </div>
+
+        <!-- Text Content -->
+        <div class="relative z-10 w-full text-center py-2 sm:py-3 md:py-6 lg:py-12 px-4 sm:px-6 bg-black/40">
+          <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl leading-tight">
+            {{ gallery.coupleNames }}
+          </h1>
+          <p class="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-oswald tracking-[0.18em] sm:tracking-[0.22em] md:tracking-widest mt-2 sm:mt-3">
+            {{ gallery.venue | uppercase }}
+          </p>
+        </div>
+      </div>
+
+      <div class="max-w-screen-xl mx-auto px-6 py-6 md:py-12">
+        <div class="mb-3 md:mb-8">
+          <p
+            routerLink="/portfolio"
+            class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200"
+          >
+            ← Back to Portfolio
+          </p>
+        </div>
+
+        <div class="max-w-3xl mx-auto text-center mb-6 md:mb-12" *ngIf="gallery.description">
+          <p class="text-xl text-gray-700">{{ gallery.description }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <img
+            *ngFor="let image of gallery.images"
+            [src]="image.thumbUrl"
+            [alt]="image.altText"
+            class="w-full h-auto transition-all duration-700 ease-out"
+            [class.opacity-0]="!loadedImages[image.imageId]"
+            [class.opacity-100]="loadedImages[image.imageId]"
+            [class.scale-[0.98]]="!loadedImages[image.imageId]"
+            [class.scale-100]="loadedImages[image.imageId]"
+            loading="lazy"
+            (load)="onImageLoad(image.imageId)"
+          />
+        </div>
+
+        <div class="my-8">
+          <p
+            routerLink="/portfolio"
+            class="text-xl hover:text-[#ea938c] transition-colors cursor-pointer duration-200"
+          >
+            ← Back to Portfolio
+          </p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</section>
