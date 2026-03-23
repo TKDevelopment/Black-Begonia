@@ -1,0 +1,65 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6 md:py-8">
+    <app-crm-page-header
+      title="Leads"
+      subtitle="Manage incoming inquiries, track outreach, and convert qualified opportunities into structured CRM records."
+      primaryActionLabel="Create Lead"
+      secondaryActionLabel="Export"
+      (primaryAction)="openCreateLeadModal()"
+      (secondaryAction)="exportLeads()"
+    />
+
+    <app-search-filter-bar
+      searchPlaceholder="Search by name, email, event type, or source"
+      [searchValue]="searchTerm()"
+      [filters]="filters()"
+      (searchChange)="onSearchChange($event)"
+      (filterChange)="onFilterChange($event)"
+      (reset)="resetFilters()"
+    />
+
+    <app-entity-table-shell
+      [columns]="columns"
+      [rows]="filteredLeads()"
+      [loading]="loading()"
+      [clickableRows]="true"
+      trackByField="lead_id"
+      emptyTitle="No leads found"
+      emptyDescription="Try adjusting your filters or create a new lead to get started."
+      (rowClick)="openLead($event)"
+    >
+      <ng-template appEntityTableCell="lead" let-row>
+        <div class="space-y-1">
+          <div class="font-medium text-stone-900">
+            {{ formatLeadName(row) }}
+          </div>
+          <div class="text-xs text-stone-500">
+            {{ row.email }}
+          </div>
+          <div *ngIf="row.phone" class="text-xs text-stone-400">
+            {{ row.phone }}
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template appEntityTableCell="event_date" let-row>
+        <span class="text-stone-700">
+          {{ formatEventDate(row.event_date) }}
+        </span>
+      </ng-template>
+
+      <ng-template appEntityTableCell="status" let-row>
+        <app-status-badge
+          [label]="row.status"
+          [tone]="getLeadStatusTone(row.status)"
+        />
+      </ng-template>
+
+      <ng-template appEntityTableCell="created_at" let-row>
+        <span class="text-stone-600">
+          {{ formatCreatedAt(row.created_at) }}
+        </span>
+      </ng-template>
+    </app-entity-table-shell>
+  </div>
+</div>

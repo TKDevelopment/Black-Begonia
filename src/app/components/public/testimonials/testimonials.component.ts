@@ -29,15 +29,6 @@ interface CtaBlock {
 export class TestimonialsComponent {
   testimonials: Testimonial[] = [
     {
-      title: 'Exceeded every expectation',
-      reviewer: 'Emily & Tim',
-      role: 'Wedding Clients',
-      event: 'MARGIN STREET INN, WESTERLY RI',
-      quote:
-        `Working with Black Begonia was one of the best decisions we made for our wedding. Every arrangement felt deeply intentional, romantic, and completely tailored to us. The floral designs elevated the entire atmosphere and made our day feel even more magical than we imagined.`,
-      image: 'assets/images/website/1000005243.jpg'
-    },
-    {
       title: 'Elegant, thoughtful, unforgettable',
       reviewer: 'Nathan & Kirsten',
       role: 'Wedding Clients',
@@ -48,21 +39,21 @@ export class TestimonialsComponent {
     },
     {
       title: 'A designer with incredible vision',
-      reviewer: 'Emily R.',
+      reviewer: 'Rayanne & Kevin',
       role: 'Bride',
       event: 'Garden Wedding',
       quote:
-        `The florals were breathtaking and felt like they belonged in a magazine. Every bouquet, centerpiece, and detail reflected so much care and creativity. I felt completely confident throughout the process, and the final result was more beautiful than I could have dreamed.`,
+        `Becca did the florals for my wedding and they were so beautiful. Everyone commented on how amazing everything turned out. She paid so much attention to detail and made all of my visions come to life. She was super accommodating with everything. 15/10 recommend for your wedding.`,
       image: 'assets/images/website/1000005214.jpg'
     },
     {
-      title: 'So personal and beautifully curated',
-      reviewer: 'Sophia & Daniel',
+      title: 'Elegant, thoughtful, unforgettable',
+      reviewer: 'Meg Rosenberg',
       role: 'Wedding Clients',
-      event: 'Estate Wedding',
+      event: 'Coastal Celebration',
       quote:
-        `Black Begonia made us feel heard, inspired, and taken care of from start to finish. The florals tied the whole day together and made every space feel warm, romantic, and elevated. We are still looking back at photos completely in awe.`,
-      image: 'assets/images/website/1000005237.jpg'
+        `Becca did such a phenomenal job with the flowers and floral arrangements. I didn’t really have a specific vision in mind, I just knew that I wanted something more unique rather than “classic bridal” and everything came out stunning! She also checked in the morning of to make sure that I liked everything. She also did the arrangements for my rehearsal dinner the day before, which were more “classic bridal” and were also so stunning! She has an incredible scope of design and I couldn’t be happier with how the flowers turned out.`,
+      image: 'assets/images/website/1000005268.jpg'
     },
     {
       title: 'The details were beyond beautiful',
@@ -75,13 +66,22 @@ export class TestimonialsComponent {
     },
     {
       title: 'Professional, calm, and artistic',
-      reviewer: 'Kaeli & Chuck',
+      reviewer: 'Alexandra & Joshua',
       role: 'Wedding Clients',
       event: 'Private Venue Celebration',
       quote:
-        `Not only was the work beautiful, but the experience of working together was so smooth and reassuring. We felt supported throughout the planning process, and the final floral styling brought such a romantic and elevated feeling to the day.`,
-      image: 'assets/images/website/CK-186.jpg'
-    }
+        `Black Begonia Floral Design provided my wedding with the most STUNNING floral arrangements!! Breath taking. The owner is a true artist with her work! Made for the most stunning details for our big day!! Brides, Becca will work with you to get you your dream bouquet! I speak from experience! My bouquet had texture and when I asked her for a wild flower (but fall) vibe, she did JUST THAT. I can't speak highly enough of her work!! Pictures don't do it justice for the beauty of her work in person!!`,
+      image: 'assets/images/website/1000005267.jpg'
+    },
+    {
+      title: 'So personal and beautifully curated',
+      reviewer: 'Morgan & Nick',
+      role: 'Wedding Clients',
+      event: 'Estate Wedding',
+      quote:
+        `Becca was extremely attentive and flexible with our wedding florals! She sent photos of every flower and greenery when we first discussed her doing our wedding. I changed my mind multiple times and she was so flexible and willing to do anything. Our centerpieces were amazing, as were the bouquets!!!`,
+      image: 'assets/images/473032518_1147611050271084_8704592988378089709_n (2).jpg'
+    },
   ];
 
   ctaBlocks: CtaBlock[] = [
