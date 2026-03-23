@@ -1,0 +1,26 @@
+<div
+  *ngIf="!authService.isReady || authService.snapshot.loading"
+  class="flex min-h-screen bg-[#f7f4f1]"
+>
+  <app-sidebar class="hidden lg:block lg:w-72 border-r border-black/10 bg-white"></app-sidebar>
+
+  <div class="flex min-h-screen flex-1 items-center justify-center px-6">
+    <div class="flex flex-col items-center text-center">
+      <div class="h-12 w-12 animate-spin rounded-full border-4 border-dashed border-[#ea938c]"></div>
+      <p class="mt-4 font-cormorant text-3xl tracking-wide text-[#1f1f1f]">
+        Preparing your session...
+      </p>
+    </div>
+  </div>
+</div>
+
+<div
+  *ngIf="authService.isReady && authService.isAuthenticated && authService.isInternalUser"
+  class="flex min-h-screen bg-[#f7f4f1]"
+>
+  <app-sidebar class="hidden lg:block lg:w-72 border-r border-black/10 bg-white"></app-sidebar>
+
+  <main class="min-w-0 flex-1 overflow-y-auto">
+    <router-outlet></router-outlet>
+  </main>
+</div>

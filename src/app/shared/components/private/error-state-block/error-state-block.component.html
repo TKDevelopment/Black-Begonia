@@ -1,0 +1,27 @@
+<div class="rounded-2xl border border-rose-200 bg-white shadow-sm">
+  <div
+    class="flex flex-col items-center justify-center px-6 py-10 text-center"
+    [ngClass]="minHeightClass"
+  >
+    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+      <span class="text-2xl font-semibold">!</span>
+    </div>
+
+    <h3 class="mt-5 text-lg font-semibold text-stone-900">
+      {{ title }}
+    </h3>
+
+    <p class="mt-2 max-w-md text-sm leading-6 text-stone-600">
+      {{ description }}
+    </p>
+
+    <button
+      *ngIf="showRetry"
+      type="button"
+      (click)="retry.emit()"
+      class="mt-5 inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+    >
+      {{ retryLabel }}
+    </button>
+  </div>
+</div>

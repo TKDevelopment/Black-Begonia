@@ -7,22 +7,12 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { SupabaseService } from '../../../services/supabase.service';
-import { ToastService } from '../../../services/toast.service';
-import { SeoService } from '../../../seo/seo.service';
-
-type InquiryInsert = {
-  inquiry_id: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  email: string;
-  service_type: string;
-  event_date: string; // YYYY-MM-DD
-  preferred_contact_method: string;
-  lead_source: string;
-  notes: string;
-};
+import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { SeoService } from '../../../core/seo/seo.service';
+import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
+import { CreateGeneralLeadInput } from '../../../core/models/create-general-lead-input';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-general-inquiries',
@@ -36,20 +26,42 @@ export class GeneralInquiriesComponent {
   submitting = false;
   submitted = false;
   error: string | null = null;
-  submittedInquiry: { inquiry_id: string } | null = null;
+  submittedInquiry: { lead_id: string } | null = null;
   invalidTooltips: Record<string, 'hidden' | 'visible' | 'fading'> = {};
-  private tooltipTimers: Record<string, any> = {};
+  private tooltipTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
   constructor(
     private fb: FormBuilder,
     private supabase: SupabaseService,
+    private leadRepository: LeadRepositoryService,
     private toast: ToastService,
+    private router: Router,
     private seo: SeoService
   ) {
     this.generalInquiryForm = this.fb.group({
-      firstName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z]+$/), Validators.minLength(2)]],
-      lastName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z]+$/), Validators.minLength(2)]],
-      phone: ['', [Validators.required, Validators.pattern(/^(\+1\s?)?(\(?\d{3}\)?)[-\s.]?\d{3}[-\s.]?\d{4}$/)]],
+      firstName: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^[a-zA-Z]+(?:[ '-][a-zA-Z]+)*$/),
+          Validators.minLength(2),
+        ],
+      ],
+      lastName: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^[a-zA-Z]+(?:[ '-][a-zA-Z]+)*$/),
+          Validators.minLength(2),
+        ],
+      ],
+      phone: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^(\+1\s?)?(\(?\d{3}\)?)[-\s.]?\d{3}[-\s.]?\d{4}$/),
+        ],
+      ],
       email: ['', [Validators.required, Validators.email]],
       serviceType: ['', Validators.required],
       eventDate: ['', Validators.required],
@@ -85,32 +97,7 @@ export class GeneralInquiriesComponent {
       .map((u) => (u ?? '').trim())
       .filter((u) => u.length > 0);
 
-    // de-dupe
     return Array.from(new Set(urls));
-  }
-
-  private async insertInquiryWithRetry(payload: Omit<InquiryInsert, 'inquiry_id'>): Promise<string> {
-    const client = this.supabase.getClient();
-
-    let inquiryId = crypto.randomUUID();
-    let row: InquiryInsert = { inquiry_id: inquiryId, ...payload };
-
-    let { error } = await client.from('inquiries').insert(row);
-
-    if (error?.code === '23505') {
-      console.warn('[inquiries] UUID collision detected, retrying once...');
-      inquiryId = crypto.randomUUID();
-      row = { inquiry_id: inquiryId, ...payload };
-
-      const retry = await client.from('inquiries').insert(row);
-      if (retry.error) throw retry.error;
-
-      return inquiryId;
-    }
-
-    if (error) throw error;
-
-    return inquiryId;
   }
 
   private requiredControlNames(): string[] {
@@ -121,7 +108,7 @@ export class GeneralInquiriesComponent {
       'email',
       'serviceType',
       'eventDate',
-      'preferredContactMethod'
+      'preferredContactMethod',
     ];
   }
 
@@ -132,21 +119,17 @@ export class GeneralInquiriesComponent {
       const ctrl = this.generalInquiryForm.get(name);
       if (!ctrl) return;
 
-      const isInvalid = ctrl.invalid;
-
-      if (isInvalid) {
+      if (ctrl.invalid) {
         this.invalidTooltips[name] = 'visible';
 
         if (this.tooltipTimers[name]) clearTimeout(this.tooltipTimers[name]);
 
-        // after 3 seconds → start fade out
         this.tooltipTimers[name] = setTimeout(() => {
           this.invalidTooltips[name] = 'fading';
 
-          // remove from DOM after fade-out finishes
           setTimeout(() => {
             this.invalidTooltips[name] = 'hidden';
-          }, 400); // must match fadeOut duration
+          }, 400);
         }, 3000);
       } else {
         this.invalidTooltips[name] = 'hidden';
@@ -169,33 +152,36 @@ export class GeneralInquiriesComponent {
     try {
       const { value } = this.generalInquiryForm;
 
-      const inquiryId = await this.insertInquiryWithRetry({
+      const payload: CreateGeneralLeadInput = {
+        service_type: value.serviceType,
+        event_type: 'general',
         first_name: value.firstName,
         last_name: value.lastName,
-        phone: value.phone,
         email: value.email,
-        service_type: value.serviceType,
-        event_date: value.eventDate,
+        phone: value.phone,
         preferred_contact_method: value.preferredContactMethod,
-        lead_source: value.leadSource,
-        notes: value.notes
-      });
+        event_date: value.eventDate || null,
+        inquiry_message: value.notes || null,
+        source: value.leadSource || 'other',
+      };
+
+      const lead = await this.leadRepository.createGeneralLead(payload);
 
       const urls = this.getCleanInspirationUrls();
 
       if (urls.length > 0) {
         const rows = urls.map((u) => ({
-          inquiry_id: inquiryId,
+          lead_id: lead.lead_id,
           url: u,
         }));
 
         const { error: urlError } = await this.supabase
           .getClient()
-          .from('inspiration_urls')
+          .from('lead_inspiration_urls')
           .insert(rows);
 
         if (urlError) {
-          console.error('[inspiration_urls] insert error:', urlError);
+          console.error('[lead_inspiration_urls] insert error:', urlError);
           this.toast.showToast(
             'Inquiry submitted, but we could not save your inspiration links.',
             'error'
@@ -204,25 +190,34 @@ export class GeneralInquiriesComponent {
       }
 
       try {
-        await this.triggerInquiryEmails(inquiryId, 'general');
+        await this.triggerInquiryEmails(lead.lead_id, 'general');
       } catch (emailErr) {
         console.error('Email function failed (non-blocking): ', emailErr);
       }
 
-      this.submittedInquiry = { inquiry_id: inquiryId };
+      this.submittedInquiry = { lead_id: lead.lead_id };
       this.submitted = true;
 
-      this.generalInquiryForm.reset();
-      this.requiredControlNames().forEach((name) => (this.invalidTooltips[name] = 'hidden'));
+      this.generalInquiryForm.reset({
+        leadSource: 'other',
+      });
+
+      this.requiredControlNames().forEach((name) => {
+        this.invalidTooltips[name] = 'hidden';
+      });
+
       this.inspirationUrls.clear();
       this.addInspirationUrl();
 
       this.toast.showToast('Your inquiry has been submitted successfully!', 'success');
+      this.router.navigate(['/inquiries/success']);
     } catch (err: any) {
       console.error('Supabase insert error:', err);
 
       if (err?.code === '42501') {
-        console.error('Your submission was blocked by database security rules (RLS). Please contact support.');
+        console.error(
+          'Your submission was blocked by database security rules (RLS). Please contact support.'
+        );
       } else if (err?.message?.includes('Unauthorized') || err?.status === 401) {
         console.error('Request was unauthorized. Please refresh and try again.');
       } else {
@@ -231,17 +226,17 @@ export class GeneralInquiriesComponent {
 
       this.toast.showToast('Failed to submit your inquiry. Please try again later.', 'error');
     } finally {
-      this.submitting = false;
+      this.submitting = false;      
     }
   }
 
-  async triggerInquiryEmails(inquiryId: string, inquiryType: string) {
+  async triggerInquiryEmails(leadId: string, leadType: string) {
     const client = this.supabase.getClient();
 
     const { data, error } = await client.functions.invoke('send-inquiry-emails', {
-      body: { 
-        inquiry_id: inquiryId,
-        inquiry_type: inquiryType
+      body: {
+        lead_id: leadId,
+        lead_type: leadType,
       },
     });
 

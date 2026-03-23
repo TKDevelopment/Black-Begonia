@@ -1,0 +1,33 @@
+<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+  <div class="space-y-1">
+    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight text-stone-900">
+      {{ title }}
+    </h1>
+
+    <p *ngIf="subtitle" class="text-sm md:text-base text-stone-600 max-w-3xl">
+      {{ subtitle }}
+    </p>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <button
+      *ngIf="secondaryActionLabel"
+      type="button"
+      (click)="secondaryAction.emit()"
+      [disabled]="secondaryDisabled"
+      class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {{ secondaryActionLabel }}
+    </button>
+
+    <button
+      *ngIf="primaryActionLabel"
+      type="button"
+      (click)="primaryAction.emit()"
+      [disabled]="primaryDisabled"
+      class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {{ primaryActionLabel }}
+    </button>
+  </div>
+</div>

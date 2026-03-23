@@ -1,7 +1,7 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { SupabaseService } from '../../../services/supabase.service';
+import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 
 interface PortfolioGalleryRow {
   gallery_id: string;

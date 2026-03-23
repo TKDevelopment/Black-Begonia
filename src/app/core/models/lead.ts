@@ -1,0 +1,38 @@
+import { LeadStatus } from './lead-status';
+
+export interface Lead {
+  lead_id: string;
+  service_type: string;
+  event_type?: string | null;
+  first_name: string;
+  last_name: string;
+  partner_first_name?: string | null;
+  partner_last_name?: string | null;
+  email: string;
+  phone?: string | null;
+  preferred_contact_method?: string | null;
+  event_date?: string | null;
+  ceremony_venue_name?: string | null;
+  ceremony_venue_city?: string | null;
+  ceremony_venue_state?: string | null;
+  reception_venue_name?: string | null;
+  reception_venue_city?: string | null;
+  reception_venue_state?: string | null;
+  budget_range?: string | null;
+  guest_count?: number | null;
+  inquiry_message?: string | null;
+  source: string;
+  status: LeadStatus;
+  assigned_user_id?: string | null;
+  decline_reason?: string | null;
+  converted_project_id?: string | null;
+  converted_primary_contact_id?: string | null;
+  converted_at?: string | null;
+  declined_at?: string | null;
+  last_contacted_at?: string | null;
+  created_at: string;
+  updated_at: string;
+
+  consultation_scheduled_at: string | null;
+  consultation_completed_at: string | null;
+}

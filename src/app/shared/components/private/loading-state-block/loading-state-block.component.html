@@ -1,0 +1,22 @@
+<div
+  class="rounded-2xl border border-stone-200 bg-white shadow-sm"
+  [class.w-full]="fullWidth"
+>
+  <div
+    class="flex flex-col items-center justify-center px-6 py-10 text-center"
+    [ngClass]="minHeightClass"
+  >
+    <div class="relative h-12 w-12">
+      <div class="absolute inset-0 rounded-full border-4 border-stone-200"></div>
+      <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-[#ea938c] animate-spin"></div>
+    </div>
+
+    <h3 class="mt-5 text-lg font-semibold text-stone-900">
+      {{ title }}
+    </h3>
+
+    <p class="mt-2 max-w-md text-sm leading-6 text-stone-600">
+      {{ description }}
+    </p>
+  </div>
+</div>

@@ -7,9 +7,12 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ToastService } from '../../../services/toast.service';
-import { SeoService } from '../../../seo/seo.service';
-import { SupabaseService } from '../../../services/supabase.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { SeoService } from '../../../core/seo/seo.service';
+import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
+import { CreateWeddingLeadInput } from '../../../core/models/create-wedding-lead-input';
+import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
+import { Router } from '@angular/router';
 
 type InquiryInsert = {
   inquiry_id: string;
@@ -45,7 +48,7 @@ export class WeddingInquiriesComponent {
   submitting = false;
   submitted = false;
   error: string | null = null;
-  submittedInquiry: { inquiry_id: string } | null = null;
+  submittedInquiry: { lead_id: string } | null = null;
   invalidTooltips: Record<string, 'hidden' | 'visible' | 'fading'> = {};
   private tooltipTimers: Record<string, any> = {};
 
@@ -53,7 +56,9 @@ export class WeddingInquiriesComponent {
     private fb: FormBuilder,
     private supabase: SupabaseService,
     private toast: ToastService,
-    private seo: SeoService
+    private seo: SeoService,
+    private leadRepository: LeadRepositoryService,
+    private router: Router
   ) {
     this.weddingInquiryForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z]+$/), Validators.minLength(2)]],
@@ -63,6 +68,7 @@ export class WeddingInquiriesComponent {
       phone: ['', [Validators.required, Validators.pattern(/^(\+1\s?)?(\(?\d{3}\)?)[-\s.]?\d{3}[-\s.]?\d{4}$/)]],
       email: ['', [Validators.required, Validators.email]],
       eventDate: ['', Validators.required],
+      serviceType: ['', Validators.required],
       ceremonyVenue: [''],
       receptionVenue: [''],
       budget: ['', Validators.required],
@@ -105,30 +111,6 @@ export class WeddingInquiriesComponent {
     return Array.from(new Set(urls));
   }
 
-  private async insertWeddingInquiryWithRetry(payload: Omit<InquiryInsert, 'inquiry_id'>): Promise<string> {
-    const client = this.supabase.getClient();
-
-    let inquiryId = crypto.randomUUID();
-    let row: InquiryInsert = { inquiry_id: inquiryId, ...payload };
-
-    let { error } = await client.from('inquiries').insert(row);
-
-    if (error?.code === '23505') {
-      console.warn('[inquiries] UUID collision detected, retrying once...');
-      inquiryId = crypto.randomUUID();
-      row = { inquiry_id: inquiryId, ...payload };
-
-      const retry = await client.from('inquiries').insert(row);
-      if (retry.error) throw retry.error;
-
-      return inquiryId;
-    }
-
-    if (error) throw error;
-
-    return inquiryId;
-  }
-
   private requiredControlNames(): string[] {
     return [
       'firstName',
@@ -138,6 +120,7 @@ export class WeddingInquiriesComponent {
       'phone',
       'email',
       'eventDate',
+      'serviceType',
       'budget',
       'preferredContactMethod',
     ];
@@ -187,41 +170,41 @@ export class WeddingInquiriesComponent {
     try {
       const { value } = this.weddingInquiryForm;
 
-      const inquiryId = await this.insertWeddingInquiryWithRetry({
+      const payload: CreateWeddingLeadInput = {
+        event_type: 'wedding',
         first_name: value.firstName,
         last_name: value.lastName,
-        fiance_first_name: value.fianceFirstName,
-        fiance_last_name: value.fianceLastName,
-        phone: value.phone,
+        partner_first_name: value.fianceFirstName,
+        partner_last_name: value.fianceLastName,
         email: value.email,
-        service_type: 'wedding',
-        event_date: value.eventDate,
-        ceremony_venue: (value.ceremonyVenue ?? '').trim() || null,
-        reception_venue: (value.receptionVenue ?? '').trim() || null,
-        budget: value.budget,
-        guests: value.guests,
-        event_planner_name: (value.eventPlannerName ?? '').trim() || null,
-        event_planner_phone: (value.eventPlannerPhone ?? '').trim() || null,
-        event_planner_email: (value.eventPlannerEmail ?? '').trim() || null,
+        phone: value.phone,
         preferred_contact_method: value.preferredContactMethod,
-        lead_source: value.leadSource,
-        notes: value.notes
-      });
+        event_date: value.eventDate || null,
+        service_type: value.serviceType,
+        ceremony_venue_name: (value.ceremonyVenue ?? '').trim() || null,
+        reception_venue_name: (value.receptionVenue ?? '').trim() || null,
+        budget_range: value.budget || null,
+        guest_count: value.guests ? Number(value.guests) : null,
+        inquiry_message: value.notes || null,
+        source: value.leadSource || 'other',
+      };
+
+      const lead = await this.leadRepository.createWeddingLead(payload);
 
       const urls = this.getCleanInspirationUrls();
       if (urls.length > 0) {
         const rows = urls.map((u) => ({
-          inquiry_id: inquiryId,
+          lead_id: lead.lead_id,
           url: u,
         }));
 
         const { error: urlError } = await this.supabase
           .getClient()
-          .from('inspiration_urls')
+          .from('lead_inspiration_urls')
           .insert(rows);
 
         if (urlError) {
-          console.error('[inspiration_urls] insert error:', urlError);
+          console.error('[lead_inspiration_urls] insert error:', urlError);
           this.toast.showToast(
             'Inquiry submitted, but we could not save your inspiration links.',
             'error'
@@ -230,44 +213,62 @@ export class WeddingInquiriesComponent {
       }
 
       try {
-        await this.triggerInquiryEmails(inquiryId, 'wedding');
+        await this.triggerInquiryEmails(lead.lead_id, 'wedding');
       } catch (emailErr) {
         console.error('Email function failed (non-blocking): ', emailErr);
       }
 
-      this.submittedInquiry = { inquiry_id: inquiryId };
+      this.submittedInquiry = { lead_id: lead.lead_id };
       this.submitted = true;
 
-      this.weddingInquiryForm.reset();
-      this.requiredControlNames().forEach((name) => (this.invalidTooltips[name] = 'hidden'));
+      this.weddingInquiryForm.reset({
+        leadSource: 'other',
+      });
+
+      this.requiredControlNames().forEach((name) => {
+        this.invalidTooltips[name] = 'hidden';
+      });
+
       this.inspirationUrls.clear();
       this.addInspirationUrl();
 
-      this.toast.showToast('Your wedding inquiry has been submitted successfully!', 'success');
+      this.toast.showToast(
+        'Your wedding inquiry has been submitted successfully!',
+        'success'
+      );
+
+      this.router.navigate(['/inquiries/success']);
     } catch (err: any) {
       console.error('Supabase insert error:', err);
 
       if (err?.code === '42501') {
-        console.error('Your submission was blocked by database security rules (RLS). Please contact support.');
+        console.error(
+          'Your submission was blocked by database security rules (RLS). Please contact support.'
+        );
       } else if (err?.message?.includes('Unauthorized') || err?.status === 401) {
         console.error('Request was unauthorized. Please refresh and try again.');
       } else {
-        console.error('An error occurred while submitting your inquiry. Please try again later.');
+        console.error(
+          'An error occurred while submitting your inquiry. Please try again later.'
+        );
       }
 
-      this.toast.showToast('Failed to submit your wedding inquiry. Please try again later.', 'error');
+      this.toast.showToast(
+        'Failed to submit your wedding inquiry. Please try again later.',
+        'error'
+      );
     } finally {
       this.submitting = false;
     }
   }
 
-  async triggerInquiryEmails(inquiryId: string, inquiryType: string) {
+  async triggerInquiryEmails(leadId: string, leadType: string) {
     const client = this.supabase.getClient();
 
     const { data, error } = await client.functions.invoke('send-inquiry-emails', {
-      body: { 
-        inquiry_id: inquiryId,
-        inquiry_type: inquiryType
+      body: {
+        lead_id: leadId,
+        lead_type: leadType,
       },
     });
 
