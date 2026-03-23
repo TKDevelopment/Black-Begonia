@@ -25,6 +25,42 @@ interface WorkshopSection {
 export class WorkshopsComponent {
   workshopSections: WorkshopSection[] = [
     {
+      key: 'social',
+      title: 'General Social Events',
+      subtitle: 'Custom floral experiences for private events and special occasions',
+      description:
+        'Create a memorable hands-on experience for your next gathering with custom floral workshops tailored to birthdays, showers, private parties, brand events, and other social occasions. Each workshop can be designed around your event style, guest count, and overall vision.',
+      inquiryLink: '/inquiries/general',
+      images: [
+        'assets/images/website/fizzandfrites-152.jpg',
+        'assets/images/website/487367734_1194785119317556_2221152768559106190_n.jpg',
+        'assets/images/website/486955655_1194784742650927_963388610016831666_n.jpg',
+        'assets/images/website/157266871_264350035263861_7456896409632197832_n.jpg'
+      ],
+      currentIndex: 0,
+      nextIndex: null,
+      displayRight: false,
+      isTransitioning: false
+    },
+    {
+      key: 'fall',
+      title: 'Fall & Thanksgiving Decor',
+      subtitle: 'Warm, textural floral experiences inspired by the autumn season',
+      description:
+        'Gather around the richness of the season with floral workshops featuring warm tones, textural elements, and arrangements inspired by autumn entertaining. These experiences are ideal for Thanksgiving hosts, community events, and groups looking for a creative, seasonal activity.',
+      inquiryLink: '/inquiries/general',
+      images: [
+        'assets/images/website/489444803_1201376215325113_3157936810932011361_n.jpg',
+        'assets/images/website/472337699_1142444514121071_8713096277024086034_n.jpg',
+        'assets/images/website/122977927_184819483216917_3621365564105853676_n.jpg',
+        'assets/images/472999197_1147600846938771_9130901346915404353_n.jpg'
+      ],
+      currentIndex: 0,
+      nextIndex: null,
+      displayRight: true,
+      isTransitioning: false
+    },
+    {
       key: 'christmas',
       title: 'Christmas Wreaths & Florals',
       subtitle: 'Festive designs for holiday gatherings and seasonal celebrations',
@@ -58,44 +94,7 @@ export class WorkshopsComponent {
       nextIndex: null,
       displayRight: false,
       isTransitioning: false
-      
     },
-    {
-      key: 'fall',
-      title: 'Fall & Thanksgiving Decor',
-      subtitle: 'Warm, textural floral experiences inspired by the autumn season',
-      description:
-        'Gather around the richness of the season with floral workshops featuring warm tones, textural elements, and arrangements inspired by autumn entertaining. These experiences are ideal for Thanksgiving hosts, community events, and groups looking for a creative, seasonal activity.',
-      inquiryLink: '/inquiries/general',
-      images: [
-        'assets/images/website/489444803_1201376215325113_3157936810932011361_n.jpg',
-        'assets/images/website/472337699_1142444514121071_8713096277024086034_n.jpg',
-        'assets/images/website/122977927_184819483216917_3621365564105853676_n.jpg',
-        'assets/images/472999197_1147600846938771_9130901346915404353_n.jpg'
-      ],
-      currentIndex: 0,
-      nextIndex: null,
-      displayRight: true,
-      isTransitioning: false
-    },
-    {
-      key: 'social',
-      title: 'General Social Events',
-      subtitle: 'Custom floral experiences for private events and special occasions',
-      description:
-        'Create a memorable hands-on experience for your next gathering with custom floral workshops tailored to birthdays, showers, private parties, brand events, and other social occasions. Each workshop can be designed around your event style, guest count, and overall vision.',
-      inquiryLink: '/inquiries/general',
-      images: [
-        'assets/images/website/fizzandfrites-152.jpg',
-        'assets/images/website/487367734_1194785119317556_2221152768559106190_n.jpg',
-        'assets/images/website/486955655_1194784742650927_963388610016831666_n.jpg',
-        'assets/images/website/157266871_264350035263861_7456896409632197832_n.jpg'
-      ],
-      currentIndex: 0,
-      nextIndex: null,
-      displayRight: false,
-      isTransitioning: false
-    }
   ];
 
   nextSlide(section: WorkshopSection): void {

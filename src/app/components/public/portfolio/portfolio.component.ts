@@ -1,6 +1,6 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 
 interface PortfolioGalleryRow {
@@ -43,7 +43,7 @@ interface PortfolioCtaBlock {
 @Component({
   selector: 'app-portfolio',
   standalone: true,
-  imports: [RouterLink, CommonModule, NgOptimizedImage],
+  imports: [CommonModule, NgOptimizedImage],
   templateUrl: './portfolio.component.html',
   styleUrl: './portfolio.component.scss'
 })
@@ -59,29 +59,6 @@ export class PortfolioComponent implements OnInit {
     private supabase: SupabaseService,
     private router: Router
   ) {}
-
-  ctaBlocks: PortfolioCtaBlock[] = [
-    {
-      quote:
-        `From the first time I chatted with Becca about our wedding, I knew she understood our vision with the florals and that she was a florist I could trust with bringing this vision to life. Becca was extremely attentive and reliable – whenever I had a random, one-off question, she was there to chat. On the wedding day, Becca went above and beyond. The florals were absolutely beautiful, and my bridal bouquet was everything I wanted and more.`,
-      reviewer: 'KAYLA F.',
-      align: 'right',
-      heading: 'Ready to get started?',
-      subheading: `We'd love to hear from you!`,
-      buttonText: 'INQUIRE',
-      buttonLink: '/inquiries'
-    },
-    {
-      quote:
-        `Becca was AMAZING to work with! She is so full of energy and clearly knows her stuff when it comes to different types of flowers and greenery. You can really see the vision come to life in her mind as she's talking to you about what you could do for your event. She was so great and I really enjoyed working with her! I can't thank her enough for all the work she did and how she brought the combination of her and mine's vision to life for my wedding day.`,
-      reviewer: 'MARIA Z.',
-      align: 'left',
-      heading: 'Let’s create something beautiful',
-      subheading: `Tell us about your vision and we’ll begin shaping the floral story.`,
-      buttonText: 'INQUIRE',
-      buttonLink: '/inquiries'
-    }
-  ];
 
   async ngOnInit(): Promise<void> {
     this.updateScreenMode();
@@ -169,10 +146,6 @@ export class PortfolioComponent implements OnInit {
 
   getDisplayPosition(gallery: PortfolioGallery): 'left' | 'center' | 'right' {
     return this.isMobileOrSmall ? 'center' : gallery.position;
-  }
-
-  getCtaForGroup(groupIndex: number): PortfolioCtaBlock {
-    return this.ctaBlocks[groupIndex % this.ctaBlocks.length];
   }
 
   get galleryChunks(): PortfolioGallery[][] {
