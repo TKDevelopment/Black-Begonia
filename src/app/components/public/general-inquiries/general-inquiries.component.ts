@@ -64,7 +64,7 @@ export class GeneralInquiriesComponent {
       ],
       email: ['', [Validators.required, Validators.email]],
       serviceType: ['', Validators.required],
-      eventDate: ['', Validators.required],
+      eventDate: [''],
       preferredContactMethod: ['', Validators.required],
       leadSource: [''],
       notes: ['', Validators.maxLength(500)],
@@ -107,7 +107,6 @@ export class GeneralInquiriesComponent {
       'phone',
       'email',
       'serviceType',
-      'eventDate',
       'preferredContactMethod',
     ];
   }

@@ -33,7 +33,7 @@ export class GeneralServicesComponent {
       title: 'Bi-Weekly/Monthly Subscriptions',
       description:
         `Bring fresh florals into your home with a thoughtfully designed arrangement delivered on a bi-weekly or monthly basis. Each design is created with your home décor, personal style, and the beauty of seasonal blooms in mind, ensuring every arrangement feels natural, intentional, and perfectly suited to your space. Subscription deliveries begin at a minimum of $150 per arrangement.`,
-      image: 'assets/images/website/181178586_302622938103237_8238857151037560948_n.jpg'
+      image: 'assets/images/website/Photo Dec 06, 4 23 21 PM.jpg'
     },
     {
       title: 'Event Florals',
@@ -45,7 +45,7 @@ export class GeneralServicesComponent {
       title: 'Sympathy & Memorial',
       description:
         `Thoughtfully designed floral arrangements created to honor and remember meaningful lives. With care and sensitivity, we craft elegant pieces that offer comfort, express remembrance, and bring a sense of peace and beauty to memorial services and gatherings.`,
-      image: 'assets/images/website/486724052_1191345626328172_755768107960406248_n.jpg'
+      image: 'assets/images/website/DSC_2652.jpg'
     },
     {
       title: 'Installations & Styling',

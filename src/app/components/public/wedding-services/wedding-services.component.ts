@@ -40,7 +40,7 @@ export class WeddingServicesComponent {
       title: 'DESIGN AND PROPOSAL',
       showInquiry: false,
       description: `After our conversation, we’ll begin shaping your floral concept and preparing a custom proposal. This gives you a clear picture of the aesthetic direction, recommended florals, and the overall scope of your event design.`,
-      image: 'assets/images/website/JJ-7-100.jpg'
+      image: 'assets/images/472549697_1141939340838255_5188480389234737517_n.jpg'
     },
     {
       title: 'BOOKING AND PLANNING',
