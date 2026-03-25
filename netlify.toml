@@ -42,7 +42,7 @@
       base-uri 'self';
       form-action 'self' https://accounts.google.com;
     '''
-    Link = "</assets/seo/og-default.jpg>; rel=preload; as=image"
+    Link = "</assets/images/og-default.png>; rel=preload; as=image"
     X-Robots-Tag = "all"
 
 [[headers]]

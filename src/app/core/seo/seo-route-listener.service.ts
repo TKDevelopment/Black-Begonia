@@ -25,7 +25,7 @@ export class SeoRouteListenerService {
           title: meta.title,
           description: meta.description,
           url: canonicalUrl,
-          image: meta.image || `${domain}/assets/images/og-default.jpg`,
+          image: meta.image || `${domain}/assets/images/og-default.png`,
           keywords: meta.keywords || []
         });
       } else {
