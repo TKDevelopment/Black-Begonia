@@ -2,6 +2,8 @@ import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
+import { SeoService } from '../../../core/seo/seo.service';
+import { JsonLdService } from '../../../core/seo/jsonld.service';
 
 interface PortfolioImage {
   image_id: string;
@@ -63,7 +65,9 @@ export class PortfolioDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private supabase: SupabaseService
+    private supabase: SupabaseService,
+    private seo: SeoService,
+    private jsonLd: JsonLdService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -90,6 +94,25 @@ export class PortfolioDetailComponent implements OnInit {
         this.loading = false;
       }, remaining);
     });
+
+    this.seo.setPageMeta({
+      title: 'Black Begonia Florals | Rhode Island Wedding Florist',
+      description:
+        'Black Begonia Florals creates luxury wedding flowers and fine art floral design across Rhode Island, Newport, Watch Hill, and New England.',
+      url: 'https://blackbegoniaflorals.com/',
+      image: 'https://blackbegoniaflorals.com/assets/images/og-default.png',
+      keywords: [
+        'Black Begonia Florals',
+        'Rhode Island Wedding Florist',
+        'Newport Wedding Florist',
+        'Watch Hill Wedding Florist',
+        'New England Wedding Florist'
+      ]
+    });
+
+    this.jsonLd.clearPageSchemas();
+    this.jsonLd.setLocalBusiness();
+    this.jsonLd.setWebsite();
   }
 
   @HostListener('window:resize')

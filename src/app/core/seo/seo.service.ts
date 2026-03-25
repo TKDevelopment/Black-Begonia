@@ -23,7 +23,7 @@ export class SeoService {
   setPageMeta(input: SeoInput) {
     const {
       title = 'Black Begonia Florals',
-      description = 'Black Begonia Florals by Becca Shappy — New England wedding florist providing luxury, elegant bouquets and event florals throughout Newport, Watch Hill, the Narragansett Bay Area, and across Rhode Island, Connecticut, and Massachussetts.',
+      description = 'Black Begonia Florals by Becca Shappy — New England wedding florist providing luxury, elegant bouquets and event florals throughout Newport, Watch Hill, the Narragansett Bay Area, and across Rhode Island, Connecticut, and Massachusetts.',
       image = 'https://blackbegoniaflorals.com/assets/images/og-default.jpg',
       url = 'https://blackbegoniaflorals.com/',
       type = 'website',

@@ -31,6 +31,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'locations',
+        loadComponent: () =>
+          import('./components/public/locations-hub/locations-hub.component').then(
+            (m) => m.LocationsHubComponent
+          )
+      },
+      {
+        path: 'locations/:slug',
+        loadComponent: () =>
+          import('./components/public/locations/locations.component').then(
+            (m) => m.LocationsComponent
+          )
+      },
+      {
         path: 'inquiries',
         loadComponent: () =>
           import('./components/public/inquiries/inquiries.component').then(m => m.InquiriesComponent),

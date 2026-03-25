@@ -10,11 +10,12 @@ export type RouteMeta = {
 export const ROUTE_META: RouteMeta[] = [
   {
     path: '',
-    title: 'Black Begonia Florals | Connecticut Wedding Florist',
+    title: 'Black Begonia Florals | Rhode Island Wedding Florist',
     description:
-      'New England wedding florist led by Rebecca Barna. Specializing in bridal bouquets, ceremony flowers, reception florals & event design across RI, CT & MA.',
+      'New England wedding florist led by Becca Shappy. Specializing in bridal bouquets, ceremony flowers, reception florals & event design across RI, CT & MA.',
     keywords: [
-      'Rebecca Barna',
+      'Becca Shappy',
+      'Shecca Bappy',
       'Black Begonia Florals',
       'New England Wedding Florist',
       'Rhode Island Wedding Florist',
@@ -142,7 +143,7 @@ export const ROUTE_META: RouteMeta[] = [
       'Wedding Flower Booking RI',
       'Newport Wedding Consultation',
       'Providence Wedding Florist Contact',
-      'Contact Rebecca Barna Florist',
+      'Contact Becca Shappy Florist',
       'Bridal Flower Consultation',
       'Reception Flower Planning',
       'Ceremony Flower Planning',
@@ -158,6 +159,222 @@ export const ROUTE_META: RouteMeta[] = [
       'Wedding Vendor Contact MA',
       'Inquire About Wedding Flowers',
       'Plan Wedding Flowers Rhode Island'
+    ]
+  },
+  {
+    path: 'locations/newport-ri-wedding-florist',
+    title: 'Newport RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Newport RI wedding florist creating romantic bouquets, ceremony flowers, and refined reception florals for coastal Rhode Island weddings.',
+    keywords: [
+      'Newport RI Wedding Florist',
+      'Newport Wedding Florist',
+      'Newport Wedding Flowers',
+      'Coastal Wedding Florist Rhode Island',
+      'Luxury Wedding Florist Newport RI',
+      'Rhode Island Wedding Florist',
+      'New England Wedding Florist',
+      'Bridal Bouquets Newport RI',
+      'Ceremony Flowers Newport RI',
+      'Reception Flowers Newport RI'
+    ]
+  },
+  {
+    path: 'locations/watch-hill-ri-wedding-florist',
+    title: 'Watch Hill RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals creates elegant wedding flowers for Watch Hill RI celebrations, including bouquets, ceremony florals, and reception floral design for coastal weddings.',
+    keywords: [
+      'Watch Hill RI Wedding Florist',
+      'Watch Hill Wedding Florist',
+      'Watch Hill Wedding Flowers',
+      'Coastal Wedding Florist RI',
+      'Luxury Wedding Florist Watch Hill',
+      'Westerly Wedding Florist',
+      'Rhode Island Wedding Florist',
+      'New England Wedding Florist',
+      'Bridal Bouquets Watch Hill',
+      'Ceremony Flowers Watch Hill'
+    ]
+  },
+  {
+    path: 'locations/providence-ri-wedding-florist',
+    title: 'Providence RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Providence RI wedding florist creating refined bouquets, ceremony flowers, and reception florals for city weddings and elegant events.',
+    keywords: [
+      'Providence RI Wedding Florist',
+      'Providence Wedding Florist',
+      'Providence Wedding Flowers',
+      'Rhode Island Wedding Florist',
+      'Luxury Wedding Florist Providence',
+      'City Wedding Florist Rhode Island',
+      'Bridal Bouquets Providence RI',
+      'Ceremony Flowers Providence RI',
+      'Reception Flowers Providence RI',
+      'New England Wedding Florist'
+    ]
+  },
+  {
+    path: 'locations/bristol-ri-wedding-florist',
+    title: 'Bristol RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals designs elegant wedding flowers for Bristol RI weddings, including bouquets, ceremony florals, centerpieces, and full floral styling.',
+    keywords: [
+      'Bristol RI Wedding Florist',
+      'Bristol Wedding Florist',
+      'Bristol Wedding Flowers',
+      'Rhode Island Wedding Florist',
+      'Luxury Wedding Florist Bristol RI',
+      'Coastal Wedding Florist Rhode Island',
+      'Bridal Bouquets Bristol RI',
+      'Ceremony Flowers Bristol RI',
+      'Reception Flowers Bristol RI',
+      'New England Wedding Florist'
+    ]
+  },
+  {
+    path: 'locations/south-kingstown-ri-wedding-florist',
+    title: 'South Kingstown RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a South Kingstown RI wedding florist designing bouquets, ceremony flowers, and elegant reception florals for Rhode Island weddings.',
+    keywords: [
+      'South Kingstown RI Wedding Florist',
+      'South Kingstown Florist',
+      'South Kingstown Wedding Flowers',
+      'South County Wedding Florist',
+      'Rhode Island Wedding Florist',
+      'Luxury Wedding Florist South Kingstown',
+      'Bridal Bouquets South Kingstown RI',
+      'Ceremony Flowers South Kingstown RI',
+      'Reception Flowers South Kingstown RI',
+      'New England Wedding Florist'
+    ]
+  },
+  {
+    path: 'locations/narragansett-ri-wedding-florist',
+    title: 'Narragansett RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Narragansett RI wedding florist creating coastal bouquets, ceremony flowers, and elegant reception florals for Rhode Island weddings.',
+    keywords: [
+      'Narragansett RI Wedding Florist',
+      'Narragansett Wedding Florist',
+      'Narragansett Wedding Flowers',
+      'Coastal Wedding Florist Rhode Island',
+      'Rhode Island Wedding Florist',
+      'Luxury Wedding Florist Narragansett',
+      'Beach Wedding Flowers Rhode Island',
+      'Bridal Bouquets Narragansett RI',
+      'Ceremony Flowers Narragansett RI',
+      'Reception Flowers Narragansett RI'
+    ]
+  },
+  {
+    path: 'locations/westerly-ri-wedding-florist',
+    title: 'Westerly RI Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Westerly RI wedding florist creating refined bouquets, ceremony flowers, and elegant reception florals for coastal Rhode Island weddings.',
+    keywords: [
+      'Westerly RI Wedding Florist',
+      'Westerly Wedding Florist',
+      'Westerly Wedding Flowers',
+      'Rhode Island Wedding Florist',
+      'Luxury Wedding Florist Westerly',
+      'Watch Hill Wedding Florist',
+      'Coastal Wedding Florist RI',
+      'Bridal Bouquets Westerly RI',
+      'Ceremony Flowers Westerly RI',
+      'Reception Flowers Westerly RI'
+    ]
+  },
+  {
+    path: 'locations/north-kingstown-ri-florist',
+    title: 'North Kingstown RI Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a North Kingstown RI florist creating wedding flowers, event florals, bouquets, and custom floral design for Rhode Island celebrations.',
+    keywords: [
+      'North Kingstown RI Florist',
+      'North Kingstown Florist',
+      'North Kingstown Wedding Florist',
+      'North Kingstown Wedding Flowers',
+      'Rhode Island Florist',
+      'Rhode Island Wedding Florist',
+      'Custom Floral Design North Kingstown',
+      'Event Florist North Kingstown RI',
+      'Bouquets North Kingstown RI',
+      'Wedding Flowers North Kingstown RI'
+    ]
+  },
+  {
+    path: 'locations/mystic-ct-wedding-florist',
+    title: 'Mystic CT Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Mystic CT wedding florist creating romantic bouquets, ceremony flowers, and coastal reception florals for Connecticut weddings.',
+    keywords: [
+      'Mystic CT Wedding Florist',
+      'Mystic Wedding Florist',
+      'Mystic Wedding Flowers',
+      'Connecticut Wedding Florist',
+      'Coastal Wedding Florist Connecticut',
+      'Luxury Wedding Florist Mystic CT',
+      'Bridal Bouquets Mystic CT',
+      'Ceremony Flowers Mystic CT',
+      'Reception Flowers Mystic CT',
+      'New England Wedding Florist'
+    ]
+  },
+  {
+    path: 'locations/stonington-ct-wedding-florist',
+    title: 'Stonington CT Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Stonington CT wedding florist creating elegant bouquets, ceremony flowers, and refined reception florals for Connecticut weddings.',
+    keywords: [
+      'Stonington CT Wedding Florist',
+      'Stonington Wedding Florist',
+      'Stonington Wedding Flowers',
+      'Connecticut Wedding Florist',
+      'Luxury Wedding Florist Stonington CT',
+      'Coastal Wedding Florist Connecticut',
+      'Bridal Bouquets Stonington CT',
+      'Ceremony Flowers Stonington CT',
+      'Reception Flowers Stonington CT',
+      'New England Wedding Florist'
+    ]
+  },
+  {
+    path: 'locations/boston-ma-wedding-florist',
+    title: 'Boston MA Wedding Florist | Black Begonia Florals',
+    description:
+      'Black Begonia Florals is a Boston MA wedding florist creating elegant bouquets, ceremony flowers, and refined reception florals for Massachusetts and New England weddings.',
+    keywords: [
+      'Boston MA Wedding Florist',
+      'Boston Wedding Florist',
+      'Boston Wedding Flowers',
+      'Massachusetts Wedding Florist',
+      'Luxury Wedding Florist Boston MA',
+      'New England Wedding Florist',
+      'Bridal Bouquets Boston MA',
+      'Ceremony Flowers Boston MA',
+      'Reception Flowers Boston MA',
+      'Editorial Wedding Florist Boston'
+    ]
+  },
+  {
+    path: 'locations',
+    title: 'Locations We Serve | Rhode Island & New England Wedding Florist',
+    description:
+      'Explore the locations Black Begonia Florals serves across Rhode Island, Connecticut, Massachusetts, and New England for wedding flowers and floral design.',
+    keywords: [
+      'Rhode Island Wedding Florist',
+      'New England Wedding Florist',
+      'Locations Wedding Florist',
+      'Newport Wedding Florist',
+      'Watch Hill Wedding Florist',
+      'Providence Wedding Florist',
+      'Narragansett Wedding Florist',
+      'Westerly Wedding Florist',
+      'Mystic CT Wedding Florist',
+      'Boston MA Wedding Florist'
     ]
   }
 ];

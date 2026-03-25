@@ -1,0 +1,124 @@
+<section class="min-h-screen bg-[#f7f4f1] font-cormorant text-[#1b1b1b]">
+  <!-- Hero -->
+  <div class="relative min-h-[280px] md:min-h-[430px] 2xl:min-h-[520px] overflow-hidden flex items-end">
+    <img
+      ngSrc="assets/images/website/1000005134.jpg"
+      priority
+      fill
+      sizes="100vw"
+      class="object-cover object-center"
+      alt="Luxury wedding floral design across New England"
+    />
+
+    <div class="absolute inset-0 bg-black/35"></div>
+
+    <div class="relative z-10 w-full px-6 md:px-10 2xl:px-16 pb-10 md:pb-14 text-white">
+      <p class="font-oswald tracking-[0.35em] uppercase text-xs md:text-sm text-[#f3cbc7] mb-3">
+        Locations We Serve
+      </p>
+
+      <h1 class="text-4xl sm:text-5xl md:text-7xl 2xl:text-8xl leading-none">
+        Wedding Flowers Across<br />
+        Rhode Island & New England
+      </h1>
+
+      <p class="mt-5 max-w-3xl text-lg md:text-2xl leading-relaxed text-white/90">
+        Explore the locations where Black Begonia Florals creates romantic, refined,
+        and editorial-inspired floral design for weddings and celebrations.
+      </p>
+    </div>
+  </div>
+
+  <!-- Intro -->
+  <div class="bg-[#ecb5b0] py-3 2xl:py-4">
+    <p class="text-white text-sm md:text-base 2xl:text-lg text-center font-oswald font-thin tracking-[0.25em]">
+      N E W &nbsp; E N G L A N D &nbsp; W E D D I N G &nbsp; F L O R A L &nbsp; D E S I G N
+    </p>
+  </div>
+
+  <div class="mx-auto max-w-7xl px-5 md:px-8 2xl:px-12 py-12 md:py-16 2xl:py-20">
+    <div class="text-center max-w-4xl mx-auto">
+      <p class="font-oswald uppercase tracking-[0.3em] text-xs md:text-sm text-[#b36c67] mb-3">
+        Black Begonia Florals
+      </p>
+      <h2 class="text-3xl md:text-5xl 2xl:text-6xl text-[#303030]">
+        Designed for coastal estates, city weddings, historic venues, and intimate celebrations
+      </h2>
+      <p class="mt-5 text-base md:text-xl leading-relaxed text-gray-600">
+        We provide wedding floral design throughout Newport, Watch Hill, Providence,
+        Bristol, Narragansett, South Kingstown, Westerly, North Kingstown, Mystic,
+        Stonington, Boston, and surrounding New England areas.
+      </p>
+    </div>
+
+    <!-- Luxury grid -->
+    <div class="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 xl:gap-8">
+      <a
+        *ngFor="let location of locations; trackBy: trackBySlug"
+        [routerLink]="['/locations', location.slug]"
+        class="group relative overflow-hidden rounded-[28px] bg-white shadow-[0_18px_55px_rgba(0,0,0,0.08)] border border-black/5"
+      >
+        <div class="relative aspect-[4/5] overflow-hidden">
+          <img
+            [ngSrc]="location.image"
+            [alt]="location.title"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            class="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+          />
+
+          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+          <div class="absolute left-0 right-0 bottom-0 p-6 md:p-7 text-white bg-black/30">
+            <p class="font-oswald uppercase tracking-[0.28em] text-[11px] md:text-xs text-[#f3cbc7] mb-2">
+              {{ location.eyebrow }}
+            </p>
+
+            <h3 class="text-3xl md:text-4xl leading-none">
+              {{ location.city }}
+            </h3>
+
+            <p class="mt-3 text-sm md:text-base text-white/85 line-clamp-3">
+              {{ location.description }}
+            </p>
+
+            <div class="mt-5 inline-flex items-center gap-2 text-sm md:text-base font-oswald uppercase tracking-[0.18em] text-[#f8d4cf]">
+              Explore Location
+              <span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="px-5 md:px-8 2xl:px-12 pb-14 md:pb-20">
+    <div class="mx-auto max-w-6xl rounded-[34px] bg-black text-white px-8 py-10 md:px-14 md:py-16 text-center shadow-[0_18px_70px_rgba(0,0,0,0.18)]">
+      <p class="font-oswald uppercase tracking-[0.3em] text-xs md:text-sm text-[#f3cbc7] mb-3">
+        Inquire
+      </p>
+      <h2 class="text-3xl md:text-5xl 2xl:text-6xl">Searching for your wedding florist?</h2>
+      <p class="mt-5 max-w-3xl mx-auto text-lg md:text-xl text-white/85 leading-relaxed">
+        Whether you’re planning a Newport celebration, a Watch Hill coastal wedding,
+        a Providence event, or a New England destination weekend, we’d love to hear more.
+      </p>
+
+      <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+        <a
+          routerLink="/inquiries"
+          class="inline-flex items-center justify-center rounded-full bg-[#ea938c] px-8 py-3 text-lg text-black transition-transform duration-300 hover:scale-[1.02]"
+        >
+          Start Your Inquiry
+        </a>
+
+        <a
+          routerLink="/portfolio"
+          class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-3 text-lg text-white transition-colors duration-300 hover:bg-white/20"
+        >
+          View Portfolio
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
