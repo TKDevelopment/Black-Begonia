@@ -33,7 +33,7 @@ export class WorkshopsComponent {
       inquiryLink: '/inquiries/general',
       images: [
         'assets/images/website/fizzandfrites-152.jpg',
-        'assets/images/website/487367734_1194785119317556_2221152768559106190_n.jpg',
+        'assets/images/website/487367734_1194785119317556_2221152768559106190_n.webp',
         'assets/images/website/486955655_1194784742650927_963388610016831666_n.jpg',
         'assets/images/website/157266871_264350035263861_7456896409632197832_n.jpg'
       ],

@@ -80,7 +80,7 @@ export class TestimonialsComponent {
       event: 'Garden Wedding',
       quote:
         `Becca did the florals for my wedding and they were so beautiful. Everyone commented on how amazing everything turned out. She paid so much attention to detail and made all of my visions come to life. She was super accommodating with everything. 15/10 recommend for your wedding.`,
-      image: 'assets/images/website/1000005214.jpg'
+      image: 'assets/images/website/1000005214.webp'
     },
     {
       title: '',
@@ -102,7 +102,7 @@ export class TestimonialsComponent {
         `From intimate celebrations to full wedding floral styling, we create romantic, artful designs tailored to your story, palette, and setting.`,
       buttonText: 'Inquire Now',
       buttonLink: '/contact',
-      image: 'assets/images/website/Screen Shot 2022-12-13 at 1.39.45 PM.png'
+      image: 'assets/images/website/Screen Shot 2022-12-13 at 1.39.45 PM.webp'
     },
     {
       eyebrow: 'VIEW MORE OF OUR WORK',
@@ -111,7 +111,7 @@ export class TestimonialsComponent {
         `Explore curated floral galleries, installation details, and design moments from past weddings and events throughout Rhode Island and beyond.`,
       buttonText: 'View Portfolio',
       buttonLink: '/portfolio',
-      image: 'assets/images/Screen Shot 2022-12-13 at 1.39.45 PM.png'
+      image: 'assets/images/website/Screen Shot 2022-12-13 at 1.39.45 PM.webp'
     }
   ];
 
