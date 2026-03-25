@@ -34,7 +34,7 @@ export class WeddingServicesComponent {
       title: 'INQUIRE AND CONNECT',
       showInquiry: false,
       description: `Start by reaching out through our inquiry form. We’ll review your event details, get a feel for your floral vision, and schedule a consultation to learn more about your style, priorities, and what matters most for your day.`,
-      image: 'assets/images/website/1000005135.jpg'
+      image: 'assets/images/website/1000005135.webp'
     },
     {
       title: 'DESIGN AND PROPOSAL',
