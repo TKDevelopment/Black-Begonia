@@ -263,7 +263,7 @@ export const LOCATION_PAGES: LocationPageData[] = [
       'Reception Flowers Bristol RI',
       'New England Wedding Florist'
     ],
-    heroImage: 'assets/images/website/Marie&Brandon-11477.jpg',
+    heroImage: 'assets/images/website/Marie&Brandon-11477.webp',
     heroAlt: 'Wedding flowers for a Bristol Rhode Island celebration',
     introHeading: 'Refined Wedding Florals for Bristol, Rhode Island',
     introText:

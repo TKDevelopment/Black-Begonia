@@ -58,7 +58,7 @@ export class WeddingServicesComponent {
       title: 'INQUIRE TODAY',
       showInquiry: true,
       description: `On the day of your event, we handle delivery, installation, styling, and all floral setup so everything is beautifully in place. Our goal is for you to be fully present, knowing every detail has been thoughtfully taken care of.`,
-      image: 'assets/images/website/JJ-7-100.jpg'
+      image: 'assets/images/website/JJ-7-100.webp'
     }
   ]
 
