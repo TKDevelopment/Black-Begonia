@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /private
+Disallow: /admin
 Sitemap: https://blackbegoniaflorals.com/sitemap.xml

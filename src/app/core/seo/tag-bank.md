@@ -1,6 +1,6 @@
 Use these tags naturally across titles, headings, paragraphs, alt text, and FAQs:
 
-Rebecca Barna, Black Begonia, Black Begonia Florals, Florist, Florals, New England, New England Florist,
+Becca Shappy, Black Begonia, Black Begonia Florals, Florist, Florals, New England, New England Florist,
 Rhode Island, Rhode Island Florist, Connecticut, Connecticut Florist, Massachusetts Florist,
 Wedding Flowers, Wedding Florist, Bridal Party Flowers, Bridal Shower Flowers, Bouquets, Boutonnieres,
 Corsages, Ceremony Flowers, Reception Flowers, Centerpieces, Arch Flowers, Aisle Flowers,
