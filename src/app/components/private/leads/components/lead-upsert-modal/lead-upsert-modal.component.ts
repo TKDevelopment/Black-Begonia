@@ -59,6 +59,9 @@ export class LeadUpsertModalComponent {
   readonly lastName = signal('');
   readonly partnerFirstName = signal('');
   readonly partnerLastName = signal('');
+  readonly plannerName = signal('');
+  readonly plannerPhone = signal('');
+  readonly plannerEmail = signal('');
   readonly email = signal('');
   readonly phone = signal('');
   readonly preferredContactMethod = signal('email');
@@ -140,6 +143,9 @@ export class LeadUpsertModalComponent {
     this.lastName.set(lead?.last_name ?? '');
     this.partnerFirstName.set(lead?.partner_first_name ?? '');
     this.partnerLastName.set(lead?.partner_last_name ?? '');
+    this.plannerName.set(lead?.planner_name ?? '');
+    this.plannerPhone.set(lead?.planner_phone ?? '');
+    this.plannerEmail.set(lead?.planner_email ?? '');
     this.email.set(lead?.email ?? '');
     this.phone.set(lead?.phone ?? '');
     this.preferredContactMethod.set(lead?.preferred_contact_method ?? 'email');
@@ -195,6 +201,9 @@ export class LeadUpsertModalComponent {
       last_name: lastName,
       partner_first_name: this.partnerFirstName().trim() || null,
       partner_last_name: this.partnerLastName().trim() || null,
+      planner_name: this.plannerName().trim() || null,
+      planner_phone: this.plannerPhone().trim() || null,
+      planner_email: this.plannerEmail().trim().toLowerCase() || null,
       email,
       phone: this.phone().trim() || null,
       preferred_contact_method: this.preferredContactMethod().trim() || null,

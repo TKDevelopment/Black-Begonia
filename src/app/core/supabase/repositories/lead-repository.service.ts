@@ -43,7 +43,10 @@ export class LeadRepositoryService {
     created_at,
     updated_at,
     consultation_completed_at,
-    consultation_scheduled_at
+    consultation_scheduled_at,
+    planner_name,
+    planner_phone,
+    planner_email
   `;
 
   async getLeads(): Promise<Lead[]> {
@@ -131,6 +134,9 @@ export class LeadRepositoryService {
           ? null
           : payload.guest_count,
       inquiry_message: payload.inquiry_message?.trim() || null,
+      planner_name: payload.planner_name?.trim() || null,
+      planner_phone: payload.planner_phone?.trim() || null,
+      planner_email: payload.planner_email?.trim() || null,
       source: payload.source?.trim() || 'other',
     };
 

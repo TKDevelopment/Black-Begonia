@@ -19,6 +19,7 @@ export interface TaskListItem {
 export class TaskListPanelComponent {
   @Input() tasks: TaskListItem[] = [];
   @Input() loading = false;
+  @Input() createDisabled = false;
 
   @Output() createTask = new EventEmitter<void>();
   @Output() openTask = new EventEmitter<TaskListItem>();

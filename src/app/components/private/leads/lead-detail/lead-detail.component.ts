@@ -38,6 +38,10 @@ import { LeadUpsertModalComponent } from '../components/lead-upsert-modal/lead-u
 import { LeadUpsertPayload } from '../components/lead-upsert-modal/lead-upsert.types';
 import { LeadNoteModalComponent } from '../components/lead-note-modal/lead-note-modal.component';
 import { ToastService } from '../../../../core/services/toast.service';
+import {
+  ConvertLeadInput,
+  LeadConversionService,
+} from '../../../../core/supabase/services/lead-conversion.service';
 
 type BadgeTone =
   | 'neutral'
@@ -79,6 +83,7 @@ export class LeadDetailComponent implements OnInit {
   private proposalWorkflow = inject(ProposalWorkflowService);
   private inspirationUrlRepository = inject(LeadInspirationUrlRepositoryService);
   private internalUserRepository = inject(InternalUserRepositoryService);
+  private leadConversionService = inject(LeadConversionService);
   private toast = inject(ToastService);
 
   loading = signal(true);
@@ -176,6 +181,17 @@ export class LeadDetailComponent implements OnInit {
   canSubmitProposal = computed(() => {
     const lead = this.lead();
     return !!lead && this.proposalWorkflow.canSubmitProposal(lead.status);
+  });
+
+  isLeadLocked = computed(() => this.lead()?.status === 'converted');
+
+  canResendProposalAccess = computed(() => {
+    const lead = this.lead();
+    return !!lead && lead.status !== 'converted';
+  });
+
+  showQuickActionConvertButton = computed(() => {
+    return false;
   });
 
   ngOnInit(): void {
@@ -297,6 +313,12 @@ export class LeadDetailComponent implements OnInit {
       case 'proposal_declined':
         return 'danger';
       case 'proposal_accepted':
+        return 'success';
+      case 'estimate_submitted':
+        return 'warning';
+      case 'estimate_declined':
+        return 'danger';
+      case 'estimate_accepted':
       case 'accepted':
         return 'success';
       case 'declined':
@@ -376,6 +398,17 @@ export class LeadDetailComponent implements OnInit {
   async handleConsultationAction(): Promise<void> {
     const lead = this.lead();
     if (!lead || this.actionLoading()) return;
+    if (this.isLeadLocked()) return;
+
+    if (lead.status === 'estimate_accepted') {
+      this.openConvertModal();
+      return;
+    }
+
+    if (lead.status === 'proposal_accepted' || lead.status === 'estimate_declined') {
+      void this.router.navigate(['/admin/leads', lead.lead_id, 'estimate-builder']);
+      return;
+    }
 
     if (this.proposalWorkflow.canSubmitProposal(lead.status)) {
       this.proposalModalOpen.set(true);
@@ -401,6 +434,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   openProposalModal(): void {
+    if (this.isLeadLocked()) return;
     this.proposalModalOpen.set(true);
   }
 
@@ -410,7 +444,7 @@ export class LeadDetailComponent implements OnInit {
 
   async submitProposal(file: File): Promise<void> {
     const lead = this.lead();
-    if (!lead || this.proposalSubmitting()) return;
+    if (!lead || this.proposalSubmitting() || this.isLeadLocked()) return;
 
     try {
       this.proposalSubmitting.set(true);
@@ -431,7 +465,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   async resendProposalAccess(proposalId: string): Promise<void> {
-    if (!proposalId || this.proposalResending()) return;
+    if (!proposalId || this.proposalResending() || this.isLeadLocked()) return;
 
     try {
       this.proposalResending.set(true);
@@ -460,7 +494,7 @@ export class LeadDetailComponent implements OnInit {
 
   async markContacted(): Promise<void> {
     const lead = this.lead();
-    if (!lead || this.actionLoading()) return;
+    if (!lead || this.actionLoading() || this.isLeadLocked()) return;
 
     try {
       this.actionLoading.set(true);
@@ -479,14 +513,17 @@ export class LeadDetailComponent implements OnInit {
   }
 
   createTaskFromLead(): void {
+    if (this.isLeadLocked()) return;
     console.log('Create task from lead');
   }
 
   convertLead(): void {
+    if (this.isLeadLocked()) return;
     this.openConvertModal();
   }
 
   editLead(): void {
+    if (this.isLeadLocked()) return;
     this.editModalOpen.set(true);
   }
 
@@ -505,6 +542,9 @@ export class LeadDetailComponent implements OnInit {
       last_name: payload.last_name,
       partner_first_name: payload.event_type === 'wedding' ? payload.partner_first_name ?? null : null,
       partner_last_name: payload.event_type === 'wedding' ? payload.partner_last_name ?? null : null,
+      planner_name: payload.event_type === 'wedding' ? payload.planner_name ?? null : null,
+      planner_phone: payload.event_type === 'wedding' ? payload.planner_phone ?? null : null,
+      planner_email: payload.event_type === 'wedding' ? payload.planner_email ?? null : null,
       email: payload.email,
       phone: payload.phone ?? null,
       preferred_contact_method: payload.preferred_contact_method ?? null,
@@ -552,6 +592,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   addInternalNote(): void {
+    if (this.isLeadLocked()) return;
     this.noteModalOpen.set(true);
   }
 
@@ -587,6 +628,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   openConvertModal(): void {
+    if (this.isLeadLocked()) return;
     this.convertModalOpen.set(true);
   }
 
@@ -600,26 +642,17 @@ export class LeadDetailComponent implements OnInit {
 
     try {
       this.convertLoading.set(true);
-
-      await this.leadWorkflow.updateStatus(lead, 'converted');
-
-      await this.activityRepository.createLeadActivity({
-        lead_id: lead.lead_id,
-        activity_type: 'status_change',
-        activity_label: 'Lead converted',
-        activity_description:
-          payload.notes || 'Lead was converted from the lead detail workflow.',
-        metadata: {
-          previous_status: lead.status,
-          next_status: 'converted',
-          notes: payload.notes || null,
-          create_primary_contact: payload.createPrimaryContact,
-          create_project_shell: payload.createProjectShell,
-        },
-      });
+      const result = await this.leadConversionService.convertLead(
+        lead,
+        payload as ConvertLeadInput
+      );
 
       this.convertModalOpen.set(false);
       await this.refreshLeadDetail();
+      this.toast.showToast(
+        `Lead converted to project "${result.project.project_name}".`,
+        'success'
+      );
     } catch (error) {
       console.error('[LeadDetailComponent] confirmConvert error:', error);
       this.error.set('We were unable to convert this lead.');
@@ -629,6 +662,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   openDeclineModal(): void {
+    if (this.isLeadLocked()) return;
     this.declineModalOpen.set(true);
   }
 
@@ -655,7 +689,7 @@ export class LeadDetailComponent implements OnInit {
 
   async updateLeadStatus(nextStatus: LeadStatus): Promise<void> {
     const lead = this.lead();
-    if (!lead || this.actionLoading() || lead.status === nextStatus) return;
+    if (!lead || this.actionLoading() || lead.status === nextStatus || this.isLeadLocked()) return;
 
     try {
       this.actionLoading.set(true);
@@ -711,6 +745,9 @@ export class LeadDetailComponent implements OnInit {
       last_name: 'last name',
       partner_first_name: 'partner first name',
       partner_last_name: 'partner last name',
+      planner_name: 'planner name',
+      planner_phone: 'planner phone',
+      planner_email: 'planner email',
       email: 'email',
       phone: 'phone',
       preferred_contact_method: 'preferred contact',

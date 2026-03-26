@@ -10,7 +10,8 @@
     <button
       type="button"
       (click)="createTask.emit()"
-      class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+      [disabled]="createDisabled"
+      class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
     >
       Create Task
     </button>

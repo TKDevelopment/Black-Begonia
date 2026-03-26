@@ -24,6 +24,7 @@ export class LeadSummaryCardComponent {
   @Input() actionLoading = false;
   @Input() consultationButtonLabel = 'Schedule Consultation';
   @Input() consultationButtonDisabled = false;
+  @Input() detailsLocked = false;
 
   @Output() markContacted = new EventEmitter<void>();
   @Output() editLead = new EventEmitter<void>();
@@ -59,9 +60,14 @@ export class LeadSummaryCardComponent {
       case 'proposal_declined':
         return 'danger';
       case 'proposal_accepted':
+      case 'estimate_accepted':
       case 'accepted':
       case 'converted':
         return 'success';
+      case 'estimate_submitted':
+        return 'warning';
+      case 'estimate_declined':
+        return 'danger';
       case 'declined':
         return 'danger';
       case 'closed_unbooked':

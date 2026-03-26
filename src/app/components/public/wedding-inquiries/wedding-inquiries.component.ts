@@ -186,6 +186,9 @@ export class WeddingInquiriesComponent {
         budget_range: value.budget || null,
         guest_count: value.guests ? Number(value.guests) : null,
         inquiry_message: value.notes || null,
+        planner_name: value.eventPlannerName || null,
+        planner_phone: value.eventPlannerPhone || null,
+        planner_email: value.eventPlannerEmail || null,
         source: value.leadSource || 'other',
       };
 

@@ -19,6 +19,7 @@ export class LeadProposalHistoryCardComponent {
   @Input() proposalResponses: Record<string, ProposalResponseSummary[]> = {};
   @Input() resending = false;
   @Input() canSubmitProposal = false;
+  @Input() canResendProposal = true;
 
   @Output() selectProposal = new EventEmitter<string>();
   @Output() openProposal = new EventEmitter<string>();
@@ -68,6 +69,7 @@ export class LeadProposalHistoryCardComponent {
   }
 
   onResend(proposalId: string): void {
+    if (!this.canResendProposal) return;
     this.resendProposal.emit(proposalId);
   }
 

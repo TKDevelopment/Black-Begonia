@@ -30,6 +30,7 @@
             [actionLoading]="actionLoading()"
             [consultationButtonLabel]="consultationButtonLabel()"
             [consultationButtonDisabled]="consultationButtonDisabled()"
+            [detailsLocked]="isLeadLocked()"
             (markContacted)="markContacted()"
             (consultationAction)="handleConsultationAction()"
             (editLead)="editLead()"
@@ -102,6 +103,21 @@
                 <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Preferred Contact</p>
                 <p class="mt-1 text-sm text-stone-800">{{ (lead.preferred_contact_method || 'Not provided') | titlecase }}</p>
               </div>
+
+              <div *ngIf="lead.event_type === 'wedding'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Planner Name</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.planner_name || 'Not provided' }}</p>
+              </div>
+
+              <div *ngIf="lead.event_type === 'wedding'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Planner Email</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.planner_email || 'Not provided' }}</p>
+              </div>
+
+              <div *ngIf="lead.event_type === 'wedding'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Planner Phone</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.planner_phone || 'Not provided' }}</p>
+              </div>
             </div>
           </div>
 
@@ -151,7 +167,7 @@
               <button
                 type="button"
                 (click)="addInternalNote()"
-                [disabled]="actionLoading() || noteSaving()"
+                [disabled]="actionLoading() || noteSaving() || isLeadLocked()"
                 class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Add Note
@@ -166,6 +182,7 @@
               [proposalResponses]="proposalResponses()"
               [resending]="proposalResending()"
               [canSubmitProposal]="canSubmitProposal()"
+              [canResendProposal]="canResendProposalAccess()"
               (selectProposal)="selectProposal($event)"
               (openProposal)="openProposal($event)"
               (resendProposal)="resendProposalAccess($event)"
@@ -194,16 +211,17 @@
               <button
                 type="button"
                 (click)="editLead()"
-                [disabled]="actionLoading() || proposalSubmitting() || editSaving()"
+                [disabled]="actionLoading() || proposalSubmitting() || editSaving() || isLeadLocked()"
                 class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Edit Lead
               </button>
 
               <button
+                *ngIf="showQuickActionConvertButton()"
                 type="button"
                 (click)="convertLead()"
-                [disabled]="actionLoading() || proposalSubmitting()"
+                [disabled]="actionLoading() || proposalSubmitting() || isLeadLocked()"
                 class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Convert to Project
@@ -212,7 +230,7 @@
               <button
                 type="button"
                 (click)="openDeclineModal()"
-                [disabled]="actionLoading() || proposalSubmitting()"
+                [disabled]="actionLoading() || proposalSubmitting() || isLeadLocked()"
                 class="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Decline Lead
@@ -236,7 +254,7 @@
               class="mt-5"
               [value]="lead.status"
               [allowedStatuses]="allowedStatuses()"
-              [disabled]="actionLoading()"
+              [disabled]="actionLoading() || isLeadLocked()"
               (statusChange)="updateLeadStatus($event)"
             />
           </div>
@@ -245,6 +263,7 @@
             <app-task-list-panel
               [tasks]="leadTasks()"
               [loading]="false"
+              [createDisabled]="isLeadLocked()"
               (createTask)="createTaskFromLead()"
               (openTask)="openTask($event)"
             />
