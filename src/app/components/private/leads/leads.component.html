@@ -10,7 +10,7 @@
     />
 
     <app-search-filter-bar
-      searchPlaceholder="Search by name, email, event type, or source"
+      searchPlaceholder="Search by name, email, proposal file, feedback, event type, or source"
       [searchValue]="searchTerm()"
       [filters]="filters()"
       (searchChange)="onSearchChange($event)"
@@ -30,36 +30,72 @@
     >
       <ng-template appEntityTableCell="lead" let-row>
         <div class="space-y-1">
-          <div class="font-medium text-stone-900">
-            {{ formatLeadName(row) }}
-          </div>
-          <div class="text-xs text-stone-500">
-            {{ row.email }}
-          </div>
-          <div *ngIf="row.phone" class="text-xs text-stone-400">
-            {{ row.phone }}
-          </div>
+          <div class="font-medium text-stone-900">{{ formatLeadName(row) }}</div>
+          <div class="text-xs text-stone-500">{{ row.email }}</div>
+          <div *ngIf="row.phone" class="text-xs text-stone-400">{{ row.phone }}</div>
         </div>
       </ng-template>
 
+      <ng-template appEntityTableCell="proposal" let-row>
+        <ng-container *ngIf="getProposalForLead(row.lead_id) as proposal; else noProposal">
+          <div class="space-y-1">
+            <div class="flex flex-wrap items-center gap-2 font-medium text-stone-900">
+              <span>v{{ proposal.version }}</span>
+              <span
+                *ngIf="proposal.is_active"
+                class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700"
+              >
+                Active
+              </span>
+            </div>
+            <div class="text-xs text-stone-500">{{ proposal.file_name || 'Proposal PDF' }}</div>
+          </div>
+        </ng-container>
+
+        <ng-template #noProposal>
+          <span class="text-xs text-stone-400">No proposal yet</span>
+        </ng-template>
+      </ng-template>
+
+      <ng-template appEntityTableCell="proposal_response" let-row>
+        <ng-container *ngIf="getProposalResponseForLead(row.lead_id) as response; else noResponse">
+          <div class="space-y-1">
+            <div
+              class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              [ngClass]="response.action === 'decline' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'"
+            >
+              {{ response.action === 'decline' ? 'Declined' : 'Accepted' }}
+            </div>
+            <div class="text-xs text-stone-500">{{ formatCreatedAt(response.created_at) }}</div>
+            <div *ngIf="response.feedback" class="line-clamp-2 text-xs text-stone-500">{{ response.feedback }}</div>
+          </div>
+        </ng-container>
+
+        <ng-template #noResponse>
+          <span class="text-xs text-stone-400">Awaiting response</span>
+        </ng-template>
+      </ng-template>
+
       <ng-template appEntityTableCell="event_date" let-row>
-        <span class="text-stone-700">
-          {{ formatEventDate(row.event_date) }}
-        </span>
+        <span class="text-stone-700">{{ formatEventDate(row.event_date) }}</span>
       </ng-template>
 
       <ng-template appEntityTableCell="status" let-row>
-        <app-status-badge
-          [label]="row.status"
-          [tone]="getLeadStatusTone(row.status)"
-        />
+        <app-status-badge [label]="row.status" [tone]="getLeadStatusTone(row.status)" />
       </ng-template>
 
       <ng-template appEntityTableCell="created_at" let-row>
-        <span class="text-stone-600">
-          {{ formatCreatedAt(row.created_at) }}
-        </span>
+        <span class="text-stone-600">{{ formatCreatedAt(row.created_at) }}</span>
       </ng-template>
     </app-entity-table-shell>
+
+    <app-lead-upsert-modal
+      [open]="createModalOpen()"
+      [saving]="createSaving()"
+      mode="create"
+      [lead]="null"
+      (close)="closeCreateLeadModal()"
+      (confirm)="createLead($event)"
+    />
   </div>
 </div>

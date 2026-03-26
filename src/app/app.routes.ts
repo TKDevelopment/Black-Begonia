@@ -1,12 +1,35 @@
-import { Routes } from '@angular/router';
+﻿import { Routes } from '@angular/router';
 import { PublicLayoutComponent } from './core/layouts/public-layout/public-layout.component';
 import { PrivateLayoutComponent } from './core/layouts/private-layout/private-layout.component';
+import { ProposalAccessLayoutComponent } from './core/layouts/proposal-access-layout/proposal-access-layout.component';
 import { LandingComponent } from './components/public/landing/landing.component';
 import { authGuard, authChildGuard } from './core/guards/auth.guard';
 import { adminRoleGuard, adminRoleChildGuard } from './core/guards/admin-role.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { proposalAccessGuard } from './core/guards/proposal-access.guard';
 
 export const routes: Routes = [
+  {
+    path: 'proposal',
+    component: ProposalAccessLayoutComponent,
+    children: [
+      {
+        path: 'auth',
+        loadComponent: () =>
+          import('./components/proposal-access/proposal-auth/proposal-auth.component').then(
+            m => m.ProposalAuthComponent
+          ),
+      },
+      {
+        path: 'review',
+        canActivate: [proposalAccessGuard],
+        loadComponent: () =>
+          import('./components/proposal-access/proposal-review/proposal-review.component').then(
+            m => m.ProposalReviewComponent
+          ),
+      },
+    ],
+  },
   {
     path: '',
     component: PublicLayoutComponent,
@@ -153,6 +176,7 @@ export const routes: Routes = [
       },
       {
         path: 'leads',
+        pathMatch: 'full',
         loadComponent: () =>
           import('./components/private/leads/leads.component').then(m => m.LeadsComponent),
       },
@@ -207,3 +231,4 @@ export const routes: Routes = [
     redirectTo: '',
   },
 ];
+

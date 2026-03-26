@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { SupabaseService } from '../clients/supabase.service';
-import { LeadActivity } from '../../models/lead-activity';
+import { LeadActivity, LeadActivityType } from '../../models/lead-activity';
 
 @Injectable({
   providedIn: 'root',
@@ -33,9 +33,33 @@ export class ActivityRepositoryService {
     return (data ?? []) as LeadActivity[];
   }
 
+  async getProposalResponseActivities(): Promise<LeadActivity[]> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('lead_activity')
+      .select(`
+        lead_activity_id,
+        lead_id,
+        activity_type,
+        activity_label,
+        activity_description,
+        performed_by,
+        metadata,
+        created_at
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[ActivityRepositoryService] getProposalResponseActivities error:', error);
+      return [];
+    }
+
+    return (data ?? []) as LeadActivity[];
+  }
+
   async createLeadActivity(payload: {
     lead_id: string;
-    activity_type: string;
+    activity_type: LeadActivityType;
     activity_label: string;
     activity_description?: string | null;
     performed_by?: string | null;
