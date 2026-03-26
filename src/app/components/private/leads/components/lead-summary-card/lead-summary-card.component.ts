@@ -54,6 +54,11 @@ export class LeadSummaryCardComponent {
         return 'warning';
       case 'nurturing':
         return 'purple';
+      case 'proposal_submitted':
+        return 'warning';
+      case 'proposal_declined':
+        return 'danger';
+      case 'proposal_accepted':
       case 'accepted':
       case 'converted':
         return 'success';

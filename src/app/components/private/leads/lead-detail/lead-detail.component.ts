@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -10,9 +10,13 @@ import { ErrorStateBlockComponent } from '../../../../shared/components/private/
 import { LeadRepositoryService } from '../../../../core/supabase/repositories/lead-repository.service';
 import { ActivityRepositoryService } from '../../../../core/supabase/repositories/activity-repository.service';
 import { LeadWorkflowService } from '../../../../core/supabase/services/lead-workflow.service';
+import { ProposalWorkflowService } from '../../../../core/supabase/services/proposal-workflow.service';
+import { LeadInspirationUrlRepositoryService } from '../../../../core/supabase/repositories/lead-inspiration-url-repository.service';
 
 import { Lead } from '../../../../core/models/lead';
 import { LeadActivity } from '../../../../core/models/lead-activity';
+import { Proposal, ProposalResponseSummary } from '../../../../core/models/proposal';
+import { LeadInspirationUrl } from '../../../../core/models/lead-inspiration-url';
 import { LeadSummaryCardComponent } from '../components/lead-summary-card/lead-summary-card.component';
 import { LeadStatusSelectorComponent } from '../components/lead-status-selector/lead-status-selector.component';
 import { LeadDeclineModalComponent } from '../components/lead-decline-modal/lead-decline-modal.component';
@@ -28,6 +32,12 @@ import {
   LeadConvertPayload,
 } from '../components/lead-convert-modal/lead-convert-modal.component';
 import { ConfirmDialogComponent } from '../../../../shared/components/private/confirm-dialog/confirm-dialog.component';
+import { LeadProposalSubmitModalComponent } from '../components/lead-proposal-submit-modal/lead-proposal-submit-modal.component';
+import { LeadProposalHistoryCardComponent } from '../components/lead-proposal-history-card/lead-proposal-history-card.component';
+import { LeadUpsertModalComponent } from '../components/lead-upsert-modal/lead-upsert-modal.component';
+import { LeadUpsertPayload } from '../components/lead-upsert-modal/lead-upsert.types';
+import { LeadNoteModalComponent } from '../components/lead-note-modal/lead-note-modal.component';
+import { ToastService } from '../../../../core/services/toast.service';
 
 type BadgeTone =
   | 'neutral'
@@ -52,6 +62,10 @@ type BadgeTone =
     TaskListPanelComponent,
     LeadConvertModalComponent,
     ConfirmDialogComponent,
+    LeadProposalSubmitModalComponent,
+    LeadProposalHistoryCardComponent,
+    LeadUpsertModalComponent,
+    LeadNoteModalComponent,
   ],
   templateUrl: './lead-detail.component.html',
   styleUrl: './lead-detail.component.scss',
@@ -59,11 +73,13 @@ type BadgeTone =
 export class LeadDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private location = inject(Location);
   private leadRepository = inject(LeadRepositoryService);
   private activityRepository = inject(ActivityRepositoryService);
   private leadWorkflow = inject(LeadWorkflowService);
+  private proposalWorkflow = inject(ProposalWorkflowService);
+  private inspirationUrlRepository = inject(LeadInspirationUrlRepositoryService);
   private internalUserRepository = inject(InternalUserRepositoryService);
+  private toast = inject(ToastService);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -71,14 +87,25 @@ export class LeadDetailComponent implements OnInit {
 
   lead = signal<Lead | null>(null);
   activities = signal<LeadActivity[]>([]);
+  proposals = signal<Proposal[]>([]);
+  inspirationUrls = signal<LeadInspirationUrl[]>([]);
 
   declineModalOpen = signal(false);
+  proposalModalOpen = signal(false);
+  proposalSubmitting = signal(false);
+  proposalResending = signal(false);
+  selectedProposalId = signal<string | null>(null);
 
   internalUsers = signal<InternalUser[]>([]);
   leadTasks = signal<TaskListItem[]>([]);
 
   convertModalOpen = signal(false);
   convertLoading = signal(false);
+
+  editModalOpen = signal(false);
+  editSaving = signal(false);
+  noteModalOpen = signal(false);
+  noteSaving = signal(false);
 
   confirmDialogOpen = signal(false);
 
@@ -102,6 +129,19 @@ export class LeadDetailComponent implements OnInit {
     const lead = this.lead();
     if (!lead) return [] as LeadStatus[];
     return this.leadWorkflow.getAllowedNextStatuses(lead.status);
+  });
+
+  proposalResponses = computed<Record<string, ProposalResponseSummary[]>>(() => {
+    const summaries = this.activities()
+      .map((activity) => this.mapActivityToProposalResponse(activity))
+      .filter((summary): summary is ProposalResponseSummary => summary !== null);
+
+    return summaries.reduce<Record<string, ProposalResponseSummary[]>>((acc, summary) => {
+      acc[summary.proposal_id] = [...(acc[summary.proposal_id] ?? []), summary].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      return acc;
+    }, {});
   });
 
   title = computed(() => {
@@ -128,8 +168,14 @@ export class LeadDetailComponent implements OnInit {
 
     if (!lead) return true;
     if (this.actionLoading()) return true;
+    if (this.proposalSubmitting()) return true;
 
     return this.leadWorkflow.isConsultationButtonDisabled(lead.status);
+  });
+
+  canSubmitProposal = computed(() => {
+    const lead = this.lead();
+    return !!lead && this.proposalWorkflow.canSubmitProposal(lead.status);
   });
 
   ngOnInit(): void {
@@ -163,25 +209,36 @@ export class LeadDetailComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const [lead, activities] = await Promise.all([
+      const [lead, activities, proposals, inspirationUrls] = await Promise.all([
         this.leadRepository.getLeadById(leadId),
         this.activityRepository.getLeadActivity(leadId),
+        this.proposalWorkflow.getLeadProposals(leadId),
+        this.inspirationUrlRepository.getInspirationUrlsByLeadId(leadId),
       ]);
 
       if (!lead) {
         this.error.set('We could not find this lead record.');
         this.lead.set(null);
         this.activities.set([]);
+        this.proposals.set([]);
+        this.inspirationUrls.set([]);
+        this.selectedProposalId.set(null);
         return;
       }
 
       this.lead.set(lead);
       this.activities.set(activities);
+      this.proposals.set(proposals);
+      this.inspirationUrls.set(inspirationUrls);
+      this.syncSelectedProposal(proposals);
     } catch (error) {
       console.error('[LeadDetailComponent] loadLeadDetail error:', error);
       this.error.set('We were unable to load this lead right now.');
       this.lead.set(null);
       this.activities.set([]);
+      this.proposals.set([]);
+      this.inspirationUrls.set([]);
+      this.selectedProposalId.set(null);
     } finally {
       this.loading.set(false);
     }
@@ -199,20 +256,30 @@ export class LeadDetailComponent implements OnInit {
     if (!leadId) return;
 
     try {
-      const [lead, activities] = await Promise.all([
+      const [lead, activities, proposals, inspirationUrls] = await Promise.all([
         this.leadRepository.getLeadById(leadId),
         this.activityRepository.getLeadActivity(leadId),
+        this.proposalWorkflow.getLeadProposals(leadId),
+        this.inspirationUrlRepository.getInspirationUrlsByLeadId(leadId),
       ]);
 
       this.lead.set(lead);
       this.activities.set(activities);
+      this.proposals.set(proposals);
+      this.inspirationUrls.set(inspirationUrls);
+      this.syncSelectedProposal(proposals);
     } catch (error) {
       console.error('[LeadDetailComponent] refreshLeadDetail error:', error);
     }
   }
 
   goBack(): void {
-    this.location.back();
+    void this.router.navigate(['/admin/leads']);
+  }
+
+  openInspirationUrl(url: string): void {
+    const normalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    window.open(normalizedUrl, '_blank', 'noopener,noreferrer');
   }
 
   getLeadStatusTone(status: Lead['status']): BadgeTone {
@@ -225,6 +292,11 @@ export class LeadDetailComponent implements OnInit {
         return 'warning';
       case 'nurturing':
         return 'purple';
+      case 'proposal_submitted':
+        return 'warning';
+      case 'proposal_declined':
+        return 'danger';
+      case 'proposal_accepted':
       case 'accepted':
         return 'success';
       case 'declined':
@@ -270,24 +342,6 @@ export class LeadDetailComponent implements OnInit {
     }).format(value);
   }
 
-  getInitials(): string {
-    const lead = this.lead();
-    if (!lead) return '--';
-
-    return `${lead.first_name.charAt(0)}${lead.last_name.charAt(0)}`.toUpperCase();
-  }
-
-  getPartnerName(): string {
-    const lead = this.lead();
-    if (!lead) return 'Not provided';
-
-    const first = lead.partner_first_name?.trim() || '';
-    const last = lead.partner_last_name?.trim() || '';
-    const full = `${first} ${last}`.trim();
-
-    return full || 'Not provided';
-  }
-
   getBudgetRange(): string {
     const lead = this.lead();
     if (!lead) return 'Not provided';
@@ -303,9 +357,16 @@ export class LeadDetailComponent implements OnInit {
         return 'bg-purple-100 text-purple-700';
       case 'call':
         return 'bg-amber-100 text-amber-700';
-      case 'note':
+      case 'updated':
+      case 'note_added':
         return 'bg-stone-100 text-stone-700';
       case 'status_change':
+      case 'status_changed':
+      case 'contact_attempted':
+      case 'consultation_scheduled':
+      case 'declined':
+      case 'accepted':
+      case 'converted':
         return 'bg-emerald-100 text-emerald-700';
       default:
         return 'bg-stone-100 text-stone-700';
@@ -315,6 +376,11 @@ export class LeadDetailComponent implements OnInit {
   async handleConsultationAction(): Promise<void> {
     const lead = this.lead();
     if (!lead || this.actionLoading()) return;
+
+    if (this.proposalWorkflow.canSubmitProposal(lead.status)) {
+      this.proposalModalOpen.set(true);
+      return;
+    }
 
     try {
       this.actionLoading.set(true);
@@ -332,6 +398,64 @@ export class LeadDetailComponent implements OnInit {
     } finally {
       this.actionLoading.set(false);
     }
+  }
+
+  openProposalModal(): void {
+    this.proposalModalOpen.set(true);
+  }
+
+  closeProposalModal(): void {
+    this.proposalModalOpen.set(false);
+  }
+
+  async submitProposal(file: File): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.proposalSubmitting()) return;
+
+    try {
+      this.proposalSubmitting.set(true);
+      await this.proposalWorkflow.submitProposal(lead, file);
+      this.proposalModalOpen.set(false);
+      await this.refreshLeadDetail();
+      this.toast.showToast('Proposal submitted successfully.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] submitProposal error:', error);
+      this.error.set(
+        error instanceof Error
+          ? error.message
+          : 'We were unable to submit the proposal right now.'
+      );
+    } finally {
+      this.proposalSubmitting.set(false);
+    }
+  }
+
+  async resendProposalAccess(proposalId: string): Promise<void> {
+    if (!proposalId || this.proposalResending()) return;
+
+    try {
+      this.proposalResending.set(true);
+      await this.proposalWorkflow.resendProposalAccessEmail(proposalId);
+      await this.refreshLeadDetail();
+      this.toast.showToast('Proposal access email resent.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] resendProposalAccess error:', error);
+      this.error.set(
+        error instanceof Error
+          ? error.message
+          : 'We were unable to resend proposal access right now.'
+      );
+    } finally {
+      this.proposalResending.set(false);
+    }
+  }
+
+  selectProposal(proposalId: string): void {
+    this.selectedProposalId.set(proposalId);
+  }
+
+  openProposal(url: string): void {
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   async markContacted(): Promise<void> {
@@ -363,11 +487,103 @@ export class LeadDetailComponent implements OnInit {
   }
 
   editLead(): void {
-    console.log('Edit lead');
+    this.editModalOpen.set(true);
+  }
+
+  closeEditModal(): void {
+    this.editModalOpen.set(false);
+  }
+
+  async saveLeadEdits(payload: LeadUpsertPayload): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.editSaving()) return;
+
+    const updates: Partial<Lead> = {
+      event_type: payload.event_type,
+      service_type: payload.service_type,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      partner_first_name: payload.event_type === 'wedding' ? payload.partner_first_name ?? null : null,
+      partner_last_name: payload.event_type === 'wedding' ? payload.partner_last_name ?? null : null,
+      email: payload.email,
+      phone: payload.phone ?? null,
+      preferred_contact_method: payload.preferred_contact_method ?? null,
+      event_date: payload.event_date ?? null,
+      ceremony_venue_name: payload.event_type === 'wedding' ? payload.ceremony_venue_name ?? null : null,
+      ceremony_venue_city: payload.event_type === 'wedding' ? payload.ceremony_venue_city ?? null : null,
+      ceremony_venue_state: payload.event_type === 'wedding' ? payload.ceremony_venue_state ?? null : null,
+      reception_venue_name: payload.event_type === 'wedding' ? payload.reception_venue_name ?? null : null,
+      reception_venue_city: payload.event_type === 'wedding' ? payload.reception_venue_city ?? null : null,
+      reception_venue_state: payload.event_type === 'wedding' ? payload.reception_venue_state ?? null : null,
+      budget_range: payload.event_type === 'wedding' ? payload.budget_range ?? null : null,
+      guest_count: payload.event_type === 'wedding' ? payload.guest_count ?? null : null,
+      inquiry_message: payload.inquiry_message ?? null,
+      source: payload.source ?? 'other',
+    };
+
+    const changedFields = this.getChangedFields(lead, updates);
+
+    try {
+      this.editSaving.set(true);
+      await this.leadRepository.updateLead(lead.lead_id, updates);
+
+      await this.activityRepository.createLeadActivity({
+        lead_id: lead.lead_id,
+        activity_type: 'updated',
+        activity_label: 'Lead details updated',
+        activity_description: changedFields.length
+          ? `Updated fields: ${changedFields.join(', ')}.`
+          : 'Lead details were saved from the CRM edit flow.',
+        metadata: {
+          changed_fields: changedFields,
+          updated_from: 'crm_lead_detail',
+        },
+      });
+
+      this.editModalOpen.set(false);
+      await this.refreshLeadDetail();
+      this.toast.showToast('Lead updated successfully.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] saveLeadEdits error:', error);
+      this.error.set('We were unable to save lead updates right now.');
+    } finally {
+      this.editSaving.set(false);
+    }
   }
 
   addInternalNote(): void {
-    console.log('Add internal note');
+    this.noteModalOpen.set(true);
+  }
+
+  closeNoteModal(): void {
+    this.noteModalOpen.set(false);
+  }
+
+  async saveInternalNote(note: string): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.noteSaving()) return;
+
+    try {
+      this.noteSaving.set(true);
+      await this.activityRepository.createLeadActivity({
+        lead_id: lead.lead_id,
+        activity_type: 'note_added',
+        activity_label: 'Internal note added',
+        activity_description: note,
+        metadata: {
+          note_source: 'crm_lead_detail',
+        },
+      });
+
+      this.noteModalOpen.set(false);
+      await this.refreshLeadDetail();
+      this.toast.showToast('Internal note added.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] saveInternalNote error:', error);
+      this.error.set('We were unable to save the internal note.');
+    } finally {
+      this.noteSaving.set(false);
+    }
   }
 
   openConvertModal(): void {
@@ -451,5 +667,70 @@ export class LeadDetailComponent implements OnInit {
     } finally {
       this.actionLoading.set(false);
     }
+  }
+
+  private syncSelectedProposal(proposals: Proposal[]): void {
+    const currentSelection = this.selectedProposalId();
+    const nextSelection = proposals.find(
+      (proposal) => proposal.proposal_id === currentSelection
+    )?.proposal_id;
+
+    this.selectedProposalId.set(nextSelection ?? proposals[0]?.proposal_id ?? null);
+  }
+
+  private mapActivityToProposalResponse(
+    activity: LeadActivity
+  ): ProposalResponseSummary | null {
+    const metadata = activity.metadata as Record<string, unknown> | null;
+    const proposalId = typeof metadata?.['proposal_id'] === 'string'
+      ? metadata['proposal_id']
+      : null;
+    const responseAction = metadata?.['response_action'];
+
+    if (!proposalId || (responseAction !== 'accept' && responseAction !== 'decline')) {
+      return null;
+    }
+
+    const feedbackValue = metadata?.['feedback'];
+
+    return {
+      proposal_id: proposalId,
+      action: responseAction,
+      feedback: typeof feedbackValue === 'string' && feedbackValue.trim().length
+        ? feedbackValue
+        : null,
+      created_at: activity.created_at,
+    };
+  }
+
+  private getChangedFields(lead: Lead, updates: Partial<Lead>): string[] {
+    const labels: Record<string, string> = {
+      event_type: 'event type',
+      service_type: 'service type',
+      first_name: 'first name',
+      last_name: 'last name',
+      partner_first_name: 'partner first name',
+      partner_last_name: 'partner last name',
+      email: 'email',
+      phone: 'phone',
+      preferred_contact_method: 'preferred contact',
+      event_date: 'event date',
+      ceremony_venue_name: 'ceremony venue',
+      ceremony_venue_city: 'ceremony city',
+      ceremony_venue_state: 'ceremony state',
+      reception_venue_name: 'reception venue',
+      reception_venue_city: 'reception city',
+      reception_venue_state: 'reception state',
+      budget_range: 'budget range',
+      guest_count: 'guest count',
+      inquiry_message: 'inquiry message',
+      source: 'source',
+    };
+
+    const currentValues = lead as unknown as Record<string, unknown>;
+
+    return Object.entries(updates)
+      .filter(([key, value]) => currentValues[key] !== value)
+      .map(([key]) => labels[key] ?? key.replace(/_/g, ' '));
   }
 }
