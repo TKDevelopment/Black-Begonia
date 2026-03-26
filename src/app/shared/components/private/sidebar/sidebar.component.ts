@@ -1,12 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { CrmThemeService } from '../../../../core/services/crm-theme.service';
 
 interface SidebarNavItem {
   label: string;
   route: string;
   exact?: boolean;
+}
+
+interface SidebarNavGroup {
+  label: string;
+  children: SidebarNavItem[];
 }
 
 @Component({
@@ -18,6 +24,13 @@ interface SidebarNavItem {
 export class SidebarComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  readonly crmThemeService = inject(CrmThemeService);
+  readonly estimateBuilderOpen = signal(
+    this.router.url.startsWith('/admin/catalog-items') ||
+      this.router.url.startsWith('/admin/vendors') ||
+      this.router.url.startsWith('/admin/arrangements') ||
+      this.router.url.startsWith('/admin/tax-regions')
+  );
 
   readonly navItems: SidebarNavItem[] = [
     { label: 'Dashboard', route: '/admin/dashboard', exact: true },
@@ -28,8 +41,42 @@ export class SidebarComponent {
     { label: 'Tasks', route: '/admin/tasks' },
   ];
 
+  readonly groupedNav: SidebarNavGroup[] = [
+    {
+      label: 'Estimate Builder',
+      children: [
+        { label: 'Catalog', route: '/admin/catalog-items' },
+        { label: 'Vendors', route: '/admin/vendors' },
+        { label: 'Arrangements', route: '/admin/arrangements' },
+        { label: 'Tax Regions', route: '/admin/tax-regions' },
+      ],
+    },
+  ];
+
   async logout(): Promise<void> {
     await this.authService.logout(true);
+  }
+
+  toggleTheme(): void {
+    this.crmThemeService.toggle();
+  }
+
+  toggleEstimateBuilder(): void {
+    this.estimateBuilderOpen.update((open) => !open);
+  }
+
+  isRouteActive(route: string, exact = false): boolean {
+    return this.router.isActive(route, exact ? {
+      paths: 'exact',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    } : {
+      paths: 'subset',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
   }
 
   get userDisplayName(): string {

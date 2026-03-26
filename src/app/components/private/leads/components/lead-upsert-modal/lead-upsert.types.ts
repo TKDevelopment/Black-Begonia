@@ -5,6 +5,9 @@ export interface LeadUpsertPayload {
   last_name: string;
   partner_first_name?: string | null;
   partner_last_name?: string | null;
+  planner_name?: string | null;
+  planner_phone?: string | null;
+  planner_email?: string | null;
   email: string;
   phone?: string | null;
   preferred_contact_method?: string | null;

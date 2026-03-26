@@ -1,6 +1,7 @@
 <div
   *ngIf="!authService.isReady || authService.snapshot.loading"
-  class="flex min-h-screen bg-[#f7f4f1]"
+  class="crm-shell flex min-h-screen bg-[#f7f4f1]"
+  [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
   <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-72 lg:border-r lg:border-black/10 lg:bg-white">
     <app-sidebar class="block h-full"></app-sidebar>
@@ -18,7 +19,8 @@
 
 <div
   *ngIf="authService.isReady && authService.isAuthenticated && authService.isInternalUser"
-  class="flex min-h-screen bg-[#f7f4f1]"
+  class="crm-shell flex min-h-screen bg-[#f7f4f1]"
+  [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
   <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-72 lg:border-r lg:border-black/10 lg:bg-white">
     <app-sidebar class="block h-full"></app-sidebar>

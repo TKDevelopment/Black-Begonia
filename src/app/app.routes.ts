@@ -181,6 +181,13 @@ export const routes: Routes = [
           import('./components/private/leads/leads.component').then(m => m.LeadsComponent),
       },
       {
+        path: 'leads/:leadId/estimate-builder',
+        loadComponent: () =>
+          import('./components/private/estimate-builder/estimate-builder.component').then(
+            m => m.EstimateBuilderComponent
+          ),
+      },
+      {
         path: 'leads/:leadId',
         loadComponent: () =>
           import('./components/private/leads/lead-detail/lead-detail.component').then(m => m.LeadDetailComponent),
@@ -207,6 +214,62 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/private/organizations/organizations.component').then(
             m => m.OrganizationsComponent
+          ),
+      },
+      {
+        path: 'catalog-items',
+        loadComponent: () =>
+          import('./components/private/catalog-items/catalog-items.component').then(
+            m => m.CatalogItemsComponent
+          ),
+      },
+      {
+        path: 'catalog-items/:itemId',
+        loadComponent: () =>
+          import('./components/private/catalog-items/catalog-items.component').then(
+            m => m.CatalogItemsComponent
+          ),
+      },
+      {
+        path: 'vendors',
+        loadComponent: () =>
+          import('./components/private/vendors/vendors.component').then(
+            m => m.VendorsComponent
+          ),
+      },
+      {
+        path: 'vendors/:vendorId',
+        loadComponent: () =>
+          import('./components/private/vendors/vendors.component').then(
+            m => m.VendorsComponent
+          ),
+      },
+      {
+        path: 'arrangements',
+        loadComponent: () =>
+          import('./components/private/arrangements/arrangements.component').then(
+            m => m.ArrangementsComponent
+          ),
+      },
+      {
+        path: 'arrangements/:arrangementId',
+        loadComponent: () =>
+          import('./components/private/arrangements/arrangements.component').then(
+            m => m.ArrangementsComponent
+          ),
+      },
+      {
+        path: 'tax-regions',
+        loadComponent: () =>
+          import('./components/private/tax-regions/tax-regions.component').then(
+            m => m.TaxRegionsComponent
+          ),
+      },
+      {
+        path: 'tax-regions/:taxRegionId',
+        loadComponent: () =>
+          import('./components/private/tax-regions/tax-regions.component').then(
+            m => m.TaxRegionsComponent
           ),
       },
       {

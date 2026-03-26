@@ -199,6 +199,9 @@ export class LeadsComponent implements OnInit {
           { label: 'Proposal Submitted', value: 'proposal_submitted' },
           { label: 'Proposal Declined', value: 'proposal_declined' },
           { label: 'Proposal Accepted', value: 'proposal_accepted' },
+          { label: 'Estimate Submitted', value: 'estimate_submitted' },
+          { label: 'Estimate Declined', value: 'estimate_declined' },
+          { label: 'Estimate Accepted', value: 'estimate_accepted' },
           { label: 'Accepted', value: 'accepted' },
           { label: 'Declined', value: 'declined' },
           { label: 'Converted', value: 'converted' },
@@ -279,6 +282,9 @@ export class LeadsComponent implements OnInit {
             last_name: payload.last_name,
             partner_first_name: payload.partner_first_name ?? null,
             partner_last_name: payload.partner_last_name ?? null,
+            planner_name: payload.planner_name ?? null,
+            planner_phone: payload.planner_phone ?? null,
+            planner_email: payload.planner_email ?? null,
             email: payload.email,
             phone: payload.phone ?? null,
             preferred_contact_method: payload.preferred_contact_method ?? null,
@@ -356,9 +362,14 @@ export class LeadsComponent implements OnInit {
       case 'proposal_declined':
         return 'danger';
       case 'proposal_accepted':
+      case 'estimate_accepted':
       case 'accepted':
       case 'converted':
         return 'success';
+      case 'estimate_submitted':
+        return 'warning';
+      case 'estimate_declined':
+        return 'danger';
       case 'declined':
         return 'danger';
       case 'closed_unbooked':
