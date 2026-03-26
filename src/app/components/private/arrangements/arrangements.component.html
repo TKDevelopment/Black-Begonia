@@ -1,5 +1,5 @@
 ﻿<div *ngIf="!isDetailView()" class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1760px] px-4 py-6 md:px-6 md:py-8">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
     <app-crm-page-header title="Arrangements" subtitle="Manage reusable floral recipes that drive estimate line items and shopping list demand." primaryActionLabel="Create Arrangement" (primaryAction)="openCreateModal()" />
 
     <app-search-filter-bar searchPlaceholder="Search by arrangement name, category, or description" [searchValue]="searchTerm()" [filters]="filters()" (searchChange)="onSearchChange($event)" (filterChange)="onFilterChange($event)" (reset)="resetFilters()" />
@@ -23,7 +23,7 @@
 </div>
 
 <div *ngIf="isDetailView()" class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1760px] px-4 py-6 md:px-6 md:py-8">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
     <app-loading-state-block *ngIf="detailLoading()" title="Loading arrangement" description="Please wait while we load the arrangement recipe and its components." minHeightClass="min-h-[520px]" />
     <app-error-state-block *ngIf="!detailLoading() && detailError()" title="Unable to load arrangement" [description]="detailError()!" (retry)="retryDetail()" minHeightClass="min-h-[520px]" />
 

@@ -1,5 +1,5 @@
 ﻿<div *ngIf="!isDetailView()" class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1760px] px-4 py-6 md:px-6 md:py-8">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
     <app-crm-page-header title="Catalog Items" subtitle="Manage flowers, greens, hardgoods, packaging, labor, and other ingredients that power arrangement and estimate automation." primaryActionLabel="Create Item" (primaryAction)="openCreateModal()" />
 
     <app-search-filter-bar searchPlaceholder="Search by item name, SKU, color, or variety" [searchValue]="searchTerm()" [filters]="filters()" (searchChange)="onSearchChange($event)" (filterChange)="onFilterChange($event)" (reset)="resetFilters()" />
@@ -28,7 +28,7 @@
 </div>
 
 <div *ngIf="isDetailView()" class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1760px] px-4 py-6 md:px-6 md:py-8">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
     <app-loading-state-block *ngIf="detailLoading()" title="Loading catalog item" description="Please wait while we load the ingredient record." minHeightClass="min-h-[520px]" />
     <app-error-state-block *ngIf="!detailLoading() && detailError()" title="Unable to load catalog item" [description]="detailError()!" (retry)="retryDetail()" minHeightClass="min-h-[520px]" />
 
