@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CrmThemeService } from '../../../../core/services/crm-theme.service';
@@ -22,6 +22,8 @@ interface SidebarNavGroup {
   templateUrl: './sidebar.component.html',
 })
 export class SidebarComponent {
+  @Input() isMobile = false;
+  @Output() navigate = new EventEmitter<void>();
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   readonly crmThemeService = inject(CrmThemeService);
@@ -54,6 +56,7 @@ export class SidebarComponent {
   ];
 
   async logout(): Promise<void> {
+    this.navigate.emit();
     await this.authService.logout(true);
   }
 
@@ -95,5 +98,9 @@ export class SidebarComponent {
 
   get userEmail(): string {
     return this.authService.snapshot.profile?.email ?? '';
+  }
+
+  onNavigate(): void {
+    this.navigate.emit();
   }
 }

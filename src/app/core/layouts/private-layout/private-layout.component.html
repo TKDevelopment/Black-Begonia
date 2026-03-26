@@ -3,11 +3,11 @@
   class="crm-shell flex min-h-screen bg-[#f7f4f1]"
   [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
-  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-72 lg:border-r lg:border-black/10 lg:bg-white">
+  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-52 lg:border-r lg:border-black/10 lg:bg-white xl:w-60 2xl:w-72">
     <app-sidebar class="block h-full"></app-sidebar>
   </div>
 
-  <div class="flex min-h-screen flex-1 items-center justify-center px-6 lg:pl-72">
+  <div class="flex min-h-screen flex-1 items-center justify-center px-6 lg:pl-52 xl:pl-60 2xl:pl-72">
     <div class="flex flex-col items-center text-center">
       <div class="h-12 w-12 animate-spin rounded-full border-4 border-dashed border-[#ea938c]"></div>
       <p class="mt-4 font-cormorant text-3xl tracking-wide text-[#1f1f1f]">
@@ -22,11 +22,41 @@
   class="crm-shell flex min-h-screen bg-[#f7f4f1]"
   [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
-  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-72 lg:border-r lg:border-black/10 lg:bg-white">
+  <div class="fixed inset-x-0 top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur lg:hidden">
+    <div class="flex items-center justify-between px-4 py-3 sm:px-5">
+      <div>
+        <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#ea938c]">Black Begonia</p>
+        <p class="font-cormorant text-2xl leading-none text-[#1f1f1f]">Admin CRM</p>
+      </div>
+
+      <button
+        type="button"
+        (click)="openMobileSidebar()"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#f7f4f1] px-3 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[#1f1f1f] transition hover:bg-white"
+      >
+        Menu
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="mobileSidebarOpen" class="fixed inset-0 z-40 lg:hidden">
+    <button
+      type="button"
+      (click)="closeMobileSidebar()"
+      class="absolute inset-0 bg-black/40"
+      aria-label="Close navigation"
+    ></button>
+
+    <div class="absolute inset-y-0 left-0 w-[86vw] max-w-sm border-r border-black/10 bg-white shadow-2xl">
+      <app-sidebar class="block h-full" [isMobile]="true" (navigate)="closeMobileSidebar()"></app-sidebar>
+    </div>
+  </div>
+
+  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-52 lg:border-r lg:border-black/10 lg:bg-white xl:w-60 2xl:w-72">
     <app-sidebar class="block h-full"></app-sidebar>
   </div>
 
-  <main class="min-w-0 flex-1 lg:pl-72">
+  <main class="min-w-0 flex-1 pt-[72px] lg:pt-0 lg:pl-52 xl:pl-60 2xl:pl-72">
     <router-outlet></router-outlet>
   </main>
 </div>

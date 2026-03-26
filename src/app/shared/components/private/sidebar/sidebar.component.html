@@ -1,37 +1,49 @@
-﻿<aside class="flex h-screen w-full flex-col bg-white">
-  <div class="border-b border-black/10 px-6 py-8">
+<aside class="flex h-screen w-full flex-col bg-white">
+  <div class="border-b border-black/10 px-3 py-5 lg:px-3.5 xl:px-4 xl:py-6 2xl:px-6 2xl:py-8">
+    <div *ngIf="isMobile" class="mb-4 flex items-center justify-between">
+      <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">Navigation</p>
+      <button
+        type="button"
+        (click)="onNavigate()"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#1f1f1f] transition hover:bg-[#f7f4f1]"
+      >
+        Close
+      </button>
+    </div>
+
     <a routerLink="/admin/dashboard" class="block">
-      <p class="font-oswald text-[11px] uppercase tracking-[0.35em] text-[#ea938c]">
+      <p class="font-oswald text-[9px] uppercase tracking-[0.28em] text-[#ea938c] lg:text-[10px] lg:tracking-[0.3em] xl:text-[11px] xl:tracking-[0.35em]">
         Black Begonia
       </p>
-      <h2 class="mt-3 font-cormorant text-3xl leading-none text-[#1f1f1f]">
+      <h2 class="mt-2.5 font-cormorant text-[1.55rem] leading-none text-[#1f1f1f] lg:text-[1.65rem] xl:text-[1.95rem] 2xl:text-3xl">
         Admin CRM
       </h2>
     </a>
 
-    <div class="mt-6 h-px w-20 bg-[#ea938c]"></div>
+    <div class="mt-5 h-px w-16 bg-[#ea938c] xl:w-20"></div>
 
-    <div class="mt-6">
+    <div class="mt-5">
       <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
         Signed in as
       </p>
-      <p class="mt-2 font-cormorant text-2xl leading-tight text-[#1f1f1f]">
+      <p class="mt-2 font-cormorant text-lg leading-tight text-[#1f1f1f] lg:text-xl xl:text-[1.65rem] 2xl:text-2xl">
         {{ userDisplayName }}
       </p>
-      <p class="mt-1 break-all text-sm text-[#6a6a6a]">
+      <p class="mt-1 break-all text-[11px] text-[#6a6a6a] xl:text-sm">
         {{ userEmail }}
       </p>
     </div>
   </div>
 
-  <nav class="flex-1 overflow-y-auto px-4 py-6">
-    <ul class="space-y-1.5">
+  <nav class="flex-1 overflow-y-auto px-2.5 py-4 lg:px-3 lg:py-5 xl:px-4 xl:py-6">
+    <ul class="space-y-1">
       <li *ngFor="let item of navItems">
         <a
           [routerLink]="item.route"
+          (click)="onNavigate()"
           [routerLinkActive]="'bg-black text-white shadow-md'"
           [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-          class="group flex items-center justify-between rounded-2xl px-3.5 py-2.5 font-oswald text-[13px] uppercase tracking-[0.2em] text-[#2d2d2d] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c]"
+          class="group flex items-center justify-between rounded-2xl px-2.5 py-2 font-oswald text-[10px] uppercase tracking-[0.16em] text-[#2d2d2d] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c] lg:px-3 lg:text-[11px] xl:px-3.5 xl:py-2.5 xl:text-[12px] 2xl:text-[13px]"
         >
           <span [routerLinkActive]="'text-white hover:text-black'">{{ item.label }}</span>
           <span class="h-2 w-2 rounded-full bg-transparent transition duration-300 group-hover:bg-[#ea938c]"></span>
@@ -42,7 +54,7 @@
         <button
           type="button"
           (click)="toggleEstimateBuilder()"
-          class="flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 text-left font-oswald text-[13px] uppercase tracking-[0.2em] text-[#2d2d2d] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c]"
+          class="flex w-full items-center justify-between rounded-2xl px-2.5 py-2 text-left font-oswald text-[10px] uppercase tracking-[0.16em] text-[#2d2d2d] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c] lg:px-3 lg:text-[11px] xl:px-3.5 xl:py-2.5 xl:text-[12px] 2xl:text-[13px]"
           [class.bg-black]="estimateBuilderOpen()"
           [class.text-white]="estimateBuilderOpen()"
         >
@@ -52,11 +64,12 @@
           </svg>
         </button>
 
-        <div *ngIf="estimateBuilderOpen()" class="mt-1.5 space-y-1.5 pl-2.5">
+        <div *ngIf="estimateBuilderOpen()" class="mt-1.5 space-y-1 pl-1.5 lg:pl-2 xl:pl-2.5">
           <a
             *ngFor="let child of group.children"
             [routerLink]="child.route"
-            class="group flex items-center justify-between rounded-2xl px-3.5 py-2 font-oswald text-[11px] uppercase tracking-[0.22em] text-[#4a4a4a] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c]"
+            (click)="onNavigate()"
+            class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[9px] uppercase tracking-[0.18em] text-[#4a4a4a] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c] lg:px-3 lg:text-[10px] xl:px-3.5 xl:py-2 xl:text-[11px]"
             [class.bg-black]="isRouteActive(child.route)"
             [class.text-white]="isRouteActive(child.route)"
           >
@@ -71,14 +84,14 @@
     </ul>
   </nav>
 
-  <div class="border-t border-black/10 px-4 py-5">
-    <div class="mb-4 rounded-2xl border border-black/10 bg-[#f7f4f1] p-4">
+  <div class="border-t border-black/10 px-2.5 py-3 lg:px-3 lg:py-4 xl:px-4 xl:py-5">
+    <div class="mb-3 rounded-2xl border border-black/10 bg-[#f7f4f1] p-3 xl:mb-4 xl:p-4">
       <div class="flex items-center justify-between gap-4">
         <div>
           <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
             CRM Theme
           </p>
-          <p class="mt-1 text-sm text-[#5e5e5e]">
+          <p class="mt-1 text-xs text-[#5e5e5e] xl:text-sm">
             {{ crmThemeService.isDarkMode ? 'Dark mode' : 'Light mode' }}
           </p>
         </div>
@@ -101,7 +114,7 @@
     <button
       type="button"
       (click)="logout()"
-      class="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-4 py-3 font-oswald text-sm uppercase tracking-[0.22em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-white"
+      class="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-4 py-2.5 font-oswald text-[11px] uppercase tracking-[0.18em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-white lg:text-[12px] xl:py-3 xl:text-sm"
     >
       Log Out
     </button>

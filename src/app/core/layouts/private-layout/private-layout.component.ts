@@ -12,6 +12,8 @@ import { CrmThemeService } from '../../services/crm-theme.service';
   templateUrl: './private-layout.component.html',
 })
 export class PrivateLayoutComponent implements OnInit {
+  mobileSidebarOpen = false;
+
   constructor(
     public authService: AuthService,
     public crmThemeService: CrmThemeService,
@@ -21,5 +23,13 @@ export class PrivateLayoutComponent implements OnInit {
     if (!this.authService.isReady) {
       await this.authService.init();
     }
+  }
+
+  openMobileSidebar(): void {
+    this.mobileSidebarOpen = true;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
   }
 }
