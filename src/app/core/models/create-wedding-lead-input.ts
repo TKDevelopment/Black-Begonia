@@ -19,4 +19,7 @@ export interface CreateWeddingLeadInput {
   guest_count?: number | null;
   inquiry_message?: string | null;
   source?: string | null;
+  planner_name?: string | null;
+  planner_phone?: string | null;
+  planner_email?: string | null;
 };

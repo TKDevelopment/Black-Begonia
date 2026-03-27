@@ -1,12 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { CrmThemeService } from '../../../../core/services/crm-theme.service';
 
 interface SidebarNavItem {
   label: string;
   route: string;
   exact?: boolean;
+}
+
+interface SidebarNavGroup {
+  label: string;
+  children: SidebarNavItem[];
 }
 
 @Component({
@@ -16,8 +22,18 @@ interface SidebarNavItem {
   templateUrl: './sidebar.component.html',
 })
 export class SidebarComponent {
+  @Input() isMobile = false;
+  @Output() navigate = new EventEmitter<void>();
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  readonly crmThemeService = inject(CrmThemeService);
+  readonly floralProposalBuilderOpen = signal(
+    this.router.url.startsWith('/admin/proposal-templates') ||
+    this.router.url.startsWith('/admin/catalog-items') ||
+      this.router.url.startsWith('/admin/vendors') ||
+      this.router.url.startsWith('/admin/arrangements') ||
+      this.router.url.startsWith('/admin/tax-regions')
+  );
 
   readonly navItems: SidebarNavItem[] = [
     { label: 'Dashboard', route: '/admin/dashboard', exact: true },
@@ -28,8 +44,44 @@ export class SidebarComponent {
     { label: 'Tasks', route: '/admin/tasks' },
   ];
 
+  readonly groupedNav: SidebarNavGroup[] = [
+    {
+      label: 'Floral Proposal Builder',
+      children: [
+        { label: 'Templates', route: '/admin/proposal-templates' },
+        { label: 'Catalog', route: '/admin/catalog-items' },
+        { label: 'Vendors', route: '/admin/vendors' },
+        { label: 'Arrangements', route: '/admin/arrangements' },
+        { label: 'Tax Regions', route: '/admin/tax-regions' },
+      ],
+    },
+  ];
+
   async logout(): Promise<void> {
+    this.navigate.emit();
     await this.authService.logout(true);
+  }
+
+  toggleTheme(): void {
+    this.crmThemeService.toggle();
+  }
+
+  toggleFloralProposalBuilder(): void {
+    this.floralProposalBuilderOpen.update((open) => !open);
+  }
+
+  isRouteActive(route: string, exact = false): boolean {
+    return this.router.isActive(route, exact ? {
+      paths: 'exact',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    } : {
+      paths: 'subset',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored',
+    });
   }
 
   get userDisplayName(): string {
@@ -49,4 +101,10 @@ export class SidebarComponent {
   get userEmail(): string {
     return this.authService.snapshot.profile?.email ?? '';
   }
+
+  onNavigate(): void {
+    this.navigate.emit();
+  }
 }
+
+

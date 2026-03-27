@@ -23,7 +23,7 @@ export class LeadWorkflowService {
 
     await this.activityRepository.createLeadActivity({
       lead_id: leadId,
-      activity_type: 'status_changed',
+      activity_type: 'contact_attempted',
       activity_label: 'Lead marked as contacted',
       activity_description: 'Lead status moved to Contacted.',
       metadata: {
@@ -44,7 +44,7 @@ export class LeadWorkflowService {
 
     await this.activityRepository.createLeadActivity({
       lead_id: lead.lead_id,
-      activity_type: 'status_changed',
+      activity_type: 'status_change',
       activity_label: `Lead status changed to ${this.formatStatusLabel(nextStatus)}`,
       activity_description: `Lead moved from ${this.formatStatusLabel(
         lead.status
@@ -69,7 +69,7 @@ export class LeadWorkflowService {
 
     await this.activityRepository.createLeadActivity({
       lead_id: leadId,
-      activity_type: 'status_changed',
+      activity_type: 'declined',
       activity_label: 'Lead declined',
       activity_description: reason || 'Lead was declined.',
       metadata: {
@@ -99,7 +99,7 @@ export class LeadWorkflowService {
 
     await this.activityRepository.createLeadActivity({
       lead_id: lead.lead_id,
-      activity_type: 'status_changed',
+      activity_type: 'consultation_scheduled',
       activity_label: 'Consultation scheduled',
       activity_description: 'Lead moved to Consultation Scheduled.',
       metadata: {
@@ -128,7 +128,7 @@ export class LeadWorkflowService {
 
     await this.activityRepository.createLeadActivity({
       lead_id: lead.lead_id,
-      activity_type: 'status_changed',
+      activity_type: 'status_change',
       activity_label: 'Consultation completed',
       activity_description:
         'Consultation completed and lead moved to Nurturing.',
@@ -142,17 +142,67 @@ export class LeadWorkflowService {
     return updatedLead;
   }
 
+  async reopenClosedUnbookedLead(lead: Lead): Promise<Lead> {
+    if (lead.status !== 'closed_unbooked') {
+      throw new Error(
+        `Cannot reopen a lead from status "${lead.status}".`
+      );
+    }
+
+    const updatedLead = await this.leadRepository.updateLead(lead.lead_id, {
+      status: 'nurturing',
+    });
+
+    await this.activityRepository.createLeadActivity({
+      lead_id: lead.lead_id,
+      activity_type: 'status_change',
+      activity_label: 'Lead reopened',
+      activity_description:
+        'Closed unbooked lead was reopened and moved back to Nurturing.',
+      metadata: {
+        previous_status: lead.status,
+        next_status: 'nurturing',
+        reopened_from: 'closed_unbooked',
+      },
+    });
+
+    return updatedLead;
+  }
+
   canScheduleConsultation(status: LeadStatus): boolean {
     return status === 'new' || status === 'contacted';
   }
 
   isConsultationButtonDisabled(status: LeadStatus): boolean {
-    return false;
+    return !(
+      status === 'new' ||
+      status === 'contacted' ||
+      status === 'consultation_scheduled' ||
+      status === 'nurturing' ||
+      status === 'proposal_declined' ||
+      status === 'proposal_accepted'
+    );
   }
 
   getConsultationButtonLabel(status: LeadStatus): string {
+    if (status === 'converted') {
+      return 'Lead Converted';
+    }
+
+    if (status === 'proposal_accepted') {
+      return 'Convert to Project';
+    }
+
+    if (status === 'nurturing' || status === 'proposal_declined') {
+      return 'Generate Floral Proposal';
+    }
+
     if (status === 'consultation_scheduled') {
       return 'Consultation Completed';
+    }
+
+    if (status === 'proposal_submitted') {
+      return 'Floral Proposal Sent';
     }
 
     return 'Schedule Consultation';
@@ -178,7 +228,29 @@ export class LeadWorkflowService {
       case 'consultation_scheduled':
         return ['consultation_scheduled', 'nurturing', 'declined'];
       case 'nurturing':
-        return ['nurturing', 'accepted', 'declined', 'closed_unbooked'];
+        return [
+          'nurturing',
+          'proposal_submitted',
+          'declined',
+          'closed_unbooked',
+        ];
+      case 'proposal_submitted':
+        return [
+          'proposal_submitted',
+          'proposal_declined',
+          'proposal_accepted',
+          'declined',
+          'closed_unbooked',
+        ];
+      case 'proposal_declined':
+        return [
+          'proposal_declined',
+          'proposal_submitted',
+          'declined',
+          'closed_unbooked',
+        ];
+      case 'proposal_accepted':
+        return ['proposal_accepted', 'converted'];
       case 'accepted':
         return ['accepted', 'converted'];
       case 'declined':

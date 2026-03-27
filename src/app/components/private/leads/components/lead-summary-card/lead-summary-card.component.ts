@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Lead } from '../../../../../core/models/lead';
 import { LeadStatus } from '../../../../../core/models/lead-status';
 import { StatusBadgeComponent } from '../../../../../shared/components/private/status-badge/status-badge.component';
@@ -24,6 +24,7 @@ export class LeadSummaryCardComponent {
   @Input() actionLoading = false;
   @Input() consultationButtonLabel = 'Schedule Consultation';
   @Input() consultationButtonDisabled = false;
+  @Input() detailsLocked = false;
 
   @Output() markContacted = new EventEmitter<void>();
   @Output() editLead = new EventEmitter<void>();
@@ -54,6 +55,11 @@ export class LeadSummaryCardComponent {
         return 'warning';
       case 'nurturing':
         return 'purple';
+      case 'proposal_submitted':
+        return 'warning';
+      case 'proposal_declined':
+        return 'danger';
+      case 'proposal_accepted':
       case 'accepted':
       case 'converted':
         return 'success';

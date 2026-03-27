@@ -32,7 +32,9 @@ export interface Lead {
   last_contacted_at?: string | null;
   created_at: string;
   updated_at: string;
-
   consultation_scheduled_at: string | null;
   consultation_completed_at: string | null;
+  planner_name: string | null;
+  planner_phone: string | null;
+  planner_email: string | null;
 }

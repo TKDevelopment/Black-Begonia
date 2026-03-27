@@ -1,12 +1,35 @@
 import { Routes } from '@angular/router';
 import { PublicLayoutComponent } from './core/layouts/public-layout/public-layout.component';
 import { PrivateLayoutComponent } from './core/layouts/private-layout/private-layout.component';
+import { ProposalAccessLayoutComponent } from './core/layouts/proposal-access-layout/proposal-access-layout.component';
 import { LandingComponent } from './components/public/landing/landing.component';
 import { authGuard, authChildGuard } from './core/guards/auth.guard';
 import { adminRoleGuard, adminRoleChildGuard } from './core/guards/admin-role.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { proposalAccessGuard } from './core/guards/proposal-access.guard';
 
 export const routes: Routes = [
+  {
+    path: 'proposal',
+    component: ProposalAccessLayoutComponent,
+    children: [
+      {
+        path: 'auth',
+        loadComponent: () =>
+          import('./components/proposal-access/proposal-auth/proposal-auth.component').then(
+            m => m.ProposalAuthComponent
+          ),
+      },
+      {
+        path: 'review',
+        canActivate: [proposalAccessGuard],
+        loadComponent: () =>
+          import('./components/proposal-access/proposal-review/proposal-review.component').then(
+            m => m.ProposalReviewComponent
+          ),
+      },
+    ],
+  },
   {
     path: '',
     component: PublicLayoutComponent,
@@ -153,8 +176,16 @@ export const routes: Routes = [
       },
       {
         path: 'leads',
+        pathMatch: 'full',
         loadComponent: () =>
           import('./components/private/leads/leads.component').then(m => m.LeadsComponent),
+      },
+      {
+        path: 'leads/:leadId/floral-proposal-builder',
+        loadComponent: () =>
+          import('./components/private/floral-proposal-builder/floral-proposal-builder.component').then(
+            m => m.FloralProposalBuilderComponent
+          ),
       },
       {
         path: 'leads/:leadId',
@@ -186,6 +217,76 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'proposal-templates',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
+        path: 'proposal-templates/:templateId',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
+        path: 'catalog-items',
+        loadComponent: () =>
+          import('./components/private/catalog-items/catalog-items.component').then(
+            m => m.CatalogItemsComponent
+          ),
+      },
+      {
+        path: 'catalog-items/:itemId',
+        loadComponent: () =>
+          import('./components/private/catalog-items/catalog-items.component').then(
+            m => m.CatalogItemsComponent
+          ),
+      },
+      {
+        path: 'vendors',
+        loadComponent: () =>
+          import('./components/private/vendors/vendors.component').then(
+            m => m.VendorsComponent
+          ),
+      },
+      {
+        path: 'vendors/:vendorId',
+        loadComponent: () =>
+          import('./components/private/vendors/vendors.component').then(
+            m => m.VendorsComponent
+          ),
+      },
+      {
+        path: 'arrangements',
+        loadComponent: () =>
+          import('./components/private/arrangements/arrangements.component').then(
+            m => m.ArrangementsComponent
+          ),
+      },
+      {
+        path: 'arrangements/:arrangementId',
+        loadComponent: () =>
+          import('./components/private/arrangements/arrangements.component').then(
+            m => m.ArrangementsComponent
+          ),
+      },
+      {
+        path: 'tax-regions',
+        loadComponent: () =>
+          import('./components/private/tax-regions/tax-regions.component').then(
+            m => m.TaxRegionsComponent
+          ),
+      },
+      {
+        path: 'tax-regions/:taxRegionId',
+        loadComponent: () =>
+          import('./components/private/tax-regions/tax-regions.component').then(
+            m => m.TaxRegionsComponent
+          ),
+      },
+      {
         path: 'projects',
         loadComponent: () =>
           import('./components/private/projects/projects.component').then(m => m.ProjectsComponent),
@@ -207,3 +308,6 @@ export const routes: Routes = [
     redirectTo: '',
   },
 ];
+
+
+

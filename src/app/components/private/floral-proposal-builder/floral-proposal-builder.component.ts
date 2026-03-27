@@ -1,0 +1,1132 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { ActivatedRoute, Router } from '@angular/router';
+
+import { CatalogItem } from '../../../core/models/catalog-item';
+import {
+  DocumentTemplate,
+  FloralProposal,
+  FloralProposalLineItemType,
+  FloralProposalShoppingListItem,
+  PricingSettings,
+} from '../../../core/models/floral-proposal';
+import { Lead } from '../../../core/models/lead';
+import { TaxRegion } from '../../../core/models/tax-region';
+import { ToastService } from '../../../core/services/toast.service';
+import { ActivityRepositoryService } from '../../../core/supabase/repositories/activity-repository.service';
+import { CatalogItemRepositoryService } from '../../../core/supabase/repositories/catalog-item-repository.service';
+import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
+import { FloralProposalRepositoryService } from '../../../core/supabase/repositories/floral-proposal-repository.service';
+import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
+import { PricingSettingsRepositoryService } from '../../../core/supabase/repositories/pricing-settings-repository.service';
+import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
+import { VendorItemPackRepositoryService } from '../../../core/supabase/repositories/vendor-item-pack-repository.service';
+import {
+  FloralProposalBuilderComponentRow,
+  FloralProposalBuilderLine,
+  FloralProposalRenderPayload,
+  FloralProposalBuilderService,
+} from '../../../core/supabase/services/floral-proposal-builder.service';
+import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
+import { EntityDetailShellComponent } from '../../../shared/components/private/entity-detail-shell/entity-detail-shell.component';
+import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
+import { LoadingStateBlockComponent } from '../../../shared/components/private/loading-state-block/loading-state-block.component';
+import { StatusBadgeComponent } from '../../../shared/components/private/status-badge/status-badge.component';
+
+@Component({
+  selector: 'app-floral-proposal-builder',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    DragDropModule,
+    LoadingStateBlockComponent,
+    ErrorStateBlockComponent,
+    EntityDetailShellComponent,
+    StatusBadgeComponent,
+  ],
+  templateUrl: './floral-proposal-builder.component.html',
+})
+export class FloralProposalBuilderComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly leadRepository = inject(LeadRepositoryService);
+  private readonly taxRegionRepository = inject(TaxRegionRepositoryService);
+  private readonly floralProposalRepository = inject(FloralProposalRepositoryService);
+  private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
+  private readonly vendorItemPackRepository = inject(VendorItemPackRepositoryService);
+  private readonly activityRepository = inject(ActivityRepositoryService);
+  private readonly documentTemplateRepository = inject(DocumentTemplateRepositoryService);
+  private readonly pricingSettingsRepository = inject(PricingSettingsRepositoryService);
+  private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
+  private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
+  private readonly toast = inject(ToastService);
+
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly saving = signal(false);
+  readonly previewOpen = signal(false);
+  readonly lead = signal<Lead | null>(null);
+  readonly proposals = signal<FloralProposal[]>([]);
+  readonly activeProposal = signal<FloralProposal | null>(null);
+  readonly taxRegions = signal<TaxRegion[]>([]);
+  readonly templates = signal<DocumentTemplate[]>([]);
+  readonly catalogItems = signal<CatalogItem[]>([]);
+  readonly pricingSettings = signal<PricingSettings | null>(null);
+  readonly lineItems = signal<FloralProposalBuilderLine[]>([]);
+  readonly shoppingList = signal<FloralProposalShoppingListItem[]>([]);
+  readonly selectedTaxRegionId = signal<string>('');
+  readonly selectedTemplateId = signal<string>('');
+  readonly defaultMarkupPercent = signal(300);
+  readonly draggingLineId = signal<string | null>(null);
+
+  readonly selectedTaxRegion = computed(() => {
+    const id = this.selectedTaxRegionId();
+    return this.taxRegions().find((region) => region.tax_region_id === id) ?? null;
+  });
+
+  readonly selectedTemplate = computed(() => {
+    const id = this.selectedTemplateId();
+    return this.templates().find((template) => template.template_id === id) ?? null;
+  });
+
+  readonly activeCatalogItems = computed(() =>
+    this.catalogItems().filter((item) => item.is_active)
+  );
+
+  readonly totals = computed(() =>
+    this.floralProposalBuilderService.calculateTotals(this.lineItems(), this.selectedTaxRegion())
+  );
+
+  readonly renderPayload = computed(() => this.buildRenderPayload());
+  readonly totalsBreakdown = computed(() => this.renderPayload().breakdown);
+
+  readonly canEdit = computed(() => {
+    const lead = this.lead();
+    return !!lead && !this.isReadOnly(lead.status) && !this.saving();
+  });
+
+  readonly canSubmit = computed(() => {
+    return (
+      this.canEdit() &&
+      !!this.selectedTemplateId() &&
+      !!this.selectedTaxRegionId() &&
+      this.lineItems().some((line) => line.item_name.trim().length > 0)
+    );
+  });
+
+  readonly shoppingListSubtotal = computed(() =>
+    Number(
+      this.shoppingList()
+        .reduce((sum, item) => sum + (item.total_estimated_cost ?? 0), 0)
+        .toFixed(2)
+    )
+  );
+
+  readonly title = computed(() => {
+    const lead = this.lead();
+    return lead
+      ? `Floral Proposal Builder: ${lead.first_name} ${lead.last_name}`
+      : 'Floral Proposal Builder';
+  });
+
+  readonly subtitle = computed(() => {
+    const lead = this.lead();
+    if (!lead) {
+      return 'Build a client-facing Floral Proposal with internal catalog-item composition and live shopping-list rollups.';
+    }
+
+    return `${this.formatStatusLabel(lead.status)} lead - ${this.formatStatusLabel(
+      lead.service_type
+    )}`;
+  });
+
+  readonly previewHtml = computed(() => this.buildProposalPrintHtml(this.renderPayload()));
+
+  ngOnInit(): void {
+    const leadId = this.route.snapshot.paramMap.get('leadId');
+    if (!leadId) {
+      void this.router.navigate(['/admin/leads']);
+      return;
+    }
+
+    void this.loadBuilder(leadId);
+  }
+
+  async loadBuilder(leadId: string): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      const [lead, taxRegions, templates, proposals, catalogItems, pricingSettings] =
+        await Promise.all([
+          this.leadRepository.getLeadById(leadId),
+          this.taxRegionRepository.getTaxRegions(),
+          this.documentTemplateRepository.getDocumentTemplates(),
+          this.floralProposalRepository.getLeadFloralProposals(leadId),
+          this.catalogItemRepository.getCatalogItems(),
+          this.pricingSettingsRepository.getActivePricingSettings(),
+        ]);
+
+      if (!lead) {
+        this.error.set('We could not find this lead.');
+        return;
+      }
+
+      this.lead.set(lead);
+      this.taxRegions.set(taxRegions.filter((region) => region.is_active));
+      this.templates.set(templates.filter((template) => template.is_active));
+      this.catalogItems.set(catalogItems);
+      this.pricingSettings.set(pricingSettings);
+      this.proposals.set(proposals);
+
+      const activeProposal = proposals.find((proposal) => proposal.is_active) ?? proposals[0] ?? null;
+      this.activeProposal.set(activeProposal);
+      this.selectedTaxRegionId.set(activeProposal?.tax_region_id ?? '');
+      this.selectedTemplateId.set(activeProposal?.template_id ?? '');
+      this.defaultMarkupPercent.set(
+        this.getInitialDefaultMarkupPercent(activeProposal, pricingSettings)
+      );
+
+      if (activeProposal) {
+        const [lineItems, components] = await Promise.all([
+          this.floralProposalRepository.getFloralProposalLineItems(activeProposal.floral_proposal_id),
+          this.floralProposalRepository.getFloralProposalComponents(activeProposal.floral_proposal_id),
+        ]);
+
+        const hydratedLines = this.floralProposalBuilderService.hydrateBuilderLines(
+          lineItems,
+          components
+        );
+        this.lineItems.set(await this.populateLineItemSignedUrls(hydratedLines));
+      } else {
+        this.lineItems.set([]);
+      }
+
+      await this.refreshShoppingList();
+
+      if (!this.isWorkflowAllowed(lead.status)) {
+        this.error.set(
+          'This lead is not ready for Floral Proposal building yet. Complete consultation and move the lead into Nurturing first.'
+        );
+      }
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] loadBuilder error:', error);
+      this.error.set('We were unable to load the Floral Proposal builder right now.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async retry(): Promise<void> {
+    const leadId = this.lead()?.lead_id ?? this.route.snapshot.paramMap.get('leadId');
+    if (!leadId) return;
+    await this.loadBuilder(leadId);
+  }
+
+  goBack(): void {
+    const leadId = this.lead()?.lead_id;
+    if (!leadId) {
+      void this.router.navigate(['/admin/leads']);
+      return;
+    }
+
+    void this.router.navigate(['/admin/leads', leadId]);
+  }
+
+  addLineItem(): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) => [
+      ...lines,
+      this.floralProposalBuilderService.createEmptyLine(lines.length),
+    ]);
+  }
+
+  reorderLineItems(event: CdkDragDrop<FloralProposalBuilderLine[]>): void {
+    if (!this.canEdit() || event.previousIndex === event.currentIndex) {
+      this.draggingLineId.set(null);
+      return;
+    }
+
+    const nextLines = [...this.lineItems()];
+    moveItemInArray(nextLines, event.previousIndex, event.currentIndex);
+    this.lineItems.set(
+      nextLines.map((line, index) => ({
+        ...line,
+        display_order: index,
+      }))
+    );
+    this.draggingLineId.set(null);
+  }
+
+  removeLine(lineId: string): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines
+        .filter((line) => line.local_id !== lineId)
+        .map((line, index) => ({ ...line, display_order: index }))
+    );
+    void this.refreshShoppingList();
+  }
+
+  toggleExpanded(lineId: string): void {
+    if (this.draggingLineId()) {
+      return;
+    }
+
+    this.lineItems.update((lines) =>
+      lines.map((line) =>
+        line.local_id === lineId ? { ...line, expanded: !line.expanded } : line
+      )
+    );
+  }
+
+  onLineDragStarted(lineId: string): void {
+    this.draggingLineId.set(lineId);
+  }
+
+  onLineDragEnded(): void {
+    this.draggingLineId.set(null);
+  }
+
+  updateLineName(lineId: string, value: string): void {
+    this.patchLine(lineId, { item_name: value });
+  }
+
+  updateLineQuantity(lineId: string, value: string): void {
+    const quantity = Math.max(Number(value || 0), 0);
+    this.patchAndRecalculateLine(lineId, { quantity });
+  }
+
+  updateLineType(lineId: string, value: FloralProposalLineItemType): void {
+    this.patchAndRecalculateLine(lineId, { line_item_type: value });
+  }
+
+  updateLineNotes(lineId: string, value: string): void {
+    this.patchLine(lineId, { notes: value || null });
+  }
+
+  updateLineDescription(lineId: string, value: string): void {
+    this.patchLine(lineId, { description: value || null });
+  }
+
+  updateManualUnitPrice(lineId: string, value: string): void {
+    const unitPrice = Math.max(Number(value || 0), 0);
+    this.patchAndRecalculateLine(lineId, { unit_price: unitPrice });
+  }
+
+  addComponentRow(lineId: string): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines.map((line) => {
+        if (line.local_id !== lineId) return line;
+
+        const nextComponent = this.floralProposalBuilderService.createEmptyComponentRow(
+          line.components.length,
+          this.defaultMarkupPercent()
+        );
+
+        return {
+          ...line,
+          expanded: true,
+          components: [...line.components, nextComponent],
+        };
+      })
+    );
+  }
+
+  removeComponentRow(lineId: string, componentId: string): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines.map((line) => {
+        if (line.local_id !== lineId) return line;
+
+        return this.floralProposalBuilderService.recalculateLine({
+          ...line,
+          components: line.components
+            .filter((component) => component.local_id !== componentId)
+            .map((component, index) => ({ ...component, display_order: index })),
+        });
+      })
+    );
+
+    void this.refreshShoppingList();
+  }
+
+  commitCatalogItemSelection(lineId: string, componentId: string, rawValue: string): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines.map((line) => {
+        if (line.local_id !== lineId) return line;
+
+        const nextComponents = line.components.map((component) => {
+          if (component.local_id !== componentId) return component;
+
+          const matchedItem = this.findCatalogItemByName(rawValue);
+          if (!matchedItem) {
+            return {
+              ...component,
+              catalog_item_id: null,
+              catalog_item_name: rawValue,
+              item_type: component.item_type ?? null,
+              unit_type: component.unit_type ?? null,
+            };
+          }
+
+          return this.floralProposalBuilderService.applyCatalogItemToComponent(
+            component,
+            matchedItem,
+            line.quantity,
+            this.defaultMarkupPercent()
+          );
+        });
+
+        return this.floralProposalBuilderService.recalculateLine({
+          ...line,
+          components: nextComponents,
+        });
+      })
+    );
+
+    void this.refreshShoppingList();
+  }
+
+  updateComponentQuantity(lineId: string, componentId: string, rawValue: string): void {
+    const quantityPerUnit = Math.max(Number(rawValue || 0), 0);
+    this.patchComponent(lineId, componentId, { quantity_per_unit: quantityPerUnit });
+  }
+
+  updateComponentMarkup(lineId: string, componentId: string, rawValue: string): void {
+    const appliedMarkupPercent = Math.max(Number(rawValue || 0), 0);
+    this.patchComponent(lineId, componentId, { applied_markup_percent: appliedMarkupPercent });
+  }
+
+  handleComponentQuantityAdvance(event: Event, lineId: string, componentId: string): void {
+    const keyboardEvent = event as KeyboardEvent;
+    const line = this.lineItems().find((item) => item.local_id === lineId);
+    const isLast = !!line && line.components[line.components.length - 1]?.local_id === componentId;
+
+    if (keyboardEvent.key === 'Enter' && isLast) {
+      keyboardEvent.preventDefault();
+      this.addComponentRow(lineId);
+    }
+  }
+
+  onTemplateChange(value: string): void {
+    this.selectedTemplateId.set(value);
+  }
+
+  onDefaultMarkupChange(value: string): void {
+    const nextValue = Math.max(Number(value || 0), 0);
+    this.defaultMarkupPercent.set(nextValue);
+    this.lineItems.update((lines) =>
+      lines.map((line) =>
+        this.floralProposalBuilderService.recalculateLine({
+          ...line,
+          components: line.components.map((component) => ({
+            ...component,
+            applied_markup_percent: nextValue,
+          })),
+        })
+      )
+    );
+    void this.refreshShoppingList();
+  }
+
+  onTaxRegionChange(value: string): void {
+    this.selectedTaxRegionId.set(value);
+  }
+
+  async saveDraft(): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.saving() || this.isReadOnly(lead.status)) return;
+
+    try {
+      this.saving.set(true);
+      const proposal = await this.persistDraft();
+      this.activeProposal.set(proposal);
+      this.toast.showToast('Floral Proposal draft saved.', 'success');
+      await this.loadBuilder(lead.lead_id);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] saveDraft error:', error);
+      this.toast.showToast('We were unable to save the Floral Proposal draft right now.', 'error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async openPreview(): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.saving() || !this.canSubmit()) return;
+
+    try {
+      this.saving.set(true);
+      const proposal = await this.persistDraft();
+      this.activeProposal.set(proposal);
+      await this.loadBuilder(lead.lead_id);
+      this.previewOpen.set(true);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] openPreview error:', error);
+      this.toast.showToast('We were unable to prepare the Floral Proposal preview right now.', 'error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  closePreview(): void {
+    if (this.saving()) return;
+    this.previewOpen.set(false);
+  }
+
+  async submitFloralProposal(): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.saving() || this.isReadOnly(lead.status)) return;
+
+    if (!this.selectedTemplateId()) {
+      this.toast.showToast('Choose a Floral Proposal template before submitting.', 'error');
+      return;
+    }
+
+    if (!this.selectedTaxRegionId()) {
+      this.toast.showToast('Choose a tax region before submitting.', 'error');
+      return;
+    }
+
+    const renderPayload = this.buildRenderPayload();
+    if (!renderPayload.line_items.length) {
+      this.toast.showToast('Add at least one line item before submitting the Floral Proposal.', 'error');
+      return;
+    }
+
+    try {
+      this.saving.set(true);
+      const result = await this.proposalWorkflow.submitProposal({
+        lead_id: lead.lead_id,
+        template_id: this.selectedTemplateId(),
+        tax_region_id: this.selectedTaxRegionId(),
+        line_items: renderPayload.line_items.map((line) => ({
+          display_order: line.display_order,
+          line_item_type: line.line_item_type,
+          item_name: line.item_name.trim(),
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          subtotal: line.subtotal,
+          description: line.description ?? null,
+          image_storage_path: line.image_storage_path ?? null,
+          image_alt_text: line.image_alt_text ?? null,
+          image_caption: line.image_caption ?? null,
+          notes: line.notes ?? null,
+          snapshot: {
+            line_type_label: line.line_type_label,
+          },
+          components:
+            line.line_item_type === 'product'
+              ? line.components
+                  .map((component, componentIndex) => ({
+                    display_order: componentIndex,
+                    catalog_item_id: component.catalog_item_id ?? null,
+                    catalog_item_name: component.catalog_item_name.trim(),
+                    quantity_per_unit: component.quantity_per_unit,
+                    extended_quantity: component.extended_quantity,
+                    base_unit_cost: component.base_unit_cost,
+                    applied_markup_percent: component.applied_markup_percent,
+                    sell_unit_price: component.sell_unit_price,
+                    subtotal: component.subtotal,
+                    reserve_percent: component.reserve_percent,
+                    snapshot: {
+                      item_type: component.item_type ?? null,
+                      unit_type: component.unit_type ?? null,
+                      color: component.color ?? null,
+                      variety: component.variety ?? null,
+                    },
+                  }))
+              : [],
+        })),
+        shopping_list_items: renderPayload.shopping_list,
+        subtotal: renderPayload.totals.subtotal,
+        tax_rate: renderPayload.tax_rate,
+        tax_amount: renderPayload.totals.taxAmount,
+        total_amount: renderPayload.totals.totalAmount,
+        terms_version: 'v1',
+        privacy_policy_version: 'v1',
+        snapshot: this.buildProposalSnapshot(renderPayload),
+      });
+
+      this.previewOpen.set(false);
+      this.toast.showToast(`Floral Proposal v${result.version} submitted successfully.`, 'success');
+      await this.loadBuilder(lead.lead_id);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] submitFloralProposal error:', error);
+      this.toast.showToast('We were unable to submit the Floral Proposal right now.', 'error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  getProposalStatusTone(status: FloralProposal['status']): 'neutral' | 'warning' | 'success' | 'danger' {
+    switch (status) {
+      case 'submitted':
+        return 'warning';
+      case 'accepted':
+        return 'success';
+      case 'declined':
+      case 'expired':
+        return 'danger';
+      default:
+        return 'neutral';
+    }
+  }
+
+  formatCurrency(value: number | null | undefined): string {
+    if (value == null) return '$0.00';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  }
+
+  formatPercent(value: number | null | undefined): string {
+    if (value == null) return '0.00%';
+    return `${(value * 100).toFixed(2)}%`;
+  }
+
+  formatDateTime(value: string | null | undefined): string {
+    if (!value) return 'Not available';
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(value));
+  }
+
+  formatStatusLabel(status: string): string {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  exportFloralProposalPdf(): void {
+    const lead = this.lead();
+    const renderPayload = this.buildRenderPayload();
+
+    if (!lead || !renderPayload.line_items.length) {
+      this.toast.showToast('Add line items before exporting the Floral Proposal.', 'error');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=900');
+    if (!printWindow) {
+      this.toast.showToast('We were unable to open the Floral Proposal export window.', 'error');
+      return;
+    }
+
+    const html = this.buildProposalPrintHtml(renderPayload);
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 250);
+  }
+
+  async onLineImageSelected(lineId: string, event: Event): Promise<void> {
+    const lead = this.lead();
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+
+    if (!lead || !file || !this.canEdit()) {
+      if (input) input.value = '';
+      return;
+    }
+
+    try {
+      this.saving.set(true);
+      const { storagePath, signedUrl } = await this.proposalWorkflow.uploadLineItemImage(
+        lead.lead_id,
+        lineId,
+        file
+      );
+
+      this.patchLine(lineId, {
+        image_storage_path: storagePath,
+        image_alt_text: this.lineItems().find((line) => line.local_id === lineId)?.item_name || null,
+        image_signed_url: signedUrl,
+      });
+      this.toast.showToast('Line item image uploaded.', 'success');
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] onLineImageSelected error:', error);
+      this.toast.showToast('We were unable to upload the line item image right now.', 'error');
+    } finally {
+      if (input) input.value = '';
+      this.saving.set(false);
+    }
+  }
+
+  async removeLineImage(lineId: string): Promise<void> {
+    const line = this.lineItems().find((item) => item.local_id === lineId);
+    if (!line || !this.canEdit()) return;
+
+    try {
+      this.saving.set(true);
+      if (line.image_storage_path) {
+        await this.proposalWorkflow.removeLineItemImage(line.image_storage_path);
+      }
+
+      this.patchLine(lineId, {
+        image_storage_path: null,
+        image_alt_text: null,
+        image_caption: null,
+        image_signed_url: null,
+      });
+      this.toast.showToast('Line item image removed.', 'success');
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] removeLineImage error:', error);
+      this.toast.showToast('We were unable to remove the line item image right now.', 'error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  updateLineImageCaption(lineId: string, value: string): void {
+    this.patchLine(lineId, { image_caption: value || null });
+  }
+
+  getCatalogItemOptions(component: FloralProposalBuilderComponentRow): CatalogItem[] {
+    const query = component.catalog_item_name.trim().toLowerCase();
+    if (!query) {
+      return this.activeCatalogItems().slice(0, 15);
+    }
+
+    return this.activeCatalogItems()
+      .filter((item) =>
+        [item.name, item.sku ?? '', item.color ?? '', item.variety ?? '']
+          .join(' ')
+          .toLowerCase()
+          .includes(query)
+      )
+      .slice(0, 15);
+  }
+
+  trackByLine = (_: number, line: FloralProposalBuilderLine) => line.local_id;
+  trackByComponent = (_: number, component: FloralProposalBuilderComponentRow) => component.local_id;
+  trackByTemplate = (_: number, template: DocumentTemplate) => template.template_id;
+  trackByTaxRegion = (_: number, taxRegion: TaxRegion) => taxRegion.tax_region_id;
+  trackByCatalogItem = (_: number, item: CatalogItem) => item.item_id;
+
+  private async persistDraft(): Promise<FloralProposal> {
+    const lead = this.lead();
+    if (!lead) {
+      throw new Error('Lead is required to save a Floral Proposal draft.');
+    }
+
+    const renderPayload = this.buildRenderPayload();
+    const normalizedLines = this.normalizeLinesForPersistence();
+    const nextVersion = Math.max(0, ...this.proposals().map((proposal) => proposal.version)) + 1;
+    const existingActiveProposal =
+      this.activeProposal() ??
+      (await this.floralProposalRepository.getActiveLeadFloralProposal(lead.lead_id));
+    const shouldReuseDraft =
+      existingActiveProposal?.is_active === true && existingActiveProposal.status === 'draft';
+
+    let proposal: FloralProposal;
+
+    if (shouldReuseDraft && existingActiveProposal) {
+      proposal = await this.floralProposalRepository.updateFloralProposal(
+        existingActiveProposal.floral_proposal_id,
+        {
+          template_id: renderPayload.template_id ?? null,
+          tax_region_id: renderPayload.tax_region_id ?? null,
+          subtotal: renderPayload.totals.subtotal,
+          tax_rate: renderPayload.tax_rate,
+          tax_amount: renderPayload.totals.taxAmount,
+          total_amount: renderPayload.totals.totalAmount,
+          snapshot: this.buildProposalSnapshot(renderPayload),
+          updated_at: new Date().toISOString(),
+        }
+      );
+    } else {
+      if (existingActiveProposal?.is_active) {
+        await this.floralProposalRepository.updateFloralProposal(
+          existingActiveProposal.floral_proposal_id,
+          {
+            is_active: false,
+          }
+        );
+      }
+
+      proposal = await this.floralProposalRepository.createFloralProposal({
+        lead_id: lead.lead_id,
+        template_id: renderPayload.template_id ?? null,
+        tax_region_id: renderPayload.tax_region_id ?? null,
+        version: nextVersion,
+        customer_email: lead.email,
+        passcode_hash: 'draft',
+        status: 'draft',
+        subtotal: renderPayload.totals.subtotal,
+        tax_rate: renderPayload.tax_rate,
+        tax_amount: renderPayload.totals.taxAmount,
+        total_amount: renderPayload.totals.totalAmount,
+        terms_version: 'v1',
+        privacy_policy_version: 'v1',
+        snapshot: this.buildProposalSnapshot(renderPayload),
+        created_by: lead.assigned_user_id ?? null,
+      });
+    }
+
+    const savedLineItems = await this.floralProposalRepository.replaceFloralProposalLineItems(
+      proposal.floral_proposal_id,
+      this.floralProposalBuilderService.buildLineItemPayloads(normalizedLines)
+    );
+    await this.floralProposalRepository.replaceFloralProposalComponents(
+      savedLineItems,
+      this.floralProposalBuilderService.buildComponentPayloadMap(savedLineItems, normalizedLines)
+    );
+    await this.floralProposalRepository.upsertShoppingList(
+      proposal.floral_proposal_id,
+      renderPayload.shopping_list
+    );
+
+    await this.activityRepository.createLeadActivity({
+      lead_id: lead.lead_id,
+      activity_type: 'updated',
+      activity_label: shouldReuseDraft
+        ? `Floral Proposal v${proposal.version} draft updated`
+        : `Floral Proposal v${proposal.version} draft saved`,
+      activity_description: shouldReuseDraft
+        ? 'The active draft Floral Proposal was updated from the CRM builder.'
+        : 'A draft Floral Proposal was saved from the CRM builder.',
+      metadata: {
+        floral_proposal_id: proposal.floral_proposal_id,
+        proposal_version: proposal.version,
+        proposal_status: 'draft',
+        draft_action: shouldReuseDraft ? 'updated' : 'created',
+      },
+    });
+
+    return proposal;
+  }
+
+  private patchLine(lineId: string, updates: Partial<FloralProposalBuilderLine>): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines.map((line) => (line.local_id === lineId ? { ...line, ...updates } : line))
+    );
+  }
+
+  private patchAndRecalculateLine(
+    lineId: string,
+    updates: Partial<FloralProposalBuilderLine>
+  ): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines.map((line) => {
+        if (line.local_id !== lineId) return line;
+        return this.floralProposalBuilderService.recalculateLine({ ...line, ...updates });
+      })
+    );
+
+    void this.refreshShoppingList();
+  }
+
+  private patchComponent(
+    lineId: string,
+    componentId: string,
+    updates: Partial<FloralProposalBuilderComponentRow>
+  ): void {
+    if (!this.canEdit()) return;
+
+    this.lineItems.update((lines) =>
+      lines.map((line) => {
+        if (line.local_id !== lineId) return line;
+
+        return this.floralProposalBuilderService.recalculateLine({
+          ...line,
+          components: line.components.map((component) =>
+            component.local_id === componentId ? { ...component, ...updates } : component
+          ),
+        });
+      })
+    );
+
+    void this.refreshShoppingList();
+  }
+
+  private async refreshShoppingList(): Promise<void> {
+    const itemIds = Array.from(
+      new Set(
+        this.lineItems()
+          .flatMap((line) => line.components)
+          .map((component) => component.catalog_item_id)
+          .filter((value): value is string => !!value)
+      )
+    );
+
+    if (!itemIds.length) {
+      this.shoppingList.set([]);
+      return;
+    }
+
+    try {
+      const packs = await this.vendorItemPackRepository.getDefaultPacksForItems(itemIds);
+      const shoppingList = this.floralProposalBuilderService.buildShoppingList(
+        this.lineItems(),
+        packs
+      );
+      this.shoppingList.set(shoppingList);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] refreshShoppingList error:', error);
+      this.shoppingList.set([]);
+    }
+  }
+
+  private async populateLineItemSignedUrls(
+    lines: FloralProposalBuilderLine[]
+  ): Promise<FloralProposalBuilderLine[]> {
+    return Promise.all(
+      lines.map(async (line) => {
+        if (!line.image_storage_path) {
+          return { ...line, image_signed_url: null };
+        }
+
+        try {
+          const signedUrl = await this.proposalWorkflow.getSignedLineItemImageUrl(
+            line.image_storage_path
+          );
+          return {
+            ...line,
+            image_signed_url: signedUrl,
+          };
+        } catch (error) {
+          console.error(
+            '[FloralProposalBuilderComponent] populateLineItemSignedUrls error:',
+            error
+          );
+          return {
+            ...line,
+            image_signed_url: null,
+          };
+        }
+      })
+    );
+  }
+
+  private findCatalogItemByName(value: string): CatalogItem | null {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return null;
+
+    return (
+      this.activeCatalogItems().find((item) => item.name.trim().toLowerCase() === normalized) ??
+      null
+    );
+  }
+
+  private getNormalizedLines(): FloralProposalBuilderLine[] {
+    return this.normalizeLinesForPersistence().filter((line) => line.item_name.trim().length > 0);
+  }
+
+  private normalizeLinesForPersistence(): FloralProposalBuilderLine[] {
+    return this.lineItems().map((line, index) =>
+      this.floralProposalBuilderService.recalculateLine({
+        ...line,
+        display_order: index,
+      })
+    );
+  }
+
+  private buildRenderPayload(): FloralProposalRenderPayload {
+    return this.floralProposalBuilderService.buildRenderPayload({
+      lines: this.lineItems(),
+      taxRegion: this.selectedTaxRegion(),
+      templateId: this.selectedTemplateId() || null,
+      templateName: this.selectedTemplate()?.name ?? null,
+      defaultMarkupPercent: this.defaultMarkupPercent(),
+      shoppingList: this.shoppingList(),
+    });
+  }
+
+  private buildProposalSnapshot(renderPayload = this.buildRenderPayload()): Record<string, unknown> {
+    return {
+      template_id: renderPayload.template_id,
+      template_name: renderPayload.template_name,
+      tax_region_id: renderPayload.tax_region_id,
+      tax_region_name: renderPayload.tax_region_name,
+      default_markup_percent: renderPayload.default_markup_percent,
+      tax_rate: renderPayload.tax_rate,
+      line_items: renderPayload.line_items.map((line) => ({
+        display_order: line.display_order,
+        line_item_type: line.line_item_type,
+        item_name: line.item_name,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        subtotal: line.subtotal,
+        description: line.description ?? null,
+        image_storage_path: line.image_storage_path ?? null,
+        image_alt_text: line.image_alt_text ?? null,
+        image_caption: line.image_caption ?? null,
+        notes: line.notes ?? null,
+        components: line.components.map((component) => ({
+          catalog_item_id: component.catalog_item_id ?? null,
+          catalog_item_name: component.catalog_item_name,
+          quantity_per_unit: component.quantity_per_unit,
+          extended_quantity: component.extended_quantity,
+          base_unit_cost: component.base_unit_cost,
+          applied_markup_percent: component.applied_markup_percent,
+          sell_unit_price: component.sell_unit_price,
+          subtotal: component.subtotal,
+        })),
+      })),
+      shopping_list: renderPayload.shopping_list,
+      totals: renderPayload.totals,
+      breakdown: renderPayload.breakdown,
+    };
+  }
+
+  private isWorkflowAllowed(status: Lead['status']): boolean {
+    return (
+      status === 'nurturing' ||
+      status === 'proposal_declined' ||
+      status === 'proposal_submitted' ||
+      status === 'proposal_accepted' ||
+      status === 'converted'
+    );
+  }
+
+  private isReadOnly(status: Lead['status']): boolean {
+    return status === 'proposal_submitted' || status === 'proposal_accepted' || status === 'converted';
+  }
+
+  private getInitialDefaultMarkupPercent(
+    proposal: FloralProposal | null,
+    pricingSettings: PricingSettings | null
+  ): number {
+    const snapshotValue = proposal?.snapshot?.['default_markup_percent'];
+    if (typeof snapshotValue === 'number' && Number.isFinite(snapshotValue)) {
+      return snapshotValue;
+    }
+
+    return pricingSettings?.default_markup_percent ?? 300;
+  }
+
+  private buildProposalPrintHtml(renderPayload: FloralProposalRenderPayload): string {
+    const lead = this.lead();
+    const proposal = this.activeProposal();
+    const template = this.selectedTemplate();
+    const lines = renderPayload.line_items;
+
+    if (!lead) {
+      return '<html><body><p>Floral Proposal unavailable.</p></body></html>';
+    }
+
+    const lineRows = lines
+      .map(
+        (line) => `
+          <div class="line-item">
+            ${
+              line.image_signed_url
+                ? `<div class="line-item-media"><img src="${line.image_signed_url}" alt="${
+                    line.image_alt_text || line.item_name
+                  }" /></div>`
+                : ''
+            }
+            <div class="line-item-copy">
+              <div class="line-item-header">
+                <div>
+                  <h3>${line.item_name}</h3>
+                  ${
+                    line.description
+                      ? `<p class="line-item-description">${line.description}</p>`
+                      : ''
+                  }
+                </div>
+                <div class="line-item-meta">
+                  <span>Qty ${line.quantity}</span>
+                  <strong>${this.formatCurrency(line.subtotal)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      )
+      .join('');
+
+    return `
+      <html>
+        <head>
+          <title>Floral Proposal ${proposal ? `v${proposal.version}` : ''}</title>
+          <style>
+            body { font-family: Georgia, serif; margin: 40px; color: #1f1f1f; }
+            h1, h2, h3 { margin: 0; }
+            .eyebrow { letter-spacing: 0.28em; text-transform: uppercase; font-size: 11px; color: #c46f67; margin-bottom: 10px; }
+            .header { display: flex; justify-content: space-between; align-items: start; gap: 24px; margin-bottom: 28px; }
+            .meta { font-size: 13px; color: #57534e; line-height: 1.7; }
+            .line-items { margin-top: 22px; display: grid; gap: 18px; }
+            .line-item { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 18px; border: 1px solid #e7e5e4; border-radius: 20px; overflow: hidden; background: #fcfaf8; }
+            .line-item-media { background: #f3ede8; min-height: 180px; }
+            .line-item-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+            .line-item-copy { padding: 20px; }
+            .line-item-header { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+            .line-item-header h3 { font-size: 22px; margin-bottom: 8px; }
+            .line-item-description { font-size: 13px; line-height: 1.8; color: #57534e; margin: 0; }
+            .line-item-meta { text-align: right; font-size: 13px; color: #57534e; }
+            .line-item-meta strong { display: block; margin-top: 8px; font-size: 18px; color: #1f1f1f; }
+            .totals { width: 320px; margin-left: auto; margin-top: 28px; }
+            .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+            .totals-row.total { border-top: 1px solid #d6d3d1; margin-top: 8px; padding-top: 12px; font-weight: 700; font-size: 16px; }
+            .note { margin-top: 36px; font-size: 12px; color: #57534e; line-height: 1.8; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <p class="eyebrow">Black Begonia Florals</p>
+              <h1>Floral Proposal</h1>
+              <p class="meta">${template?.name ?? 'Structured Template'}<br />Prepared for ${
+                lead.first_name
+              } ${lead.last_name}<br />${lead.email}</p>
+            </div>
+            <div class="meta">
+              <strong>Lead Status:</strong> ${this.formatStatusLabel(lead.status)}<br />
+              <strong>Event Date:</strong> ${lead.event_date ?? 'Not set'}<br />
+              <strong>Tax Region:</strong> ${renderPayload.tax_region_name ?? 'Not selected'}<br />
+              <strong>Generated:</strong> ${this.formatDateTime(new Date().toISOString())}
+            </div>
+          </div>
+
+          <div class="line-items">
+            ${lineRows}
+          </div>
+
+          <div class="totals">
+            <div class="totals-row"><span>Products</span><span>${this.formatCurrency(
+              renderPayload.breakdown.productsTotal
+            )}</span></div>
+            <div class="totals-row"><span>Fees</span><span>${this.formatCurrency(
+              renderPayload.breakdown.feesTotal
+            )}</span></div>
+            <div class="totals-row"><span>Discounts</span><span>${this.formatCurrency(
+              renderPayload.breakdown.discountsTotal
+            )}</span></div>
+            <div class="totals-row"><span>Subtotal</span><span>${this.formatCurrency(
+              renderPayload.breakdown.subtotal
+            )}</span></div>
+            <div class="totals-row"><span>Tax</span><span>${this.formatCurrency(
+              renderPayload.totals.taxAmount
+            )}</span></div>
+            <div class="totals-row total"><span>Total</span><span>${this.formatCurrency(
+              renderPayload.totals.totalAmount
+            )}</span></div>
+          </div>
+
+          <div class="note">
+            This Floral Proposal is generated from the saved CRM proposal data for client review. Internal catalog-item composition and shopping-list details are intentionally omitted from the customer-facing document.
+          </div>
+        </body>
+      </html>
+    `;
+  }
+}

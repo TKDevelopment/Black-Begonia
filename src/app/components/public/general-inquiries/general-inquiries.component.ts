@@ -22,6 +22,8 @@ import { Router } from '@angular/router';
   styleUrl: './general-inquiries.component.scss',
 })
 export class GeneralInquiriesComponent {
+  private readonly inquiryEmailMaxAttempts = 3;
+  private readonly inquiryEmailRetryDelayMs = 1200;
   generalInquiryForm!: FormGroup;
   submitting = false;
   submitted = false;
@@ -188,11 +190,7 @@ export class GeneralInquiriesComponent {
         }
       }
 
-      try {
-        await this.triggerInquiryEmails(lead.lead_id, 'general');
-      } catch (emailErr) {
-        console.error('Email function failed (non-blocking): ', emailErr);
-      }
+      await this.triggerInquiryEmails(lead.lead_id, 'general');
 
       this.submittedInquiry = { lead_id: lead.lead_id };
       this.submitted = true;
@@ -231,19 +229,51 @@ export class GeneralInquiriesComponent {
 
   async triggerInquiryEmails(leadId: string, leadType: string) {
     const client = this.supabase.getClient();
+    let lastError: unknown = null;
 
-    const { data, error } = await client.functions.invoke('send-inquiry-emails', {
-      body: {
-        lead_id: leadId,
-        lead_type: leadType,
-      },
-    });
+    for (let attempt = 1; attempt <= this.inquiryEmailMaxAttempts; attempt += 1) {
+      try {
+        const { data, error } = await client.functions.invoke('send-inquiry-emails', {
+          body: {
+            lead_id: leadId,
+            lead_type: leadType,
+          },
+        });
 
-    if (error) {
-      console.error('[send-inquiry-emails] invoke error:', error);
-      throw error;
+        if (error) {
+          throw error;
+        }
+
+        if (data?.success === false) {
+          throw new Error(
+            typeof data?.error === 'string'
+              ? data.error
+              : 'Inquiry email function reported failure.'
+          );
+        }
+
+        console.log('[send-inquiry-emails] response:', data);
+        return;
+      } catch (error) {
+        lastError = error;
+        console.error(
+          `[send-inquiry-emails] attempt ${attempt}/${this.inquiryEmailMaxAttempts} failed:`,
+          error
+        );
+
+        if (attempt < this.inquiryEmailMaxAttempts) {
+          await this.delay(this.inquiryEmailRetryDelayMs);
+        }
+      }
     }
 
-    console.log('[send-inquiry-emails] response:', data);
+    console.error(
+      `[send-inquiry-emails] all ${this.inquiryEmailMaxAttempts} attempts failed for lead ${leadId}.`,
+      lastError
+    );
+  }
+
+  private async delay(ms: number): Promise<void> {
+    await new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 }

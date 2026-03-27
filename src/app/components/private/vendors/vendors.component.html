@@ -1,0 +1,124 @@
+﻿<div *ngIf="!isDetailView()" class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+    <app-crm-page-header title="Vendors" subtitle="Manage wholesalers and suppliers that determine how catalog items are purchased in bulk for shopping list generation." primaryActionLabel="Create Vendor" (primaryAction)="openCreateModal()" />
+
+    <app-search-filter-bar searchPlaceholder="Search by vendor name, email, phone, or website" [searchValue]="searchTerm()" [filters]="filters()" (searchChange)="onSearchChange($event)" (filterChange)="onFilterChange($event)" (reset)="resetFilters()" />
+
+    <app-loading-state-block *ngIf="loading()" title="Loading vendors" description="Please wait while we load the purchasing vendors." minHeightClass="min-h-[420px]" />
+    <app-error-state-block *ngIf="!loading() && error()" title="Unable to load vendors" [description]="error()!" (retry)="retryList()" minHeightClass="min-h-[420px]" />
+
+    <app-entity-table-shell *ngIf="!loading() && !error()" [columns]="columns" [rows]="filteredVendors()" [loading]="false" [clickableRows]="true" trackByField="vendor_id" emptyTitle="No vendors found" emptyDescription="Create the first vendor or adjust your filters." (rowClick)="openVendor($event)">
+      <ng-template appEntityTableCell="name" let-vendor>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-medium text-stone-900">{{ vendor.name }}</p>
+            <span *ngIf="!vendor.is_active" class="inline-flex rounded-full bg-stone-200 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-600">Inactive</span>
+          </div>
+        </div>
+      </ng-template>
+      <ng-template appEntityTableCell="email" let-vendor><span class="text-sm text-stone-700">{{ vendor.email || 'Not provided' }}</span></ng-template>
+      <ng-template appEntityTableCell="phone" let-vendor><span class="text-sm text-stone-700">{{ vendor.phone || 'Not provided' }}</span></ng-template>
+      <ng-template appEntityTableCell="website" let-vendor><span class="text-sm text-stone-700">{{ vendor.website || 'Not provided' }}</span></ng-template>
+    </app-entity-table-shell>
+  </div>
+</div>
+
+<div *ngIf="isDetailView()" class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+    <app-loading-state-block *ngIf="detailLoading()" title="Loading vendor" description="Please wait while we load the vendor and pack definitions." minHeightClass="min-h-[520px]" />
+    <app-error-state-block *ngIf="!detailLoading() && detailError()" title="Unable to load vendor" [description]="detailError()!" (retry)="retryDetail()" minHeightClass="min-h-[520px]" />
+
+    <app-entity-detail-shell *ngIf="!detailLoading() && !detailError() && vendor()" [title]="vendor()!.name" subtitle="Purchasing Vendor" [loading]="false" backLabel="Back to Vendors" (back)="goBack()">
+      <div detail-main>
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex items-start gap-4">
+              <div class="crm-theme-static-chip flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#f3dfdc] text-sm font-semibold text-stone-800">{{ vendor()!.name.charAt(0) }}</div>
+              <div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <h2 class="text-2xl font-semibold text-stone-900">{{ vendor()!.name }}</h2>
+                  <span *ngIf="!vendor()!.is_active" class="inline-flex rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700">Inactive</span>
+                </div>
+                <p class="mt-2 text-sm text-stone-600">{{ vendor()!.email || 'No email provided' }}</p>
+                <p class="mt-1 text-sm text-stone-600">{{ vendor()!.phone || 'No phone provided' }}</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <button type="button" (click)="openAddPackModal()" [disabled]="saving() || !vendor()!.is_active" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">Add Pack</button>
+              <button type="button" (click)="openEditModal()" [disabled]="saving()" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">Edit Vendor</button>
+              <button *ngIf="vendor()!.is_active" type="button" (click)="deactivateCurrentVendor()" [disabled]="saving()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">Deactivate Vendor</button>
+              <button *ngIf="!vendor()!.is_active" type="button" (click)="activateCurrentVendor()" [disabled]="saving()" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">Activate Vendor</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-stone-900">Contact & Reference</h3>
+          <div class="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Email</p><p class="mt-1 text-sm text-stone-800">{{ vendor()!.email || 'Not provided' }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Phone</p><p class="mt-1 text-sm text-stone-800">{{ vendor()!.phone || 'Not provided' }}</p></div>
+            <div class="md:col-span-2"><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Website</p><p class="mt-1 break-all text-sm text-stone-800">{{ vendor()!.website || 'Not provided' }}</p></div>
+            <div class="md:col-span-2"><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Notes</p><p class="mt-1 whitespace-pre-line text-sm leading-7 text-stone-800">{{ vendor()!.notes || 'No notes have been added for this vendor.' }}</p></div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-semibold text-stone-900">Vendor Item Packs</h3>
+              <p class="mt-1 text-sm text-stone-600">Define how each catalog item is purchased from this vendor.</p>
+            </div>
+            <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">{{ vendorItemPacks().length }}</span>
+          </div>
+          <div *ngIf="vendorItemPacks().length; else noPacks" class="mt-5 space-y-4">
+            <div *ngFor="let pack of vendorItemPacks()" class="rounded-2xl border border-stone-200 bg-[#fcfaf8] p-4">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-sm font-semibold text-stone-900">{{ pack.item?.name || 'Catalog item unavailable' }}</p>
+                    <span *ngIf="pack.is_default" class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">Default</span>
+                    <span *ngIf="pack.item && !pack.item.is_active" class="inline-flex rounded-full bg-stone-200 px-2.5 py-1 text-[11px] font-semibold text-stone-600">Item Inactive</span>
+                  </div>
+                  <p class="mt-1 text-xs text-stone-500">{{ pack.item?.sku || 'No SKU' }} · {{ formatLabel(pack.item?.item_type || '') }} · {{ formatLabel(pack.item?.unit_type || '') }}</p>
+                  <div class="mt-4 grid grid-cols-1 gap-3 text-sm text-stone-700 md:grid-cols-2 xl:grid-cols-4">
+                    <div><span class="font-medium text-stone-900">Pack:</span> {{ pack.purchase_unit_name }}</div>
+                    <div><span class="font-medium text-stone-900">Units:</span> {{ pack.units_per_pack }}</div>
+                    <div><span class="font-medium text-stone-900">Pack Price:</span> {{ formatCurrency(pack.pack_price) }}</div>
+                    <div><span class="font-medium text-stone-900">Unit Cost:</span> {{ formatUnitPrice(pack) }}</div>
+                    <div><span class="font-medium text-stone-900">Minimum Order:</span> {{ pack.minimum_order_packs }} pack(s)</div>
+                  </div>
+                </div>
+                <div class="flex shrink-0 flex-wrap items-center gap-3">
+                  <button type="button" (click)="openEditPackModal(pack)" [disabled]="saving() || !vendor()!.is_active" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">Edit Pack</button>
+                  <button type="button" (click)="deleteVendorPack(pack)" [disabled]="saving() || !vendor()!.is_active" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <ng-template #noPacks><div class="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500">No pack definitions exist for this vendor yet. Add one to begin mapping purchasing logic.</div></ng-template>
+        </div>
+      </div>
+
+      <div detail-sidebar>
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-stone-900">Purchasing Notes</h3>
+          <p class="mt-4 text-sm leading-7 text-stone-600">Default item packs are what the estimate engine will use first when converting arrangement demand into a real shopping list.</p>
+        </div>
+
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-stone-900">Record Metadata</h3>
+          <div class="mt-5 space-y-4 text-sm">
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Vendor ID</p><p class="mt-1 break-all text-stone-800">{{ vendor()!.vendor_id }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Created</p><p class="mt-1 text-stone-800">{{ formatDateTime(vendor()!.created_at) }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Updated</p><p class="mt-1 text-stone-800">{{ formatDateTime(vendor()!.updated_at) }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Status</p><p class="mt-1 text-stone-800">{{ vendor()!.is_active ? 'Active' : 'Inactive' }}</p></div>
+          </div>
+        </div>
+      </div>
+    </app-entity-detail-shell>
+  </div>
+</div>
+
+<app-vendor-upsert-modal [open]="createModalOpen()" [saving]="saving()" mode="create" (close)="closeCreateModal()" (confirm)="createVendor($event)" />
+<app-vendor-upsert-modal [open]="editModalOpen()" [saving]="saving()" mode="edit" [vendor]="vendor()" (close)="closeEditModal()" (confirm)="saveVendorEdits($event)" />
+<app-vendor-item-pack-modal [open]="packModalOpen()" [saving]="saving()" [mode]="selectedPack() ? 'edit' : 'create'" [pack]="selectedPack()" [catalogItems]="catalogItems()" (close)="closePackModal()" (confirm)="saveVendorPack($event)" />
