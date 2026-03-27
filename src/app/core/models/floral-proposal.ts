@@ -21,6 +21,110 @@ export interface FloralProposalResponseSummary {
   created_at: string;
 }
 
+export interface FloralProposalRenderLeadContext {
+  lead_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  service_type: string;
+  event_type?: string | null;
+  event_date?: string | null;
+  status: string;
+}
+
+export interface FloralProposalRenderTemplateContext {
+  template_id?: string | null;
+  name?: string | null;
+  template_key?: string | null;
+  header_layout?: DocumentTemplateHeaderLayout | null;
+  line_item_layout?: DocumentTemplateLineItemLayout | null;
+  footer_layout?: DocumentTemplateFooterLayout | null;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  accent_color?: string | null;
+  heading_font_family?: string | null;
+  body_font_family?: string | null;
+  show_cover_page?: boolean;
+  show_intro_message?: boolean;
+  intro_title?: string | null;
+  intro_body?: string | null;
+  show_terms_section?: boolean;
+  show_privacy_section?: boolean;
+  show_signature_section?: boolean;
+  agreement_clauses?: Record<string, unknown>[];
+  header_content?: Record<string, unknown>;
+  footer_content?: Record<string, unknown>;
+  body_config?: Record<string, unknown>;
+  template_config?: Record<string, unknown>;
+}
+
+export interface FloralProposalRenderLineComponent {
+  display_order: number;
+  catalog_item_id?: string | null;
+  catalog_item_name: string;
+  quantity_per_unit: number;
+  extended_quantity: number;
+  base_unit_cost: number;
+  applied_markup_percent: number;
+  sell_unit_price: number;
+  subtotal: number;
+  reserve_percent?: number;
+  snapshot?: Record<string, unknown>;
+}
+
+export interface FloralProposalRenderLineItem {
+  display_order: number;
+  line_item_type: FloralProposalLineItemType;
+  line_type_label: string;
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  description?: string | null;
+  image_storage_path?: string | null;
+  image_signed_url?: string | null;
+  image_alt_text?: string | null;
+  image_caption?: string | null;
+  notes?: string | null;
+  components: FloralProposalRenderLineComponent[];
+}
+
+export interface FloralProposalRenderContract {
+  proposal_id?: string | null;
+  proposal_version?: number | null;
+  generated_at: string;
+  lead: FloralProposalRenderLeadContext;
+  template: FloralProposalRenderTemplateContext;
+  tax_region: {
+    tax_region_id?: string | null;
+    name?: string | null;
+    tax_rate: number;
+  };
+  pricing: {
+    default_markup_percent: number;
+  };
+  line_items: FloralProposalRenderLineItem[];
+  shopping_list: FloralProposalShoppingListItem[];
+  totals: {
+    products_total: number;
+    fees_total: number;
+    discounts_total: number;
+    subtotal: number;
+    tax_amount: number;
+    total_amount: number;
+  };
+  renderer_assets: {
+    line_item_images: Array<{
+      display_order: number;
+      item_name: string;
+      storage_path?: string | null;
+      signed_url?: string | null;
+      alt_text?: string | null;
+      caption?: string | null;
+    }>;
+  };
+}
+
 export interface PricingSettings {
   pricing_settings_id: string;
   default_markup_percent: number;
@@ -215,4 +319,9 @@ export interface DocumentTemplateUpsertInput {
   footer_content?: Record<string, unknown>;
   body_config?: Record<string, unknown>;
   template_config?: Record<string, unknown>;
+}
+
+export interface DocumentTemplateLogoUploadResult {
+  storagePath: string;
+  signedUrl: string;
 }

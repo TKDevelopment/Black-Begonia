@@ -59,12 +59,14 @@ export class ProposalTemplatesComponent implements OnInit {
   readonly detailLoading = signal(true);
   readonly detailError = signal<string | null>(null);
   readonly saving = signal(false);
+  readonly logoSaving = signal(false);
   readonly createModalOpen = signal(false);
   readonly editModalOpen = signal(false);
 
   readonly currentTemplateId = signal<string | null>(null);
   readonly templates = signal<DocumentTemplate[]>([]);
   readonly template = signal<DocumentTemplate | null>(null);
+  readonly templateLogoUrl = signal<string | null>(null);
 
   readonly searchTerm = signal('');
   readonly statusFilter = signal<'active' | 'inactive' | 'all'>('active');
@@ -162,14 +164,17 @@ export class ProposalTemplatesComponent implements OnInit {
       const template = await this.documentTemplateRepository.getDocumentTemplateById(templateId);
       if (!template) {
         this.template.set(null);
+        this.templateLogoUrl.set(null);
         this.detailError.set('We could not find this proposal template.');
         return;
       }
 
       this.template.set(template);
+      this.templateLogoUrl.set(await this.resolveTemplateLogoUrl(template));
     } catch (error) {
       console.error('[ProposalTemplatesComponent] loadTemplateDetail error:', error);
       this.template.set(null);
+      this.templateLogoUrl.set(null);
       this.detailError.set('We were unable to load this proposal template right now.');
     } finally {
       this.detailLoading.set(false);
@@ -253,6 +258,69 @@ export class ProposalTemplatesComponent implements OnInit {
     }
   }
 
+  async onTemplateLogoSelected(event: Event): Promise<void> {
+    const template = this.template();
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+
+    if (!template || !file || this.logoSaving()) {
+      if (input) input.value = '';
+      return;
+    }
+
+    try {
+      this.logoSaving.set(true);
+
+      if (template.logo_storage_path) {
+        await this.documentTemplateService.removeTemplateLogo(template.logo_storage_path);
+      }
+
+      const { storagePath, signedUrl } = await this.documentTemplateService.uploadTemplateLogo(
+        template.template_id,
+        file
+      );
+
+      await this.documentTemplateService.updateDocumentTemplate(template.template_id, {
+        logo_storage_path: storagePath,
+        logo_url: null,
+      });
+
+      this.templateLogoUrl.set(signedUrl);
+      await this.loadTemplateDetail(template.template_id);
+      await this.loadTemplates();
+      this.toast.showToast('Template logo uploaded.', 'success');
+    } catch (error) {
+      console.error('[ProposalTemplatesComponent] onTemplateLogoSelected error:', error);
+      this.toast.showToast('We were unable to upload the template logo right now.', 'error');
+    } finally {
+      if (input) input.value = '';
+      this.logoSaving.set(false);
+    }
+  }
+
+  async removeTemplateLogo(): Promise<void> {
+    const template = this.template();
+    if (!template || !template.logo_storage_path || this.logoSaving()) return;
+
+    try {
+      this.logoSaving.set(true);
+      await this.documentTemplateService.removeTemplateLogo(template.logo_storage_path);
+      await this.documentTemplateService.updateDocumentTemplate(template.template_id, {
+        logo_storage_path: null,
+        logo_url: null,
+      });
+      this.templateLogoUrl.set(null);
+      await this.loadTemplateDetail(template.template_id);
+      await this.loadTemplates();
+      this.toast.showToast('Template logo removed.', 'success');
+    } catch (error) {
+      console.error('[ProposalTemplatesComponent] removeTemplateLogo error:', error);
+      this.toast.showToast('We were unable to remove the template logo right now.', 'error');
+    } finally {
+      this.logoSaving.set(false);
+    }
+  }
+
   async deactivateCurrentTemplate(): Promise<void> {
     const template = this.template();
     if (!template || this.saving()) return;
@@ -330,5 +398,22 @@ export class ProposalTemplatesComponent implements OnInit {
 
   formatLabel(value: string): string {
     return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  private async resolveTemplateLogoUrl(template: DocumentTemplate): Promise<string | null> {
+    if (template.logo_url) {
+      return template.logo_url;
+    }
+
+    if (!template.logo_storage_path) {
+      return null;
+    }
+
+    try {
+      return await this.documentTemplateService.getSignedTemplateLogoUrl(template.logo_storage_path);
+    } catch (error) {
+      console.error('[ProposalTemplatesComponent] resolveTemplateLogoUrl error:', error);
+      return null;
+    }
   }
 }
