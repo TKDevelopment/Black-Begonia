@@ -36,8 +36,8 @@ export class LeadConversionService {
     lead: Lead,
     payload: ConvertLeadInput
   ): Promise<ConvertLeadResult> {
-    if (lead.status !== 'estimate_accepted') {
-      throw new Error('Only estimate-accepted leads can be converted to projects.');
+    if (lead.status !== 'proposal_accepted') {
+      throw new Error('Only accepted Floral Proposal leads can be converted to projects.');
     }
 
     const primaryContact = await this.contactRepository.createContact({
@@ -214,3 +214,4 @@ export class LeadConversionService {
     return value.replace(/\b\w/g, (char) => char.toUpperCase());
   }
 }
+

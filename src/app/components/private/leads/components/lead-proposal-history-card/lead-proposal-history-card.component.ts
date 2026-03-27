@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-import { Proposal, ProposalResponseSummary } from '../../../../../core/models/proposal';
+import { FloralProposal } from '../../../../../core/models/floral-proposal';
+import { FloralProposalResponseSummary } from '../../../../../core/models/floral-proposal';
 
 @Component({
   selector: 'app-lead-proposal-history-card',
@@ -14,9 +15,9 @@ import { Proposal, ProposalResponseSummary } from '../../../../../core/models/pr
 export class LeadProposalHistoryCardComponent {
   private sanitizer = inject(DomSanitizer);
 
-  @Input() proposals: Proposal[] = [];
+  @Input() proposals: FloralProposal[] = [];
   @Input() selectedProposalId: string | null = null;
-  @Input() proposalResponses: Record<string, ProposalResponseSummary[]> = {};
+  @Input() proposalResponses: Record<string, FloralProposalResponseSummary[]> = {};
   @Input() resending = false;
   @Input() canSubmitProposal = false;
   @Input() canResendProposal = true;
@@ -32,7 +33,7 @@ export class LeadProposalHistoryCardComponent {
     if (this.selectedProposalId) {
       return (
         this.proposals.find(
-          (proposal) => proposal.proposal_id === this.selectedProposalId
+          (proposal) => proposal.floral_proposal_id === this.selectedProposalId
         ) ?? this.proposals[0]
       );
     }
@@ -55,7 +56,7 @@ export class LeadProposalHistoryCardComponent {
     }).format(new Date(value));
   }
 
-  getLatestResponse(proposalId: string): ProposalResponseSummary | null {
+  getLatestResponse(proposalId: string): FloralProposalResponseSummary | null {
     return this.proposalResponses[proposalId]?.[0] ?? null;
   }
 
@@ -77,3 +78,5 @@ export class LeadProposalHistoryCardComponent {
     this.submitProposal.emit();
   }
 }
+
+

@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -10,12 +10,13 @@ import { ErrorStateBlockComponent } from '../../../../shared/components/private/
 import { LeadRepositoryService } from '../../../../core/supabase/repositories/lead-repository.service';
 import { ActivityRepositoryService } from '../../../../core/supabase/repositories/activity-repository.service';
 import { LeadWorkflowService } from '../../../../core/supabase/services/lead-workflow.service';
-import { ProposalWorkflowService } from '../../../../core/supabase/services/proposal-workflow.service';
+import { FloralProposalWorkflowService } from '../../../../core/supabase/services/floral-proposal-workflow.service';
 import { LeadInspirationUrlRepositoryService } from '../../../../core/supabase/repositories/lead-inspiration-url-repository.service';
 
 import { Lead } from '../../../../core/models/lead';
 import { LeadActivity } from '../../../../core/models/lead-activity';
-import { Proposal, ProposalResponseSummary } from '../../../../core/models/proposal';
+import { FloralProposal } from '../../../../core/models/floral-proposal';
+import { FloralProposalResponseSummary } from '../../../../core/models/floral-proposal';
 import { LeadInspirationUrl } from '../../../../core/models/lead-inspiration-url';
 import { LeadSummaryCardComponent } from '../components/lead-summary-card/lead-summary-card.component';
 import { LeadStatusSelectorComponent } from '../components/lead-status-selector/lead-status-selector.component';
@@ -32,7 +33,6 @@ import {
   LeadConvertPayload,
 } from '../components/lead-convert-modal/lead-convert-modal.component';
 import { ConfirmDialogComponent } from '../../../../shared/components/private/confirm-dialog/confirm-dialog.component';
-import { LeadProposalSubmitModalComponent } from '../components/lead-proposal-submit-modal/lead-proposal-submit-modal.component';
 import { LeadProposalHistoryCardComponent } from '../components/lead-proposal-history-card/lead-proposal-history-card.component';
 import { LeadUpsertModalComponent } from '../components/lead-upsert-modal/lead-upsert-modal.component';
 import { LeadUpsertPayload } from '../components/lead-upsert-modal/lead-upsert.types';
@@ -66,7 +66,6 @@ type BadgeTone =
     TaskListPanelComponent,
     LeadConvertModalComponent,
     ConfirmDialogComponent,
-    LeadProposalSubmitModalComponent,
     LeadProposalHistoryCardComponent,
     LeadUpsertModalComponent,
     LeadNoteModalComponent,
@@ -80,7 +79,7 @@ export class LeadDetailComponent implements OnInit {
   private leadRepository = inject(LeadRepositoryService);
   private activityRepository = inject(ActivityRepositoryService);
   private leadWorkflow = inject(LeadWorkflowService);
-  private proposalWorkflow = inject(ProposalWorkflowService);
+  private proposalWorkflow = inject(FloralProposalWorkflowService);
   private inspirationUrlRepository = inject(LeadInspirationUrlRepositoryService);
   private internalUserRepository = inject(InternalUserRepositoryService);
   private leadConversionService = inject(LeadConversionService);
@@ -92,7 +91,7 @@ export class LeadDetailComponent implements OnInit {
 
   lead = signal<Lead | null>(null);
   activities = signal<LeadActivity[]>([]);
-  proposals = signal<Proposal[]>([]);
+  proposals = signal<FloralProposal[]>([]);
   inspirationUrls = signal<LeadInspirationUrl[]>([]);
 
   declineModalOpen = signal(false);
@@ -136,12 +135,12 @@ export class LeadDetailComponent implements OnInit {
     return this.leadWorkflow.getAllowedNextStatuses(lead.status);
   });
 
-  proposalResponses = computed<Record<string, ProposalResponseSummary[]>>(() => {
+  proposalResponses = computed<Record<string, FloralProposalResponseSummary[]>>(() => {
     const summaries = this.activities()
       .map((activity) => this.mapActivityToProposalResponse(activity))
-      .filter((summary): summary is ProposalResponseSummary => summary !== null);
+      .filter((summary): summary is FloralProposalResponseSummary => summary !== null);
 
-    return summaries.reduce<Record<string, ProposalResponseSummary[]>>((acc, summary) => {
+    return summaries.reduce<Record<string, FloralProposalResponseSummary[]>>((acc, summary) => {
       acc[summary.proposal_id] = [...(acc[summary.proposal_id] ?? []), summary].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
@@ -313,18 +312,11 @@ export class LeadDetailComponent implements OnInit {
       case 'proposal_declined':
         return 'danger';
       case 'proposal_accepted':
-        return 'success';
-      case 'estimate_submitted':
-        return 'warning';
-      case 'estimate_declined':
-        return 'danger';
-      case 'estimate_accepted':
       case 'accepted':
+      case 'converted':
         return 'success';
       case 'declined':
         return 'danger';
-      case 'converted':
-        return 'success';
       case 'closed_unbooked':
         return 'neutral';
       default:
@@ -400,18 +392,13 @@ export class LeadDetailComponent implements OnInit {
     if (!lead || this.actionLoading()) return;
     if (this.isLeadLocked()) return;
 
-    if (lead.status === 'estimate_accepted') {
+    if (lead.status === 'proposal_accepted') {
       this.openConvertModal();
       return;
     }
 
-    if (lead.status === 'proposal_accepted' || lead.status === 'estimate_declined') {
-      void this.router.navigate(['/admin/leads', lead.lead_id, 'estimate-builder']);
-      return;
-    }
-
     if (this.proposalWorkflow.canSubmitProposal(lead.status)) {
-      this.proposalModalOpen.set(true);
+      void this.router.navigate(['/admin/leads', lead.lead_id, 'floral-proposal-builder']);
       return;
     }
 
@@ -434,34 +421,17 @@ export class LeadDetailComponent implements OnInit {
   }
 
   openProposalModal(): void {
-    if (this.isLeadLocked()) return;
-    this.proposalModalOpen.set(true);
+    const lead = this.lead();
+    if (!lead || this.isLeadLocked()) return;
+    void this.router.navigate(['/admin/leads', lead.lead_id, 'floral-proposal-builder']);
   }
 
   closeProposalModal(): void {
     this.proposalModalOpen.set(false);
   }
 
-  async submitProposal(file: File): Promise<void> {
-    const lead = this.lead();
-    if (!lead || this.proposalSubmitting() || this.isLeadLocked()) return;
-
-    try {
-      this.proposalSubmitting.set(true);
-      await this.proposalWorkflow.submitProposal(lead, file);
-      this.proposalModalOpen.set(false);
-      await this.refreshLeadDetail();
-      this.toast.showToast('Proposal submitted successfully.', 'success');
-    } catch (error) {
-      console.error('[LeadDetailComponent] submitProposal error:', error);
-      this.error.set(
-        error instanceof Error
-          ? error.message
-          : 'We were unable to submit the proposal right now.'
-      );
-    } finally {
-      this.proposalSubmitting.set(false);
-    }
+  async submitProposal(_file: File): Promise<void> {
+    this.openProposalModal();
   }
 
   async resendProposalAccess(proposalId: string): Promise<void> {
@@ -703,21 +673,21 @@ export class LeadDetailComponent implements OnInit {
     }
   }
 
-  private syncSelectedProposal(proposals: Proposal[]): void {
+  private syncSelectedProposal(proposals: FloralProposal[]): void {
     const currentSelection = this.selectedProposalId();
     const nextSelection = proposals.find(
-      (proposal) => proposal.proposal_id === currentSelection
-    )?.proposal_id;
+      (proposal) => proposal.floral_proposal_id === currentSelection
+    )?.floral_proposal_id;
 
-    this.selectedProposalId.set(nextSelection ?? proposals[0]?.proposal_id ?? null);
+    this.selectedProposalId.set(nextSelection ?? proposals[0]?.floral_proposal_id ?? null);
   }
 
   private mapActivityToProposalResponse(
     activity: LeadActivity
-  ): ProposalResponseSummary | null {
+  ): FloralProposalResponseSummary | null {
     const metadata = activity.metadata as Record<string, unknown> | null;
-    const proposalId = typeof metadata?.['proposal_id'] === 'string'
-      ? metadata['proposal_id']
+    const proposalId = typeof metadata?.['floral_proposal_id'] === 'string'
+      ? metadata['floral_proposal_id']
       : null;
     const responseAction = metadata?.['response_action'];
 
@@ -771,3 +741,12 @@ export class LeadDetailComponent implements OnInit {
       .map(([key]) => labels[key] ?? key.replace(/_/g, ' '));
   }
 }
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Lead } from '../../../../../core/models/lead';
 import { LeadStatus } from '../../../../../core/models/lead-status';
 import { StatusBadgeComponent } from '../../../../../shared/components/private/status-badge/status-badge.component';
@@ -60,14 +60,9 @@ export class LeadSummaryCardComponent {
       case 'proposal_declined':
         return 'danger';
       case 'proposal_accepted':
-      case 'estimate_accepted':
       case 'accepted':
       case 'converted':
         return 'success';
-      case 'estimate_submitted':
-        return 'warning';
-      case 'estimate_declined':
-        return 'danger';
       case 'declined':
         return 'danger';
       case 'closed_unbooked':

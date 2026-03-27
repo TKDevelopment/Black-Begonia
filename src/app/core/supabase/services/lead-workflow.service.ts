@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Lead } from '../../models/lead';
 import { LeadStatus } from '../../models/lead-status';
 import { LeadRepositoryService } from '../repositories/lead-repository.service';
@@ -153,9 +153,7 @@ export class LeadWorkflowService {
       status === 'consultation_scheduled' ||
       status === 'nurturing' ||
       status === 'proposal_declined' ||
-      status === 'proposal_accepted' ||
-      status === 'estimate_declined' ||
-      status === 'estimate_accepted'
+      status === 'proposal_accepted'
     );
   }
 
@@ -164,20 +162,20 @@ export class LeadWorkflowService {
       return 'Lead Converted';
     }
 
-    if (status === 'estimate_accepted') {
+    if (status === 'proposal_accepted') {
       return 'Convert to Project';
     }
 
-    if (status === 'proposal_accepted' || status === 'estimate_declined') {
-      return 'Submit Estimate';
-    }
-
     if (status === 'nurturing' || status === 'proposal_declined') {
-      return 'Submit Proposal';
+      return 'Generate Floral Proposal';
     }
 
     if (status === 'consultation_scheduled') {
       return 'Consultation Completed';
+    }
+
+    if (status === 'proposal_submitted') {
+      return 'Floral Proposal Sent';
     }
 
     return 'Schedule Consultation';
@@ -225,19 +223,7 @@ export class LeadWorkflowService {
           'closed_unbooked',
         ];
       case 'proposal_accepted':
-        return ['proposal_accepted', 'estimate_submitted', 'estimate_declined'];
-      case 'estimate_submitted':
-        return [
-          'estimate_submitted',
-          'estimate_declined',
-          'estimate_accepted',
-          'declined',
-          'closed_unbooked',
-        ];
-      case 'estimate_declined':
-        return ['estimate_declined', 'estimate_submitted', 'declined', 'closed_unbooked'];
-      case 'estimate_accepted':
-        return ['estimate_accepted', 'converted'];
+        return ['proposal_accepted', 'converted'];
       case 'accepted':
         return ['accepted', 'converted'];
       case 'declined':

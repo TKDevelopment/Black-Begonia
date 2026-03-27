@@ -27,7 +27,7 @@ export class SidebarComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   readonly crmThemeService = inject(CrmThemeService);
-  readonly estimateBuilderOpen = signal(
+  readonly floralProposalBuilderOpen = signal(
     this.router.url.startsWith('/admin/catalog-items') ||
       this.router.url.startsWith('/admin/vendors') ||
       this.router.url.startsWith('/admin/arrangements') ||
@@ -45,7 +45,7 @@ export class SidebarComponent {
 
   readonly groupedNav: SidebarNavGroup[] = [
     {
-      label: 'Estimate Builder',
+      label: 'Floral Proposal Builder',
       children: [
         { label: 'Catalog', route: '/admin/catalog-items' },
         { label: 'Vendors', route: '/admin/vendors' },
@@ -64,8 +64,8 @@ export class SidebarComponent {
     this.crmThemeService.toggle();
   }
 
-  toggleEstimateBuilder(): void {
-    this.estimateBuilderOpen.update((open) => !open);
+  toggleFloralProposalBuilder(): void {
+    this.floralProposalBuilderOpen.update((open) => !open);
   }
 
   isRouteActive(route: string, exact = false): boolean {
@@ -104,3 +104,5 @@ export class SidebarComponent {
     this.navigate.emit();
   }
 }
+
+

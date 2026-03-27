@@ -18,9 +18,10 @@ import { StatusBadgeComponent } from '../../../shared/components/private/status-
 import { Lead } from '../../../core/models/lead';
 import { LeadActivity } from '../../../core/models/lead-activity';
 import { LeadStatus } from '../../../core/models/lead-status';
-import { Proposal, ProposalResponseSummary } from '../../../core/models/proposal';
+import { FloralProposal } from '../../../core/models/floral-proposal';
+import { FloralProposalResponseSummary } from '../../../core/models/floral-proposal';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
-import { ProposalRepositoryService } from '../../../core/supabase/repositories/proposal-repository.service';
+import { FloralProposalRepositoryService } from '../../../core/supabase/repositories/floral-proposal-repository.service';
 import { ActivityRepositoryService } from '../../../core/supabase/repositories/activity-repository.service';
 import { LeadUpsertModalComponent } from './components/lead-upsert-modal/lead-upsert-modal.component';
 import { LeadUpsertPayload } from './components/lead-upsert-modal/lead-upsert.types';
@@ -47,7 +48,7 @@ import { ToastService } from '../../../core/services/toast.service';
 export class LeadsComponent implements OnInit {
   private router = inject(Router);
   private leadRepository = inject(LeadRepositoryService);
-  private proposalRepository = inject(ProposalRepositoryService);
+  private proposalRepository = inject(FloralProposalRepositoryService);
   private activityRepository = inject(ActivityRepositoryService);
   private toast = inject(ToastService);
 
@@ -63,7 +64,7 @@ export class LeadsComponent implements OnInit {
   sortBy = signal<'created_desc' | 'created_asc' | 'event_date_asc' | 'event_date_desc'>('created_desc');
 
   leads = signal<Lead[]>([]);
-  proposals = signal<Proposal[]>([]);
+  proposals = signal<FloralProposal[]>([]);
   proposalResponseActivities = signal<LeadActivity[]>([]);
 
   columns: AdminTableColumn[] = [
@@ -77,8 +78,8 @@ export class LeadsComponent implements OnInit {
     { key: 'created_at', label: 'Created' },
   ];
 
-  proposalByLeadId = computed<Record<string, Proposal | null>>(() => {
-    return this.proposals().reduce<Record<string, Proposal | null>>((acc, proposal) => {
+  proposalByLeadId = computed<Record<string, FloralProposal | null>>(() => {
+    return this.proposals().reduce<Record<string, FloralProposal | null>>((acc, proposal) => {
       const current = acc[proposal.lead_id];
       if (!current) {
         acc[proposal.lead_id] = proposal;
@@ -98,12 +99,12 @@ export class LeadsComponent implements OnInit {
     }, {});
   });
 
-  proposalResponseByLeadId = computed<Record<string, ProposalResponseSummary | null>>(() => {
+  proposalResponseByLeadId = computed<Record<string, FloralProposalResponseSummary | null>>(() => {
     const summaries = this.proposalResponseActivities()
       .map((activity) => this.mapActivityToProposalResponse(activity))
-      .filter((summary): summary is ProposalResponseSummary & { lead_id: string } => summary !== null);
+      .filter((summary): summary is FloralProposalResponseSummary & { lead_id: string } => summary !== null);
 
-    return summaries.reduce<Record<string, ProposalResponseSummary | null>>((acc, summary) => {
+    return summaries.reduce<Record<string, FloralProposalResponseSummary | null>>((acc, summary) => {
       const current = acc[summary.lead_id];
       if (!current || new Date(summary.created_at).getTime() > new Date(current.created_at).getTime()) {
         acc[summary.lead_id] = summary;
@@ -157,7 +158,7 @@ export class LeadsComponent implements OnInit {
         (lead.service_type ?? '').toLowerCase().includes(term) ||
         lead.source.toLowerCase().includes(term) ||
         (lead.ceremony_venue_name ?? '').toLowerCase().includes(term) ||
-        (proposal?.file_name ?? '').toLowerCase().includes(term) ||
+        (proposal?.status ?? '').toLowerCase().includes(term) ||
         (response?.feedback ?? '').toLowerCase().includes(term);
 
       const matchesStatus = status === 'all' || lead.status === status;
@@ -199,9 +200,6 @@ export class LeadsComponent implements OnInit {
           { label: 'Proposal Submitted', value: 'proposal_submitted' },
           { label: 'Proposal Declined', value: 'proposal_declined' },
           { label: 'Proposal Accepted', value: 'proposal_accepted' },
-          { label: 'Estimate Submitted', value: 'estimate_submitted' },
-          { label: 'Estimate Declined', value: 'estimate_declined' },
-          { label: 'Estimate Accepted', value: 'estimate_accepted' },
           { label: 'Accepted', value: 'accepted' },
           { label: 'Declined', value: 'declined' },
           { label: 'Converted', value: 'converted' },
@@ -362,14 +360,9 @@ export class LeadsComponent implements OnInit {
       case 'proposal_declined':
         return 'danger';
       case 'proposal_accepted':
-      case 'estimate_accepted':
       case 'accepted':
       case 'converted':
         return 'success';
-      case 'estimate_submitted':
-        return 'warning';
-      case 'estimate_declined':
-        return 'danger';
       case 'declined':
         return 'danger';
       case 'closed_unbooked':
@@ -400,20 +393,20 @@ export class LeadsComponent implements OnInit {
     }).format(new Date(value));
   }
 
-  getProposalForLead(leadId: string): Proposal | null {
+  getProposalForLead(leadId: string): FloralProposal | null {
     return this.proposalByLeadId()[leadId] ?? null;
   }
 
-  getProposalResponseForLead(leadId: string): ProposalResponseSummary | null {
+  getProposalResponseForLead(leadId: string): FloralProposalResponseSummary | null {
     return this.proposalResponseByLeadId()[leadId] ?? null;
   }
 
   private mapActivityToProposalResponse(
     activity: LeadActivity
-  ): (ProposalResponseSummary & { lead_id: string }) | null {
+  ): (FloralProposalResponseSummary & { lead_id: string }) | null {
     const metadata = activity.metadata as Record<string, unknown> | null;
-    const proposalId = typeof metadata?.['proposal_id'] === 'string'
-      ? metadata['proposal_id']
+    const proposalId = typeof metadata?.['floral_proposal_id'] === 'string'
+      ? metadata['floral_proposal_id']
       : null;
     const responseAction = metadata?.['response_action'];
 
@@ -434,3 +427,11 @@ export class LeadsComponent implements OnInit {
     };
   }
 }
+
+
+
+
+
+
+
+

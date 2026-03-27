@@ -1,4 +1,4 @@
-﻿import { Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 import { PublicLayoutComponent } from './core/layouts/public-layout/public-layout.component';
 import { PrivateLayoutComponent } from './core/layouts/private-layout/private-layout.component';
 import { ProposalAccessLayoutComponent } from './core/layouts/proposal-access-layout/proposal-access-layout.component';
@@ -181,10 +181,10 @@ export const routes: Routes = [
           import('./components/private/leads/leads.component').then(m => m.LeadsComponent),
       },
       {
-        path: 'leads/:leadId/estimate-builder',
+        path: 'leads/:leadId/floral-proposal-builder',
         loadComponent: () =>
-          import('./components/private/estimate-builder/estimate-builder.component').then(
-            m => m.EstimateBuilderComponent
+          import('./components/private/floral-proposal-builder/floral-proposal-builder.component').then(
+            m => m.FloralProposalBuilderComponent
           ),
       },
       {
@@ -294,4 +294,6 @@ export const routes: Routes = [
     redirectTo: '',
   },
 ];
+
+
 
