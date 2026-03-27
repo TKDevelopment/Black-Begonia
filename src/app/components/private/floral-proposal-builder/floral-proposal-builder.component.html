@@ -28,37 +28,63 @@
         <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
           <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <p class="font-oswald text-[11px] uppercase tracking-[0.32em] text-[#ea938c]">Floral Proposal Builder</p>
-              <h2 class="mt-3 font-cormorant text-4xl text-stone-900">{{ lead()!.first_name }} {{ lead()!.last_name }}</h2>
+              <p class="font-oswald text-[11px] uppercase tracking-[0.32em] text-[#ea938c]">
+                Floral Proposal Builder
+              </p>
+              <h2 class="mt-3 font-cormorant text-4xl text-stone-900">
+                {{ lead()!.first_name }} {{ lead()!.last_name }}
+              </h2>
               <p class="mt-3 max-w-3xl text-sm leading-7 text-stone-600">
                 Build the client-facing Floral Proposal line items here, then expand each row to compose the internal catalog-item recipe that drives pricing and the shopping list.
               </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-              <app-status-badge *ngIf="activeProposal()" [label]="activeProposal()!.status" [tone]="getProposalStatusTone(activeProposal()!.status)" />
-              <button type="button" (click)="exportFloralProposalPdf()" [disabled]="!lineItems().length" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">Export PDF</button>
-              <button type="button" (click)="saveDraft()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">Save Draft</button>
-              <button type="button" (click)="submitFloralProposal()" [disabled]="!canSubmit() || saving()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">Submit Floral Proposal</button>
+              <app-status-badge
+                *ngIf="activeProposal()"
+                [label]="activeProposal()!.status"
+                [tone]="getProposalStatusTone(activeProposal()!.status)"
+              />
+              <button type="button" (click)="exportFloralProposalPdf()" [disabled]="!lineItems().length" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+                Export PDF
+              </button>
+              <button type="button" (click)="saveDraft()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+                Save Draft
+              </button>
+              <button type="button" (click)="openPreview()" [disabled]="!canSubmit() || saving()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                Preview Floral Proposal
+              </button>
             </div>
           </div>
         </div>
 
         <div class="my-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-          <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div class="grid gap-4 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)]">
             <div>
               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Proposal Template</label>
               <select [ngModel]="selectedTemplateId()" (ngModelChange)="onTemplateChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
                 <option value="">Select a template</option>
-                <option *ngFor="let template of templates(); trackBy: trackByTemplate" [value]="template.template_id">{{ template.name }}</option>
+                <option *ngFor="let template of templates(); trackBy: trackByTemplate" [value]="template.template_id">
+                  {{ template.name }}
+                </option>
               </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Default Markup</label>
+              <div class="mt-2 relative">
+                <input [ngModel]="defaultMarkupPercent()" (ngModelChange)="onDefaultMarkupChange($event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[13px] text-stone-500">%</span>
+              </div>
             </div>
 
             <div>
               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Tax Region</label>
               <select [ngModel]="selectedTaxRegionId()" (ngModelChange)="onTaxRegionChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
                 <option value="">Select a tax region</option>
-                <option *ngFor="let region of taxRegions(); trackBy: trackByTaxRegion" [value]="region.tax_region_id">{{ region.name }} · {{ formatPercent(region.tax_rate) }}</option>
+                <option *ngFor="let region of taxRegions(); trackBy: trackByTaxRegion" [value]="region.tax_region_id">
+                  {{ region.name }} - {{ formatPercent(region.tax_rate) }}
+                </option>
               </select>
             </div>
           </div>
@@ -79,28 +105,26 @@
           </div>
 
           <datalist id="catalog-item-options">
-            <option *ngFor="let item of activeCatalogItems(); trackBy: trackByCatalogItem" [value]="item.name">{{ item.name }}</option>
+            <option *ngFor="let item of activeCatalogItems(); trackBy: trackByCatalogItem" [value]="item.name">
+              {{ item.name }}
+            </option>
           </datalist>
+
           <div *ngIf="lineItems().length; else emptyState" class="mt-5 overflow-hidden rounded-2xl border border-stone-200">
             <div class="overflow-x-auto">
               <table cdkDropList [cdkDropListData]="lineItems()" (cdkDropListDropped)="reorderLineItems($event)" class="min-w-full divide-y divide-stone-200 text-sm">
                 <thead class="bg-[#fcfaf8]">
                   <tr class="text-left text-[11px] uppercase tracking-[0.22em] text-stone-500">
                     <th class="px-4 py-3 font-semibold">Item</th>
-                    <th class="px-4 py-3 font-semibold w-28">Qty</th>
-                    <th class="px-4 py-3 font-semibold w-40">Unit Price</th>
-                    <th class="px-4 py-3 font-semibold w-40">Subtotal</th>
-                    <th class="px-4 py-3 font-semibold w-36">Actions</th>
+                    <th class="w-28 px-4 py-3 font-semibold">Qty</th>
+                    <th class="w-40 px-4 py-3 font-semibold">Unit Price</th>
+                    <th class="w-40 px-4 py-3 font-semibold">Subtotal</th>
+                    <th class="w-36 px-4 py-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
+
                 <ng-container *ngFor="let line of lineItems(); trackBy: trackByLine">
-                  <tbody
-                    cdkDrag
-                    [cdkDragData]="line"
-                    (cdkDragStarted)="onLineDragStarted(line.local_id)"
-                    (cdkDragEnded)="onLineDragEnded()"
-                    class="border-t border-stone-100"
-                  >
+                  <tbody cdkDrag [cdkDragData]="line" (cdkDragStarted)="onLineDragStarted(line.local_id)" (cdkDragEnded)="onLineDragEnded()" class="border-t border-stone-100">
                     <ng-template cdkDragPreview>
                       <div class="flex min-w-[720px] items-center gap-3 rounded-2xl border border-stone-300 bg-white px-4 py-3 shadow-2xl">
                         <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-[#fcfaf8] text-stone-500">
@@ -115,10 +139,8 @@
                         <span class="w-32 text-right text-sm font-semibold text-stone-900">{{ formatCurrency(line.subtotal) }}</span>
                       </div>
                     </ng-template>
-                    <tr
-                      (click)="toggleExpanded(line.local_id)"
-                      class="cursor-pointer bg-white align-top transition hover:bg-stone-50/80"
-                    >
+
+                    <tr (click)="toggleExpanded(line.local_id)" class="cursor-pointer bg-white align-top transition hover:bg-stone-50/80">
                       <td class="px-4 py-3">
                         <div class="flex items-center gap-2.5">
                           <button type="button" cdkDragHandle (click)="$event.stopPropagation()" class="inline-flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-xl border border-stone-200 bg-[#fcfaf8] text-stone-500 transition hover:bg-stone-100 active:cursor-grabbing" aria-label="Drag to reorder line item">
@@ -133,11 +155,17 @@
                       <td class="px-4 py-3">
                         <input (click)="$event.stopPropagation()" [ngModel]="line.quantity" (ngModelChange)="updateLineQuantity(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                       </td>
-                      <td class="px-4 py-3"><div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base font-medium text-stone-900">{{ formatCurrency(line.unit_price) }}</div></td>
-                      <td class="px-4 py-3"><div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base font-medium text-stone-900">{{ formatCurrency(line.subtotal) }}</div></td>
+                      <td class="px-4 py-3">
+                        <div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base font-medium text-stone-900">{{ formatCurrency(line.unit_price) }}</div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base font-medium text-stone-900">{{ formatCurrency(line.subtotal) }}</div>
+                      </td>
                       <td class="px-4 py-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                          <button type="button" (click)="$event.stopPropagation(); removeLine(line.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60">Remove</button>
+                          <button type="button" (click)="$event.stopPropagation(); removeLine(line.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                            Remove
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -156,6 +184,29 @@
                             <label class="mt-4 block text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Notes</label>
                             <textarea [ngModel]="line.notes || ''" (ngModelChange)="updateLineNotes(line.local_id, $event)" [disabled]="!canEdit()" rows="3" class="mt-2 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Optional internal note"></textarea>
 
+                            <label class="mt-4 block text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Proposal Description</label>
+                            <textarea [ngModel]="line.description || ''" (ngModelChange)="updateLineDescription(line.local_id, $event)" [disabled]="!canEdit()" rows="4" class="mt-2 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Describe how this floral piece will look and where it will be used in the event."></textarea>
+
+                            <div class="mt-4 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-4 text-sm text-stone-600">
+                              <p class="font-medium text-stone-800">Line Item Image</p>
+                              <div *ngIf="line.image_signed_url" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 bg-white">
+                                <img [src]="line.image_signed_url" [alt]="line.image_alt_text || line.item_name" class="h-40 w-full object-cover" />
+                              </div>
+                              <div class="mt-3 flex flex-wrap items-center gap-3">
+                                <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50">
+                                  <input type="file" accept="image/*" class="hidden" (click)="$event.stopPropagation()" (change)="onLineImageSelected(line.local_id, $event)" [disabled]="!canEdit()" />
+                                  {{ line.image_storage_path ? 'Replace Image' : 'Upload Image' }}
+                                </label>
+                                <button *ngIf="line.image_storage_path" type="button" (click)="$event.stopPropagation(); removeLineImage(line.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                                  Remove Image
+                                </button>
+                              </div>
+                              <textarea [ngModel]="line.image_caption || ''" (ngModelChange)="updateLineImageCaption(line.local_id, $event)" [disabled]="!canEdit()" rows="2" class="mt-3 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Optional image caption for this line item"></textarea>
+                              <p class="mt-2 leading-6 text-xs text-stone-500">
+                                One image per line item. This image will appear beside the line item in the Floral Proposal preview and final generated PDF.
+                              </p>
+                            </div>
+
                             <div *ngIf="line.line_item_type !== 'product'" class="mt-4">
                               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Manual Unit Price</label>
                               <input (click)="$event.stopPropagation()" [ngModel]="line.unit_price" (ngModelChange)="updateManualUnitPrice(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
@@ -169,7 +220,9 @@
                                 <h4 class="text-sm font-semibold text-stone-900">Internal Catalog Composition</h4>
                                 <p class="mt-1 text-xs leading-5 text-stone-500">This internal build drives the client-facing price and the shopping list. Fee and discount lines can stay manual.</p>
                               </div>
-                              <button type="button" (click)="$event.stopPropagation(); addComponentRow(line.local_id)" [disabled]="!canEdit() || line.line_item_type !== 'product'" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">Add Catalog Row</button>
+                              <button type="button" (click)="$event.stopPropagation(); addComponentRow(line.local_id)" [disabled]="!canEdit() || line.line_item_type !== 'product'" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+                                Add Catalog Row
+                              </button>
                             </div>
 
                             <div *ngIf="line.line_item_type === 'product'" class="mt-4 overflow-x-auto">
@@ -177,11 +230,11 @@
                                 <thead>
                                   <tr class="text-left text-[11px] uppercase tracking-[0.18em] text-stone-500">
                                     <th class="pb-3 pr-3 font-semibold">Catalog Item</th>
-                                    <th class="pb-3 pr-3 font-semibold w-28">Qty</th>
-                                    <th class="pb-3 pr-3 font-semibold w-32">Markup %</th>
-                                    <th class="pb-3 pr-3 font-semibold w-32">Reserve %</th>
-                                    <th class="pb-3 pr-3 font-semibold w-36">Subtotal</th>
-                                    <th class="pb-3 font-semibold w-24">Actions</th>
+                                    <th class="w-28 pb-3 pr-3 font-semibold">Qty</th>
+                                    <th class="w-32 pb-3 pr-3 font-semibold">Unit Price</th>
+                                    <th class="w-32 pb-3 pr-3 font-semibold">Markup %</th>
+                                    <th class="w-36 pb-3 pr-3 font-semibold">Subtotal</th>
+                                    <th class="w-24 pb-3 font-semibold">Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody class="divide-y divide-stone-100">
@@ -193,14 +246,18 @@
                                       <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="py-3 pr-3">
+                                      <div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
+                                    </td>
+                                    <td class="py-3 pr-3">
                                       <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="py-3 pr-3">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.reserve_percent" (ngModelChange)="updateComponentReserve(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                      <div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div>
                                     </td>
-                                    <td class="py-3 pr-3"><div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div></td>
                                     <td class="py-3">
-                                      <button type="button" (click)="$event.stopPropagation(); removeComponentRow(line.local_id, component.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60">Remove</button>
+                                      <button type="button" (click)="$event.stopPropagation(); removeComponentRow(line.local_id, component.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                                        Remove
+                                      </button>
                                     </td>
                                   </tr>
                                 </tbody>
@@ -235,7 +292,7 @@
           <div class="flex items-start justify-between gap-4">
             <div>
               <h3 class="text-lg font-semibold text-stone-900">Shopping List Preview</h3>
-              <p class="mt-1 text-sm text-stone-600">Generated automatically from the internal catalog composition, reserve percentages, and default vendor packs.</p>
+              <p class="mt-1 text-sm text-stone-600">Generated automatically from the internal catalog composition and default vendor packs.</p>
             </div>
             <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">{{ shoppingList().length }}</span>
           </div>
@@ -253,10 +310,11 @@
                   <th class="pb-3 pr-4">Estimated Cost</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-stone-100">                <tr *ngFor="let item of shoppingList()">
+              <tbody class="divide-y divide-stone-100">
+                <tr *ngFor="let item of shoppingList()">
                   <td class="py-3 pr-4">
                     <p class="font-medium text-stone-900">{{ item.item_name }}</p>
-                    <p class="mt-1 text-xs text-stone-500">{{ formatStatusLabel(item.item_type) }} · {{ formatStatusLabel(item.unit_type) }}</p>
+                    <p class="mt-1 text-xs text-stone-500">{{ formatStatusLabel(item.item_type) }} - {{ formatStatusLabel(item.unit_type) }}</p>
                   </td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.vendor?.name || 'No default vendor' }}</td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.required_units }}</td>
@@ -276,7 +334,9 @@
           </div>
 
           <ng-template #noShoppingList>
-            <div class="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500">Add catalog composition rows to product lines and the shopping list will populate automatically.</div>
+            <div class="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+              Add catalog composition rows to product lines and the shopping list will populate automatically.
+            </div>
           </ng-template>
         </div>
       </div>
@@ -284,34 +344,73 @@
       <div detail-sidebar>
         <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-stone-900">Workflow Notes</h3>
-          <p class="mt-4 text-sm leading-7 text-stone-600">This builder now creates the full Floral Proposal. Once the client accepts and signs it, the lead becomes eligible for project conversion.</p>
+          <p class="mt-4 text-sm leading-7 text-stone-600">
+            This builder now creates the full Floral Proposal. Once the client accepts and signs it, the lead becomes eligible for project conversion.
+          </p>
         </div>
 
         <div class="my-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
           <h3 class="text-lg font-semibold text-stone-900">Totals</h3>
-          <div class="mt-4 space-y-2.5 text-sm">
-            <div class="flex items-center justify-between text-stone-600"><span>Subtotal</span><span class="font-medium text-stone-900">{{ formatCurrency(totals().subtotal) }}</span></div>
-            <div class="flex items-center justify-between text-stone-600"><span>Tax</span><span class="font-medium text-stone-900">{{ formatCurrency(totals().taxAmount) }}</span></div>
-            <div class="flex items-center justify-between border-t border-stone-200 pt-3 text-base font-semibold text-stone-900"><span>Total</span><span>{{ formatCurrency(totals().totalAmount) }}</span></div>
+          <div class="mt-4 space-y-3 text-sm">
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Products</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().productsTotal) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Fees</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().feesTotal) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Discounts</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().discountsTotal) }}</p>
+            </div>
+            <div class="border-t border-stone-200 pt-3">
+              <div class="flex items-center justify-between gap-4">
+                <p class="text-stone-700">Subtotal</p>
+                <p class="font-semibold text-stone-900">{{ formatCurrency(totalsBreakdown().subtotal) }}</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Tax</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().taxAmount) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 border-t border-stone-200 pt-3">
+              <p class="text-base font-semibold text-stone-900">Total</p>
+              <p class="text-base font-semibold text-stone-900">{{ formatCurrency(totalsBreakdown().totalAmount) }}</p>
+            </div>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+        <div class="my-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
           <h3 class="text-lg font-semibold text-stone-900">Proposal Summary</h3>
           <div class="mt-4 space-y-3 text-sm">
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current Version</p><p class="mt-1 text-stone-800">{{ activeProposal()?.version || 1 }}</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Template</p><p class="mt-1 text-stone-800">{{ selectedTemplate()?.name || 'Not selected yet' }}</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Tax Region</p><p class="mt-1 text-stone-800">{{ selectedTaxRegion()?.name || 'Not selected yet' }}</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Markup</p><p class="mt-1 text-stone-800">{{ pricingSettings()?.default_markup_percent ?? 300 }}%</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Reserve</p><p class="mt-1 text-stone-800">{{ pricingSettings()?.default_reserve_percent ?? 3 }}%</p></div>
-            <div *ngIf="activeProposal()"><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Saved</p><p class="mt-1 text-stone-800">{{ formatDateTime(activeProposal()!.updated_at) }}</p></div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current Version</p>
+              <p class="mt-1 text-stone-800">{{ activeProposal()?.version || 1 }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Template</p>
+              <p class="mt-1 text-stone-800">{{ selectedTemplate()?.name || 'Not selected yet' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Tax Region</p>
+              <p class="mt-1 text-stone-800">{{ selectedTaxRegion()?.name || 'Not selected yet' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Markup</p>
+              <p class="mt-1 text-stone-800">{{ defaultMarkupPercent() }}%</p>
+            </div>
+            <div *ngIf="activeProposal()">
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Saved</p>
+              <p class="mt-1 text-stone-800">{{ formatDateTime(activeProposal()!.updated_at) }}</p>
+            </div>
           </div>
         </div>
 
         <div class="my-3 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-stone-900">Proposal Versions</h3>
           <div class="mt-5 space-y-3" *ngIf="proposals().length; else noVersions">
-            <div *ngFor="let proposal of proposals()" class="rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3">
+            <div *ngFor="let proposal of proposals()" class="rounded-2xl border border-stone-200 bg-[#fcfaf8] p-4">
               <div class="flex items-center justify-between gap-3">
                 <p class="text-sm font-semibold text-stone-900">Version {{ proposal.version }}</p>
                 <app-status-badge [label]="proposal.status" [tone]="getProposalStatusTone(proposal.status)" size="sm" />
@@ -328,10 +427,22 @@
         <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
           <h3 class="text-lg font-semibold text-stone-900">Lead Context</h3>
           <div class="mt-5 space-y-4 text-sm">
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Lead Status</p><p class="mt-1 text-stone-800">{{ formatStatusLabel(lead()!.status) }}</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p><p class="mt-1 text-stone-800">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p><p class="mt-1 text-stone-800">{{ lead()!.budget_range || 'Not provided' }}</p></div>
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Guest Count</p><p class="mt-1 text-stone-800">{{ lead()!.guest_count ?? 'Not provided' }}</p></div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Lead Status</p>
+              <p class="mt-1 text-stone-800">{{ formatStatusLabel(lead()!.status) }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.budget_range || 'Not provided' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Guest Count</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.guest_count ?? 'Not provided' }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -339,9 +450,31 @@
   </div>
 </div>
 
+<div *ngIf="previewOpen()" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+  <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-[#fcfaf8] shadow-2xl">
+    <div class="flex items-center justify-between gap-4 border-b border-stone-200 px-6 py-5">
+      <div>
+        <p class="font-oswald text-[11px] uppercase tracking-[0.3em] text-[#ea938c]">Floral Proposal</p>
+        <h2 class="mt-2 font-cormorant text-3xl text-stone-900">Preview Before Sending</h2>
+      </div>
+      <button type="button" (click)="closePreview()" [disabled]="saving()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 transition hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
 
+    <div class="flex-1 overflow-hidden bg-stone-100 p-4">
+      <iframe [attr.srcdoc]="previewHtml()" class="h-full min-h-[640px] w-full rounded-2xl border border-stone-200 bg-white"></iframe>
+    </div>
 
-
-
-
-
+    <div class="flex items-center justify-end gap-3 border-t border-stone-200 px-6 py-5">
+      <button type="button" (click)="closePreview()" [disabled]="saving()" class="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+        Back to Edit
+      </button>
+      <button type="button" (click)="submitFloralProposal()" [disabled]="saving()" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+        Generate &amp; Send Floral Proposal
+      </button>
+    </div>
+  </div>
+</div>

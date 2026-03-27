@@ -19,6 +19,10 @@ export interface SubmitFloralProposalPayload {
     quantity: number;
     unit_price: number;
     subtotal: number;
+    description?: string | null;
+    image_storage_path?: string | null;
+    image_alt_text?: string | null;
+    image_caption?: string | null;
     notes?: string | null;
     snapshot?: Record<string, unknown>;
     components?: {
@@ -52,6 +56,7 @@ export interface SubmitFloralProposalPayload {
 })
 export class FloralProposalWorkflowService {
   private readonly floralProposalBucket = 'floral-proposals';
+  private readonly lineItemImageBucket = 'floral-proposal-line-items';
   private readonly signedUrlExpirySeconds = 60 * 60;
   private readonly proposalAccessPath = '/proposal/auth';
 
@@ -103,6 +108,65 @@ export class FloralProposalWorkflowService {
 
   canSubmitProposal(status: Lead['status']): boolean {
     return status === 'nurturing' || status === 'proposal_declined';
+  }
+
+  async uploadLineItemImage(
+    leadId: string,
+    lineId: string,
+    file: File
+  ): Promise<{ storagePath: string; signedUrl: string }> {
+    const sanitizedFileName = file.name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9.\-_]+/g, '-')
+      .replace(/-+/g, '-');
+    const storagePath = `${leadId}/${lineId}/${Date.now()}-${sanitizedFileName}`;
+    const client = this.supabaseService.getClient();
+
+    const { error: uploadError } = await client.storage
+      .from(this.lineItemImageBucket)
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error(
+        '[FloralProposalWorkflowService] uploadLineItemImage upload error:',
+        uploadError
+      );
+      throw new Error('We could not upload the line item image right now.');
+    }
+
+    const signedUrl = await this.createSignedStorageUrl(
+      this.lineItemImageBucket,
+      storagePath
+    );
+
+    return { storagePath, signedUrl };
+  }
+
+  async removeLineItemImage(storagePath: string): Promise<void> {
+    if (!storagePath) return;
+
+    const { error } = await this.supabaseService
+      .getClient()
+      .storage
+      .from(this.lineItemImageBucket)
+      .remove([storagePath]);
+
+    if (error) {
+      console.error(
+        '[FloralProposalWorkflowService] removeLineItemImage error:',
+        error
+      );
+      throw new Error('We could not remove the line item image right now.');
+    }
+  }
+
+  async getSignedLineItemImageUrl(storagePath: string): Promise<string | null> {
+    if (!storagePath) return null;
+    return this.createSignedStorageUrl(this.lineItemImageBucket, storagePath);
   }
 
   async submitProposal(payload: SubmitFloralProposalPayload): Promise<{
@@ -171,6 +235,27 @@ export class FloralProposalWorkflowService {
           'We could not resend Floral Proposal access right now.'
       );
     }
+  }
+
+  private async createSignedStorageUrl(
+    bucket: string,
+    storagePath: string
+  ): Promise<string> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .storage
+      .from(bucket)
+      .createSignedUrl(storagePath, this.signedUrlExpirySeconds);
+
+    if (error || !data?.signedUrl) {
+      console.error(
+        '[FloralProposalWorkflowService] createSignedStorageUrl error:',
+        error
+      );
+      throw new Error('We could not generate a secure file preview right now.');
+    }
+
+    return data.signedUrl;
   }
 }
 

@@ -173,20 +173,29 @@ export class LeadDetailComponent implements OnInit {
     if (!lead) return true;
     if (this.actionLoading()) return true;
     if (this.proposalSubmitting()) return true;
+    if (this.isLeadReadOnly()) return true;
 
     return this.leadWorkflow.isConsultationButtonDisabled(lead.status);
   });
 
   canSubmitProposal = computed(() => {
     const lead = this.lead();
-    return !!lead && this.proposalWorkflow.canSubmitProposal(lead.status);
+    return !!lead && !this.isLeadReadOnly() && this.proposalWorkflow.canSubmitProposal(lead.status);
   });
 
   isLeadLocked = computed(() => this.lead()?.status === 'converted');
+  isLeadReadOnly = computed(() => {
+    const status = this.lead()?.status;
+    return status === 'converted' || status === 'declined' || status === 'closed_unbooked';
+  });
+  canReopenClosedUnbookedLead = computed(() => {
+    const lead = this.lead();
+    return !!lead && lead.status === 'closed_unbooked' && !this.actionLoading();
+  });
 
   canResendProposalAccess = computed(() => {
     const lead = this.lead();
-    return !!lead && lead.status !== 'converted';
+    return !!lead && !this.isLeadReadOnly();
   });
 
   showQuickActionConvertButton = computed(() => {
@@ -390,7 +399,7 @@ export class LeadDetailComponent implements OnInit {
   async handleConsultationAction(): Promise<void> {
     const lead = this.lead();
     if (!lead || this.actionLoading()) return;
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
 
     if (lead.status === 'proposal_accepted') {
       this.openConvertModal();
@@ -422,7 +431,7 @@ export class LeadDetailComponent implements OnInit {
 
   openProposalModal(): void {
     const lead = this.lead();
-    if (!lead || this.isLeadLocked()) return;
+    if (!lead || this.isLeadReadOnly()) return;
     void this.router.navigate(['/admin/leads', lead.lead_id, 'floral-proposal-builder']);
   }
 
@@ -435,7 +444,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   async resendProposalAccess(proposalId: string): Promise<void> {
-    if (!proposalId || this.proposalResending() || this.isLeadLocked()) return;
+    if (!proposalId || this.proposalResending() || this.isLeadReadOnly()) return;
 
     try {
       this.proposalResending.set(true);
@@ -464,7 +473,7 @@ export class LeadDetailComponent implements OnInit {
 
   async markContacted(): Promise<void> {
     const lead = this.lead();
-    if (!lead || this.actionLoading() || this.isLeadLocked()) return;
+    if (!lead || this.actionLoading() || this.isLeadReadOnly()) return;
 
     try {
       this.actionLoading.set(true);
@@ -483,17 +492,17 @@ export class LeadDetailComponent implements OnInit {
   }
 
   createTaskFromLead(): void {
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
     console.log('Create task from lead');
   }
 
   convertLead(): void {
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
     this.openConvertModal();
   }
 
   editLead(): void {
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
     this.editModalOpen.set(true);
   }
 
@@ -562,7 +571,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   addInternalNote(): void {
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
     this.noteModalOpen.set(true);
   }
 
@@ -598,7 +607,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   openConvertModal(): void {
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
     this.convertModalOpen.set(true);
   }
 
@@ -632,7 +641,7 @@ export class LeadDetailComponent implements OnInit {
   }
 
   openDeclineModal(): void {
-    if (this.isLeadLocked()) return;
+    if (this.isLeadReadOnly()) return;
     this.declineModalOpen.set(true);
   }
 
@@ -659,7 +668,7 @@ export class LeadDetailComponent implements OnInit {
 
   async updateLeadStatus(nextStatus: LeadStatus): Promise<void> {
     const lead = this.lead();
-    if (!lead || this.actionLoading() || lead.status === nextStatus || this.isLeadLocked()) return;
+    if (!lead || this.actionLoading() || lead.status === nextStatus || this.isLeadReadOnly()) return;
 
     try {
       this.actionLoading.set(true);
@@ -668,6 +677,23 @@ export class LeadDetailComponent implements OnInit {
     } catch (error) {
       console.error('[LeadDetailComponent] updateLeadStatus error:', error);
       this.error.set('We were unable to update the lead status.');
+    } finally {
+      this.actionLoading.set(false);
+    }
+  }
+
+  async reopenClosedUnbookedLead(): Promise<void> {
+    const lead = this.lead();
+    if (!lead || lead.status !== 'closed_unbooked' || this.actionLoading()) return;
+
+    try {
+      this.actionLoading.set(true);
+      await this.leadWorkflow.reopenClosedUnbookedLead(lead);
+      await this.refreshLeadDetail();
+      this.toast.showToast('Lead reopened and moved back to Nurturing.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] reopenClosedUnbookedLead error:', error);
+      this.error.set('We were unable to reopen this lead right now.');
     } finally {
       this.actionLoading.set(false);
     }

@@ -142,6 +142,33 @@ export class LeadWorkflowService {
     return updatedLead;
   }
 
+  async reopenClosedUnbookedLead(lead: Lead): Promise<Lead> {
+    if (lead.status !== 'closed_unbooked') {
+      throw new Error(
+        `Cannot reopen a lead from status "${lead.status}".`
+      );
+    }
+
+    const updatedLead = await this.leadRepository.updateLead(lead.lead_id, {
+      status: 'nurturing',
+    });
+
+    await this.activityRepository.createLeadActivity({
+      lead_id: lead.lead_id,
+      activity_type: 'status_change',
+      activity_label: 'Lead reopened',
+      activity_description:
+        'Closed unbooked lead was reopened and moved back to Nurturing.',
+      metadata: {
+        previous_status: lead.status,
+        next_status: 'nurturing',
+        reopened_from: 'closed_unbooked',
+      },
+    });
+
+    return updatedLead;
+  }
+
   canScheduleConsultation(status: LeadStatus): boolean {
     return status === 'new' || status === 'contacted';
   }

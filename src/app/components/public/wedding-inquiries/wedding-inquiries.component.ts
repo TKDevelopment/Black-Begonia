@@ -14,26 +14,15 @@ import { CreateWeddingLeadInput } from '../../../core/models/create-wedding-lead
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { Router } from '@angular/router';
 
-type InquiryInsert = {
-  inquiry_id: string;
-  first_name: string;
-  last_name: string;
-  fiance_first_name: string;
-  fiance_last_name: string;
-  phone: string;
-  email: string;
-  service_type: 'wedding';
-  event_date: string;
-  ceremony_venue: string | null;
-  reception_venue: string | null;
-  budget: number | string;
-  guests: number | string;
-  event_planner_name: string | null;
-  event_planner_phone: string | null;
-  event_planner_email: string | null;
-  preferred_contact_method: string;
-  lead_source: string;
-  notes: string;
+type WeddingServiceType =
+  | 'full-service wedding'
+  | 'ceremony-only wedding'
+  | 'elopement'
+  | 'engagement';
+
+type BudgetOption = {
+  label: string;
+  value: string;
 };
 
 @Component({
@@ -44,6 +33,34 @@ type InquiryInsert = {
   styleUrl: './wedding-inquiries.component.scss',
 })
 export class WeddingInquiriesComponent {
+  private readonly inquiryEmailMaxAttempts = 3;
+  private readonly inquiryEmailRetryDelayMs = 1200;
+  private readonly weddingBudgetOptions: Record<WeddingServiceType, BudgetOption[]> = {
+    'full-service wedding': [
+      { label: '$3,000 - $5,000', value: '$3,000 - $5,000' },
+      { label: '$5,000 - $8,000', value: '$5,000 - $8,000' },
+      { label: '$8,000 - $10,000', value: '$8,000 - $10,000' },
+      { label: '$10,000+', value: '$10,000+' },
+    ],
+    'ceremony-only wedding': [
+      { label: '$2,800 - $5,000', value: '$2,800 - $5,000' },
+      { label: '$5,000 - $8,000', value: '$5,000 - $8,000' },
+      { label: '$8,000 - $10,000', value: '$8,000 - $10,000' },
+      { label: '$10,000+', value: '$10,000+' },
+    ],
+    engagement: [
+      { label: '$350 - $500', value: '$350 - $500' },
+      { label: '$500 - $800', value: '$500 - $800' },
+      { label: '$800 - $1,200', value: '$800 - $1,200' },
+      { label: '$1,200+', value: '$1,200+' },
+    ],
+    elopement: [
+      { label: '$650 - $1,000', value: '$650 - $1,000' },
+      { label: '$1,000 - $1,500', value: '$1,000 - $1,500' },
+      { label: '$1,500 - $2,000', value: '$1,500 - $2,000' },
+      { label: '$2,000+', value: '$2,000+' },
+    ],
+  };
   weddingInquiryForm!: FormGroup;
   submitting = false;
   submitted = false;
@@ -86,7 +103,26 @@ export class WeddingInquiriesComponent {
       this.invalidTooltips[name] = 'hidden';
     });
 
+    this.weddingInquiryForm.get('serviceType')?.valueChanges.subscribe((serviceType) => {
+      const budgetControl = this.weddingInquiryForm.get('budget');
+      if (!budgetControl) return;
+
+      const allowedValues = this.getBudgetOptionsForServiceType(serviceType).map(
+        (option) => option.value
+      );
+
+      if (budgetControl.value && !allowedValues.includes(budgetControl.value)) {
+        budgetControl.setValue('');
+      }
+    });
+
     this.addInspirationUrl();
+  }
+
+  get budgetOptions(): BudgetOption[] {
+    return this.getBudgetOptionsForServiceType(
+      this.weddingInquiryForm.get('serviceType')?.value
+    );
   }
 
   get inspirationUrls(): FormArray {
@@ -215,11 +251,7 @@ export class WeddingInquiriesComponent {
         }
       }
 
-      try {
-        await this.triggerInquiryEmails(lead.lead_id, 'wedding');
-      } catch (emailErr) {
-        console.error('Email function failed (non-blocking): ', emailErr);
-      }
+      await this.triggerInquiryEmails(lead.lead_id, 'wedding');
 
       this.submittedInquiry = { lead_id: lead.lead_id };
       this.submitted = true;
@@ -267,19 +299,60 @@ export class WeddingInquiriesComponent {
 
   async triggerInquiryEmails(leadId: string, leadType: string) {
     const client = this.supabase.getClient();
+    let lastError: unknown = null;
 
-    const { data, error } = await client.functions.invoke('send-inquiry-emails', {
-      body: {
-        lead_id: leadId,
-        lead_type: leadType,
-      },
-    });
+    for (let attempt = 1; attempt <= this.inquiryEmailMaxAttempts; attempt += 1) {
+      try {
+        const { data, error } = await client.functions.invoke('send-inquiry-emails', {
+          body: {
+            lead_id: leadId,
+            lead_type: leadType,
+          },
+        });
 
-    if (error) {
-      console.error('[send-inquiry-emails] invoke error:', error);
-      throw error;
+        if (error) {
+          throw error;
+        }
+
+        if (data?.success === false) {
+          throw new Error(
+            typeof data?.error === 'string'
+              ? data.error
+              : 'Inquiry email function reported failure.'
+          );
+        }
+
+        console.log('[send-inquiry-emails] response:', data);
+        return;
+      } catch (error) {
+        lastError = error;
+        console.error(
+          `[send-inquiry-emails] attempt ${attempt}/${this.inquiryEmailMaxAttempts} failed:`,
+          error
+        );
+
+        if (attempt < this.inquiryEmailMaxAttempts) {
+          await this.delay(this.inquiryEmailRetryDelayMs);
+        }
+      }
     }
 
-    console.log('[send-inquiry-emails] response:', data);
+    console.error(
+      `[send-inquiry-emails] all ${this.inquiryEmailMaxAttempts} attempts failed for lead ${leadId}.`,
+      lastError
+    );
+  }
+
+  private getBudgetOptionsForServiceType(serviceType: string | null | undefined): BudgetOption[] {
+    const normalizedServiceType = String(serviceType ?? '').trim().toLowerCase() as WeddingServiceType;
+
+    return (
+      this.weddingBudgetOptions[normalizedServiceType] ??
+      this.weddingBudgetOptions['full-service wedding']
+    );
+  }
+
+  private async delay(ms: number): Promise<void> {
+    await new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 }
