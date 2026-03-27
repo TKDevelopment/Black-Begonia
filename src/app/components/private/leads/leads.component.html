@@ -48,7 +48,7 @@
                 Active
               </span>
             </div>
-            <div class="text-xs text-stone-500">{{ proposal.file_name || 'Proposal PDF' }}</div>
+            <div class="text-xs text-stone-500">{{ proposal.signed_url ? 'Floral Proposal PDF' : 'Floral Proposal Draft' }}</div>
           </div>
         </ng-container>
 
@@ -99,3 +99,4 @@
     />
   </div>
 </div>
+

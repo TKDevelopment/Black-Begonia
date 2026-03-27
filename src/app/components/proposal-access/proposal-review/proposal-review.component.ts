@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -20,9 +20,9 @@ export class ProposalReviewComponent implements OnInit {
   readonly session = computed(() => this.proposalAccessService.getSession());
   readonly previewUrl = computed<SafeResourceUrl | null>(() => {
     const session = this.session();
-    if (!session?.signed_url) return null;
+    if (!session?.pdf_url) return null;
 
-    return this.sanitizer.bypassSecurityTrustResourceUrl(session.signed_url);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(session.pdf_url);
   });
   readonly hasResponded = computed(() => !!this.session()?.response_action);
 
@@ -33,6 +33,9 @@ export class ProposalReviewComponent implements OnInit {
   readonly declineModalOpen = signal(false);
   readonly acceptModalOpen = signal(false);
   readonly declineFeedback = signal('');
+  readonly signatureName = signal('');
+  readonly acceptedTerms = signal(false);
+  readonly acceptedPrivacyPolicy = signal(false);
   readonly declineModalState = signal<'form' | 'submitting' | 'success'>('form');
   readonly acceptModalState = signal<'confirm' | 'submitting' | 'success'>('confirm');
 
@@ -47,8 +50,8 @@ export class ProposalReviewComponent implements OnInit {
       this.completedAction.set(session.response_action);
       this.successMessage.set(
         session.response_action === 'accept'
-          ? 'This proposal has already been accepted.'
-          : 'This proposal has already been declined and your feedback was received.'
+          ? 'This Floral Proposal has already been accepted.'
+          : 'This Floral Proposal has already been declined and your feedback was received.'
       );
     }
   }
@@ -105,15 +108,28 @@ export class ProposalReviewComponent implements OnInit {
   async confirmAccept(): Promise<void> {
     if (this.submitting() || this.completedAction()) return;
 
+    const signatureName = this.signatureName().trim();
+    if (!this.acceptedTerms() || !this.acceptedPrivacyPolicy() || !signatureName) {
+      this.errorMessage.set(
+        'Please accept the terms, accept the privacy policy, and provide your full signature name.'
+      );
+      return;
+    }
+
     try {
       this.submitting.set(true);
       this.acceptModalState.set('submitting');
       this.errorMessage.set(null);
       this.successMessage.set(null);
 
-      await this.proposalAccessService.submitResponse('accept');
+      await this.proposalAccessService.submitResponse({
+        action: 'accept',
+        accepted_terms: this.acceptedTerms(),
+        accepted_privacy_policy: this.acceptedPrivacyPolicy(),
+        signature_name: signatureName,
+      });
       this.completedAction.set('accept');
-      this.successMessage.set('Your proposal has been accepted successfully.');
+      this.successMessage.set('Your Floral Proposal has been accepted successfully.');
       this.acceptModalState.set('success');
     } catch (error) {
       console.error('[ProposalReviewComponent] confirmAccept error:', error);
@@ -133,7 +149,7 @@ export class ProposalReviewComponent implements OnInit {
 
     const feedback = this.declineFeedback().trim();
     if (!feedback) {
-      this.errorMessage.set('Please share a few notes so we can revise the proposal thoughtfully.');
+      this.errorMessage.set('Please share a few notes so we can revise the Floral Proposal thoughtfully.');
       return;
     }
 
@@ -143,10 +159,13 @@ export class ProposalReviewComponent implements OnInit {
       this.errorMessage.set(null);
       this.successMessage.set(null);
 
-      await this.proposalAccessService.submitResponse('decline', feedback);
+      await this.proposalAccessService.submitResponse({
+        action: 'decline',
+        feedback,
+      });
       this.completedAction.set('decline');
       this.successMessage.set(
-        'Your message was received and the proposal was declined successfully.'
+        'Your message was received and the Floral Proposal was declined successfully.'
       );
       this.declineModalState.set('success');
     } catch (error) {

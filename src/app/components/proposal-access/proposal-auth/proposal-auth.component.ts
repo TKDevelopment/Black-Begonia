@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -21,10 +21,7 @@ export class ProposalAuthComponent implements OnInit {
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    passcode: [
-      '',
-      [Validators.required, Validators.pattern(/^\d{6}$/)],
-    ],
+    passcode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
   });
 
   ngOnInit(): void {
@@ -52,7 +49,7 @@ export class ProposalAuthComponent implements OnInit {
       this.errorMessage.set(
         error instanceof Error
           ? error.message
-          : 'We could not verify your proposal access.'
+          : 'We could not verify your Floral Proposal access.'
       );
     } finally {
       this.isSubmitting.set(false);

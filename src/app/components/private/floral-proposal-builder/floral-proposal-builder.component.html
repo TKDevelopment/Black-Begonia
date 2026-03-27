@@ -1,0 +1,346 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+    <app-loading-state-block
+      *ngIf="loading()"
+      title="Loading Floral Proposal builder"
+      description="Please wait while we load the lead, proposal versions, templates, tax settings, and catalog items."
+      minHeightClass="min-h-[560px]"
+    />
+
+    <app-error-state-block
+      *ngIf="!loading() && error()"
+      title="Unable to load Floral Proposal builder"
+      [description]="error()!"
+      retryLabel="Retry"
+      (retry)="retry()"
+      minHeightClass="min-h-[560px]"
+    />
+
+    <app-entity-detail-shell
+      *ngIf="!loading() && !error() && lead()"
+      [title]="title()"
+      [subtitle]="subtitle()"
+      [loading]="false"
+      backLabel="Back to Lead"
+      (back)="goBack()"
+    >
+      <div detail-main>
+        <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19] sm:p-6">
+          <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <p class="font-oswald text-[11px] uppercase tracking-[0.32em] text-[#ea938c]">Floral Proposal Builder</p>
+              <h2 class="mt-3 font-cormorant text-4xl text-stone-900 dark:text-stone-100">{{ lead()!.first_name }} {{ lead()!.last_name }}</h2>
+              <p class="mt-3 max-w-3xl text-sm leading-7 text-stone-600 dark:text-stone-300">
+                Build the client-facing Floral Proposal line items here, then expand each row to compose the internal catalog-item recipe that drives pricing and the shopping list.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+              <app-status-badge *ngIf="activeProposal()" [label]="activeProposal()!.status" [tone]="getProposalStatusTone(activeProposal()!.status)" />
+              <button type="button" (click)="exportFloralProposalPdf()" [disabled]="!lineItems().length" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#2b2624]">Export PDF</button>
+              <button type="button" (click)="saveDraft()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#2b2624]">Save Draft</button>
+              <button type="button" (click)="submitFloralProposal()" [disabled]="!canSubmit() || saving()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">Submit Floral Proposal</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19] sm:p-5">
+          <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">Proposal Template</label>
+              <select [ngModel]="selectedTemplateId()" (ngModelChange)="onTemplateChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100">
+                <option value="">Select a template</option>
+                <option *ngFor="let template of templates(); trackBy: trackByTemplate" [value]="template.template_id">{{ template.name }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">Tax Region</label>
+              <select [ngModel]="selectedTaxRegionId()" (ngModelChange)="onTaxRegionChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100">
+                <option value="">Select a tax region</option>
+                <option *ngFor="let region of taxRegions(); trackBy: trackByTaxRegion" [value]="region.tax_region_id">{{ region.name }} · {{ formatPercent(region.tax_rate) }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19] sm:p-5">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Line Items</h3>
+              <p class="mt-1 text-sm leading-6 text-stone-600 dark:text-stone-300">
+                Add client-facing line items, then expand each row to compose the internal catalog-item recipe or manual fee amount.
+              </p>
+            </div>
+
+            <button type="button" (click)="addLineItem()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-2xl bg-[#1f1f1f] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#ea938c] dark:text-white">
+              Add Line Item
+            </button>
+          </div>
+
+          <datalist id="catalog-item-options">
+            <option *ngFor="let item of activeCatalogItems(); trackBy: trackByCatalogItem" [value]="item.name">{{ item.name }}</option>
+          </datalist>
+          <div *ngIf="lineItems().length; else emptyState" class="mt-5 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
+            <div class="overflow-x-auto">
+              <table cdkDropList [cdkDropListData]="lineItems()" (cdkDropListDropped)="reorderLineItems($event)" class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/10">
+                <thead class="bg-[#fcfaf8] dark:bg-[#171413]">
+                  <tr class="text-left text-[11px] uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">
+                    <th class="px-4 py-3 font-semibold">Item</th>
+                    <th class="px-4 py-3 font-semibold w-28">Qty</th>
+                    <th class="px-4 py-3 font-semibold w-40">Unit Price</th>
+                    <th class="px-4 py-3 font-semibold w-40">Subtotal</th>
+                    <th class="px-4 py-3 font-semibold w-36">Actions</th>
+                  </tr>
+                </thead>
+                <ng-container *ngFor="let line of lineItems(); trackBy: trackByLine">
+                  <tbody
+                    cdkDrag
+                    [cdkDragData]="line"
+                    (cdkDragStarted)="onLineDragStarted(line.local_id)"
+                    (cdkDragEnded)="onLineDragEnded()"
+                    class="border-t border-stone-100 dark:border-white/5"
+                  >
+                    <ng-template cdkDragPreview>
+                      <div class="flex min-w-[720px] items-center gap-3 rounded-2xl border border-stone-300 bg-white px-4 py-3 shadow-2xl dark:border-white/10 dark:bg-[#1f1b19]">
+                        <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-[#fcfaf8] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M7 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM16 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                          </svg>
+                        </span>
+                        <span class="inline-flex h-9 w-24 shrink-0 items-center justify-center rounded-full bg-stone-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-600 dark:bg-white/10 dark:text-stone-300">{{ formatStatusLabel(line.line_item_type) }}</span>
+                        <span class="min-w-0 flex-1 truncate text-sm font-semibold text-stone-900 dark:text-stone-100">{{ line.item_name || 'Untitled line item' }}</span>
+                        <span class="w-24 text-right text-sm text-stone-600 dark:text-stone-300">{{ line.quantity }}</span>
+                        <span class="w-32 text-right text-sm text-stone-600 dark:text-stone-300">{{ formatCurrency(line.unit_price) }}</span>
+                        <span class="w-32 text-right text-sm font-semibold text-stone-900 dark:text-stone-100">{{ formatCurrency(line.subtotal) }}</span>
+                      </div>
+                    </ng-template>
+                    <tr
+                      (click)="toggleExpanded(line.local_id)"
+                      class="cursor-pointer bg-white align-top transition hover:bg-stone-50/80 dark:bg-[#1f1b19] dark:hover:bg-[#231f1d]"
+                    >
+                      <td class="px-4 py-3">
+                        <div class="flex items-center gap-2.5">
+                          <button type="button" cdkDragHandle (click)="$event.stopPropagation()" class="inline-flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-xl border border-stone-200 bg-[#fcfaf8] text-stone-500 transition hover:bg-stone-100 active:cursor-grabbing dark:border-white/10 dark:bg-[#171413] dark:text-stone-300 dark:hover:bg-[#231f1d]" aria-label="Drag to reorder line item">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M7 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM16 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                            </svg>
+                          </button>
+                          <span class="inline-flex h-9 w-24 shrink-0 items-center justify-center rounded-full bg-stone-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-600 dark:bg-white/10 dark:text-stone-300">{{ formatStatusLabel(line.line_item_type) }}</span>
+                          <input (click)="$event.stopPropagation()" [ngModel]="line.item_name" (ngModelChange)="updateLineName(line.local_id, $event)" [disabled]="!canEdit()" type="text" maxlength="60" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Bridal Bouquet" />
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <input (click)="$event.stopPropagation()" [ngModel]="line.quantity" (ngModelChange)="updateLineQuantity(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" />
+                      </td>
+                      <td class="px-4 py-3"><div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base font-medium text-stone-900 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100">{{ formatCurrency(line.unit_price) }}</div></td>
+                      <td class="px-4 py-3"><div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-base font-medium text-stone-900 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100">{{ formatCurrency(line.subtotal) }}</div></td>
+                      <td class="px-4 py-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          <button type="button" (click)="$event.stopPropagation(); removeLine(line.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">Remove</button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="line.expanded" class="bg-[#fcfaf8] dark:bg-[#171413]">
+                      <td colspan="5" class="px-4 py-4">
+                        <div class="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
+                          <div class="rounded-2xl border border-stone-200 bg-white p-4 dark:border-white/10 dark:bg-[#1f1b19]">
+                            <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">Line Type</label>
+                            <select (click)="$event.stopPropagation()" [ngModel]="line.line_item_type" (ngModelChange)="updateLineType(line.local_id, $event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100">
+                              <option value="product">Product</option>
+                              <option value="fee">Fee</option>
+                              <option value="discount">Discount</option>
+                            </select>
+
+                            <label class="mt-4 block text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">Notes</label>
+                            <textarea [ngModel]="line.notes || ''" (ngModelChange)="updateLineNotes(line.local_id, $event)" [disabled]="!canEdit()" rows="3" class="mt-2 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Optional internal note"></textarea>
+
+                            <div *ngIf="line.line_item_type !== 'product'" class="mt-4">
+                              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">Manual Unit Price</label>
+                              <input (click)="$event.stopPropagation()" [ngModel]="line.unit_price" (ngModelChange)="updateManualUnitPrice(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" />
+                              <p class="mt-2 text-xs leading-5 text-stone-500 dark:text-stone-400">Fee and discount rows use this manual amount instead of catalog-item composition.</p>
+                            </div>
+                          </div>
+
+                          <div class="rounded-2xl border border-stone-200 bg-white p-4 dark:border-white/10 dark:bg-[#1f1b19]">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <h4 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Internal Catalog Composition</h4>
+                                <p class="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">This internal build drives the client-facing price and the shopping list. Fee and discount lines can stay manual.</p>
+                              </div>
+                              <button type="button" (click)="$event.stopPropagation(); addComponentRow(line.local_id)" [disabled]="!canEdit() || line.line_item_type !== 'product'" class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#2b2624]">Add Catalog Row</button>
+                            </div>
+
+                            <div *ngIf="line.line_item_type === 'product'" class="mt-4 overflow-x-auto">
+                              <table class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/10">
+                                <thead>
+                                  <tr class="text-left text-[11px] uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                                    <th class="pb-3 pr-3 font-semibold">Catalog Item</th>
+                                    <th class="pb-3 pr-3 font-semibold w-28">Qty</th>
+                                    <th class="pb-3 pr-3 font-semibold w-32">Markup %</th>
+                                    <th class="pb-3 pr-3 font-semibold w-32">Reserve %</th>
+                                    <th class="pb-3 pr-3 font-semibold w-36">Subtotal</th>
+                                    <th class="pb-3 font-semibold w-24">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-stone-100 dark:divide-white/5">
+                                  <tr *ngFor="let component of line.components; trackBy: trackByComponent">
+                                    <td class="py-3 pr-3">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Red Rose" />
+                                    </td>
+                                    <td class="py-3 pr-3">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" />
+                                    </td>
+                                    <td class="py-3 pr-3">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" />
+                                    </td>
+                                    <td class="py-3 pr-3">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.reserve_percent" (ngModelChange)="updateComponentReserve(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" />
+                                    </td>
+                                    <td class="py-3 pr-3"><div class="rounded-xl border border-stone-200 bg-[#fcfaf8] px-3 py-2 text-sm font-medium text-stone-900 dark:border-white/10 dark:bg-[#171413] dark:text-stone-100">{{ formatCurrency(component.subtotal) }}</div></td>
+                                    <td class="py-3">
+                                      <button type="button" (click)="$event.stopPropagation(); removeComponentRow(line.local_id, component.local_id)" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">Remove</button>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+
+                              <div *ngIf="!line.components.length" class="rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+                                No catalog rows yet. Add the flowers, greens, and materials that make up this line item.
+                              </div>
+                            </div>
+
+                            <div *ngIf="line.line_item_type !== 'product'" class="mt-4 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+                              This line item is configured as a {{ line.line_item_type }}. Set the manual unit price in the left panel and it will roll up into the Floral Proposal totals.
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </ng-container>
+              </table>
+            </div>
+          </div>
+
+          <ng-template #emptyState>
+            <div class="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-10 text-sm text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+              No line items yet. Start by adding the client-facing items that should appear on the Floral Proposal.
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="mt-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19] sm:p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Shopping List Preview</h3>
+              <p class="mt-1 text-sm text-stone-600 dark:text-stone-300">Generated automatically from the internal catalog composition, reserve percentages, and default vendor packs.</p>
+            </div>
+            <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600 dark:bg-white/10 dark:text-stone-300">{{ shoppingList().length }}</span>
+          </div>
+
+          <div *ngIf="shoppingList().length; else noShoppingList" class="mt-5 overflow-x-auto">
+            <table class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/10">
+              <thead>
+                <tr class="text-left text-xs uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">
+                  <th class="pb-3 pr-4">Item</th>
+                  <th class="pb-3 pr-4">Vendor</th>
+                  <th class="pb-3 pr-4">Needed</th>
+                  <th class="pb-3 pr-4">Reserve</th>
+                  <th class="pb-3 pr-4">Total to Buy</th>
+                  <th class="pb-3 pr-4">Pack Count</th>
+                  <th class="pb-3 pr-4">Estimated Cost</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100 dark:divide-white/5">                <tr *ngFor="let item of shoppingList()">
+                  <td class="py-3 pr-4">
+                    <p class="font-medium text-stone-900 dark:text-stone-100">{{ item.item_name }}</p>
+                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">{{ formatStatusLabel(item.item_type) }} · {{ formatStatusLabel(item.unit_type) }}</p>
+                  </td>
+                  <td class="py-3 pr-4 text-stone-700 dark:text-stone-200">{{ item.vendor?.name || 'No default vendor' }}</td>
+                  <td class="py-3 pr-4 text-stone-700 dark:text-stone-200">{{ item.required_units }}</td>
+                  <td class="py-3 pr-4 text-stone-700 dark:text-stone-200">{{ item.reserve_units }}</td>
+                  <td class="py-3 pr-4 text-stone-700 dark:text-stone-200">{{ item.total_units_to_buy }}</td>
+                  <td class="py-3 pr-4 text-stone-700 dark:text-stone-200">{{ item.required_pack_count ?? '' }}</td>
+                  <td class="py-3 pr-4 text-stone-700 dark:text-stone-200">{{ formatCurrency(item.total_estimated_cost) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="pt-4 text-right text-sm font-semibold text-stone-900 dark:text-stone-100">Shopping List Subtotal</td>
+                  <td class="pt-4 text-sm font-semibold text-stone-900 dark:text-stone-100">{{ formatCurrency(shoppingListSubtotal()) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <ng-template #noShoppingList>
+            <div class="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">Add catalog composition rows to product lines and the shopping list will populate automatically.</div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div detail-sidebar>
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+          <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Workflow Notes</h3>
+          <p class="mt-4 text-sm leading-7 text-stone-600 dark:text-stone-300">This builder now creates the full Floral Proposal. Once the client accepts and signs it, the lead becomes eligible for project conversion.</p>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19] sm:p-5">
+          <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Totals</h3>
+          <div class="mt-4 space-y-2.5 text-sm">
+            <div class="flex items-center justify-between text-stone-600 dark:text-stone-300"><span>Subtotal</span><span class="font-medium text-stone-900 dark:text-stone-100">{{ formatCurrency(totals().subtotal) }}</span></div>
+            <div class="flex items-center justify-between text-stone-600 dark:text-stone-300"><span>Tax</span><span class="font-medium text-stone-900 dark:text-stone-100">{{ formatCurrency(totals().taxAmount) }}</span></div>
+            <div class="flex items-center justify-between border-t border-stone-200 pt-3 text-base font-semibold text-stone-900 dark:border-white/10 dark:text-stone-100"><span>Total</span><span>{{ formatCurrency(totals().totalAmount) }}</span></div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19] sm:p-5">
+          <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Proposal Summary</h3>
+          <div class="mt-4 space-y-3 text-sm">
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Current Version</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ activeProposal()?.version || 1 }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Template</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ selectedTemplate()?.name || 'Not selected yet' }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Tax Region</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ selectedTaxRegion()?.name || 'Not selected yet' }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Default Markup</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ pricingSettings()?.default_markup_percent ?? 300 }}%</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Default Reserve</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ pricingSettings()?.default_reserve_percent ?? 3 }}%</p></div>
+            <div *ngIf="activeProposal()"><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Last Saved</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ formatDateTime(activeProposal()!.updated_at) }}</p></div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+          <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Proposal Versions</h3>
+          <div class="mt-5 space-y-3" *ngIf="proposals().length; else noVersions">
+            <div *ngFor="let proposal of proposals()" class="rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 dark:border-white/10 dark:bg-[#171413]">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-stone-900 dark:text-stone-100">Version {{ proposal.version }}</p>
+                <app-status-badge [label]="proposal.status" [tone]="getProposalStatusTone(proposal.status)" size="sm" />
+              </div>
+              <p class="mt-2 text-xs text-stone-500 dark:text-stone-400">Updated {{ formatDateTime(proposal.updated_at) }}</p>
+              <p class="mt-2 text-sm text-stone-700 dark:text-stone-200">{{ formatCurrency(proposal.total_amount) }}</p>
+            </div>
+          </div>
+          <ng-template #noVersions>
+            <p class="mt-4 text-sm text-stone-500 dark:text-stone-400">No Floral Proposal versions have been saved yet.</p>
+          </ng-template>
+        </div>
+
+        <div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+          <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">Lead Context</h3>
+          <div class="mt-5 space-y-4 text-sm">
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Lead Status</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ formatStatusLabel(lead()!.status) }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Event Date</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Budget Range</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ lead()!.budget_range || 'Not provided' }}</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Guest Count</p><p class="mt-1 text-stone-800 dark:text-stone-200">{{ lead()!.guest_count ?? 'Not provided' }}</p></div>
+          </div>
+        </div>
+      </div>
+    </app-entity-detail-shell>
+  </div>
+</div>
+
+
+
+
+
+

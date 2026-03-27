@@ -1,4 +1,4 @@
-﻿<div class="min-h-screen bg-[#f7f4f1]">
+<div class="min-h-screen bg-[#f7f4f1]">
   <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
     <app-loading-state-block
       *ngIf="loading()"
@@ -279,7 +279,7 @@
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                     [class]="getActivityIconClasses(activity.activity_type)"
                   >
-                    •
+                    �
                   </div>
 
                   <div class="min-w-0 flex-1 border-b border-stone-100 pb-5 last:border-b-0 last:pb-0">
@@ -375,14 +375,6 @@
       (confirm)="confirmConvert($event)"
     />
 
-    <app-lead-proposal-submit-modal
-      [open]="proposalModalOpen()"
-      [saving]="proposalSubmitting()"
-      [leadName]="title()"
-      (close)="closeProposalModal()"
-      (confirm)="submitProposal($event)"
-    />
-
     <app-confirm-dialog
       [open]="confirmDialogOpen()"
       [loading]="actionLoading()"
@@ -411,3 +403,4 @@
     />
   </div>
 </div>
+
