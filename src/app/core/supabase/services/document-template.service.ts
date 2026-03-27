@@ -2,16 +2,22 @@ import { Injectable } from '@angular/core';
 
 import {
   DocumentTemplate,
+  DocumentTemplateLogoUploadResult,
   DocumentTemplateUpsertInput,
 } from '../../models/floral-proposal';
 import { DocumentTemplateRepositoryService } from '../repositories/document-template-repository.service';
+import { SupabaseService } from '../clients/supabase.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DocumentTemplateService {
+  private readonly templateAssetBucket = 'proposal-template-assets';
+  private readonly signedUrlExpirySeconds = 60 * 60;
+
   constructor(
-    private readonly documentTemplateRepository: DocumentTemplateRepositoryService
+    private readonly documentTemplateRepository: DocumentTemplateRepositoryService,
+    private readonly supabaseService: SupabaseService
   ) {}
 
   async createDocumentTemplate(
@@ -33,5 +39,64 @@ export class DocumentTemplateService {
 
   async activateTemplate(template: DocumentTemplate): Promise<DocumentTemplate> {
     return this.updateDocumentTemplate(template.template_id, { is_active: true });
+  }
+
+  async uploadTemplateLogo(
+    templateId: string,
+    file: File
+  ): Promise<DocumentTemplateLogoUploadResult> {
+    const sanitizedFileName = file.name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9.\-_]+/g, '-')
+      .replace(/-+/g, '-');
+    const storagePath = `${templateId}/${Date.now()}-${sanitizedFileName}`;
+
+    const { error } = await this.supabaseService
+      .getClient()
+      .storage
+      .from(this.templateAssetBucket)
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('[DocumentTemplateService] uploadTemplateLogo error:', error);
+      throw new Error('We could not upload the template logo right now.');
+    }
+
+    const signedUrl = await this.getSignedTemplateLogoUrl(storagePath);
+    return { storagePath, signedUrl };
+  }
+
+  async removeTemplateLogo(storagePath: string): Promise<void> {
+    if (!storagePath) return;
+
+    const { error } = await this.supabaseService
+      .getClient()
+      .storage
+      .from(this.templateAssetBucket)
+      .remove([storagePath]);
+
+    if (error) {
+      console.error('[DocumentTemplateService] removeTemplateLogo error:', error);
+      throw new Error('We could not remove the template logo right now.');
+    }
+  }
+
+  async getSignedTemplateLogoUrl(storagePath: string): Promise<string> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .storage
+      .from(this.templateAssetBucket)
+      .createSignedUrl(storagePath, this.signedUrlExpirySeconds);
+
+    if (error || !data?.signedUrl) {
+      console.error('[DocumentTemplateService] getSignedTemplateLogoUrl error:', error);
+      throw new Error('We could not load the template logo right now.');
+    }
+
+    return data.signedUrl;
   }
 }
