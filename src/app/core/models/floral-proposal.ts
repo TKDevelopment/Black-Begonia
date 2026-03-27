@@ -10,6 +10,9 @@ export type FloralProposalStatus =
 export type FloralProposalLineItemType = 'product' | 'fee' | 'discount';
 export type FloralProposalShoppingListStatus = 'generated' | 'exported';
 export type DocumentTemplateKind = 'floral_proposal';
+export type DocumentTemplateHeaderLayout = 'editorial' | 'minimal' | 'classic';
+export type DocumentTemplateLineItemLayout = 'image_left' | 'image_right' | 'stacked';
+export type DocumentTemplateFooterLayout = 'signature_focused' | 'minimal' | 'formal';
 
 export interface FloralProposalResponseSummary {
   proposal_id: string;
@@ -33,9 +36,28 @@ export interface DocumentTemplate {
   template_key: string;
   template_kind: DocumentTemplateKind;
   is_active: boolean;
+  is_default: boolean;
+  logo_storage_path?: string | null;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  accent_color?: string | null;
+  heading_font_family?: string | null;
+  body_font_family?: string | null;
+  header_layout: DocumentTemplateHeaderLayout;
+  line_item_layout: DocumentTemplateLineItemLayout;
+  footer_layout: DocumentTemplateFooterLayout;
+  show_cover_page: boolean;
+  show_intro_message: boolean;
+  intro_title?: string | null;
+  intro_body?: string | null;
+  show_terms_section: boolean;
+  show_privacy_section: boolean;
+  show_signature_section: boolean;
+  agreement_clauses: Record<string, unknown>[];
   header_content: Record<string, unknown>;
   footer_content: Record<string, unknown>;
   body_config: Record<string, unknown>;
+  template_config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +105,10 @@ export interface FloralProposalLineItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  description?: string | null;
+  image_storage_path?: string | null;
+  image_alt_text?: string | null;
+  image_caption?: string | null;
   notes?: string | null;
   snapshot: Record<string, unknown>;
   created_at: string;
@@ -160,4 +186,33 @@ export interface CreateFloralProposalInput {
   privacy_policy_version?: string;
   snapshot?: Record<string, unknown>;
   created_by?: string | null;
+}
+
+export interface DocumentTemplateUpsertInput {
+  name: string;
+  template_key: string;
+  template_kind?: DocumentTemplateKind;
+  is_active?: boolean;
+  is_default?: boolean;
+  logo_storage_path?: string | null;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  accent_color?: string | null;
+  heading_font_family?: string | null;
+  body_font_family?: string | null;
+  header_layout?: DocumentTemplateHeaderLayout;
+  line_item_layout?: DocumentTemplateLineItemLayout;
+  footer_layout?: DocumentTemplateFooterLayout;
+  show_cover_page?: boolean;
+  show_intro_message?: boolean;
+  intro_title?: string | null;
+  intro_body?: string | null;
+  show_terms_section?: boolean;
+  show_privacy_section?: boolean;
+  show_signature_section?: boolean;
+  agreement_clauses?: Record<string, unknown>[];
+  header_content?: Record<string, unknown>;
+  footer_content?: Record<string, unknown>;
+  body_config?: Record<string, unknown>;
+  template_config?: Record<string, unknown>;
 }

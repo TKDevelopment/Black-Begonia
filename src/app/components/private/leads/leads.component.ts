@@ -46,6 +46,11 @@ import { ToastService } from '../../../core/services/toast.service';
   styleUrl: './leads.component.scss',
 })
 export class LeadsComponent implements OnInit {
+  private readonly hiddenDefaultStatuses = new Set<LeadStatus>([
+    'declined',
+    'closed_unbooked',
+    'converted',
+  ]);
   private router = inject(Router);
   private leadRepository = inject(LeadRepositoryService);
   private proposalRepository = inject(FloralProposalRepositoryService);
@@ -74,8 +79,6 @@ export class LeadsComponent implements OnInit {
     { key: 'proposal_response', label: 'Client Response' },
     { key: 'event_date', label: 'Event Date' },
     { key: 'status', label: 'Status' },
-    { key: 'source', label: 'Source' },
-    { key: 'created_at', label: 'Created' },
   ];
 
   proposalByLeadId = computed<Record<string, FloralProposal | null>>(() => {
@@ -161,11 +164,19 @@ export class LeadsComponent implements OnInit {
         (proposal?.status ?? '').toLowerCase().includes(term) ||
         (response?.feedback ?? '').toLowerCase().includes(term);
 
+      const matchesDefaultStatusVisibility =
+        status !== 'all' || !this.hiddenDefaultStatuses.has(lead.status);
       const matchesStatus = status === 'all' || lead.status === status;
       const matchesEventType = eventType === 'all' || (lead.event_type ?? '') === eventType;
       const matchesServiceType = serviceType === 'all' || (lead.service_type ?? '') === serviceType;
 
-      return matchesSearch && matchesStatus && matchesEventType && matchesServiceType;
+      return (
+        matchesSearch &&
+        matchesDefaultStatusVisibility &&
+        matchesStatus &&
+        matchesEventType &&
+        matchesServiceType
+      );
     });
   });
 
@@ -213,7 +224,7 @@ export class LeadsComponent implements OnInit {
         options: [
           { label: 'All Event Types', value: 'all' },
           ...eventTypes.map((eventType) => ({
-            label: eventType,
+            label: this.formatDisplayValue(eventType),
             value: eventType,
           })),
         ],
@@ -225,7 +236,7 @@ export class LeadsComponent implements OnInit {
         options: [
           { label: 'All Service Types', value: 'all' },
           ...serviceTypes.map((serviceType) => ({
-            label: serviceType,
+            label: this.formatDisplayValue(serviceType),
             value: serviceType,
           })),
         ],
@@ -391,6 +402,16 @@ export class LeadsComponent implements OnInit {
       day: 'numeric',
       year: 'numeric',
     }).format(new Date(value));
+  }
+
+  formatDisplayValue(value: string | null | undefined): string {
+    if (!value) {
+      return 'Not set';
+    }
+
+    return value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
   getProposalForLead(leadId: string): FloralProposal | null {

@@ -28,6 +28,7 @@ export class SidebarComponent {
   private readonly router = inject(Router);
   readonly crmThemeService = inject(CrmThemeService);
   readonly floralProposalBuilderOpen = signal(
+    this.router.url.startsWith('/admin/proposal-templates') ||
     this.router.url.startsWith('/admin/catalog-items') ||
       this.router.url.startsWith('/admin/vendors') ||
       this.router.url.startsWith('/admin/arrangements') ||
@@ -47,6 +48,7 @@ export class SidebarComponent {
     {
       label: 'Floral Proposal Builder',
       children: [
+        { label: 'Templates', route: '/admin/proposal-templates' },
         { label: 'Catalog', route: '/admin/catalog-items' },
         { label: 'Vendors', route: '/admin/vendors' },
         { label: 'Arrangements', route: '/admin/arrangements' },

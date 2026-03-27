@@ -217,6 +217,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'proposal-templates',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
+        path: 'proposal-templates/:templateId',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
         path: 'catalog-items',
         loadComponent: () =>
           import('./components/private/catalog-items/catalog-items.component').then(

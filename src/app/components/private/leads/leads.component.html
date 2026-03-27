@@ -10,7 +10,7 @@
     />
 
     <app-search-filter-bar
-      searchPlaceholder="Search by name, email, proposal file, feedback, event type, or source"
+      searchPlaceholder="Search by name, email, proposal file, feedback, or event type"
       [searchValue]="searchTerm()"
       [filters]="filters()"
       (searchChange)="onSearchChange($event)"
@@ -76,16 +76,16 @@
         </ng-template>
       </ng-template>
 
+      <ng-template appEntityTableCell="service_type" let-row>
+        <span class="text-stone-700">{{ formatDisplayValue(row.service_type) }}</span>
+      </ng-template>
+
       <ng-template appEntityTableCell="event_date" let-row>
         <span class="text-stone-700">{{ formatEventDate(row.event_date) }}</span>
       </ng-template>
 
       <ng-template appEntityTableCell="status" let-row>
         <app-status-badge [label]="row.status" [tone]="getLeadStatusTone(row.status)" />
-      </ng-template>
-
-      <ng-template appEntityTableCell="created_at" let-row>
-        <span class="text-stone-600">{{ formatCreatedAt(row.created_at) }}</span>
       </ng-template>
     </app-entity-table-shell>
 
