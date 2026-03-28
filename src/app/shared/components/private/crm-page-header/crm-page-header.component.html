@@ -15,7 +15,7 @@
       type="button"
       (click)="secondaryAction.emit()"
       [disabled]="secondaryDisabled"
-      class="inline-flex w-full items-center justify-center rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      class="inline-flex w-full items-center justify-center rounded-xl border border-black/10 bg-white px-3.5 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
     >
       {{ secondaryActionLabel }}
     </button>
@@ -25,7 +25,7 @@
       type="button"
       (click)="primaryAction.emit()"
       [disabled]="primaryDisabled"
-      class="inline-flex w-full items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      class="inline-flex w-full items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-[#1f1f1f] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
     >
       {{ primaryActionLabel }}
     </button>

@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -261,7 +261,7 @@ export class CatalogItemsComponent implements OnInit {
   async deactivateCurrentItem(): Promise<void> {
     const item = this.item();
     if (!item || this.saving()) return;
-    const confirmed = window.confirm(`Deactivate ${item.name}? It will remain in the catalog but won’t be available for new arrangement use.`);
+    const confirmed = window.confirm(`Deactivate ${item.name}? It will remain in the catalog but won�t be available for new Floral Proposal use.`);
     if (!confirmed) return;
 
     try {
@@ -333,3 +333,4 @@ export class CatalogItemsComponent implements OnInit {
     }
   }
 }
+

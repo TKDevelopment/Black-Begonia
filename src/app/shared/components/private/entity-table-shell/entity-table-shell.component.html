@@ -1,4 +1,4 @@
-<div class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+<div class="crm-table-shell overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
   <div *ngIf="loading" class="p-3.5 sm:p-4 md:p-5">
     <div class="space-y-2.5">
       <div class="h-9 animate-pulse rounded-xl bg-stone-100"></div>
@@ -12,8 +12,8 @@
   <ng-container *ngIf="!loading">
     <ng-container *ngIf="rows?.length; else emptyBlock">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-stone-200">
-          <thead class="bg-stone-50">
+        <table class="crm-table min-w-full divide-y divide-stone-200">
+          <thead class="crm-table-head bg-stone-50">
             <tr>
               <th
                 *ngFor="let column of columns"
@@ -26,17 +26,17 @@
             </tr>
           </thead>
 
-          <tbody class="divide-y divide-stone-100 bg-white">
+          <tbody class="crm-table-body divide-y divide-stone-100 bg-white">
             <tr
               *ngFor="let row of rows; trackBy: trackByRow"
               (click)="onRowClicked(row)"
-              class="transition"
+              class="crm-table-row transition"
               [class.cursor-pointer]="clickableRows"
               [class.hover:bg-stone-50]="clickableRows"
             >
               <td
                 *ngFor="let column of columns"
-                class="px-3 py-2.5 align-top text-[12px] text-stone-700 sm:px-3.5 sm:text-[13px] md:px-5 md:py-3"
+                class="crm-table-cell px-3 py-2.5 align-top text-[12px] text-stone-700 sm:px-3.5 sm:text-[13px] md:px-5 md:py-3"
                 [ngClass]="column.className"
               >
                 <ng-container *ngIf="getCellTemplate(column.key) as customTemplate; else defaultCell">
