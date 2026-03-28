@@ -37,12 +37,10 @@ export interface FloralProposalBuilderLine {
   quantity: number;
   unit_price: number;
   subtotal: number;
-  description?: string | null;
   image_storage_path?: string | null;
   image_alt_text?: string | null;
   image_caption?: string | null;
   image_signed_url?: string | null;
-  notes?: string | null;
   expanded: boolean;
   components: FloralProposalBuilderComponentRow[];
   snapshot?: Record<string, unknown>;
@@ -56,12 +54,10 @@ export interface FloralProposalRenderPayloadLine {
   quantity: number;
   unit_price: number;
   subtotal: number;
-  description?: string | null;
   image_storage_path?: string | null;
   image_signed_url?: string | null;
   image_alt_text?: string | null;
   image_caption?: string | null;
-  notes?: string | null;
   components: FloralProposalBuilderComponentRow[];
 }
 
@@ -102,12 +98,10 @@ export class FloralProposalBuilderService {
       quantity: 1,
       unit_price: 0,
       subtotal: 0,
-      description: null,
       image_storage_path: null,
       image_alt_text: null,
       image_caption: null,
       image_signed_url: null,
-      notes: null,
       expanded: false,
       components: [],
       snapshot: {},
@@ -128,12 +122,10 @@ export class FloralProposalBuilderService {
       quantity,
       unit_price: unitPrice,
       subtotal: 0,
-      description: null,
       image_storage_path: null,
       image_alt_text: null,
       image_caption: null,
       image_signed_url: null,
-      notes: null,
       expanded: false,
       components: [],
       snapshot: {},
@@ -154,12 +146,10 @@ export class FloralProposalBuilderService {
       quantity,
       unit_price: unitPrice,
       subtotal: 0,
-      description: null,
       image_storage_path: null,
       image_alt_text: null,
       image_caption: null,
       image_signed_url: null,
-      notes: null,
       expanded: false,
       components: [],
       snapshot: {},
@@ -240,7 +230,7 @@ export class FloralProposalBuilderService {
       quantityPerUnit * normalizedLineQuantity,
       2
     );
-    const subtotal = this.roundCurrency(sellUnitPrice * extendedQuantity);
+    const subtotal = this.roundCurrency(sellUnitPrice * quantityPerUnit);
 
     return {
       ...component,
@@ -366,12 +356,10 @@ export class FloralProposalBuilderService {
           quantity: line.quantity,
           unit_price: this.roundCurrency(line.unit_price),
           subtotal: this.roundCurrency(line.subtotal),
-          description: line.description ?? null,
           image_storage_path: line.image_storage_path ?? null,
           image_signed_url: line.image_signed_url ?? null,
           image_alt_text: line.image_alt_text ?? null,
           image_caption: line.image_caption ?? null,
-          notes: line.notes ?? null,
           components: line.components
             .filter((component) => component.catalog_item_name.trim().length > 0)
             .map((component, componentIndex) => ({
@@ -405,12 +393,10 @@ export class FloralProposalBuilderService {
       quantity: line.quantity,
       unit_price: this.roundCurrency(line.unit_price),
       subtotal: this.roundCurrency(line.subtotal),
-      description: line.description ?? null,
       image_storage_path: line.image_storage_path ?? null,
       image_alt_text: line.image_alt_text ?? null,
       image_caption: line.image_caption ?? null,
       image_signed_url: null,
-      notes: line.notes ?? null,
       snapshot: {
         ...(line.snapshot ?? {}),
         expanded: line.expanded,
@@ -603,12 +589,10 @@ export class FloralProposalBuilderService {
         quantity: lineItem.quantity,
         unit_price: lineItem.unit_price,
         subtotal: lineItem.subtotal,
-        description: lineItem.description ?? null,
         image_storage_path: lineItem.image_storage_path ?? null,
         image_alt_text: lineItem.image_alt_text ?? null,
         image_caption: lineItem.image_caption ?? null,
         image_signed_url: null,
-        notes: lineItem.notes ?? null,
         expanded: false,
         components:
           componentsByLineItemId[lineItem.floral_proposal_line_item_id] ?? [],
@@ -644,4 +628,5 @@ export class FloralProposalBuilderService {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }
+
 

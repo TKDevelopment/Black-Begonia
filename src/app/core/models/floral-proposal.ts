@@ -80,12 +80,10 @@ export interface FloralProposalRenderLineItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
-  description?: string | null;
   image_storage_path?: string | null;
   image_signed_url?: string | null;
   image_alt_text?: string | null;
   image_caption?: string | null;
-  notes?: string | null;
   components: FloralProposalRenderLineComponent[];
 }
 
@@ -209,11 +207,9 @@ export interface FloralProposalLineItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
-  description?: string | null;
   image_storage_path?: string | null;
   image_alt_text?: string | null;
   image_caption?: string | null;
-  notes?: string | null;
   snapshot: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -325,3 +321,4 @@ export interface DocumentTemplateLogoUploadResult {
   storagePath: string;
   signedUrl: string;
 }
+

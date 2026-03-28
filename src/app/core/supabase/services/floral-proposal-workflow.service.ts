@@ -26,11 +26,9 @@ export interface SubmitFloralProposalPayload {
     quantity: number;
     unit_price: number;
     subtotal: number;
-    description?: string | null;
     image_storage_path?: string | null;
     image_alt_text?: string | null;
     image_caption?: string | null;
-    notes?: string | null;
     snapshot?: Record<string, unknown>;
     components?: {
       display_order: number;
@@ -396,11 +394,9 @@ export class FloralProposalWorkflowService {
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
-        description: line.description ?? null,
         image_storage_path: line.image_storage_path ?? null,
         image_alt_text: line.image_alt_text ?? null,
         image_caption: line.image_caption ?? null,
-        notes: line.notes ?? null,
         snapshot: {
           line_type_label: line.line_type_label,
         },
@@ -505,5 +501,6 @@ export class FloralProposalWorkflowService {
     }
   }
 }
+
 
 

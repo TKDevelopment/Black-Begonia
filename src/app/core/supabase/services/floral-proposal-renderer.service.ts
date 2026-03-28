@@ -381,11 +381,6 @@ export class FloralProposalRendererService {
         <div class="line-item-top">
           <div>
             <h3 class="line-item-title">${this.escapeHtml(line.item_name)}</h3>
-            ${
-              line.description
-                ? `<p class="line-item-description">${this.escapeHtml(line.description)}</p>`
-                : ''
-            }
           </div>
           <div class="line-item-price">
             <span>Qty ${line.quantity}</span>
