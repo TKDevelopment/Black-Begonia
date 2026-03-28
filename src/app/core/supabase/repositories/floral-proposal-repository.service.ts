@@ -80,11 +80,9 @@ export class FloralProposalRepositoryService {
     quantity,
     unit_price,
     subtotal,
-    description,
     image_storage_path,
     image_alt_text,
     image_caption,
-    notes,
     snapshot,
     created_at,
     updated_at
@@ -342,11 +340,9 @@ export class FloralProposalRepositoryService {
           quantity: lineItem.quantity,
           unit_price: lineItem.unit_price,
           subtotal: lineItem.subtotal,
-          description: lineItem.description ?? null,
           image_storage_path: lineItem.image_storage_path ?? null,
           image_alt_text: lineItem.image_alt_text ?? null,
           image_caption: lineItem.image_caption ?? null,
-          notes: lineItem.notes ?? null,
           snapshot: lineItem.snapshot ?? {},
         }))
       )
@@ -539,4 +535,5 @@ export class FloralProposalRepositoryService {
     return shoppingList;
   }
 }
+
 

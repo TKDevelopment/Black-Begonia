@@ -89,6 +89,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly selectedTemplateId = signal<string>('');
   readonly defaultMarkupPercent = signal(300);
   readonly draggingLineId = signal<string | null>(null);
+  readonly dragOverImageLineId = signal<string | null>(null);
 
   readonly selectedTaxRegion = computed(() => {
     const id = this.selectedTaxRegionId();
@@ -325,13 +326,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.patchAndRecalculateLine(lineId, { line_item_type: value });
   }
 
-  updateLineNotes(lineId: string, value: string): void {
-    this.patchLine(lineId, { notes: value || null });
-  }
 
-  updateLineDescription(lineId: string, value: string): void {
-    this.patchLine(lineId, { description: value || null });
-  }
 
   updateManualUnitPrice(lineId: string, value: string): void {
     const unitPrice = Math.max(Number(value || 0), 0);
@@ -613,6 +608,19 @@ export class FloralProposalBuilderComponent implements OnInit {
     return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
+  getLineImageFileName(storagePath: string | null | undefined): string {
+    if (!storagePath) {
+      return '';
+    }
+
+    const segments = storagePath.split('/');
+    return segments[segments.length - 1] ?? '';
+  }
+
+  lineHasImage(line: FloralProposalBuilderLine): boolean {
+    return Boolean(line.image_storage_path || line.image_signed_url);
+  }
+
   exportFloralProposalPdf(): void {
     const lead = this.lead();
     const renderPayload = this.buildRenderPayload();
@@ -644,36 +652,82 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.previewPdfObjectUrl.set(nextUrl);
   }
 
-  async onLineImageSelected(lineId: string, event: Event): Promise<void> {
+  private async uploadLineItemImage(lineId: string, file: File): Promise<void> {
     const lead = this.lead();
-    const input = event.target as HTMLInputElement | null;
-    const file = input?.files?.[0];
-
-    if (!lead || !file || !this.canEdit()) {
-      if (input) input.value = '';
-      return;
+    if (!lead) {
+      throw new Error('Lead is required to upload a line item image.');
     }
 
+    this.saving.set(true);
     try {
-      this.saving.set(true);
       const { storagePath, signedUrl } = await this.proposalWorkflow.uploadLineItemImage(
         lead.lead_id,
         lineId,
         file
       );
 
-      this.patchLine(lineId, {
+      this.patchLineImageState(lineId, {
         image_storage_path: storagePath,
         image_alt_text: this.lineItems().find((line) => line.local_id === lineId)?.item_name || null,
+        image_caption: null,
         image_signed_url: signedUrl,
       });
       this.toast.showToast('Line item image uploaded.', 'success');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async onLineImageSelected(lineId: string, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+
+    if (!file || !this.canEdit()) {
+      if (input) input.value = '';
+      return;
+    }
+
+    try {
+      await this.uploadLineItemImage(lineId, file);
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] onLineImageSelected error:', error);
       this.toast.showToast('We were unable to upload the line item image right now.', 'error');
     } finally {
       if (input) input.value = '';
       this.saving.set(false);
+    }
+  }
+
+  onLineImageDragOver(lineId: string, event: DragEvent): void {
+    if (!this.canEdit()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverImageLineId.set(lineId);
+  }
+
+  onLineImageDragLeave(lineId: string, event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.dragOverImageLineId() === lineId) {
+      this.dragOverImageLineId.set(null);
+    }
+  }
+
+  async onLineImageDrop(lineId: string, event: DragEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverImageLineId.set(null);
+
+    if (!this.canEdit()) return;
+
+    const file = event.dataTransfer?.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    try {
+      await this.uploadLineItemImage(lineId, file);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] onLineImageDrop error:', error);
+      this.toast.showToast('We were unable to upload the line item image right now.', 'error');
     }
   }
 
@@ -687,7 +741,7 @@ export class FloralProposalBuilderComponent implements OnInit {
         await this.proposalWorkflow.removeLineItemImage(line.image_storage_path);
       }
 
-      this.patchLine(lineId, {
+      this.patchLineImageState(lineId, {
         image_storage_path: null,
         image_alt_text: null,
         image_caption: null,
@@ -700,10 +754,6 @@ export class FloralProposalBuilderComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
-  }
-
-  updateLineImageCaption(lineId: string, value: string): void {
-    this.patchLine(lineId, { image_caption: value || null });
   }
 
   getCatalogItemOptions(component: FloralProposalBuilderComponentRow): CatalogItem[] {
@@ -824,6 +874,15 @@ export class FloralProposalBuilderComponent implements OnInit {
   private patchLine(lineId: string, updates: Partial<FloralProposalBuilderLine>): void {
     if (!this.canEdit()) return;
 
+    this.lineItems.update((lines) =>
+      lines.map((line) => (line.local_id === lineId ? { ...line, ...updates } : line))
+    );
+  }
+
+  private patchLineImageState(
+    lineId: string,
+    updates: Partial<FloralProposalBuilderLine>
+  ): void {
     this.lineItems.update((lines) =>
       lines.map((line) => (line.local_id === lineId ? { ...line, ...updates } : line))
     );
@@ -979,11 +1038,9 @@ export class FloralProposalBuilderComponent implements OnInit {
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
-        description: line.description ?? null,
         image_storage_path: line.image_storage_path ?? null,
         image_alt_text: line.image_alt_text ?? null,
         image_caption: line.image_caption ?? null,
-        notes: line.notes ?? null,
         components: line.components.map((component) => ({
           catalog_item_id: component.catalog_item_id ?? null,
           catalog_item_name: component.catalog_item_name,
@@ -1107,4 +1164,5 @@ export class FloralProposalBuilderComponent implements OnInit {
     return this.floralProposalRenderer.renderHtml(fallbackContract);
   }
 }
+
 
