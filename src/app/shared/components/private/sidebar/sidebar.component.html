@@ -5,7 +5,7 @@
       <button
         type="button"
         (click)="onNavigate()"
-        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#1f1f1f] transition hover:bg-[#f7f4f1]"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#1f1f1f] transition hover:bg-[#efe5e1]"
       >
         Close
       </button>
@@ -41,42 +41,39 @@
         <a
           [routerLink]="item.route"
           (click)="onNavigate()"
-          [routerLinkActive]="'bg-black text-white shadow-md'"
+          [routerLinkActive]="'bg-[#ea938c] text-[#1f1f1f] shadow-[0_12px_28px_rgba(234,147,140,0.3)]'"
           [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-          class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
+          class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
         >
-          <span [routerLinkActive]="'text-white hover:text-black'">{{ item.label }}</span>
-          <span class="h-2 w-2 rounded-full bg-transparent transition duration-300 group-hover:bg-[#ea938c]"></span>
+          <span [routerLinkActive]="'text-[#1f1f1f]'">{{ item.label }}</span>
+          <span class="h-2 w-2 rounded-full bg-transparent transition duration-300 group-hover:bg-[#c46f67]"></span>
         </a>
       </li>
 
       <li *ngFor="let group of groupedNav" class="pt-2">
         <button
           type="button"
-          (click)="toggleFloralProposalBuilder()"
-          class="flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-left font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
-          [class.bg-black]="floralProposalBuilderOpen()"
-          [class.text-white]="floralProposalBuilderOpen()"
+          (click)="toggleProposalSettings()"
+          class="flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-left font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
         >
           <span>{{ group.label }}</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-300" [ngClass]="floralProposalBuilderOpen() ? 'rotate-180 text-white' : 'text-[#ea938c]'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#ea938c] transition-transform duration-300" [ngClass]="proposalSettingsOpen() ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
           </svg>
         </button>
 
-        <div *ngIf="floralProposalBuilderOpen()" class="mt-1 space-y-1 pl-1 lg:pl-1.5 xl:pl-2">
+        <div *ngIf="proposalSettingsOpen()" class="mt-1 space-y-1 pl-1 lg:pl-1.5 xl:pl-2">
           <a
             *ngFor="let child of group.children"
             [routerLink]="child.route"
             (click)="onNavigate()"
-            class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[8px] uppercase tracking-[0.16em] text-[#4a4a4a] transition duration-300 hover:bg-[#f7f4f1] hover:text-[#ea938c] lg:px-2.5 lg:text-[9px] xl:px-3 xl:py-1.5 xl:text-[10px]"
-            [class.bg-black]="isRouteActive(child.route)"
-            [class.text-white]="isRouteActive(child.route)"
+            class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[8px] uppercase tracking-[0.16em] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] dark:hover:bg-white/10 dark:hover:text-[#f0b0aa] lg:px-2.5 lg:text-[9px] xl:px-3 xl:py-1.5 xl:text-[10px]"
+            [ngClass]="isRouteActive(child.route) ? 'bg-[#ea938c] text-[#1f1f1f] shadow-[0_10px_24px_rgba(234,147,140,0.24)]' : ''"
           >
-            <span>{{ child.label }}</span>
+            <span [style.color]="isRouteActive(child.route) ? '#1f1f1f' : (crmThemeService.isDarkMode ? '#d6d3d1' : '#171717')">{{ child.label }}</span>
             <span
               class="h-1.5 w-1.5 rounded-full bg-transparent transition duration-300"
-              [ngClass]="isRouteActive(child.route) ? 'bg-white' : 'group-hover:bg-[#ea938c]'"
+              [ngClass]="isRouteActive(child.route) ? 'bg-[#1f1f1f]' : 'group-hover:bg-[#c46f67]'"
             ></span>
           </a>
         </div>
@@ -114,7 +111,7 @@
     <button
       type="button"
       (click)="logout()"
-      class="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-3.5 py-2 font-oswald text-[10px] uppercase tracking-[0.16em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-white lg:text-[11px] xl:py-2.5 xl:text-[12px]"
+      class="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-3.5 py-2 font-oswald text-[10px] uppercase tracking-[0.16em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-[#1f1f1f] lg:text-[11px] xl:py-2.5 xl:text-[12px]"
     >
       Log Out
     </button>

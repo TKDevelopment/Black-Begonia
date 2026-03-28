@@ -258,20 +258,7 @@ export const routes: Routes = [
             m => m.VendorsComponent
           ),
       },
-      {
-        path: 'arrangements',
-        loadComponent: () =>
-          import('./components/private/arrangements/arrangements.component').then(
-            m => m.ArrangementsComponent
-          ),
-      },
-      {
-        path: 'arrangements/:arrangementId',
-        loadComponent: () =>
-          import('./components/private/arrangements/arrangements.component').then(
-            m => m.ArrangementsComponent
-          ),
-      },
+
       {
         path: 'tax-regions',
         loadComponent: () =>
@@ -308,6 +295,8 @@ export const routes: Routes = [
     redirectTo: '',
   },
 ];
+
+
 
 
 

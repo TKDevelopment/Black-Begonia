@@ -1,4 +1,4 @@
-<div class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
   <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
     <div>
       <div class="flex items-center gap-4">
@@ -24,7 +24,7 @@
         type="button"
         (click)="onResend(selectedProposal()!.floral_proposal_id)"
         [disabled]="resending"
-        class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {{ resending ? 'Resending...' : 'Resend Floral Proposal Email' }}
       </button>
@@ -34,7 +34,7 @@
         type="button"
         (click)="onOpen(proposal.signed_url)"
         [disabled]="!proposal.signed_url"
-        class="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
         Open in New Tab
       </button>
@@ -63,8 +63,8 @@
           class="w-full rounded-2xl border p-4 text-left transition"
           [ngClass]="
             selectedProposalId === proposal.floral_proposal_id
-              ? 'border-stone-300 bg-stone-100 shadow-sm'
-              : 'border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50'
+              ? 'border-black/10 bg-stone-100 shadow-sm'
+              : 'border-black/10 bg-white hover:border-black/15 hover:bg-stone-50'
           "
         >
           <div class="flex items-start justify-between gap-3">
@@ -103,7 +103,7 @@
         </button>
       </div>
 
-      <div *ngIf="selectedProposal() as proposal" class="rounded-[24px] border border-stone-200 bg-[#fcfaf8] p-4">
+      <div *ngIf="selectedProposal() as proposal" class="rounded-[24px] border border-black/10 bg-[#fcfaf8] p-4">
         <div *ngIf="getLatestResponse(proposal.floral_proposal_id) as response" class="rounded-2xl border px-4 py-4 text-sm leading-7"
           [ngClass]="response.action === 'decline' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'"
         >
@@ -120,7 +120,7 @@
 
         <div
           *ngIf="proposal.signed_url && getPreviewUrl(proposal.signed_url) as previewUrl; else unavailablePreview"
-          class="mt-4 h-[900px] overflow-hidden rounded-2xl border border-stone-200 bg-white"
+          class="mt-4 h-[900px] overflow-hidden rounded-2xl border border-black/10 bg-white"
         >
           <iframe
             [src]="previewUrl"
@@ -130,7 +130,7 @@
         </div>
 
         <ng-template #unavailablePreview>
-          <div class="mt-4 flex h-[720px] items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-6 text-center text-sm leading-6 text-stone-500">
+          <div class="mt-4 flex h-[720px] items-center justify-center rounded-2xl border border-dashed border-black/10 bg-stone-50 px-6 text-center text-sm leading-6 text-stone-500">
             Signed preview URL is unavailable for this Floral Proposal right now.
           </div>
         </ng-template>
@@ -139,7 +139,7 @@
   </ng-container>
 
   <ng-template #emptyState>
-    <div class="mt-6 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-6 py-12 text-center">
+    <div class="mt-6 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-6 py-12 text-center">
       <p class="text-sm font-medium text-stone-700">
         No Floral Proposals have been attached to this lead yet.
       </p>

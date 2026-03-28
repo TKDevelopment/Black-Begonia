@@ -1,4 +1,4 @@
-<div class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+<div class="crm-table-shell overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
   <div *ngIf="loading" class="p-3.5 sm:p-4 md:p-5">
     <div class="space-y-2.5">
       <div class="h-9 animate-pulse rounded-xl bg-stone-100"></div>
@@ -12,8 +12,8 @@
   <ng-container *ngIf="!loading">
     <ng-container *ngIf="rows?.length; else emptyBlock">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-stone-200">
-          <thead class="bg-stone-50">
+        <table class="crm-table min-w-full divide-y divide-stone-200">
+          <thead class="crm-table-head bg-stone-50">
             <tr>
               <th
                 *ngFor="let column of columns"
@@ -26,17 +26,17 @@
             </tr>
           </thead>
 
-          <tbody class="divide-y divide-stone-100 bg-white">
+          <tbody class="crm-table-body divide-y divide-stone-100 bg-white">
             <tr
-              *ngFor="let row of rows; trackBy: trackByRow"
+              *ngFor="let row of paginatedRows; trackBy: trackByRow"
               (click)="onRowClicked(row)"
-              class="transition"
+              class="crm-table-row transition"
               [class.cursor-pointer]="clickableRows"
               [class.hover:bg-stone-50]="clickableRows"
             >
               <td
                 *ngFor="let column of columns"
-                class="px-3 py-2.5 align-top text-[12px] text-stone-700 sm:px-3.5 sm:text-[13px] md:px-5 md:py-3"
+                class="crm-table-cell px-3 py-2.5 align-top text-[12px] text-stone-700 sm:px-3.5 sm:text-[13px] md:px-5 md:py-3"
                 [ngClass]="column.className"
               >
                 <ng-container *ngIf="getCellTemplate(column.key) as customTemplate; else defaultCell">
@@ -52,6 +52,47 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="border-t border-black/10 bg-[#fcfaf8] px-3 py-3 sm:px-4 md:px-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-[12px] text-stone-600" [class.opacity-60]="totalPages === 1">
+            {{ pageSummaryText }}
+          </p>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              (click)="goToPreviousPage()"
+              [disabled]="currentPage === 1"
+              class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Back
+            </button>
+
+            <button
+              *ngFor="let page of visiblePageNumbers"
+              type="button"
+              (click)="goToPage(page)"
+              class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-3 text-[12px] font-medium transition"
+              [ngClass]="page === currentPage
+                ? 'border-[#ea938c] bg-[#ea938c] text-[#1f1f1f] shadow-[0_10px_24px_rgba(234,147,140,0.22)]'
+                : 'border-black/10 bg-white text-stone-700 hover:bg-stone-50'"
+              [disabled]="totalPages === 1"
+            >
+              {{ page }}
+            </button>
+
+            <button
+              type="button"
+              (click)="goToNextPage()"
+              [disabled]="currentPage === totalPages"
+              class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </ng-container>
 

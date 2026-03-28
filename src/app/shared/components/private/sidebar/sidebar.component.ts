@@ -27,11 +27,10 @@ export class SidebarComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   readonly crmThemeService = inject(CrmThemeService);
-  readonly floralProposalBuilderOpen = signal(
+  readonly proposalSettingsOpen = signal(
     this.router.url.startsWith('/admin/proposal-templates') ||
     this.router.url.startsWith('/admin/catalog-items') ||
       this.router.url.startsWith('/admin/vendors') ||
-      this.router.url.startsWith('/admin/arrangements') ||
       this.router.url.startsWith('/admin/tax-regions')
   );
 
@@ -46,12 +45,11 @@ export class SidebarComponent {
 
   readonly groupedNav: SidebarNavGroup[] = [
     {
-      label: 'Floral Proposal Builder',
+      label: 'Proposal Settings',
       children: [
         { label: 'Templates', route: '/admin/proposal-templates' },
         { label: 'Catalog', route: '/admin/catalog-items' },
         { label: 'Vendors', route: '/admin/vendors' },
-        { label: 'Arrangements', route: '/admin/arrangements' },
         { label: 'Tax Regions', route: '/admin/tax-regions' },
       ],
     },
@@ -66,8 +64,8 @@ export class SidebarComponent {
     this.crmThemeService.toggle();
   }
 
-  toggleFloralProposalBuilder(): void {
-    this.floralProposalBuilderOpen.update((open) => !open);
+  toggleProposalSettings(): void {
+    this.proposalSettingsOpen.update((open) => !open);
   }
 
   isRouteActive(route: string, exact = false): boolean {
@@ -106,5 +104,7 @@ export class SidebarComponent {
     this.navigate.emit();
   }
 }
+
+
 
 

@@ -10,7 +10,7 @@
     />
 
     <app-search-filter-bar
-      searchPlaceholder="Search by name, email, proposal file, feedback, or event type"
+      searchPlaceholder="Search by name, email, event type, or service type"
       [searchValue]="searchTerm()"
       [filters]="filters()"
       (searchChange)="onSearchChange($event)"
@@ -29,16 +29,14 @@
       (rowClick)="openLead($event)"
     >
       <ng-template appEntityTableCell="lead" let-row>
-        <div class="space-y-1">
+        <div class="space-y-0.5">
           <div class="font-medium text-stone-900">{{ formatLeadName(row) }}</div>
-          <div class="text-xs text-stone-500">{{ row.email }}</div>
-          <div *ngIf="row.phone" class="text-xs text-stone-400">{{ row.phone }}</div>
         </div>
       </ng-template>
 
       <ng-template appEntityTableCell="proposal" let-row>
         <ng-container *ngIf="getProposalForLead(row.lead_id) as proposal; else noProposal">
-          <div class="space-y-1">
+          <div class="space-y-0.5">
             <div class="flex flex-wrap items-center gap-2 font-medium text-stone-900">
               <span>v{{ proposal.version }}</span>
               <span
@@ -48,7 +46,6 @@
                 Active
               </span>
             </div>
-            <div class="text-xs text-stone-500">{{ proposal.signed_url ? 'Floral Proposal PDF' : 'Floral Proposal Draft' }}</div>
           </div>
         </ng-container>
 
@@ -59,15 +56,13 @@
 
       <ng-template appEntityTableCell="proposal_response" let-row>
         <ng-container *ngIf="getProposalResponseForLead(row.lead_id) as response; else noResponse">
-          <div class="space-y-1">
+          <div class="space-y-0.5">
             <div
               class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
               [ngClass]="response.action === 'decline' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'"
             >
               {{ response.action === 'decline' ? 'Declined' : 'Accepted' }}
             </div>
-            <div class="text-xs text-stone-500">{{ formatCreatedAt(response.created_at) }}</div>
-            <div *ngIf="response.feedback" class="line-clamp-2 text-xs text-stone-500">{{ response.feedback }}</div>
           </div>
         </ng-container>
 

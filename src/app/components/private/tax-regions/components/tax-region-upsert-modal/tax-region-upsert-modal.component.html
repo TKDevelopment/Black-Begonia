@@ -1,6 +1,6 @@
-﻿<div *ngIf="open" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm">
-  <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-[#fcfaf8] shadow-2xl dark:border-white/10 dark:bg-[#171413]">
-    <div class="flex items-start justify-between gap-4 border-b border-stone-200 px-6 py-5 dark:border-white/10">
+<div *ngIf="open" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm">
+  <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fcfaf8] shadow-2xl dark:border-white/10 dark:bg-[#171413]">
+    <div class="flex items-start justify-between gap-4 border-b border-black/10 px-6 py-5 dark:border-white/10">
       <div>
         <p class="font-oswald text-[11px] uppercase tracking-[0.3em] text-[#ea938c]">Estimate Builder</p>
         <h2 class="mt-2 font-cormorant text-3xl text-stone-900 dark:text-stone-100">{{ title }}</h2>
@@ -9,7 +9,7 @@
         type="button"
         (click)="onClose()"
         [disabled]="saving"
-        class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 transition hover:border-stone-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-300 dark:hover:text-white"
+        class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-stone-500 transition hover:border-black/15 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-300 dark:hover:text-white"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -18,7 +18,7 @@
     </div>
 
     <div class="grid gap-6 overflow-y-auto px-6 py-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <div class="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+      <div class="rounded-3xl border border-black/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
         <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-stone-500 dark:text-stone-400">Summary</p>
         <h3 class="mt-3 font-cormorant text-3xl text-stone-900 dark:text-stone-100">Tax logic for estimates</h3>
         <p class="mt-3 text-sm leading-7 text-stone-600 dark:text-stone-300">
@@ -29,46 +29,46 @@
           <div class="rounded-2xl border border-dashed border-[#ead7d0] bg-[#fcf1ed] px-4 py-3 text-sm leading-6 text-stone-600 dark:border-white/10 dark:bg-[#261f1d] dark:text-stone-300">
             Use familiar percentages like <span class="font-semibold text-stone-900 dark:text-stone-100">8.25</span>. The CRM stores the region as a decimal rate automatically.
           </div>
-          <div class="rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm leading-6 text-stone-600 dark:border-white/10 dark:bg-[#191615] dark:text-stone-300">
+          <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm leading-6 text-stone-600 dark:border-white/10 dark:bg-[#191615] dark:text-stone-300">
             Product, service, and delivery applicability can vary by jurisdiction, so we keep those toggles explicit here.
           </div>
         </div>
       </div>
 
-      <div class="space-y-5 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+      <div class="space-y-5 rounded-3xl border border-black/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
         <div>
           <label class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Region Name</label>
-          <input [(ngModel)]="name" type="text" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Virginia Sales Tax" />
+          <input [(ngModel)]="name" type="text" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Virginia Sales Tax" />
         </div>
 
         <div>
           <label class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Authority Name</label>
-          <input [(ngModel)]="authorityName" type="text" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Commonwealth of Virginia" />
+          <input [(ngModel)]="authorityName" type="text" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="Commonwealth of Virginia" />
         </div>
 
         <div>
           <label class="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Tax Rate (%)</label>
-          <input [(ngModel)]="taxRatePercent" type="number" min="0" step="0.0001" class="mt-2 w-full rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="8.25" />
+          <input [(ngModel)]="taxRatePercent" type="number" min="0" step="0.0001" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100" placeholder="8.25" />
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
-          <label class="flex items-center justify-between rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
+          <label class="flex items-center justify-between rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
             <span>Apply to Products</span>
-            <input [(ngModel)]="appliesToProducts" type="checkbox" class="h-4 w-4 rounded border-stone-300 text-[#ea938c] focus:ring-[#ea938c]" />
+            <input [(ngModel)]="appliesToProducts" type="checkbox" class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]" />
           </label>
-          <label class="flex items-center justify-between rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
+          <label class="flex items-center justify-between rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
             <span>Apply to Services</span>
-            <input [(ngModel)]="appliesToServices" type="checkbox" class="h-4 w-4 rounded border-stone-300 text-[#ea938c] focus:ring-[#ea938c]" />
+            <input [(ngModel)]="appliesToServices" type="checkbox" class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]" />
           </label>
-          <label class="flex items-center justify-between rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 sm:col-span-2">
+          <label class="flex items-center justify-between rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 sm:col-span-2">
             <span>Apply to Delivery</span>
-            <input [(ngModel)]="appliesToDelivery" type="checkbox" class="h-4 w-4 rounded border-stone-300 text-[#ea938c] focus:ring-[#ea938c]" />
+            <input [(ngModel)]="appliesToDelivery" type="checkbox" class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]" />
           </label>
         </div>
 
-        <label class="flex items-center justify-between rounded-2xl border border-stone-200 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
+        <label class="flex items-center justify-between rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
           <span>Region Active</span>
-          <input [(ngModel)]="isActive" type="checkbox" class="h-4 w-4 rounded border-stone-300 text-[#ea938c] focus:ring-[#ea938c]" />
+          <input [(ngModel)]="isActive" type="checkbox" class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]" />
         </label>
 
         <div *ngIf="validationError()" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
@@ -77,8 +77,8 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-end gap-3 border-t border-stone-200 px-6 py-5 dark:border-white/10">
-      <button type="button" (click)="onClose()" [disabled]="saving" class="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#2b2624]">Cancel</button>
+    <div class="flex items-center justify-end gap-3 border-t border-black/10 px-6 py-5 dark:border-white/10">
+      <button type="button" (click)="onClose()" [disabled]="saving" class="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#2b2624]">Cancel</button>
       <button type="button" (click)="onConfirm()" [disabled]="saving" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{{ confirmLabel }}</button>
     </div>
   </div>

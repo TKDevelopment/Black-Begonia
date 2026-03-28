@@ -17,6 +17,7 @@ import {
 import { Lead } from '../../../core/models/lead';
 import { TaxRegion } from '../../../core/models/tax-region';
 import { ToastService } from '../../../core/services/toast.service';
+import { CrmThemeService } from '../../../core/services/crm-theme.service';
 import { ActivityRepositoryService } from '../../../core/supabase/repositories/activity-repository.service';
 import { CatalogItemRepositoryService } from '../../../core/supabase/repositories/catalog-item-repository.service';
 import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
@@ -68,6 +69,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly floralProposalRenderer = inject(FloralProposalRendererService);
   private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
   private readonly toast = inject(ToastService);
+  readonly crmThemeService = inject(CrmThemeService);
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -76,6 +78,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly previewLoading = signal(false);
   readonly previewContract = signal<FloralProposalRenderContract | null>(null);
   readonly previewPdfObjectUrl = signal<string | null>(null);
+  readonly previewPdfBase64 = signal<string | null>(null);
   readonly lead = signal<Lead | null>(null);
   readonly proposals = signal<FloralProposal[]>([]);
   readonly activeProposal = signal<FloralProposal | null>(null);
@@ -483,6 +486,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.previewOpen.set(true);
     this.previewLoading.set(true);
     this.previewContract.set(null);
+    this.previewPdfBase64.set(null);
     this.resetPreviewPdfUrl(null);
 
     try {
@@ -497,15 +501,17 @@ export class FloralProposalBuilderComponent implements OnInit {
         termsVersion: 'v1',
         privacyPolicyVersion: 'v1',
       });
-      const previewPdfObjectUrl =
+      const previewPdf =
         await this.proposalWorkflow.previewProposalPdf(previewPayload);
-      this.resetPreviewPdfUrl(previewPdfObjectUrl);
+      this.previewPdfBase64.set(previewPdf.pdfBase64);
+      this.resetPreviewPdfUrl(previewPdf.objectUrl);
       await this.loadBuilder(lead.lead_id);
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] openPreview error:', error);
       this.previewOpen.set(false);
       this.previewLoading.set(false);
       this.previewContract.set(null);
+      this.previewPdfBase64.set(null);
       this.resetPreviewPdfUrl(null);
       this.toast.showToast('We were unable to prepare the Floral Proposal preview right now.', 'error');
     } finally {
@@ -517,6 +523,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   closePreview(): void {
     if (this.saving() || this.previewLoading()) return;
     this.previewContract.set(null);
+    this.previewPdfBase64.set(null);
     this.resetPreviewPdfUrl(null);
     this.previewOpen.set(false);
   }
@@ -546,18 +553,22 @@ export class FloralProposalBuilderComponent implements OnInit {
       const renderContract =
         this.previewContract() ??
         (await this.buildServerRenderContract(activeProposal));
-      const result = await this.proposalWorkflow.submitProposal(
-        this.proposalWorkflow.buildSubmissionPayload({
-          lead,
-          renderContract,
-          termsVersion: 'v1',
-          privacyPolicyVersion: 'v1',
-        })
-      );
+      const submissionPayload = this.proposalWorkflow.buildSubmissionPayload({
+        lead,
+        renderContract,
+        termsVersion: 'v1',
+        privacyPolicyVersion: 'v1',
+      });
+      const previewPdfBase64 = this.previewPdfBase64();
+      const result = await this.proposalWorkflow.submitProposal({
+        ...submissionPayload,
+        pdf_base64: previewPdfBase64,
+      });
 
       this.previewOpen.set(false);
       this.previewLoading.set(false);
       this.previewContract.set(null);
+      this.previewPdfBase64.set(null);
       this.resetPreviewPdfUrl(null);
       this.toast.showToast(`Floral Proposal v${result.version} submitted successfully.`, 'success');
       await this.loadBuilder(lead.lead_id);

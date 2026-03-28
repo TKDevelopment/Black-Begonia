@@ -3,7 +3,7 @@
   class="crm-shell flex min-h-screen bg-[#f7f4f1]"
   [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
-  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white xl:w-56 2xl:w-[17rem]">
+  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white dark:lg:border-white/15 xl:w-56 2xl:w-[17rem]">
     <app-sidebar class="block h-full"></app-sidebar>
   </div>
 
@@ -22,7 +22,7 @@
   class="crm-shell flex min-h-screen bg-[#f7f4f1]"
   [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
-  <div class="fixed inset-x-0 top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur lg:hidden">
+  <div class="fixed inset-x-0 top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur dark:border-white/15 lg:hidden">
     <div class="flex items-center justify-between px-3.5 py-2.5 sm:px-4.5">
       <div>
         <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#ea938c]">Black Begonia</p>
@@ -47,12 +47,12 @@
       aria-label="Close navigation"
     ></button>
 
-    <div class="absolute inset-y-0 left-0 w-[86vw] max-w-sm border-r border-black/10 bg-white shadow-2xl">
+    <div class="absolute inset-y-0 left-0 w-[86vw] max-w-sm border-r border-black/10 bg-white shadow-2xl dark:border-white/15">
       <app-sidebar class="block h-full" [isMobile]="true" (navigate)="closeMobileSidebar()"></app-sidebar>
     </div>
   </div>
 
-  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white xl:w-56 2xl:w-[17rem]">
+  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white dark:lg:border-white/15 xl:w-56 2xl:w-[17rem]">
     <app-sidebar class="block h-full"></app-sidebar>
   </div>
 
