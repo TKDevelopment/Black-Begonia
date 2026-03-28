@@ -67,6 +67,7 @@
 
     <app-entity-detail-shell
       *ngIf="!detailLoading() && !detailError() && template()"
+      moduleLabel="Proposal Templates"
       [title]="template()!.name"
       subtitle="Floral Proposal Template"
       [loading]="false"
@@ -172,3 +173,6 @@
 
 <app-proposal-template-upsert-modal [open]="createModalOpen()" [saving]="saving()" mode="create" (close)="closeCreateModal()" (confirm)="createTemplate($event)" />
 <app-proposal-template-upsert-modal [open]="editModalOpen()" [saving]="saving()" mode="edit" [template]="template()" (close)="closeEditModal()" (confirm)="saveTemplateEdits($event)" />
+
+
+

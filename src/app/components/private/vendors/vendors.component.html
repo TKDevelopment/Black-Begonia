@@ -1,4 +1,4 @@
-ï»¿<div *ngIf="!isDetailView()" class="min-h-screen bg-[#f7f4f1]">
+<div *ngIf="!isDetailView()" class="min-h-screen bg-[#f7f4f1]">
   <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
     <app-crm-page-header title="Vendors" subtitle="Manage wholesalers and suppliers that determine how catalog items are purchased in bulk for shopping list generation." primaryActionLabel="Create Vendor" (primaryAction)="openCreateModal()" />
 
@@ -28,7 +28,7 @@
     <app-loading-state-block *ngIf="detailLoading()" title="Loading vendor" description="Please wait while we load the vendor and pack definitions." minHeightClass="min-h-[520px]" />
     <app-error-state-block *ngIf="!detailLoading() && detailError()" title="Unable to load vendor" [description]="detailError()!" (retry)="retryDetail()" minHeightClass="min-h-[520px]" />
 
-    <app-entity-detail-shell *ngIf="!detailLoading() && !detailError() && vendor()" [title]="vendor()!.name" subtitle="Purchasing Vendor" [loading]="false" backLabel="Back to Vendors" (back)="goBack()">
+    <app-entity-detail-shell *ngIf="!detailLoading() && !detailError() && vendor()" moduleLabel="Vendors" [title]="vendor()!.name" subtitle="Purchasing Vendor" [loading]="false" backLabel="Back to Vendors" (back)="goBack()">
       <div detail-main>
         <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -79,7 +79,7 @@
                     <span *ngIf="pack.is_default" class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">Default</span>
                     <span *ngIf="pack.item && !pack.item.is_active" class="inline-flex rounded-full bg-stone-200 px-2.5 py-1 text-[11px] font-semibold text-stone-600">Item Inactive</span>
                   </div>
-                  <p class="mt-1 text-xs text-stone-500">{{ pack.item?.sku || 'No SKU' }} Â· {{ formatLabel(pack.item?.item_type || '') }} Â· {{ formatLabel(pack.item?.unit_type || '') }}</p>
+                  <p class="mt-1 text-xs text-stone-500">{{ pack.item?.sku || 'No SKU' }} · {{ formatLabel(pack.item?.item_type || '') }} · {{ formatLabel(pack.item?.unit_type || '') }}</p>
                   <div class="mt-4 grid grid-cols-1 gap-3 text-sm text-stone-700 md:grid-cols-2 xl:grid-cols-4">
                     <div><span class="font-medium text-stone-900">Pack:</span> {{ pack.purchase_unit_name }}</div>
                     <div><span class="font-medium text-stone-900">Units:</span> {{ pack.units_per_pack }}</div>
@@ -122,4 +122,7 @@
 <app-vendor-upsert-modal [open]="createModalOpen()" [saving]="saving()" mode="create" (close)="closeCreateModal()" (confirm)="createVendor($event)" />
 <app-vendor-upsert-modal [open]="editModalOpen()" [saving]="saving()" mode="edit" [vendor]="vendor()" (close)="closeEditModal()" (confirm)="saveVendorEdits($event)" />
 <app-vendor-item-pack-modal [open]="packModalOpen()" [saving]="saving()" [mode]="selectedPack() ? 'edit' : 'create'" [pack]="selectedPack()" [catalogItems]="catalogItems()" (close)="closePackModal()" (confirm)="saveVendorPack($event)" />
+
+
+
 
