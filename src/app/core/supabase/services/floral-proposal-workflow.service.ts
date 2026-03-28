@@ -64,6 +64,11 @@ export interface PreviewFloralProposalPdfResponse {
   error?: string;
 }
 
+export interface PreviewFloralProposalPdfResult {
+  objectUrl: string;
+  pdfBase64: string;
+}
+
 export interface FloralProposalRenderContractInput {
   lead: Lead;
   proposal?: FloralProposal | null;
@@ -229,7 +234,7 @@ export class FloralProposalWorkflowService {
 
   async previewProposalPdf(
     payload: SubmitFloralProposalPayload
-  ): Promise<string> {
+  ): Promise<PreviewFloralProposalPdfResult> {
     const { data, error } = await this.supabaseService
       .getClient()
       .functions.invoke('preview-floral-proposal-pdf', {
@@ -258,7 +263,10 @@ export class FloralProposalWorkflowService {
       char.charCodeAt(0)
     );
     const blob = new Blob([bytes], { type: 'application/pdf' });
-    return URL.createObjectURL(blob);
+    return {
+      objectUrl: URL.createObjectURL(blob),
+      pdfBase64: response.pdf_base64,
+    };
   }
 
   async resendProposalAccessEmail(floralProposalId: string): Promise<void> {

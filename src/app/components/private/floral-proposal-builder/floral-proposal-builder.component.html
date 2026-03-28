@@ -99,7 +99,7 @@
               </p>
             </div>
 
-            <button type="button" (click)="addLineItem()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
+            <button type="button" (click)="addLineItem()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
               Add Line Item
             </button>
           </div>
@@ -163,11 +163,14 @@
                       </td>
                       <td class="px-4 py-3 mr-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                          <button 
+                            <button 
                             type="button" 
                             (click)="$event.stopPropagation(); removeLine(line.local_id)" 
                             [disabled]="!canEdit()" 
-                            class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-[#fff7f5] text-[#8a3f39] transition hover:border-[#e6a8a2] hover:bg-[#fde9e5] hover:text-[#6f2f29] disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200 xl:h-8 xl:w-8"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                            [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
+                            [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
+                            [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
@@ -225,7 +228,10 @@
                                         type="button"
                                         (click)="$event.stopPropagation(); removeLineImage(line.local_id)"
                                         [disabled]="!canEdit()"
-                                        class="inline-flex min-w-[132px] items-center justify-center rounded-xl border border-[#efc6c2] bg-[#fff7f5] px-3 py-2 text-xs font-medium text-[#8a3f39] transition hover:bg-[#fde9e5] disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
+                                        class="inline-flex min-w-[132px] items-center justify-center rounded-xl px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
+                                        [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
+                                        [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
+                                        [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
                                       >
                                         Clear Image
                                       </button>
@@ -270,26 +276,29 @@
                                 <tbody class="">
                                   <tr *ngFor="let component of line.components; trackBy: trackByComponent">
                                     <td class="py-1.5 pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
                                     </td>
                                     <td class="pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="pr-2">
-                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
+                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
                                     </td>
                                     <td class="pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="pr-1">
-                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div>
+                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div>
                                     </td>
                                     <td class="text-left">
                                       <button
                                         type="button"
                                         (click)="$event.stopPropagation(); removeComponentRow(line.local_id, component.local_id)"
                                         [disabled]="!canEdit()"
-                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-[#fff7f5] text-[#8a3f39] transition hover:border-[#e6a8a2] hover:bg-[#fde9e5] hover:text-[#6f2f29] disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200 xl:h-8 xl:w-8"
+                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                                        [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
+                                        [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
+                                        [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
                                         aria-label="Remove catalog row"
                                       >
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -354,7 +363,7 @@
               </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="6" class="pt-4 text-right text-sm font-semibold text-stone-900">Shopping List Subtotal</td>
+                  <td colspan="6" class="pt-4 text-left text-sm font-semibold text-stone-900">Shopping List Subtotal</td>
                   <td class="pt-4 text-sm font-semibold text-stone-900">{{ formatCurrency(shoppingListSubtotal()) }}</td>
                 </tr>
               </tfoot>
@@ -490,7 +499,7 @@
     <div class="flex items-center justify-between gap-4 border-b border-black/10 px-6 py-5">
       <div>
         <p class="font-oswald text-[11px] uppercase tracking-[0.3em] text-[#ea938c]">Floral Proposal</p>
-        <h2 class="mt-2 font-cormorant text-3xl text-stone-900">Preview Before Sending</h2>
+        <h2 class="mt-2 font-cormorant text-3xl text-stone-900">Approve Before Sending</h2>
       </div>
       <button type="button" (click)="closePreview()" [disabled]="saving()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-stone-500 transition hover:border-black/15 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -515,13 +524,18 @@
       </ng-container>
     </div>
 
-    <div class="flex items-center justify-end gap-3 border-t border-black/10 px-6 py-5">
+    <div class="flex items-center justify-between gap-4 border-t border-black/10 px-6 py-5">
+      <p class="max-w-2xl text-sm leading-6 text-stone-600">
+        This approved preview PDF is the exact document that will be stored and sent to the client. We will not regenerate it again when you send.
+      </p>
+      <div class="flex items-center justify-end gap-3">
       <button type="button" (click)="closePreview()" [disabled]="saving() || previewLoading()" class="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
         Back to Edit
       </button>
       <button type="button" (click)="submitFloralProposal()" [disabled]="saving() || previewLoading()" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
-        Generate &amp; Send Floral Proposal
+        Send Floral Proposal
       </button>
+      </div>
     </div>
   </div>
 </div>
