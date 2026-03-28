@@ -62,6 +62,7 @@
 
     <app-entity-detail-shell
       *ngIf="!detailLoading() && !detailError() && taxRegion()"
+      moduleLabel="Tax Regions"
       [title]="taxRegion()!.name"
       subtitle="Estimate Tax Region"
       [loading]="false"
@@ -125,4 +126,7 @@
 
 <app-tax-region-upsert-modal [open]="createModalOpen()" [saving]="saving()" mode="create" (close)="closeCreateModal()" (confirm)="createTaxRegion($event)" />
 <app-tax-region-upsert-modal [open]="editModalOpen()" [saving]="saving()" mode="edit" [taxRegion]="taxRegion()" (close)="closeEditModal()" (confirm)="saveTaxRegionEdits($event)" />
+
+
+
 
