@@ -74,7 +74,7 @@
             <div>
               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Default Markup</label>
               <div class="mt-2 relative">
-                <input [ngModel]="defaultMarkupPercent()" (ngModelChange)="onDefaultMarkupChange($event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                <input [ngModel]="defaultMarkupPercent()" (ngModelChange)="onDefaultMarkupChange($event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[13px] text-stone-500">%</span>
               </div>
             </div>
@@ -280,7 +280,7 @@
                                       <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
                                     </td>
                                     <td class="pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="pr-2">
                                       <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
@@ -333,7 +333,7 @@
           <div class="flex items-start justify-between gap-4">
             <div>
               <h3 class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[17px]">Shopping List Preview</h3>
-              <p class="mt-1 text-[13px] text-stone-600 xl:text-[11px] 2xl:text-[14px]">Generated automatically from the internal catalog composition and default vendor packs.</p>
+              <p class="mt-1 text-[13px] text-stone-600 xl:text-[11px] 2xl:text-[14px]">Generated automatically from the internal catalog composition and native pack quantities on catalog items.</p>
             </div>
             <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">{{ shoppingList().length }}</span>
           </div>
@@ -343,8 +343,8 @@
               <thead>
                 <tr class="text-left text-[11px] uppercase tracking-[0.18em] text-stone-500">
                   <th class="pb-3 pr-4">Item</th>
-                  <th class="pb-3 pr-4">Vendor</th>
                   <th class="pb-3 pr-4">Needed</th>
+                  <th class="pb-3 pr-4">Reserve %</th>
                   <th class="pb-3 pr-4">Reserve</th>
                   <th class="pb-3 pr-4">Total to Buy</th>
                   <th class="pb-3 pr-4">Pack Count</th>
@@ -354,8 +354,18 @@
               <tbody class="divide-y divide-black dark:divide-white/20">
                 <tr *ngFor="let item of shoppingList()">
                   <td class="py-3 pr-4 font-medium text-stone-900">{{ item.item_name }}</td>
-                  <td class="py-3 pr-4 text-stone-700">{{ item.vendor?.name || 'No default vendor' }}</td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.required_units }}</td>
+                  <td class="py-3 pr-4 text-stone-700">
+                    <input
+                      [ngModel]="item.reserve_percent"
+                      (ngModelChange)="updateShoppingListReserve(item, $event)"
+                      [disabled]="!canEdit()"
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="w-24 rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.reserve_units }}</td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.total_units_to_buy }}</td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.required_pack_count ?? '' }}</td>
@@ -388,10 +398,51 @@
 
       <div detail-sidebar>
         <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
-          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Workflow Notes</h3>
-          <p class="mt-4 text-sm leading-7 text-stone-600 xl:mt-3 xl:text-[12px] xl:leading-6 2xl:text-[14px] 2xl:leading-7">
-            This builder now creates the full Floral Proposal. Once the client accepts and signs it, the lead becomes eligible for project conversion.
-          </p>
+          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Lead Context</h3>
+          <div class="mt-5 space-y-4 text-sm xl:mt-3 xl:space-y-3 xl:text-[12px] 2xl:mt-4 2xl:space-y-4 2xl:text-[14px]">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Lead Status</p>
+              <p class="mt-1 text-stone-800">{{ formatStatusLabel(lead()!.status) }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.budget_range || 'Not provided' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Guest Count</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.guest_count ?? 'Not provided' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Summary</h3>
+          <div class="mt-4 space-y-3 text-sm xl:mt-3 xl:space-y-2.5 xl:text-[12px] 2xl:mt-4 2xl:space-y-3 2xl:text-[14px]">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current Version</p>
+              <p class="mt-1 text-stone-800">{{ activeProposal()?.version || 1 }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Template</p>
+              <p class="mt-1 text-stone-800">{{ selectedTemplate()?.name || 'Not selected yet' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Tax Region</p>
+              <p class="mt-1 text-stone-800">{{ selectedTaxRegion()?.name || 'Not selected yet' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Markup</p>
+              <p class="mt-1 text-stone-800">{{ defaultMarkupPercent() }}%</p>
+            </div>
+            <div *ngIf="activeProposal()">
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Saved</p>
+              <p class="mt-1 text-stone-800">{{ formatDateTime(activeProposal()!.updated_at) }}</p>
+            </div>
+          </div>
         </div>
 
         <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
@@ -426,32 +477,6 @@
           </div>
         </div>
 
-        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
-          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Summary</h3>
-          <div class="mt-4 space-y-3 text-sm xl:mt-3 xl:space-y-2.5 xl:text-[12px] 2xl:mt-4 2xl:space-y-3 2xl:text-[14px]">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current Version</p>
-              <p class="mt-1 text-stone-800">{{ activeProposal()?.version || 1 }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Template</p>
-              <p class="mt-1 text-stone-800">{{ selectedTemplate()?.name || 'Not selected yet' }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Tax Region</p>
-              <p class="mt-1 text-stone-800">{{ selectedTaxRegion()?.name || 'Not selected yet' }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Markup</p>
-              <p class="mt-1 text-stone-800">{{ defaultMarkupPercent() }}%</p>
-            </div>
-            <div *ngIf="activeProposal()">
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Saved</p>
-              <p class="mt-1 text-stone-800">{{ formatDateTime(activeProposal()!.updated_at) }}</p>
-            </div>
-          </div>
-        </div>
-
         <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
           <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Versions</h3>
           <div class="mt-5 space-y-3 xl:mt-3 xl:space-y-2.5 2xl:mt-4 2xl:space-y-3" *ngIf="proposals().length; else noVersions">
@@ -467,28 +492,6 @@
           <ng-template #noVersions>
             <p class="mt-4 text-sm text-stone-500">No Floral Proposal versions have been saved yet.</p>
           </ng-template>
-        </div>
-
-        <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
-          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Lead Context</h3>
-          <div class="mt-5 space-y-4 text-sm xl:mt-3 xl:space-y-3 xl:text-[12px] 2xl:mt-4 2xl:space-y-4 2xl:text-[14px]">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Lead Status</p>
-              <p class="mt-1 text-stone-800">{{ formatStatusLabel(lead()!.status) }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p>
-              <p class="mt-1 text-stone-800">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p>
-              <p class="mt-1 text-stone-800">{{ lead()!.budget_range || 'Not provided' }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Guest Count</p>
-              <p class="mt-1 text-stone-800">{{ lead()!.guest_count ?? 'Not provided' }}</p>
-            </div>
-          </div>
         </div>
       </div>
     </app-entity-detail-shell>

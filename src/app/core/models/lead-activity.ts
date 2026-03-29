@@ -1,6 +1,7 @@
-﻿export type LeadActivityType =
+export type LeadActivityType =
   | 'created'
   | 'updated'
+  | 'proposal_viewed'
   | 'status_changed'
   | 'assigned'
   | 'contact_attempted'

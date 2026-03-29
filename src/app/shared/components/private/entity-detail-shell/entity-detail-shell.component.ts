@@ -15,6 +15,7 @@ export class EntityDetailShellComponent {
   @Input() backLabel = 'Back';
   @Input() loading = false;
   @Input() useBrowserBack = false;
+  @Input() fullWidth = false;
 
   @Output() back = new EventEmitter<void>();
 

@@ -1,15 +1,31 @@
 import { Injectable } from '@angular/core';
 
 import {
+  DocumentTemplate,
   FloralProposalRenderContract,
   FloralProposalRenderLineItem,
 } from '../../models/floral-proposal';
+import { DocumentTemplateStudioBridgeService } from '../../templates/document-template-studio-bridge.service';
+import { ProposalRenderModelFactory } from '../../templates/proposal-render-model.factory';
+import { TemplateDocumentRendererService } from '../../templates/template-document-renderer.service';
+import { TemplateDefinition } from '../../templates/template-studio.models';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FloralProposalRendererService {
+  constructor(
+    private readonly templateStudioBridge: DocumentTemplateStudioBridgeService,
+    private readonly proposalRenderModelFactory: ProposalRenderModelFactory,
+    private readonly templateDocumentRenderer: TemplateDocumentRendererService
+  ) {}
+
   renderHtml(contract: FloralProposalRenderContract): string {
+    const studioHtml = this.renderTemplateStudioHtml(contract);
+    if (studioHtml) {
+      return studioHtml;
+    }
+
     const primaryColor = contract.template.primary_color || '#111111';
     const accentColor = contract.template.accent_color || '#ea938c';
     const headingFont =
@@ -280,6 +296,87 @@ export class FloralProposalRendererService {
         </body>
       </html>
     `;
+  }
+
+  private renderTemplateStudioHtml(contract: FloralProposalRenderContract): string | null {
+    try {
+      const templateDefinition = this.resolveTemplateDefinition(contract);
+      if (!templateDefinition) {
+        return null;
+      }
+
+      const proposal = this.proposalRenderModelFactory.fromLegacyRenderContract(contract, {
+        businessName: contract.template.name ?? 'Floral Proposal',
+      });
+
+      const rendered = this.templateDocumentRenderer.render({
+        template: templateDefinition,
+        proposal,
+        mode: 'pdf',
+      });
+
+      return `
+        <html>
+          <head>
+            <title>${this.escapeHtml(contract.template.name || 'Floral Proposal')}</title>
+            <style>${rendered.css}</style>
+          </head>
+          <body style="margin:0;background:#f3eee8;">
+            ${rendered.html}
+          </body>
+        </html>
+      `;
+    } catch (error) {
+      console.error('[FloralProposalRendererService] renderTemplateStudioHtml fallback error:', error);
+      return null;
+    }
+  }
+
+  private resolveTemplateDefinition(contract: FloralProposalRenderContract): TemplateDefinition | null {
+    const stored = (contract.template.template_config as { template_studio?: { definition?: TemplateDefinition } } | null)
+      ?.template_studio?.definition;
+
+    if (stored?.schema_version === '1.0') {
+      return stored;
+    }
+
+    if (!contract.template.template_id || !contract.template.name || !contract.template.template_key) {
+      return null;
+    }
+
+    const legacyTemplate: DocumentTemplate = {
+      template_id: contract.template.template_id,
+      name: contract.template.name,
+      template_key: contract.template.template_key,
+      template_kind: 'floral_proposal',
+      is_active: true,
+      is_default: false,
+      logo_storage_path: null,
+      logo_url: contract.template.logo_url ?? null,
+      primary_color: contract.template.primary_color ?? null,
+      accent_color: contract.template.accent_color ?? null,
+      heading_font_family: contract.template.heading_font_family ?? null,
+      body_font_family: contract.template.body_font_family ?? null,
+      header_layout: contract.template.header_layout ?? 'editorial',
+      line_item_layout: contract.template.line_item_layout ?? 'image_left',
+      footer_layout: contract.template.footer_layout ?? 'signature_focused',
+      show_cover_page: contract.template.show_cover_page ?? true,
+      show_intro_message: contract.template.show_intro_message ?? true,
+      intro_title: contract.template.intro_title ?? null,
+      intro_body: contract.template.intro_body ?? null,
+      show_terms_section: contract.template.show_terms_section ?? true,
+      show_privacy_section: contract.template.show_privacy_section ?? true,
+      show_signature_section: contract.template.show_signature_section ?? true,
+      agreement_clauses: contract.template.agreement_clauses ?? [],
+      header_content: contract.template.header_content ?? {},
+      footer_content: contract.template.footer_content ?? {},
+      body_config: contract.template.body_config ?? {},
+      template_config: contract.template.template_config ?? {},
+      created_at: contract.generated_at,
+      updated_at: contract.generated_at,
+    };
+
+    return this.templateStudioBridge.getTemplateDefinition(legacyTemplate);
   }
 
   private renderHeader(contract: FloralProposalRenderContract): string {

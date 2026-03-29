@@ -79,6 +79,7 @@ export class LeadsComponent implements OnInit {
     { key: 'proposal_response', label: 'Client Response' },
     { key: 'event_date', label: 'Event Date' },
     { key: 'status', label: 'Status' },
+    { key: 'action', label: 'Actions' },
   ];
 
   proposalByLeadId = computed<Record<string, FloralProposal | null>>(() => {
@@ -379,6 +380,28 @@ export class LeadsComponent implements OnInit {
       case 'closed_unbooked':
       default:
         return 'neutral';
+    }
+  }
+
+  getLeadAction(status: LeadStatus): {
+    label: string;
+    tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'purple';
+  } | null {
+    switch (status) {
+      case 'new':
+        return { label: 'schedule consultation', tone: 'neutral' };
+      case 'consultation_scheduled':
+        return { label: 'complete consultation', tone: 'neutral' };
+      case 'nurturing':
+        return { label: 'generate floral proposal', tone: 'neutral' };
+      case 'proposal_submitted':
+        return { label: 'awaiting customer response', tone: 'neutral' };
+      case 'proposal_declined':
+        return { label: 'resubmit floral proposal', tone: 'neutral' };
+      case 'proposal_accepted':
+        return { label: 'convert to project', tone: 'neutral' };
+      default:
+        return null;
     }
   }
 

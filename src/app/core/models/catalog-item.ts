@@ -22,6 +22,7 @@ export interface CatalogItem {
   name: string;
   item_type: CatalogItemType;
   unit_type: CatalogUnitType;
+  pack_quantity?: number | null;
   color?: string | null;
   variety?: string | null;
   sku?: string | null;
@@ -36,6 +37,7 @@ export interface CreateCatalogItemInput {
   name: string;
   item_type: CatalogItemType;
   unit_type: CatalogUnitType;
+  pack_quantity?: number | null;
   color?: string | null;
   variety?: string | null;
   sku?: string | null;

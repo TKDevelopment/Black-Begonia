@@ -82,6 +82,16 @@
       <ng-template appEntityTableCell="status" let-row>
         <app-status-badge [label]="row.status" [tone]="getLeadStatusTone(row.status)" />
       </ng-template>
+
+      <ng-template appEntityTableCell="action" let-row>
+        <ng-container *ngIf="getLeadAction(row.status) as action; else noAction">
+          <app-status-badge [label]="action.label" [tone]="action.tone" />
+        </ng-container>
+
+        <ng-template #noAction>
+          <span class="text-xs text-stone-400">-</span>
+        </ng-template>
+      </ng-template>
     </app-entity-table-shell>
 
     <app-lead-upsert-modal

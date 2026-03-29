@@ -1,12 +1,21 @@
 <div class="space-y-3 md:space-y-5">
-  <div *ngIf="loading; else detailContent" class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_340px] md:gap-5">
+  <div
+    *ngIf="loading; else detailContent"
+    class="grid grid-cols-1 gap-3 md:gap-5"
+    [ngClass]="{
+      'xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_340px]': !fullWidth
+    }"
+  >
     <div class="space-y-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 md:p-5">
       <div class="h-6 w-40 animate-pulse rounded-lg bg-stone-100"></div>
       <div class="h-32 animate-pulse rounded-xl bg-stone-100"></div>
       <div class="h-32 animate-pulse rounded-xl bg-stone-100"></div>
     </div>
 
-    <div class="space-y-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 md:p-5">
+    <div
+      *ngIf="!fullWidth"
+      class="space-y-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 md:p-5"
+    >
       <div class="h-6 w-32 animate-pulse rounded-lg bg-stone-100"></div>
       <div class="h-24 animate-pulse rounded-xl bg-stone-100"></div>
       <div class="h-24 animate-pulse rounded-xl bg-stone-100"></div>
@@ -14,12 +23,17 @@
   </div>
 
   <ng-template #detailContent>
-    <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_340px] md:gap-5">
+    <div
+      class="grid grid-cols-1 gap-3 md:gap-5"
+      [ngClass]="{
+        'xl:grid-cols-[minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_340px]': !fullWidth
+      }"
+    >
       <section class="min-w-0 space-y-3 md:space-y-5">
         <ng-content select="[detail-main]"></ng-content>
       </section>
 
-      <aside class="min-w-0 space-y-3 md:space-y-5">
+      <aside *ngIf="!fullWidth" class="min-w-0 space-y-3 md:space-y-5">
         <ng-content select="[detail-sidebar]"></ng-content>
       </aside>
     </div>

@@ -25,7 +25,6 @@ import { FloralProposalRepositoryService } from '../../../core/supabase/reposito
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { PricingSettingsRepositoryService } from '../../../core/supabase/repositories/pricing-settings-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
-import { VendorItemPackRepositoryService } from '../../../core/supabase/repositories/vendor-item-pack-repository.service';
 import {
   FloralProposalBuilderComponentRow,
   FloralProposalBuilderLine,
@@ -61,7 +60,6 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly taxRegionRepository = inject(TaxRegionRepositoryService);
   private readonly floralProposalRepository = inject(FloralProposalRepositoryService);
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
-  private readonly vendorItemPackRepository = inject(VendorItemPackRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly documentTemplateRepository = inject(DocumentTemplateRepositoryService);
   private readonly pricingSettingsRepository = inject(PricingSettingsRepositoryService);
@@ -392,8 +390,14 @@ export class FloralProposalBuilderComponent implements OnInit {
               ...component,
               catalog_item_id: null,
               catalog_item_name: rawValue,
-              item_type: component.item_type ?? null,
-              unit_type: component.unit_type ?? null,
+              base_unit_cost: 0,
+              reserve_percent: component.reserve_percent ?? this.getDefaultReservePercent(),
+              pack_quantity: null,
+              purchase_unit_cost: 0,
+              item_type: null,
+              unit_type: null,
+              color: null,
+              variety: null,
             };
           }
 
@@ -401,7 +405,8 @@ export class FloralProposalBuilderComponent implements OnInit {
             component,
             matchedItem,
             line.quantity,
-            this.defaultMarkupPercent()
+            this.defaultMarkupPercent(),
+            this.getDefaultReservePercent()
           );
         });
 
@@ -459,6 +464,26 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   onTaxRegionChange(value: string): void {
     this.selectedTaxRegionId.set(value);
+  }
+
+  updateShoppingListReserve(item: FloralProposalShoppingListItem, rawValue: string): void {
+    const reservePercent = Math.max(Number(rawValue || 0), 0);
+    const itemKey = this.getShoppingListItemKey(item);
+
+    this.lineItems.update((lines) =>
+      lines.map((line) =>
+        this.floralProposalBuilderService.recalculateLine({
+          ...line,
+          components: line.components.map((component) =>
+            this.getComponentShoppingKey(component) === itemKey
+              ? { ...component, reserve_percent: reservePercent }
+              : component
+          ),
+        })
+      )
+    );
+
+    void this.refreshShoppingList();
   }
 
   async saveDraft(): Promise<void> {
@@ -939,25 +964,9 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private async refreshShoppingList(): Promise<void> {
-    const itemIds = Array.from(
-      new Set(
-        this.lineItems()
-          .flatMap((line) => line.components)
-          .map((component) => component.catalog_item_id)
-          .filter((value): value is string => !!value)
-      )
-    );
-
-    if (!itemIds.length) {
-      this.shoppingList.set([]);
-      return;
-    }
-
     try {
-      const packs = await this.vendorItemPackRepository.getDefaultPacksForItems(itemIds);
       const shoppingList = this.floralProposalBuilderService.buildShoppingList(
-        this.lineItems(),
-        packs
+        this.lineItems()
       );
       this.shoppingList.set(shoppingList);
     } catch (error) {
@@ -1111,6 +1120,21 @@ export class FloralProposalBuilderComponent implements OnInit {
     }
 
     return pricingSettings?.default_markup_percent ?? 300;
+  }
+
+  private getDefaultReservePercent(): number {
+    return this.pricingSettings()?.default_reserve_percent ?? 0;
+  }
+
+  private getComponentShoppingKey(component: FloralProposalBuilderComponentRow): string {
+    return (
+      component.catalog_item_id ??
+      `${component.catalog_item_name}:${component.unit_type ?? 'other'}`
+    );
+  }
+
+  private getShoppingListItemKey(item: FloralProposalShoppingListItem): string {
+    return item.catalog_item_id ?? `${item.item_name}:${item.unit_type ?? 'other'}`;
   }
 
   private buildProposalPrintHtmlFromRenderPayload(renderPayload: FloralProposalRenderPayload): string {
