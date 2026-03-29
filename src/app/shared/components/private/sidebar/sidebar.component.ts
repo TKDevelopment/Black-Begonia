@@ -30,7 +30,6 @@ export class SidebarComponent {
   readonly proposalSettingsOpen = signal(
     this.router.url.startsWith('/admin/proposal-templates') ||
     this.router.url.startsWith('/admin/catalog-items') ||
-      this.router.url.startsWith('/admin/vendors') ||
       this.router.url.startsWith('/admin/tax-regions')
   );
 
@@ -49,7 +48,6 @@ export class SidebarComponent {
       children: [
         { label: 'Templates', route: '/admin/proposal-templates' },
         { label: 'Catalog', route: '/admin/catalog-items' },
-        { label: 'Vendors', route: '/admin/vendors' },
         { label: 'Tax Regions', route: '/admin/tax-regions' },
       ],
     },

@@ -38,6 +38,13 @@
   caret-color: transparent;
 }
 
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  caret-color: currentColor;
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

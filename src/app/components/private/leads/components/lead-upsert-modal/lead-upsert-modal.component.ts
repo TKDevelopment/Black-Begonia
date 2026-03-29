@@ -25,6 +25,7 @@ export class LeadUpsertModalComponent {
   private readonly weddingServiceOptions: string[] = [
     'full-service wedding',
     'ceremony-only wedding',
+    'reception-only wedding',
     'elopement',
     'engagement',
   ];

@@ -224,6 +224,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'proposal-templates/:templateId/studio',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
+            m => m.ProposalTemplateStudioComponent
+          ),
+      },
+      {
         path: 'proposal-templates/:templateId',
         loadComponent: () =>
           import('./components/private/proposal-templates/proposal-templates.component').then(
@@ -246,17 +253,12 @@ export const routes: Routes = [
       },
       {
         path: 'vendors',
-        loadComponent: () =>
-          import('./components/private/vendors/vendors.component').then(
-            m => m.VendorsComponent
-          ),
+        redirectTo: 'catalog-items',
+        pathMatch: 'full',
       },
       {
         path: 'vendors/:vendorId',
-        loadComponent: () =>
-          import('./components/private/vendors/vendors.component').then(
-            m => m.VendorsComponent
-          ),
+        redirectTo: 'catalog-items',
       },
 
       {

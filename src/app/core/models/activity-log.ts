@@ -3,6 +3,7 @@ export type ActivityEntityType = 'lead' | 'contact' | 'organization' | 'project'
 export type ActivityLogType =
   | 'created'
   | 'updated'
+  | 'proposal_viewed'
   | 'status_changed'
   | 'assigned'
   | 'contact_attempted'

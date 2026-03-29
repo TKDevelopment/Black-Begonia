@@ -82,4 +82,40 @@ export class ActivityRepositoryService {
       throw error;
     }
   }
+
+  async updateLeadActivity(
+    leadActivityId: string,
+    updates: {
+      activity_label?: string;
+      activity_description?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }
+  ): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('lead_activity')
+      .update({
+        ...updates,
+        metadata: updates.metadata ?? {},
+      })
+      .eq('lead_activity_id', leadActivityId);
+
+    if (error) {
+      console.error('[ActivityRepositoryService] updateLeadActivity error:', error);
+      throw error;
+    }
+  }
+
+  async deleteLeadActivity(leadActivityId: string): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('lead_activity')
+      .delete()
+      .eq('lead_activity_id', leadActivityId);
+
+    if (error) {
+      console.error('[ActivityRepositoryService] deleteLeadActivity error:', error);
+      throw error;
+    }
+  }
 }

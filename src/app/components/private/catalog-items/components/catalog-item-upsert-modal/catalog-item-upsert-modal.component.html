@@ -34,9 +34,13 @@
             </div>
             <div>
               <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Unit Type</label>
-              <select [ngModel]="unitType()" (ngModelChange)="unitType.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]">
+              <select [ngModel]="unitType()" (ngModelChange)="onUnitTypeChange($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]">
                 <option *ngFor="let option of unitTypes" [value]="option">{{ formatLabel(option) }}</option>
               </select>
+            </div>
+            <div *ngIf="requiresPackQuantity(unitType())">
+              <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Pack Quantity</label>
+              <input type="number" min="1" step="1" [ngModel]="packQuantity()" (ngModelChange)="packQuantity.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
             </div>
             <div>
               <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Color</label>
@@ -46,7 +50,7 @@
               <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Variety</label>
               <input type="text" [ngModel]="variety()" (ngModelChange)="variety.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
             </div>
-            <div class="md:col-span-2">
+            <div>
               <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">SKU</label>
               <input type="text" [ngModel]="sku()" (ngModelChange)="sku.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
             </div>
@@ -57,16 +61,12 @@
           <div class="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm md:p-6">
             <div class="border-b border-black/10 pb-4">
               <p class="font-oswald text-[11px] uppercase tracking-[0.24em] text-[#c46f67]">Costing</p>
-              <p class="mt-2 text-sm leading-6 text-stone-600">These values feed ingredient costing and default reserve planning for the shopping list preview.</p>
+              <p class="mt-2 text-sm leading-6 text-stone-600">Base cost is the purchase cost of this catalog unit. Packed items still price by the stem inside the Floral Proposal builder.</p>
             </div>
             <div class="mt-5 grid gap-4">
               <div>
                 <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Base Unit Cost</label>
                 <input type="number" step="0.01" min="0" [ngModel]="baseUnitCost()" (ngModelChange)="baseUnitCost.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
-              </div>
-              <div>
-                <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Default Reserve Percent</label>
-                <input type="number" step="0.01" min="0" [ngModel]="defaultWastePercent()" (ngModelChange)="defaultWastePercent.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
               </div>
             </div>
           </div>
