@@ -21,8 +21,9 @@ export interface SubmitFloralProposalPayload {
   tax_region_id?: string | null;
   line_items: {
     display_order: number;
-    line_item_type: 'product' | 'fee' | 'discount';
+    line_item_type: 'product' | 'fee' | 'discount' | 'labor';
     item_name: string;
+    description?: string | null;
     quantity: number;
     unit_price: number;
     subtotal: number;
@@ -358,11 +359,13 @@ export class FloralProposalWorkflowService {
       },
       pricing: {
         default_markup_percent: input.renderPayload.default_markup_percent,
+        labor_percent: input.renderPayload.labor_percent,
       },
       line_items: lineItems,
       shopping_list: input.renderPayload.shopping_list,
       totals: {
         products_total: input.renderPayload.breakdown.productsTotal,
+        labor_total: input.renderPayload.breakdown.laborTotal,
         fees_total: input.renderPayload.breakdown.feesTotal,
         discounts_total: input.renderPayload.breakdown.discountsTotal,
         subtotal: input.renderPayload.breakdown.subtotal,
@@ -399,6 +402,7 @@ export class FloralProposalWorkflowService {
         display_order: line.display_order,
         line_item_type: line.line_item_type,
         item_name: line.item_name,
+        description: line.description ?? null,
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
@@ -407,6 +411,7 @@ export class FloralProposalWorkflowService {
         image_caption: line.image_caption ?? null,
         snapshot: {
           line_type_label: line.line_type_label,
+          description: line.description ?? null,
         },
         components:
           line.line_item_type === 'product'

@@ -107,12 +107,14 @@ export class ProposalRenderModelFactory {
       id: `${line.display_order}`,
       name: line.item_name,
       category: line.line_type_label,
-      description: line.components.length
-        ? line.components
-            .slice(0, 4)
-            .map((component) => component.catalog_item_name)
-            .join(', ')
-        : null,
+      description:
+        line.description?.trim() ||
+        (line.components.length
+          ? line.components
+              .slice(0, 4)
+              .map((component) => component.catalog_item_name)
+              .join(', ')
+          : null),
       quantity: line.quantity,
       unit_label: 'item',
       image_url: line.image_signed_url ?? null,

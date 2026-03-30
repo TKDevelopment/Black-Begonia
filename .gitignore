@@ -42,3 +42,4 @@ testem.log
 Thumbs.db
 
 /supabase
+/src/environments/environment.dev.ts

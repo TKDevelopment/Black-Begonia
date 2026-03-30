@@ -35,6 +35,7 @@ export interface FloralProposalBuilderLine {
   display_order: number;
   line_item_type: FloralProposalLineItemType;
   item_name: string;
+  description?: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -52,6 +53,7 @@ export interface FloralProposalRenderPayloadLine {
   line_item_type: FloralProposalLineItemType;
   line_type_label: string;
   item_name: string;
+  description?: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -69,6 +71,7 @@ export interface FloralProposalRenderPayload {
   tax_region_name?: string | null;
   tax_rate: number;
   default_markup_percent: number;
+  labor_percent: number;
   line_items: FloralProposalRenderPayloadLine[];
   shopping_list: FloralProposalShoppingListItem[];
   totals: {
@@ -78,6 +81,9 @@ export interface FloralProposalRenderPayload {
   };
   breakdown: {
     productsTotal: number;
+    laborTotal: number;
+    calculatedLaborAmount: number;
+    manualLaborTotal: number;
     feesTotal: number;
     discountsTotal: number;
     subtotal: number;
@@ -96,6 +102,7 @@ export class FloralProposalBuilderService {
       display_order: displayOrder,
       line_item_type: 'product',
       item_name: '',
+      description: null,
       quantity: 1,
       unit_price: 0,
       subtotal: 0,
@@ -120,6 +127,7 @@ export class FloralProposalBuilderService {
       display_order: displayOrder,
       line_item_type: 'fee',
       item_name: itemName,
+      description: null,
       quantity,
       unit_price: unitPrice,
       subtotal: 0,
@@ -144,6 +152,7 @@ export class FloralProposalBuilderService {
       display_order: displayOrder,
       line_item_type: 'discount',
       item_name: itemName,
+      description: null,
       quantity,
       unit_price: unitPrice,
       subtotal: 0,
@@ -299,14 +308,39 @@ export class FloralProposalBuilderService {
 
   calculateTotals(
     lines: FloralProposalBuilderLine[],
-    taxRegion: TaxRegion | null
+    taxRegion: TaxRegion | null,
+    laborPercent = 0
   ): {
     subtotal: number;
     taxAmount: number;
     totalAmount: number;
   } {
+    const productsTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'product')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const manualLaborTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'labor')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const calculatedLaborAmount = this.roundCurrency(
+      productsTotal * (Math.max(this.roundNumber(laborPercent, 2), 0) / 100)
+    );
+    const laborTotal = this.roundCurrency(calculatedLaborAmount + manualLaborTotal);
+    const feesTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'fee')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const discountsTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'discount')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
     const subtotal = this.roundCurrency(
-      lines.reduce((sum, line) => sum + line.subtotal, 0)
+      productsTotal + laborTotal + feesTotal + discountsTotal
     );
     const taxAmount = this.roundCurrency(
       Math.max(subtotal, 0) * (taxRegion?.tax_rate ?? 0)
@@ -326,6 +360,7 @@ export class FloralProposalBuilderService {
     templateId?: string | null;
     templateName?: string | null;
     defaultMarkupPercent: number;
+    laborPercent: number;
     shoppingList: FloralProposalShoppingListItem[];
   }): FloralProposalRenderPayload {
     const normalizedLines = args.lines.map((line, index) =>
@@ -334,12 +369,21 @@ export class FloralProposalBuilderService {
         display_order: index,
       })
     );
-    const totals = this.calculateTotals(normalizedLines, args.taxRegion);
+    const totals = this.calculateTotals(normalizedLines, args.taxRegion, args.laborPercent);
     const productsTotal = this.roundCurrency(
       normalizedLines
         .filter((line) => line.line_item_type === 'product')
         .reduce((sum, line) => sum + line.subtotal, 0)
     );
+    const manualLaborTotal = this.roundCurrency(
+      normalizedLines
+        .filter((line) => line.line_item_type === 'labor')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const calculatedLaborAmount = this.roundCurrency(
+      productsTotal * (Math.max(this.roundNumber(args.laborPercent, 2), 0) / 100)
+    );
+    const laborTotal = this.roundCurrency(calculatedLaborAmount + manualLaborTotal);
     const feesTotal = this.roundCurrency(
       normalizedLines
         .filter((line) => line.line_item_type === 'fee')
@@ -358,6 +402,7 @@ export class FloralProposalBuilderService {
       tax_region_name: args.taxRegion?.name ?? null,
       tax_rate: args.taxRegion?.tax_rate ?? 0,
       default_markup_percent: args.defaultMarkupPercent,
+      labor_percent: this.roundNumber(args.laborPercent, 2),
       line_items: normalizedLines
         .filter((line) => line.item_name.trim().length > 0)
         .map((line) => ({
@@ -365,6 +410,7 @@ export class FloralProposalBuilderService {
           line_item_type: line.line_item_type,
           line_type_label: this.formatLineTypeLabel(line.line_item_type),
           item_name: line.item_name.trim(),
+          description: line.description?.trim() || null,
           quantity: line.quantity,
           unit_price: this.roundCurrency(line.unit_price),
           subtotal: this.roundCurrency(line.subtotal),
@@ -383,9 +429,12 @@ export class FloralProposalBuilderService {
       totals,
       breakdown: {
         productsTotal,
+        laborTotal,
+        calculatedLaborAmount,
+        manualLaborTotal,
         feesTotal,
         discountsTotal,
-        subtotal: this.roundCurrency(productsTotal + feesTotal + discountsTotal),
+        subtotal: this.roundCurrency(productsTotal + laborTotal + feesTotal + discountsTotal),
         taxAmount: totals.taxAmount,
         totalAmount: totals.totalAmount,
       },
@@ -412,6 +461,7 @@ export class FloralProposalBuilderService {
       snapshot: {
         ...(line.snapshot ?? {}),
         expanded: line.expanded,
+        description: line.description?.trim() || null,
       },
     }));
   }
@@ -614,6 +664,7 @@ export class FloralProposalBuilderService {
         display_order: lineItem.display_order,
         line_item_type: lineItem.line_item_type,
         item_name: lineItem.item_name,
+        description: (lineItem.snapshot?.['description'] as string | null) ?? null,
         quantity: lineItem.quantity,
         unit_price: lineItem.unit_price,
         subtotal: lineItem.subtotal,
@@ -633,6 +684,8 @@ export class FloralProposalBuilderService {
     switch (lineType) {
       case 'product':
         return 'Product';
+      case 'labor':
+        return 'Labor';
       case 'fee':
         return 'Fee';
       case 'discount':
