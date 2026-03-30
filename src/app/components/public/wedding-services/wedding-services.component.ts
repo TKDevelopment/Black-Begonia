@@ -126,6 +126,17 @@ export class WeddingServicesComponent {
     this.faqs[index].isOpen = !this.faqs[index].isOpen;
   }
 
+  scrollToSection(sectionId: string): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
   get current(): ProcessStep {
     return this.steps[this.currentStep];
   }

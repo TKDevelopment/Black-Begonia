@@ -66,26 +66,172 @@ select,
   );
 }
 
+.crm-shell {
+  --crm-page-bg: #f4ede6;
+  --crm-surface: #ffffff;
+  --crm-surface-elevated: #fffdfa;
+  --crm-surface-muted: #fbf7f3;
+  --crm-surface-subtle: #f7efe8;
+  --crm-surface-highlight: #f1e3d6;
+  --crm-border: #d5c2b3;
+  --crm-border-strong: #c9b19d;
+  --crm-text: #241815;
+  --crm-text-strong: #3a2a24;
+  --crm-text-muted: #6e5d53;
+  --crm-text-soft: #89766a;
+  --crm-accent: #ea938c;
+  --crm-accent-hover: #f0a69d;
+  background: var(--crm-page-bg);
+  color: var(--crm-text);
+}
+
+.crm-shell:not(.crm-theme-dark) .bg-\[\#f7f4f1\],
+.crm-shell:not(.crm-theme-dark) .bg-\[\#f4ede6\] {
+  background-color: var(--crm-page-bg) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .bg-white,
+.crm-shell:not(.crm-theme-dark) .bg-white\/95,
+.crm-shell:not(.crm-theme-dark) .bg-white\/90 {
+  background-color: var(--crm-surface) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .bg-stone-50,
+.crm-shell:not(.crm-theme-dark) .bg-stone-100,
+.crm-shell:not(.crm-theme-dark) .bg-\[\#fcfaf8\],
+.crm-shell:not(.crm-theme-dark) .bg-\[\#faf8f6\],
+.crm-shell:not(.crm-theme-dark) .bg-\[\#fbf7f3\],
+.crm-shell:not(.crm-theme-dark) .bg-\[\#f8f0e9\] {
+  background-color: var(--crm-surface-muted) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .border-stone-200,
+.crm-shell:not(.crm-theme-dark) .border-stone-300,
+.crm-shell:not(.crm-theme-dark) .border-black\/10,
+.crm-shell:not(.crm-theme-dark) .border-black\/15,
+.crm-shell:not(.crm-theme-dark) .border-black\/20 {
+  border-color: var(--crm-border) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .text-\[\#1f1f1f\],
+.crm-shell:not(.crm-theme-dark) .text-stone-900,
+.crm-shell:not(.crm-theme-dark) .text-stone-800,
+.crm-shell:not(.crm-theme-dark) .text-stone-700,
+.crm-shell:not(.crm-theme-dark) .text-\[\#2d2d2d\],
+.crm-shell:not(.crm-theme-dark) .text-\[\#5e5e5e\],
+.crm-shell:not(.crm-theme-dark) .text-\[\#6a6a6a\],
+.crm-shell:not(.crm-theme-dark) .text-\[\#7a7a7a\] {
+  color: var(--crm-text-strong) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .text-stone-600 {
+  color: var(--crm-text-muted) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .text-stone-500 {
+  color: var(--crm-text-soft) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .hover\:bg-stone-50:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:bg-stone-100:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:bg-\[\#f7f4f1\]:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:bg-\[\#efe5e1\]:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:bg-white:hover {
+  background-color: #f1e5da !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .hover\:border-stone-300:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:border-stone-400:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:border-black\/15:hover,
+.crm-shell:not(.crm-theme-dark) .hover\:border-black\/20:hover {
+  border-color: var(--crm-border-strong) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) input,
+.crm-shell:not(.crm-theme-dark) select,
+.crm-shell:not(.crm-theme-dark) textarea {
+  background-color: var(--crm-surface-elevated) !important;
+  border-color: var(--crm-border-strong) !important;
+  color: var(--crm-text) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) input::placeholder,
+.crm-shell:not(.crm-theme-dark) textarea::placeholder {
+  color: var(--crm-text-soft) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) input:focus,
+.crm-shell:not(.crm-theme-dark) select:focus,
+.crm-shell:not(.crm-theme-dark) textarea:focus {
+  border-color: #d08a78 !important;
+  --tw-ring-color: rgba(208, 138, 120, 0.2) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .shadow-sm,
+.crm-shell:not(.crm-theme-dark) .shadow-md,
+.crm-shell:not(.crm-theme-dark) .shadow-2xl,
+.crm-shell:not(.crm-theme-dark) .shadow-\[0_32px_90px_rgba\(28\,25\,23\,0\.18\)\] {
+  box-shadow: 0 10px 30px rgba(84, 57, 38, 0.08) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-mobile-header,
+.crm-shell:not(.crm-theme-dark) .crm-mobile-sidebar-panel,
+.crm-shell:not(.crm-theme-dark) .crm-sidebar-rail {
+  background-color: var(--crm-surface) !important;
+  border-color: var(--crm-border) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-mobile-menu-button {
+  background-color: var(--crm-surface-muted) !important;
+  border-color: var(--crm-border-strong) !important;
+  color: var(--crm-text) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-mobile-menu-button:hover {
+  background-color: #f1e5da !important;
+}
+
 .crm-shell.crm-theme-dark {
-  background: #141414;
-  color: #ece7e1;
+  --crm-page-bg: #120f0d;
+  --crm-surface: #1c1613;
+  --crm-surface-elevated: #241c18;
+  --crm-surface-muted: #191310;
+  --crm-surface-subtle: #211916;
+  --crm-surface-highlight: #2a211d;
+  --crm-border: #3a2c23;
+  --crm-border-strong: #4f3d33;
+  --crm-text: #f6ebe3;
+  --crm-text-strong: #ebdbd0;
+  --crm-text-muted: #c3b1a4;
+  --crm-text-soft: #ad9a8d;
+  --crm-accent: #f0a69d;
+  --crm-accent-hover: #f4b0a7;
+  background: var(--crm-page-bg);
+  color: var(--crm-text);
 }
 
 .crm-shell.crm-theme-dark .bg-\[\#f7f4f1\] {
-  background-color: #141414 !important;
+  background-color: var(--crm-page-bg) !important;
+}
+
+.crm-shell.crm-theme-dark .bg-\[\#f4ede6\] {
+  background-color: var(--crm-page-bg) !important;
 }
 
 .crm-shell.crm-theme-dark .bg-white,
 .crm-shell.crm-theme-dark .bg-white\/95,
 .crm-shell.crm-theme-dark .bg-white\/90 {
-  background-color: #1c1c1c !important;
+  background-color: var(--crm-surface) !important;
 }
 
 .crm-shell.crm-theme-dark .bg-stone-50,
 .crm-shell.crm-theme-dark .bg-stone-100,
 .crm-shell.crm-theme-dark .bg-\[\#fcfaf8\],
-.crm-shell.crm-theme-dark .bg-\[\#faf8f6\] {
-  background-color: #242424 !important;
+.crm-shell.crm-theme-dark .bg-\[\#faf8f6\],
+.crm-shell.crm-theme-dark .bg-\[\#fbf7f3\],
+.crm-shell.crm-theme-dark .bg-\[\#f4ede6\],
+.crm-shell.crm-theme-dark .bg-\[\#f8f0e9\] {
+  background-color: var(--crm-surface-muted) !important;
 }
 
 .crm-shell:not(.crm-theme-dark) .bg-black,
@@ -105,8 +251,10 @@ select,
 .crm-shell.crm-theme-dark .border-stone-200,
 .crm-shell.crm-theme-dark .border-stone-300,
 .crm-shell.crm-theme-dark .border-black\/10,
-.crm-shell.crm-theme-dark .border-dashed.border-stone-300 {
-  border-color: rgba(255, 255, 255, 0.16) !important;
+.crm-shell.crm-theme-dark .border-dashed.border-stone-300,
+.crm-shell.crm-theme-dark .border-white\/10,
+.crm-shell.crm-theme-dark .border-white\/15 {
+  border-color: var(--crm-border) !important;
 }
 
 .crm-shell.crm-theme-dark .text-\[\#1f1f1f\],
@@ -118,11 +266,11 @@ select,
 .crm-shell.crm-theme-dark .text-\[\#5e5e5e\],
 .crm-shell.crm-theme-dark .text-\[\#6a6a6a\],
 .crm-shell.crm-theme-dark .text-\[\#7a7a7a\] {
-  color: #e8e1db !important;
+  color: var(--crm-text-strong) !important;
 }
 
 .crm-shell.crm-theme-dark .text-stone-500 {
-  color: #b8ada5 !important;
+  color: var(--crm-text-soft) !important;
 }
 
 .crm-shell.crm-theme-dark .hover\:bg-stone-50:hover,
@@ -130,21 +278,21 @@ select,
 .crm-shell.crm-theme-dark .hover\:bg-\[\#f7f4f1\]:hover,
 .crm-shell.crm-theme-dark .hover\:bg-\[\#efe5e1\]:hover,
 .crm-shell.crm-theme-dark .hover\:bg-white:hover {
-  background-color: #2f2927 !important;
+  background-color: #2c221d !important;
 }
 
 .crm-shell.crm-theme-dark .hover\:text-\[\#ea938c\]:hover,
 .crm-shell.crm-theme-dark .hover\:text-\[\#c46f67\]:hover,
 .crm-shell.crm-theme-dark .text-\[\#ea938c\],
 .crm-shell.crm-theme-dark .text-\[\#c46f67\] {
-  color: #f0a69d !important;
+  color: var(--crm-accent) !important;
 }
 
 .crm-shell.crm-theme-dark .bg-black,
 .crm-shell.crm-theme-dark .bg-stone-900,
 .crm-shell.crm-theme-dark .bg-\[\#1f1f1f\],
 .crm-shell.crm-theme-dark .bg-\[\#ea938c\] {
-  background-color: #f0a69d !important;
+  background-color: var(--crm-accent) !important;
 }
 
 .crm-shell.crm-theme-dark .text-white {
@@ -152,7 +300,7 @@ select,
 }
 
 .crm-shell.crm-theme-dark .hover\:bg-\[\#ea938c\]:hover {
-  background-color: #f4b0a7 !important;
+  background-color: var(--crm-accent-hover) !important;
   color: #161616 !important;
 }
 
@@ -161,81 +309,201 @@ select,
 .crm-shell.crm-theme-dark .hover\:border-black\/15:hover,
 .crm-shell.crm-theme-dark .hover\:border-black\/20:hover,
 .crm-shell.crm-theme-dark .hover\:border-\[\#ea938c\]:hover {
-  border-color: #f0a69d !important;
+  border-color: var(--crm-accent) !important;
 }
 
 .crm-shell.crm-theme-dark input,
 .crm-shell.crm-theme-dark select,
 .crm-shell.crm-theme-dark textarea {
-  background-color: #242424 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #ece7e1 !important;
+  background-color: #2a211c !important;
+  border-color: var(--crm-border-strong) !important;
+  color: var(--crm-text) !important;
 }
 
 .crm-shell.crm-theme-dark input::placeholder,
 .crm-shell.crm-theme-dark textarea::placeholder {
-  color: #9f948c !important;
+  color: var(--crm-text-soft) !important;
 }
 
 .crm-shell.crm-theme-dark input:focus,
 .crm-shell.crm-theme-dark select:focus,
 .crm-shell.crm-theme-dark textarea:focus {
-  border-color: #f0a69d !important;
+  border-color: var(--crm-accent) !important;
   --tw-ring-color: rgba(240, 166, 157, 0.28) !important;
 }
 
 .crm-shell.crm-theme-dark .shadow-sm,
 .crm-shell.crm-theme-dark .shadow-md,
-.crm-shell.crm-theme-dark .shadow-\[0_32px_90px_rgba\(28\,25\,23\,0\.18\)\] {
+.crm-shell.crm-theme-dark .shadow-\[0_32px_90px_rgba\(28\,25\,23\,0\.18\)\],
+.crm-shell.crm-theme-dark .shadow-2xl {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32) !important;
 }
 
+.crm-shell.crm-theme-dark .crm-mobile-header,
+.crm-shell.crm-theme-dark .crm-mobile-sidebar-panel,
+.crm-shell.crm-theme-dark .crm-sidebar-rail {
+  background-color: #181311 !important;
+  border-color: var(--crm-border) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-mobile-menu-button {
+  background-color: #241c18 !important;
+  border-color: var(--crm-border-strong) !important;
+  color: var(--crm-text) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-mobile-menu-button:hover {
+  background-color: #2c221d !important;
+}
+
 .crm-shell .crm-table-shell {
-  background-color: #ffffff !important;
-  border-color: rgba(31, 31, 31, 0.08) !important;
+  background-color: var(--crm-surface) !important;
+  border-color: var(--crm-border) !important;
+  box-shadow: 0 16px 42px rgba(71, 48, 33, 0.08) !important;
 }
 
 .crm-shell .crm-table-head {
-  background-color: #ffffff !important;
+  background-color: var(--crm-surface-subtle) !important;
+  border-bottom: 1px solid var(--crm-border) !important;
 }
 
 .crm-shell .crm-table-body {
-  background-color: #ffffff !important;
+  background-color: var(--crm-surface) !important;
 }
 
 .crm-shell .crm-table-cell {
-  color: #44403c !important;
+  color: var(--crm-text-strong) !important;
+}
+
+.crm-shell .crm-page-header-title,
+.crm-shell .crm-page-header-subtitle,
+.crm-shell .crm-filter-label,
+.crm-shell .crm-detail-main,
+.crm-shell .crm-detail-sidebar {
+  color: inherit;
+}
+
+.crm-shell .crm-filter-bar,
+.crm-shell .crm-detail-loading-card,
+.crm-shell .crm-detail-card {
+  background-color: var(--crm-surface) !important;
+  border-color: var(--crm-border) !important;
+  box-shadow: 0 16px 42px rgba(71, 48, 33, 0.08) !important;
+}
+
+.crm-shell .crm-filter-input,
+.crm-shell .crm-filter-select,
+.crm-shell .crm-detail-action-button,
+.crm-shell .crm-secondary-button,
+.crm-shell .crm-table-toolbar-button {
+  background-color: var(--crm-surface-elevated) !important;
+  border-color: var(--crm-border-strong) !important;
+  color: var(--crm-text-strong) !important;
+}
+
+.crm-shell .crm-detail-action-button:hover,
+.crm-shell .crm-secondary-button:hover,
+.crm-shell .crm-table-toolbar-button:hover,
+.crm-shell .crm-filter-reset:hover {
+  background-color: var(--crm-surface-highlight) !important;
+  border-color: var(--crm-border-strong) !important;
+}
+
+.crm-shell .crm-primary-button {
+  background-color: var(--crm-accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(234, 147, 140, 0.22) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-primary-button {
+  color: #161311 !important;
+}
+
+.crm-shell .crm-table-pagination {
+  background-color: var(--crm-surface-muted) !important;
+  border-color: var(--crm-border) !important;
+}
+
+.crm-shell .crm-table-page-button:not(.border-\[\#ea938c\]) {
+  background-color: var(--crm-surface-elevated) !important;
+  border-color: var(--crm-border) !important;
+  color: var(--crm-text-strong) !important;
+}
+
+.crm-shell .crm-table-page-button:not(.border-\[\#ea938c\]):hover {
+  background-color: var(--crm-surface-highlight) !important;
+  border-color: var(--crm-border-strong) !important;
+}
+
+.crm-shell .crm-detail-list-item,
+.crm-shell .crm-stat-card,
+.crm-shell .crm-empty-dashed {
+  background-color: var(--crm-surface-muted) !important;
+  border-color: var(--crm-border) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-detail-list-item:hover,
+.crm-shell:not(.crm-theme-dark) .crm-stat-card:hover {
+  background-color: #f4e7da !important;
+  border-color: var(--crm-border-strong) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-detail-list-item:hover,
+.crm-shell.crm-theme-dark .crm-stat-card:hover {
+  background-color: #241c18 !important;
+  border-color: var(--crm-border-strong) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-table thead,
+.crm-shell:not(.crm-theme-dark) .crm-table tbody {
+  border-color: var(--crm-border) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-table-row {
+  border-color: #e4d4c7 !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-table-row.hover\:bg-stone-50:hover {
+  background-color: #f4e8dd !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-table-shell .bg-\[\#fcfaf8\] {
+  background-color: var(--crm-surface-muted) !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .crm-table-shell .bg-white {
+  background-color: var(--crm-surface-elevated) !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table-shell {
-  background-color: #191615 !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
+  background-color: var(--crm-surface) !important;
+  border-color: var(--crm-border) !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table,
 .crm-shell.crm-theme-dark .crm-table-body {
-  background-color: #141414 !important;
+  background-color: var(--crm-surface-muted) !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table-head {
-  background-color: #1c1c1c !important;
+  background-color: #261d19 !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table thead,
 .crm-shell.crm-theme-dark .crm-table tbody {
-  border-color: rgba(255, 255, 255, 0.16) !important;
+  border-color: var(--crm-border) !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table-row {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: #382b23 !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table-row.hover\:bg-stone-50:hover {
-  background-color: #232323 !important;
+  background-color: #2a211d !important;
 }
 
 .crm-shell.crm-theme-dark .crm-table-cell {
-  color: #e8e1db !important;
+  color: var(--crm-text-strong) !important;
 }
 
 .crm-shell.crm-theme-dark .bg-emerald-100 {

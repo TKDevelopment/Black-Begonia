@@ -51,6 +51,7 @@ import { StatusBadgeComponent } from '../../../shared/components/private/status-
     StatusBadgeComponent,
   ],
   templateUrl: './floral-proposal-builder.component.html',
+  styleUrl: './floral-proposal-builder.component.scss',
 })
 export class FloralProposalBuilderComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -89,8 +90,10 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly selectedTaxRegionId = signal<string>('');
   readonly selectedTemplateId = signal<string>('');
   readonly defaultMarkupPercent = signal(300);
+  readonly laborPercent = signal(0);
   readonly draggingLineId = signal<string | null>(null);
   readonly dragOverImageLineId = signal<string | null>(null);
+  readonly isDarkMode = computed(() => this.crmThemeService.mode() === 'dark');
 
   readonly selectedTaxRegion = computed(() => {
     const id = this.selectedTaxRegionId();
@@ -107,7 +110,11 @@ export class FloralProposalBuilderComponent implements OnInit {
   );
 
   readonly totals = computed(() =>
-    this.floralProposalBuilderService.calculateTotals(this.lineItems(), this.selectedTaxRegion())
+    this.floralProposalBuilderService.calculateTotals(
+      this.lineItems(),
+      this.selectedTaxRegion(),
+      this.laborPercent()
+    )
   );
 
   readonly renderPayload = computed(() => this.buildRenderPayload());
@@ -210,6 +217,7 @@ export class FloralProposalBuilderComponent implements OnInit {
       this.defaultMarkupPercent.set(
         this.getInitialDefaultMarkupPercent(activeProposal, pricingSettings)
       );
+      this.laborPercent.set(this.getInitialLaborPercent(activeProposal));
 
       if (activeProposal) {
         const [lineItems, components] = await Promise.all([
@@ -316,6 +324,10 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   updateLineName(lineId: string, value: string): void {
     this.patchLine(lineId, { item_name: value });
+  }
+
+  updateLineDescription(lineId: string, value: string): void {
+    this.patchLine(lineId, { description: value });
   }
 
   updateLineQuantity(lineId: string, value: string): void {
@@ -460,6 +472,10 @@ export class FloralProposalBuilderComponent implements OnInit {
       )
     );
     void this.refreshShoppingList();
+  }
+
+  onLaborPercentChange(value: string): void {
+    this.laborPercent.set(Math.max(Number(value || 0), 0));
   }
 
   onTaxRegionChange(value: string): void {
@@ -1036,6 +1052,7 @@ export class FloralProposalBuilderComponent implements OnInit {
       templateId: this.selectedTemplateId() || null,
       templateName: this.selectedTemplate()?.name ?? null,
       defaultMarkupPercent: this.defaultMarkupPercent(),
+      laborPercent: this.laborPercent(),
       shoppingList: this.shoppingList(),
     });
   }
@@ -1050,11 +1067,13 @@ export class FloralProposalBuilderComponent implements OnInit {
       tax_region_id: renderPayload.tax_region_id,
       tax_region_name: renderPayload.tax_region_name,
       default_markup_percent: renderPayload.default_markup_percent,
+      labor_percent: renderPayload.labor_percent,
       tax_rate: renderPayload.tax_rate,
       line_items: renderPayload.line_items.map((line) => ({
         display_order: line.display_order,
         line_item_type: line.line_item_type,
         item_name: line.item_name,
+        description: line.description ?? null,
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
@@ -1122,6 +1141,15 @@ export class FloralProposalBuilderComponent implements OnInit {
     return pricingSettings?.default_markup_percent ?? 300;
   }
 
+  private getInitialLaborPercent(proposal: FloralProposal | null): number {
+    const snapshotValue = proposal?.snapshot?.['labor_percent'];
+    if (typeof snapshotValue === 'number' && Number.isFinite(snapshotValue)) {
+      return snapshotValue;
+    }
+
+    return 0;
+  }
+
   private getDefaultReservePercent(): number {
     return this.pricingSettings()?.default_reserve_percent ?? 0;
   }
@@ -1173,11 +1201,13 @@ export class FloralProposalBuilderComponent implements OnInit {
       },
       pricing: {
         default_markup_percent: renderPayload.default_markup_percent,
+        labor_percent: renderPayload.labor_percent,
       },
       line_items: renderPayload.line_items,
       shopping_list: renderPayload.shopping_list,
       totals: {
         products_total: renderPayload.breakdown.productsTotal,
+        labor_total: renderPayload.breakdown.laborTotal,
         fees_total: renderPayload.breakdown.feesTotal,
         discounts_total: renderPayload.breakdown.discountsTotal,
         subtotal: renderPayload.breakdown.subtotal,
