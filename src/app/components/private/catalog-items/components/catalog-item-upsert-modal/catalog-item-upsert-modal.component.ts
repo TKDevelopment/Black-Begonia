@@ -7,11 +7,11 @@ export interface CatalogItemUpsertPayload {
   name: string;
   item_type: CatalogItemType;
   unit_type: CatalogUnitType;
+  pack_quantity?: number | null;
   color?: string | null;
   variety?: string | null;
   sku?: string | null;
   base_unit_cost: number;
-  default_waste_percent: number;
   is_active: boolean;
 }
 
@@ -39,8 +39,8 @@ export class CatalogItemUpsertModalComponent {
   readonly color = signal('');
   readonly variety = signal('');
   readonly sku = signal('');
+  readonly packQuantity = signal('');
   readonly baseUnitCost = signal('0.00');
-  readonly defaultWastePercent = signal('0');
   readonly isActive = signal(true);
   readonly validationError = signal<string | null>(null);
 
@@ -78,16 +78,28 @@ export class CatalogItemUpsertModalComponent {
     return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
+  requiresPackQuantity(unitType: CatalogUnitType): boolean {
+    return unitType === 'bunch' || unitType === 'bundle';
+  }
+
+  onUnitTypeChange(value: CatalogUnitType): void {
+    this.unitType.set(value);
+
+    if (!this.requiresPackQuantity(value)) {
+      this.packQuantity.set('');
+    }
+  }
+
   private hydrateForm(): void {
     const item = this.item;
     this.name.set(item?.name ?? '');
     this.itemType.set(item?.item_type ?? 'flower');
     this.unitType.set(item?.unit_type ?? 'stem');
+    this.packQuantity.set(item?.pack_quantity != null ? String(item.pack_quantity) : '');
     this.color.set(item?.color ?? '');
     this.variety.set(item?.variety ?? '');
     this.sku.set(item?.sku ?? '');
     this.baseUnitCost.set((item?.base_unit_cost ?? 0).toFixed(2));
-    this.defaultWastePercent.set(String(item?.default_waste_percent ?? 0));
     this.isActive.set(item?.is_active ?? true);
     this.validationError.set(null);
   }
@@ -95,7 +107,10 @@ export class CatalogItemUpsertModalComponent {
   private buildPayload(): CatalogItemUpsertPayload | null {
     const name = this.name().trim();
     const baseUnitCost = Number(this.baseUnitCost());
-    const defaultWastePercent = Number(this.defaultWastePercent());
+    const unitType = this.unitType();
+    const rawPackQuantity = String(this.packQuantity() ?? '').trim();
+    const requiresPackQuantity = this.requiresPackQuantity(unitType);
+    const packQuantity = rawPackQuantity.length ? Number(rawPackQuantity) : null;
 
     if (!name) {
       this.validationError.set('Item name is required.');
@@ -107,8 +122,8 @@ export class CatalogItemUpsertModalComponent {
       return null;
     }
 
-    if (Number.isNaN(defaultWastePercent) || defaultWastePercent < 0) {
-      this.validationError.set('Default reserve percent must be a valid non-negative number.');
+    if (requiresPackQuantity && (packQuantity == null || Number.isNaN(packQuantity) || packQuantity <= 0)) {
+      this.validationError.set('Pack quantity must be a valid number greater than 0 for bunches and bundles.');
       return null;
     }
 
@@ -117,12 +132,12 @@ export class CatalogItemUpsertModalComponent {
     return {
       name,
       item_type: this.itemType(),
-      unit_type: this.unitType(),
+      unit_type: unitType,
+      pack_quantity: requiresPackQuantity ? Number(packQuantity!.toFixed(2)) : null,
       color: this.color().trim() || null,
       variety: this.variety().trim() || null,
       sku: this.sku().trim() || null,
       base_unit_cost: Number(baseUnitCost.toFixed(2)),
-      default_waste_percent: Number(defaultWastePercent.toFixed(2)),
       is_active: this.isActive(),
     };
   }

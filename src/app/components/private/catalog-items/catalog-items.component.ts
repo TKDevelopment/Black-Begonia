@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -45,8 +45,8 @@ export class CatalogItemsComponent implements OnInit {
     { key: 'name', label: 'Item' },
     { key: 'item_type', label: 'Type' },
     { key: 'unit_type', label: 'Unit' },
+    { key: 'pack_quantity', label: 'Pack Qty' },
     { key: 'base_unit_cost', label: 'Unit Cost' },
-    { key: 'default_waste_percent', label: 'Reserve %' },
   ];
 
   loading = signal(true);
@@ -261,7 +261,7 @@ export class CatalogItemsComponent implements OnInit {
   async deactivateCurrentItem(): Promise<void> {
     const item = this.item();
     if (!item || this.saving()) return;
-    const confirmed = window.confirm(`Deactivate ${item.name}? It will remain in the catalog but won’t be available for new arrangement use.`);
+    const confirmed = window.confirm(`Deactivate ${item.name}? It will remain in the catalog but won't be available for new Floral Proposal use.`);
     if (!confirmed) return;
 
     try {
@@ -309,6 +309,11 @@ export class CatalogItemsComponent implements OnInit {
   formatCurrency(value: number | null | undefined): string {
     if (value == null) return '$0.00';
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  }
+
+  formatPackQuantity(item: CatalogItem): string {
+    if (item.unit_type !== 'bunch' && item.unit_type !== 'bundle') return '-';
+    return item.pack_quantity != null ? String(item.pack_quantity) : 'Not set';
   }
 
   formatDate(value: string | null | undefined): string {

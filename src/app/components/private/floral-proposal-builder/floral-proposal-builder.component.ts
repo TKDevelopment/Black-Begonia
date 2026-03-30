@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { CatalogItem } from '../../../core/models/catalog-item';
 import {
   DocumentTemplate,
   FloralProposal,
+  FloralProposalRenderContract,
   FloralProposalLineItemType,
   FloralProposalShoppingListItem,
   PricingSettings,
@@ -15,6 +17,7 @@ import {
 import { Lead } from '../../../core/models/lead';
 import { TaxRegion } from '../../../core/models/tax-region';
 import { ToastService } from '../../../core/services/toast.service';
+import { CrmThemeService } from '../../../core/services/crm-theme.service';
 import { ActivityRepositoryService } from '../../../core/supabase/repositories/activity-repository.service';
 import { CatalogItemRepositoryService } from '../../../core/supabase/repositories/catalog-item-repository.service';
 import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
@@ -22,7 +25,6 @@ import { FloralProposalRepositoryService } from '../../../core/supabase/reposito
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { PricingSettingsRepositoryService } from '../../../core/supabase/repositories/pricing-settings-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
-import { VendorItemPackRepositoryService } from '../../../core/supabase/repositories/vendor-item-pack-repository.service';
 import {
   FloralProposalBuilderComponentRow,
   FloralProposalBuilderLine,
@@ -30,6 +32,7 @@ import {
   FloralProposalBuilderService,
 } from '../../../core/supabase/services/floral-proposal-builder.service';
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
+import { FloralProposalRendererService } from '../../../core/supabase/services/floral-proposal-renderer.service';
 import { EntityDetailShellComponent } from '../../../shared/components/private/entity-detail-shell/entity-detail-shell.component';
 import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
 import { LoadingStateBlockComponent } from '../../../shared/components/private/loading-state-block/loading-state-block.component';
@@ -52,22 +55,28 @@ import { StatusBadgeComponent } from '../../../shared/components/private/status-
 export class FloralProposalBuilderComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly sanitizer = inject(DomSanitizer);
   private readonly leadRepository = inject(LeadRepositoryService);
   private readonly taxRegionRepository = inject(TaxRegionRepositoryService);
   private readonly floralProposalRepository = inject(FloralProposalRepositoryService);
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
-  private readonly vendorItemPackRepository = inject(VendorItemPackRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly documentTemplateRepository = inject(DocumentTemplateRepositoryService);
   private readonly pricingSettingsRepository = inject(PricingSettingsRepositoryService);
   private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
+  private readonly floralProposalRenderer = inject(FloralProposalRendererService);
   private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
   private readonly toast = inject(ToastService);
+  readonly crmThemeService = inject(CrmThemeService);
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly saving = signal(false);
   readonly previewOpen = signal(false);
+  readonly previewLoading = signal(false);
+  readonly previewContract = signal<FloralProposalRenderContract | null>(null);
+  readonly previewPdfObjectUrl = signal<string | null>(null);
+  readonly previewPdfBase64 = signal<string | null>(null);
   readonly lead = signal<Lead | null>(null);
   readonly proposals = signal<FloralProposal[]>([]);
   readonly activeProposal = signal<FloralProposal | null>(null);
@@ -81,6 +90,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly selectedTemplateId = signal<string>('');
   readonly defaultMarkupPercent = signal(300);
   readonly draggingLineId = signal<string | null>(null);
+  readonly dragOverImageLineId = signal<string | null>(null);
 
   readonly selectedTaxRegion = computed(() => {
     const id = this.selectedTaxRegionId();
@@ -143,7 +153,18 @@ export class FloralProposalBuilderComponent implements OnInit {
     )}`;
   });
 
-  readonly previewHtml = computed(() => this.buildProposalPrintHtml(this.renderPayload()));
+  readonly previewHtml = computed(() => {
+    const previewContract = this.previewContract();
+    return previewContract
+      ? this.floralProposalRenderer.renderHtml(previewContract)
+      : this.buildProposalPrintHtmlFromRenderPayload(this.renderPayload());
+  });
+  readonly previewPdfUrl = computed<SafeResourceUrl | null>(() => {
+    const objectUrl = this.previewPdfObjectUrl();
+    return objectUrl
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(objectUrl)
+      : null;
+  });
 
   ngOnInit(): void {
     const leadId = this.route.snapshot.paramMap.get('leadId');
@@ -306,13 +327,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.patchAndRecalculateLine(lineId, { line_item_type: value });
   }
 
-  updateLineNotes(lineId: string, value: string): void {
-    this.patchLine(lineId, { notes: value || null });
-  }
 
-  updateLineDescription(lineId: string, value: string): void {
-    this.patchLine(lineId, { description: value || null });
-  }
 
   updateManualUnitPrice(lineId: string, value: string): void {
     const unitPrice = Math.max(Number(value || 0), 0);
@@ -375,8 +390,14 @@ export class FloralProposalBuilderComponent implements OnInit {
               ...component,
               catalog_item_id: null,
               catalog_item_name: rawValue,
-              item_type: component.item_type ?? null,
-              unit_type: component.unit_type ?? null,
+              base_unit_cost: 0,
+              reserve_percent: component.reserve_percent ?? this.getDefaultReservePercent(),
+              pack_quantity: null,
+              purchase_unit_cost: 0,
+              item_type: null,
+              unit_type: null,
+              color: null,
+              variety: null,
             };
           }
 
@@ -384,7 +405,8 @@ export class FloralProposalBuilderComponent implements OnInit {
             component,
             matchedItem,
             line.quantity,
-            this.defaultMarkupPercent()
+            this.defaultMarkupPercent(),
+            this.getDefaultReservePercent()
           );
         });
 
@@ -444,6 +466,26 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.selectedTaxRegionId.set(value);
   }
 
+  updateShoppingListReserve(item: FloralProposalShoppingListItem, rawValue: string): void {
+    const reservePercent = Math.max(Number(rawValue || 0), 0);
+    const itemKey = this.getShoppingListItemKey(item);
+
+    this.lineItems.update((lines) =>
+      lines.map((line) =>
+        this.floralProposalBuilderService.recalculateLine({
+          ...line,
+          components: line.components.map((component) =>
+            this.getComponentShoppingKey(component) === itemKey
+              ? { ...component, reserve_percent: reservePercent }
+              : component
+          ),
+        })
+      )
+    );
+
+    void this.refreshShoppingList();
+  }
+
   async saveDraft(): Promise<void> {
     const lead = this.lead();
     if (!lead || this.saving() || this.isReadOnly(lead.status)) return;
@@ -466,22 +508,48 @@ export class FloralProposalBuilderComponent implements OnInit {
     const lead = this.lead();
     if (!lead || this.saving() || !this.canSubmit()) return;
 
+    this.previewOpen.set(true);
+    this.previewLoading.set(true);
+    this.previewContract.set(null);
+    this.previewPdfBase64.set(null);
+    this.resetPreviewPdfUrl(null);
+
     try {
       this.saving.set(true);
       const proposal = await this.persistDraft();
       this.activeProposal.set(proposal);
+      const previewContract = await this.buildServerRenderContract(proposal);
+      this.previewContract.set(previewContract);
+      const previewPayload = this.proposalWorkflow.buildSubmissionPayload({
+        lead,
+        renderContract: previewContract,
+        termsVersion: 'v1',
+        privacyPolicyVersion: 'v1',
+      });
+      const previewPdf =
+        await this.proposalWorkflow.previewProposalPdf(previewPayload);
+      this.previewPdfBase64.set(previewPdf.pdfBase64);
+      this.resetPreviewPdfUrl(previewPdf.objectUrl);
       await this.loadBuilder(lead.lead_id);
-      this.previewOpen.set(true);
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] openPreview error:', error);
+      this.previewOpen.set(false);
+      this.previewLoading.set(false);
+      this.previewContract.set(null);
+      this.previewPdfBase64.set(null);
+      this.resetPreviewPdfUrl(null);
       this.toast.showToast('We were unable to prepare the Floral Proposal preview right now.', 'error');
     } finally {
+      this.previewLoading.set(false);
       this.saving.set(false);
     }
   }
 
   closePreview(): void {
-    if (this.saving()) return;
+    if (this.saving() || this.previewLoading()) return;
+    this.previewContract.set(null);
+    this.previewPdfBase64.set(null);
+    this.resetPreviewPdfUrl(null);
     this.previewOpen.set(false);
   }
 
@@ -499,67 +567,34 @@ export class FloralProposalBuilderComponent implements OnInit {
       return;
     }
 
-    const renderPayload = this.buildRenderPayload();
-    if (!renderPayload.line_items.length) {
+    if (!this.renderPayload().line_items.length) {
       this.toast.showToast('Add at least one line item before submitting the Floral Proposal.', 'error');
       return;
     }
 
     try {
       this.saving.set(true);
+      const activeProposal = this.activeProposal();
+      const renderContract =
+        this.previewContract() ??
+        (await this.buildServerRenderContract(activeProposal));
+      const submissionPayload = this.proposalWorkflow.buildSubmissionPayload({
+        lead,
+        renderContract,
+        termsVersion: 'v1',
+        privacyPolicyVersion: 'v1',
+      });
+      const previewPdfBase64 = this.previewPdfBase64();
       const result = await this.proposalWorkflow.submitProposal({
-        lead_id: lead.lead_id,
-        template_id: this.selectedTemplateId(),
-        tax_region_id: this.selectedTaxRegionId(),
-        line_items: renderPayload.line_items.map((line) => ({
-          display_order: line.display_order,
-          line_item_type: line.line_item_type,
-          item_name: line.item_name.trim(),
-          quantity: line.quantity,
-          unit_price: line.unit_price,
-          subtotal: line.subtotal,
-          description: line.description ?? null,
-          image_storage_path: line.image_storage_path ?? null,
-          image_alt_text: line.image_alt_text ?? null,
-          image_caption: line.image_caption ?? null,
-          notes: line.notes ?? null,
-          snapshot: {
-            line_type_label: line.line_type_label,
-          },
-          components:
-            line.line_item_type === 'product'
-              ? line.components
-                  .map((component, componentIndex) => ({
-                    display_order: componentIndex,
-                    catalog_item_id: component.catalog_item_id ?? null,
-                    catalog_item_name: component.catalog_item_name.trim(),
-                    quantity_per_unit: component.quantity_per_unit,
-                    extended_quantity: component.extended_quantity,
-                    base_unit_cost: component.base_unit_cost,
-                    applied_markup_percent: component.applied_markup_percent,
-                    sell_unit_price: component.sell_unit_price,
-                    subtotal: component.subtotal,
-                    reserve_percent: component.reserve_percent,
-                    snapshot: {
-                      item_type: component.item_type ?? null,
-                      unit_type: component.unit_type ?? null,
-                      color: component.color ?? null,
-                      variety: component.variety ?? null,
-                    },
-                  }))
-              : [],
-        })),
-        shopping_list_items: renderPayload.shopping_list,
-        subtotal: renderPayload.totals.subtotal,
-        tax_rate: renderPayload.tax_rate,
-        tax_amount: renderPayload.totals.taxAmount,
-        total_amount: renderPayload.totals.totalAmount,
-        terms_version: 'v1',
-        privacy_policy_version: 'v1',
-        snapshot: this.buildProposalSnapshot(renderPayload),
+        ...submissionPayload,
+        pdf_base64: previewPdfBase64,
       });
 
       this.previewOpen.set(false);
+      this.previewLoading.set(false);
+      this.previewContract.set(null);
+      this.previewPdfBase64.set(null);
+      this.resetPreviewPdfUrl(null);
       this.toast.showToast(`Floral Proposal v${result.version} submitted successfully.`, 'success');
       await this.loadBuilder(lead.lead_id);
     } catch (error) {
@@ -609,6 +644,19 @@ export class FloralProposalBuilderComponent implements OnInit {
     return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
+  getLineImageFileName(storagePath: string | null | undefined): string {
+    if (!storagePath) {
+      return '';
+    }
+
+    const segments = storagePath.split('/');
+    return segments[segments.length - 1] ?? '';
+  }
+
+  lineHasImage(line: FloralProposalBuilderLine): boolean {
+    return Boolean(line.image_storage_path || line.image_signed_url);
+  }
+
   exportFloralProposalPdf(): void {
     const lead = this.lead();
     const renderPayload = this.buildRenderPayload();
@@ -624,7 +672,7 @@ export class FloralProposalBuilderComponent implements OnInit {
       return;
     }
 
-    const html = this.buildProposalPrintHtml(renderPayload);
+    const html = this.buildProposalPrintHtmlFromRenderPayload(renderPayload);
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
@@ -632,36 +680,90 @@ export class FloralProposalBuilderComponent implements OnInit {
     setTimeout(() => printWindow.print(), 250);
   }
 
-  async onLineImageSelected(lineId: string, event: Event): Promise<void> {
-    const lead = this.lead();
-    const input = event.target as HTMLInputElement | null;
-    const file = input?.files?.[0];
+  private resetPreviewPdfUrl(nextUrl: string | null): void {
+    const previousUrl = this.previewPdfObjectUrl();
+    if (previousUrl) {
+      URL.revokeObjectURL(previousUrl);
+    }
+    this.previewPdfObjectUrl.set(nextUrl);
+  }
 
-    if (!lead || !file || !this.canEdit()) {
-      if (input) input.value = '';
-      return;
+  private async uploadLineItemImage(lineId: string, file: File): Promise<void> {
+    const lead = this.lead();
+    if (!lead) {
+      throw new Error('Lead is required to upload a line item image.');
     }
 
+    this.saving.set(true);
     try {
-      this.saving.set(true);
       const { storagePath, signedUrl } = await this.proposalWorkflow.uploadLineItemImage(
         lead.lead_id,
         lineId,
         file
       );
 
-      this.patchLine(lineId, {
+      this.patchLineImageState(lineId, {
         image_storage_path: storagePath,
         image_alt_text: this.lineItems().find((line) => line.local_id === lineId)?.item_name || null,
+        image_caption: null,
         image_signed_url: signedUrl,
       });
       this.toast.showToast('Line item image uploaded.', 'success');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async onLineImageSelected(lineId: string, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+
+    if (!file || !this.canEdit()) {
+      if (input) input.value = '';
+      return;
+    }
+
+    try {
+      await this.uploadLineItemImage(lineId, file);
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] onLineImageSelected error:', error);
       this.toast.showToast('We were unable to upload the line item image right now.', 'error');
     } finally {
       if (input) input.value = '';
       this.saving.set(false);
+    }
+  }
+
+  onLineImageDragOver(lineId: string, event: DragEvent): void {
+    if (!this.canEdit()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverImageLineId.set(lineId);
+  }
+
+  onLineImageDragLeave(lineId: string, event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.dragOverImageLineId() === lineId) {
+      this.dragOverImageLineId.set(null);
+    }
+  }
+
+  async onLineImageDrop(lineId: string, event: DragEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverImageLineId.set(null);
+
+    if (!this.canEdit()) return;
+
+    const file = event.dataTransfer?.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    try {
+      await this.uploadLineItemImage(lineId, file);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] onLineImageDrop error:', error);
+      this.toast.showToast('We were unable to upload the line item image right now.', 'error');
     }
   }
 
@@ -675,7 +777,7 @@ export class FloralProposalBuilderComponent implements OnInit {
         await this.proposalWorkflow.removeLineItemImage(line.image_storage_path);
       }
 
-      this.patchLine(lineId, {
+      this.patchLineImageState(lineId, {
         image_storage_path: null,
         image_alt_text: null,
         image_caption: null,
@@ -688,10 +790,6 @@ export class FloralProposalBuilderComponent implements OnInit {
     } finally {
       this.saving.set(false);
     }
-  }
-
-  updateLineImageCaption(lineId: string, value: string): void {
-    this.patchLine(lineId, { image_caption: value || null });
   }
 
   getCatalogItemOptions(component: FloralProposalBuilderComponentRow): CatalogItem[] {
@@ -817,6 +915,15 @@ export class FloralProposalBuilderComponent implements OnInit {
     );
   }
 
+  private patchLineImageState(
+    lineId: string,
+    updates: Partial<FloralProposalBuilderLine>
+  ): void {
+    this.lineItems.update((lines) =>
+      lines.map((line) => (line.local_id === lineId ? { ...line, ...updates } : line))
+    );
+  }
+
   private patchAndRecalculateLine(
     lineId: string,
     updates: Partial<FloralProposalBuilderLine>
@@ -857,25 +964,9 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private async refreshShoppingList(): Promise<void> {
-    const itemIds = Array.from(
-      new Set(
-        this.lineItems()
-          .flatMap((line) => line.components)
-          .map((component) => component.catalog_item_id)
-          .filter((value): value is string => !!value)
-      )
-    );
-
-    if (!itemIds.length) {
-      this.shoppingList.set([]);
-      return;
-    }
-
     try {
-      const packs = await this.vendorItemPackRepository.getDefaultPacksForItems(itemIds);
       const shoppingList = this.floralProposalBuilderService.buildShoppingList(
-        this.lineItems(),
-        packs
+        this.lineItems()
       );
       this.shoppingList.set(shoppingList);
     } catch (error) {
@@ -949,7 +1040,10 @@ export class FloralProposalBuilderComponent implements OnInit {
     });
   }
 
-  private buildProposalSnapshot(renderPayload = this.buildRenderPayload()): Record<string, unknown> {
+  private buildProposalSnapshot(
+    renderPayload = this.buildRenderPayload(),
+    renderContract?: FloralProposalRenderContract | null
+  ): Record<string, unknown> {
     return {
       template_id: renderPayload.template_id,
       template_name: renderPayload.template_name,
@@ -964,11 +1058,9 @@ export class FloralProposalBuilderComponent implements OnInit {
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
-        description: line.description ?? null,
         image_storage_path: line.image_storage_path ?? null,
         image_alt_text: line.image_alt_text ?? null,
         image_caption: line.image_caption ?? null,
-        notes: line.notes ?? null,
         components: line.components.map((component) => ({
           catalog_item_id: component.catalog_item_id ?? null,
           catalog_item_name: component.catalog_item_name,
@@ -983,7 +1075,25 @@ export class FloralProposalBuilderComponent implements OnInit {
       shopping_list: renderPayload.shopping_list,
       totals: renderPayload.totals,
       breakdown: renderPayload.breakdown,
+      render_contract: renderContract ?? null,
     };
+  }
+
+  private async buildServerRenderContract(
+    proposal?: FloralProposal | null
+  ): Promise<FloralProposalRenderContract> {
+    const lead = this.lead();
+    if (!lead) {
+      throw new Error('Lead is required to build the Floral Proposal render contract.');
+    }
+
+    return this.proposalWorkflow.createRenderContract({
+      lead,
+      proposal: proposal ?? this.activeProposal(),
+      template: this.selectedTemplate(),
+      taxRegion: this.selectedTaxRegion(),
+      renderPayload: this.renderPayload(),
+    });
   }
 
   private isWorkflowAllowed(status: Lead['status']): boolean {
@@ -1012,121 +1122,82 @@ export class FloralProposalBuilderComponent implements OnInit {
     return pricingSettings?.default_markup_percent ?? 300;
   }
 
-  private buildProposalPrintHtml(renderPayload: FloralProposalRenderPayload): string {
-    const lead = this.lead();
-    const proposal = this.activeProposal();
-    const template = this.selectedTemplate();
-    const lines = renderPayload.line_items;
+  private getDefaultReservePercent(): number {
+    return this.pricingSettings()?.default_reserve_percent ?? 0;
+  }
 
+  private getComponentShoppingKey(component: FloralProposalBuilderComponentRow): string {
+    return (
+      component.catalog_item_id ??
+      `${component.catalog_item_name}:${component.unit_type ?? 'other'}`
+    );
+  }
+
+  private getShoppingListItemKey(item: FloralProposalShoppingListItem): string {
+    return item.catalog_item_id ?? `${item.item_name}:${item.unit_type ?? 'other'}`;
+  }
+
+  private buildProposalPrintHtmlFromRenderPayload(renderPayload: FloralProposalRenderPayload): string {
+    const contract = this.previewContract();
+    if (contract) {
+      return this.floralProposalRenderer.renderHtml(contract);
+    }
+
+    const lead = this.lead();
     if (!lead) {
       return '<html><body><p>Floral Proposal unavailable.</p></body></html>';
     }
 
-    const lineRows = lines
-      .map(
-        (line) => `
-          <div class="line-item">
-            ${
-              line.image_signed_url
-                ? `<div class="line-item-media"><img src="${line.image_signed_url}" alt="${
-                    line.image_alt_text || line.item_name
-                  }" /></div>`
-                : ''
-            }
-            <div class="line-item-copy">
-              <div class="line-item-header">
-                <div>
-                  <h3>${line.item_name}</h3>
-                  ${
-                    line.description
-                      ? `<p class="line-item-description">${line.description}</p>`
-                      : ''
-                  }
-                </div>
-                <div class="line-item-meta">
-                  <span>Qty ${line.quantity}</span>
-                  <strong>${this.formatCurrency(line.subtotal)}</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        `
-      )
-      .join('');
+    const fallbackContract: FloralProposalRenderContract = {
+      proposal_id: this.activeProposal()?.floral_proposal_id ?? null,
+      proposal_version: this.activeProposal()?.version ?? null,
+      generated_at: new Date().toISOString(),
+      lead: {
+        lead_id: lead.lead_id,
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        email: lead.email,
+        service_type: lead.service_type,
+        event_type: lead.event_type ?? null,
+        event_date: lead.event_date ?? null,
+        status: lead.status,
+      },
+      template: {
+        template_id: this.selectedTemplate()?.template_id ?? renderPayload.template_id ?? null,
+        name: this.selectedTemplate()?.name ?? renderPayload.template_name ?? null,
+      },
+      tax_region: {
+        tax_region_id: renderPayload.tax_region_id ?? null,
+        name: renderPayload.tax_region_name ?? null,
+        tax_rate: renderPayload.tax_rate,
+      },
+      pricing: {
+        default_markup_percent: renderPayload.default_markup_percent,
+      },
+      line_items: renderPayload.line_items,
+      shopping_list: renderPayload.shopping_list,
+      totals: {
+        products_total: renderPayload.breakdown.productsTotal,
+        fees_total: renderPayload.breakdown.feesTotal,
+        discounts_total: renderPayload.breakdown.discountsTotal,
+        subtotal: renderPayload.breakdown.subtotal,
+        tax_amount: renderPayload.totals.taxAmount,
+        total_amount: renderPayload.totals.totalAmount,
+      },
+      renderer_assets: {
+        line_item_images: renderPayload.line_items.map((line) => ({
+          display_order: line.display_order,
+          item_name: line.item_name,
+          storage_path: line.image_storage_path ?? null,
+          signed_url: line.image_signed_url ?? null,
+          alt_text: line.image_alt_text ?? null,
+          caption: line.image_caption ?? null,
+        })),
+      },
+    };
 
-    return `
-      <html>
-        <head>
-          <title>Floral Proposal ${proposal ? `v${proposal.version}` : ''}</title>
-          <style>
-            body { font-family: Georgia, serif; margin: 40px; color: #1f1f1f; }
-            h1, h2, h3 { margin: 0; }
-            .eyebrow { letter-spacing: 0.28em; text-transform: uppercase; font-size: 11px; color: #c46f67; margin-bottom: 10px; }
-            .header { display: flex; justify-content: space-between; align-items: start; gap: 24px; margin-bottom: 28px; }
-            .meta { font-size: 13px; color: #57534e; line-height: 1.7; }
-            .line-items { margin-top: 22px; display: grid; gap: 18px; }
-            .line-item { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 18px; border: 1px solid #e7e5e4; border-radius: 20px; overflow: hidden; background: #fcfaf8; }
-            .line-item-media { background: #f3ede8; min-height: 180px; }
-            .line-item-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
-            .line-item-copy { padding: 20px; }
-            .line-item-header { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
-            .line-item-header h3 { font-size: 22px; margin-bottom: 8px; }
-            .line-item-description { font-size: 13px; line-height: 1.8; color: #57534e; margin: 0; }
-            .line-item-meta { text-align: right; font-size: 13px; color: #57534e; }
-            .line-item-meta strong { display: block; margin-top: 8px; font-size: 18px; color: #1f1f1f; }
-            .totals { width: 320px; margin-left: auto; margin-top: 28px; }
-            .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
-            .totals-row.total { border-top: 1px solid #d6d3d1; margin-top: 8px; padding-top: 12px; font-weight: 700; font-size: 16px; }
-            .note { margin-top: 36px; font-size: 12px; color: #57534e; line-height: 1.8; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <p class="eyebrow">Black Begonia Florals</p>
-              <h1>Floral Proposal</h1>
-              <p class="meta">${template?.name ?? 'Structured Template'}<br />Prepared for ${
-                lead.first_name
-              } ${lead.last_name}<br />${lead.email}</p>
-            </div>
-            <div class="meta">
-              <strong>Lead Status:</strong> ${this.formatStatusLabel(lead.status)}<br />
-              <strong>Event Date:</strong> ${lead.event_date ?? 'Not set'}<br />
-              <strong>Tax Region:</strong> ${renderPayload.tax_region_name ?? 'Not selected'}<br />
-              <strong>Generated:</strong> ${this.formatDateTime(new Date().toISOString())}
-            </div>
-          </div>
-
-          <div class="line-items">
-            ${lineRows}
-          </div>
-
-          <div class="totals">
-            <div class="totals-row"><span>Products</span><span>${this.formatCurrency(
-              renderPayload.breakdown.productsTotal
-            )}</span></div>
-            <div class="totals-row"><span>Fees</span><span>${this.formatCurrency(
-              renderPayload.breakdown.feesTotal
-            )}</span></div>
-            <div class="totals-row"><span>Discounts</span><span>${this.formatCurrency(
-              renderPayload.breakdown.discountsTotal
-            )}</span></div>
-            <div class="totals-row"><span>Subtotal</span><span>${this.formatCurrency(
-              renderPayload.breakdown.subtotal
-            )}</span></div>
-            <div class="totals-row"><span>Tax</span><span>${this.formatCurrency(
-              renderPayload.totals.taxAmount
-            )}</span></div>
-            <div class="totals-row total"><span>Total</span><span>${this.formatCurrency(
-              renderPayload.totals.totalAmount
-            )}</span></div>
-          </div>
-
-          <div class="note">
-            This Floral Proposal is generated from the saved CRM proposal data for client review. Internal catalog-item composition and shopping-list details are intentionally omitted from the customer-facing document.
-          </div>
-        </body>
-      </html>
-    `;
+    return this.floralProposalRenderer.renderHtml(fallbackContract);
   }
 }
+
+

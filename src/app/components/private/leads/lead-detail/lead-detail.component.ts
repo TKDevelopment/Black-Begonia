@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { EntityDetailShellComponent } from '../../../../shared/components/private/entity-detail-shell/entity-detail-shell.component';
@@ -24,6 +25,7 @@ import { LeadDeclineModalComponent } from '../components/lead-decline-modal/lead
 import { LeadStatus } from '../../../../core/models/lead-status';
 import { InternalUserRepositoryService } from '../../../../core/supabase/repositories/internal-user-repository.service';
 import { InternalUser } from '../../../../core/models/internal-user';
+import { Task } from '../../../../core/models/task';
 import {
   TaskListItem,
   TaskListPanelComponent,
@@ -36,12 +38,17 @@ import { ConfirmDialogComponent } from '../../../../shared/components/private/co
 import { LeadProposalHistoryCardComponent } from '../components/lead-proposal-history-card/lead-proposal-history-card.component';
 import { LeadUpsertModalComponent } from '../components/lead-upsert-modal/lead-upsert-modal.component';
 import { LeadUpsertPayload } from '../components/lead-upsert-modal/lead-upsert.types';
-import { LeadNoteModalComponent } from '../components/lead-note-modal/lead-note-modal.component';
 import { ToastService } from '../../../../core/services/toast.service';
+import { CrmThemeService } from '../../../../core/services/crm-theme.service';
 import {
   ConvertLeadInput,
   LeadConversionService,
 } from '../../../../core/supabase/services/lead-conversion.service';
+import { TaskWorkflowService } from '../../../../core/supabase/services/task-workflow.service';
+import {
+  TaskUpsertModalComponent,
+  TaskUpsertPayload,
+} from '../../tasks/components/task-upsert-modal/task-upsert-modal.component';
 
 type BadgeTone =
   | 'neutral'
@@ -56,6 +63,7 @@ type BadgeTone =
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     EntityDetailShellComponent,
     StatusBadgeComponent,
     LoadingStateBlockComponent,
@@ -68,7 +76,7 @@ type BadgeTone =
     ConfirmDialogComponent,
     LeadProposalHistoryCardComponent,
     LeadUpsertModalComponent,
-    LeadNoteModalComponent,
+    TaskUpsertModalComponent,
   ],
   templateUrl: './lead-detail.component.html',
   styleUrl: './lead-detail.component.scss',
@@ -83,11 +91,16 @@ export class LeadDetailComponent implements OnInit {
   private inspirationUrlRepository = inject(LeadInspirationUrlRepositoryService);
   private internalUserRepository = inject(InternalUserRepositoryService);
   private leadConversionService = inject(LeadConversionService);
+  private taskWorkflow = inject(TaskWorkflowService);
   private toast = inject(ToastService);
+  readonly crmThemeService = inject(CrmThemeService);
 
   loading = signal(true);
   error = signal<string | null>(null);
   actionLoading = signal(false);
+  inspirationUploadLoading = signal(false);
+  inspirationDropActive = signal(false);
+  deletingInspirationId = signal<string | null>(null);
 
   lead = signal<Lead | null>(null);
   activities = signal<LeadActivity[]>([]);
@@ -101,15 +114,25 @@ export class LeadDetailComponent implements OnInit {
   selectedProposalId = signal<string | null>(null);
 
   internalUsers = signal<InternalUser[]>([]);
-  leadTasks = signal<TaskListItem[]>([]);
+  leadTasks = signal<Task[]>([]);
+  taskLoading = signal(false);
+  taskSaving = signal(false);
+  taskModalOpen = signal(false);
+  taskModalMode = signal<'create' | 'edit'>('create');
+  selectedTask = signal<Task | null>(null);
 
   convertModalOpen = signal(false);
   convertLoading = signal(false);
 
   editModalOpen = signal(false);
   editSaving = signal(false);
-  noteModalOpen = signal(false);
   noteSaving = signal(false);
+  noteDraft = signal('');
+  noteDraftError = signal<string | null>(null);
+  editingNoteId = signal<string | null>(null);
+  editingNoteDraft = signal('');
+  editingNoteError = signal<string | null>(null);
+  deletingNoteId = signal<string | null>(null);
 
   confirmDialogOpen = signal(false);
 
@@ -147,6 +170,14 @@ export class LeadDetailComponent implements OnInit {
       return acc;
     }, {});
   });
+
+  noteActivities = computed(() =>
+    this.activities().filter((activity) => activity.activity_type === 'note_added')
+  );
+
+  timelineActivities = computed(() =>
+    this.activities().filter((activity) => activity.activity_type !== 'note_added')
+  );
 
   title = computed(() => {
     const lead = this.lead();
@@ -233,11 +264,12 @@ export class LeadDetailComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const [lead, activities, proposals, inspirationUrls] = await Promise.all([
+      const [lead, activities, proposals, inspirationUrls, tasks] = await Promise.all([
         this.leadRepository.getLeadById(leadId),
         this.activityRepository.getLeadActivity(leadId),
         this.proposalWorkflow.getLeadProposals(leadId),
         this.inspirationUrlRepository.getInspirationUrlsByLeadId(leadId),
+        this.taskWorkflow.getTasksByLeadId(leadId),
       ]);
 
       if (!lead) {
@@ -246,6 +278,7 @@ export class LeadDetailComponent implements OnInit {
         this.activities.set([]);
         this.proposals.set([]);
         this.inspirationUrls.set([]);
+        this.leadTasks.set([]);
         this.selectedProposalId.set(null);
         return;
       }
@@ -254,6 +287,7 @@ export class LeadDetailComponent implements OnInit {
       this.activities.set(activities);
       this.proposals.set(proposals);
       this.inspirationUrls.set(inspirationUrls);
+      this.leadTasks.set(tasks);
       this.syncSelectedProposal(proposals);
     } catch (error) {
       console.error('[LeadDetailComponent] loadLeadDetail error:', error);
@@ -262,6 +296,7 @@ export class LeadDetailComponent implements OnInit {
       this.activities.set([]);
       this.proposals.set([]);
       this.inspirationUrls.set([]);
+      this.leadTasks.set([]);
       this.selectedProposalId.set(null);
     } finally {
       this.loading.set(false);
@@ -280,17 +315,19 @@ export class LeadDetailComponent implements OnInit {
     if (!leadId) return;
 
     try {
-      const [lead, activities, proposals, inspirationUrls] = await Promise.all([
+      const [lead, activities, proposals, inspirationUrls, tasks] = await Promise.all([
         this.leadRepository.getLeadById(leadId),
         this.activityRepository.getLeadActivity(leadId),
         this.proposalWorkflow.getLeadProposals(leadId),
         this.inspirationUrlRepository.getInspirationUrlsByLeadId(leadId),
+        this.taskWorkflow.getTasksByLeadId(leadId),
       ]);
 
       this.lead.set(lead);
       this.activities.set(activities);
       this.proposals.set(proposals);
       this.inspirationUrls.set(inspirationUrls);
+      this.leadTasks.set(tasks);
       this.syncSelectedProposal(proposals);
     } catch (error) {
       console.error('[LeadDetailComponent] refreshLeadDetail error:', error);
@@ -304,6 +341,80 @@ export class LeadDetailComponent implements OnInit {
   openInspirationUrl(url: string): void {
     const normalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
     window.open(normalizedUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  openInspirationPicker(input: HTMLInputElement): void {
+    if (this.isLeadReadOnly() || this.inspirationUploadLoading()) return;
+    input.click();
+  }
+
+  onInspirationDragOver(event: DragEvent): void {
+    if (this.isLeadReadOnly()) return;
+    event.preventDefault();
+    this.inspirationDropActive.set(true);
+  }
+
+  onInspirationDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.inspirationDropActive.set(false);
+  }
+
+  onInspirationDrop(event: DragEvent): void {
+    if (this.isLeadReadOnly()) return;
+    event.preventDefault();
+    this.inspirationDropActive.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (!files?.length) return;
+
+    void this.uploadInspirationPhotos(files);
+  }
+
+  onInspirationFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const files = input?.files;
+
+    if (!files?.length) return;
+
+    void this.uploadInspirationPhotos(files).finally(() => {
+      if (input) {
+        input.value = '';
+      }
+    });
+  }
+
+  async deleteInspirationPhoto(inspiration: LeadInspirationUrl): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.isLeadReadOnly()) return;
+    if (this.deletingInspirationId() === inspiration.lead_inspiration_url_id) return;
+
+    try {
+      this.deletingInspirationId.set(inspiration.lead_inspiration_url_id);
+      await this.inspirationUrlRepository.deleteInspirationPhoto(inspiration);
+
+      await this.activityRepository.createLeadActivity({
+        lead_id: lead.lead_id,
+        activity_type: 'updated',
+        activity_label: 'Inspiration photo deleted',
+        activity_description: `Deleted inspiration photo link: ${inspiration.url}.`,
+        metadata: {
+          deleted_from: 'crm_lead_detail',
+          lead_inspiration_url_id: inspiration.lead_inspiration_url_id,
+        },
+      });
+
+      await this.refreshLeadDetail();
+      this.toast.showToast('Inspiration photo deleted.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] deleteInspirationPhoto error:', error);
+      this.error.set(
+        error instanceof Error
+          ? error.message
+          : 'We were unable to delete the inspiration photo right now.'
+      );
+    } finally {
+      this.deletingInspirationId.set(null);
+    }
   }
 
   getLeadStatusTone(status: Lead['status']): BadgeTone {
@@ -383,6 +494,12 @@ export class LeadDetailComponent implements OnInit {
       case 'updated':
       case 'note_added':
         return 'bg-stone-100 text-stone-700';
+      case 'proposal_viewed':
+        return 'bg-blue-100 text-blue-700';
+      case 'task_created':
+        return 'bg-purple-100 text-purple-700';
+      case 'task_completed':
+        return 'bg-emerald-100 text-emerald-700';
       case 'status_change':
       case 'status_changed':
       case 'contact_attempted':
@@ -393,6 +510,34 @@ export class LeadDetailComponent implements OnInit {
         return 'bg-emerald-100 text-emerald-700';
       default:
         return 'bg-stone-100 text-stone-700';
+    }
+  }
+
+  getActivityIconPath(type: string): string {
+    switch (type) {
+      case 'created':
+        return 'M12 5v14m7-7H5';
+      case 'email':
+        return 'M4 6h16v12H4zm0 0 8 6 8-6';
+      case 'call':
+        return 'M5.5 4.5h3l1.5 4-2 1.5a15 15 0 0 0 6 6L15.5 14l4 1.5v3a1 1 0 0 1-1 1A15.5 15.5 0 0 1 4.5 5.5a1 1 0 0 1 1-1Z';
+      case 'proposal_viewed':
+        return 'M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Zm9.5-3.25A3.25 3.25 0 1 0 12 15.25 3.25 3.25 0 0 0 12 8.75Z';
+      case 'task_created':
+      case 'task_completed':
+        return 'M9 11.5 11 13.5 15 9.5M7 4.5h10a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Zm-2 4H3m2 4H3';
+      case 'status_change':
+      case 'status_changed':
+      case 'contact_attempted':
+      case 'consultation_scheduled':
+      case 'declined':
+      case 'accepted':
+      case 'converted':
+        return 'M12 4v4l3 3m5-1a8 8 0 1 1-2.34-5.66';
+      case 'updated':
+      case 'note_added':
+      default:
+        return 'M8 7.5h8M8 12h8m-8 4.5h5M5.5 7.5h.01M5.5 12h.01M5.5 16.5h.01';
     }
   }
 
@@ -487,13 +632,75 @@ export class LeadDetailComponent implements OnInit {
     }
   }
 
-  openTask(task: TaskListItem): void {
-    console.log('Open task', task);
+  async openTask(task: TaskListItem): Promise<void> {
+    if (this.taskSaving()) return;
+
+    try {
+      this.taskLoading.set(true);
+      const fullTask = await this.taskWorkflow.getTaskById(task.task_id);
+
+      if (!fullTask) {
+        this.toast.showToast('We could not find that task.', 'error');
+        return;
+      }
+
+      this.selectedTask.set(fullTask);
+      this.taskModalMode.set('edit');
+      this.taskModalOpen.set(true);
+    } catch (error) {
+      console.error('[LeadDetailComponent] openTask error:', error);
+      this.error.set('We were unable to open this task right now.');
+    } finally {
+      this.taskLoading.set(false);
+    }
   }
 
   createTaskFromLead(): void {
     if (this.isLeadReadOnly()) return;
-    console.log('Create task from lead');
+    this.selectedTask.set(null);
+    this.taskModalMode.set('create');
+    this.taskModalOpen.set(true);
+  }
+
+  closeTaskModal(force = false): void {
+    if (this.taskSaving() && !force) return;
+    this.taskModalOpen.set(false);
+    this.taskModalMode.set('create');
+    this.selectedTask.set(null);
+  }
+
+  async saveTask(payload: TaskUpsertPayload): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.taskSaving()) return;
+
+    try {
+      this.taskSaving.set(true);
+
+      if (this.taskModalMode() === 'create') {
+        await this.taskWorkflow.createTask({
+          ...payload,
+          related_entity_type: 'lead',
+          related_entity_id: lead.lead_id,
+          lead_id: lead.lead_id,
+          project_id: null,
+        });
+        this.toast.showToast('Task created.', 'success');
+      } else {
+        const selectedTask = this.selectedTask();
+        if (!selectedTask) return;
+
+        await this.taskWorkflow.updateTask(selectedTask, payload);
+        this.toast.showToast('Task updated.', 'success');
+      }
+
+      this.closeTaskModal(true);
+      await this.refreshLeadDetail();
+    } catch (error) {
+      console.error('[LeadDetailComponent] saveTask error:', error);
+      this.error.set('We were unable to save the task right now.');
+    } finally {
+      this.taskSaving.set(false);
+    }
   }
 
   convertLead(): void {
@@ -570,32 +777,43 @@ export class LeadDetailComponent implements OnInit {
     }
   }
 
-  addInternalNote(): void {
-    if (this.isLeadReadOnly()) return;
-    this.noteModalOpen.set(true);
+  startEditingNote(note: LeadActivity): void {
+    this.editingNoteId.set(note.lead_activity_id);
+    this.editingNoteDraft.set(note.activity_description ?? '');
+    this.editingNoteError.set(null);
   }
 
-  closeNoteModal(): void {
-    this.noteModalOpen.set(false);
+  cancelEditingNote(): void {
+    this.editingNoteId.set(null);
+    this.editingNoteDraft.set('');
+    this.editingNoteError.set(null);
   }
 
-  async saveInternalNote(note: string): Promise<void> {
+  async saveInternalNote(): Promise<void> {
     const lead = this.lead();
     if (!lead || this.noteSaving()) return;
+    const note = this.noteDraft().trim();
+
+    if (!note) {
+      this.noteDraftError.set('Please enter a note before saving.');
+      return;
+    }
 
     try {
       this.noteSaving.set(true);
+      this.noteDraftError.set(null);
       await this.activityRepository.createLeadActivity({
         lead_id: lead.lead_id,
         activity_type: 'note_added',
-        activity_label: 'Internal note added',
+        activity_label: 'Internal note',
         activity_description: note,
         metadata: {
           note_source: 'crm_lead_detail',
+          note_kind: 'internal',
         },
       });
 
-      this.noteModalOpen.set(false);
+      this.noteDraft.set('');
       await this.refreshLeadDetail();
       this.toast.showToast('Internal note added.', 'success');
     } catch (error) {
@@ -603,6 +821,60 @@ export class LeadDetailComponent implements OnInit {
       this.error.set('We were unable to save the internal note.');
     } finally {
       this.noteSaving.set(false);
+    }
+  }
+
+  async saveEditedNote(note: LeadActivity): Promise<void> {
+    const draft = this.editingNoteDraft().trim();
+
+    if (!draft) {
+      this.editingNoteError.set('Please enter a note before saving.');
+      return;
+    }
+
+    try {
+      this.noteSaving.set(true);
+      this.editingNoteError.set(null);
+      await this.activityRepository.updateLeadActivity(note.lead_activity_id, {
+        activity_label: 'Internal note',
+        activity_description: draft,
+        metadata: {
+          ...(note.metadata ?? {}),
+          note_source: 'crm_lead_detail',
+          note_kind: 'internal',
+          edited_at: new Date().toISOString(),
+        },
+      });
+
+      this.cancelEditingNote();
+      await this.refreshLeadDetail();
+      this.toast.showToast('Internal note updated.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] saveEditedNote error:', error);
+      this.error.set('We were unable to update the internal note.');
+    } finally {
+      this.noteSaving.set(false);
+    }
+  }
+
+  async deleteNote(note: LeadActivity): Promise<void> {
+    if (this.deletingNoteId() === note.lead_activity_id) return;
+
+    try {
+      this.deletingNoteId.set(note.lead_activity_id);
+      await this.activityRepository.deleteLeadActivity(note.lead_activity_id);
+
+      if (this.editingNoteId() === note.lead_activity_id) {
+        this.cancelEditingNote();
+      }
+
+      await this.refreshLeadDetail();
+      this.toast.showToast('Internal note deleted.', 'success');
+    } catch (error) {
+      console.error('[LeadDetailComponent] deleteNote error:', error);
+      this.error.set('We were unable to delete the internal note.');
+    } finally {
+      this.deletingNoteId.set(null);
     }
   }
 
@@ -699,6 +971,62 @@ export class LeadDetailComponent implements OnInit {
     }
   }
 
+  private async uploadInspirationPhotos(files: FileList): Promise<void> {
+    const lead = this.lead();
+    if (!lead || this.inspirationUploadLoading() || this.isLeadReadOnly()) return;
+
+    const imageFiles = Array.from(files).filter((file) =>
+      file.type.toLowerCase().startsWith('image/')
+    );
+
+    if (!imageFiles.length) {
+      this.toast.showToast('Please upload image files only.', 'error');
+      return;
+    }
+
+    try {
+      this.inspirationUploadLoading.set(true);
+
+      await Promise.all(
+        imageFiles.map((file) =>
+          this.inspirationUrlRepository.uploadInspirationPhoto(lead.lead_id, file)
+        )
+      );
+
+      await this.activityRepository.createLeadActivity({
+        lead_id: lead.lead_id,
+        activity_type: 'updated',
+        activity_label: 'Inspiration photos uploaded',
+        activity_description:
+          imageFiles.length === 1
+            ? `Uploaded 1 inspiration photo: ${imageFiles[0].name}.`
+            : `Uploaded ${imageFiles.length} inspiration photos.`,
+        metadata: {
+          uploaded_from: 'crm_lead_detail',
+          uploaded_count: imageFiles.length,
+        },
+      });
+
+      await this.refreshLeadDetail();
+      this.toast.showToast(
+        imageFiles.length === 1
+          ? 'Inspiration photo uploaded.'
+          : 'Inspiration photos uploaded.',
+        'success'
+      );
+    } catch (error) {
+      console.error('[LeadDetailComponent] uploadInspirationPhotos error:', error);
+      this.error.set(
+        error instanceof Error
+          ? error.message
+          : 'We were unable to upload inspiration photos right now.'
+      );
+    } finally {
+      this.inspirationUploadLoading.set(false);
+      this.inspirationDropActive.set(false);
+    }
+  }
+
   private syncSelectedProposal(proposals: FloralProposal[]): void {
     const currentSelection = this.selectedProposalId();
     const nextSelection = proposals.find(
@@ -765,6 +1093,19 @@ export class LeadDetailComponent implements OnInit {
     return Object.entries(updates)
       .filter(([key, value]) => currentValues[key] !== value)
       .map(([key]) => labels[key] ?? key.replace(/_/g, ' '));
+  }
+
+  get relatedTaskItems(): TaskListItem[] {
+    return this.leadTasks().map((task) => ({
+      task_id: task.task_id,
+      title: task.title,
+      status: task.status,
+      due_at: task.due_at ?? null,
+      assignee_name: task.assigned_user
+        ? `${task.assigned_user.first_name ?? ''} ${task.assigned_user.last_name ?? ''}`.trim() ||
+          task.assigned_user.email
+        : null,
+    }));
   }
 }
 

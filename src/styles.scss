@@ -38,6 +38,13 @@
   caret-color: transparent;
 }
 
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  caret-color: currentColor;
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -81,11 +88,25 @@
   background-color: #242424 !important;
 }
 
+.crm-shell:not(.crm-theme-dark) .bg-black,
+.crm-shell:not(.crm-theme-dark) .bg-stone-900,
+.crm-shell:not(.crm-theme-dark) .bg-\[\#1f1f1f\] {
+  background-color: #ea938c !important;
+}
+
+.crm-shell:not(.crm-theme-dark) .bg-black.text-white,
+.crm-shell:not(.crm-theme-dark) .bg-stone-900.text-white,
+.crm-shell:not(.crm-theme-dark) .bg-\[\#1f1f1f\].text-white,
+.crm-shell:not(.crm-theme-dark) .bg-\[\#ea938c\].text-white,
+.crm-shell:not(.crm-theme-dark) .hover\:bg-\[\#ea938c\]:hover {
+  color: #ffffff !important;
+}
+
 .crm-shell.crm-theme-dark .border-stone-200,
 .crm-shell.crm-theme-dark .border-stone-300,
 .crm-shell.crm-theme-dark .border-black\/10,
 .crm-shell.crm-theme-dark .border-dashed.border-stone-300 {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 .crm-shell.crm-theme-dark .text-\[\#1f1f1f\],
@@ -106,18 +127,23 @@
 
 .crm-shell.crm-theme-dark .hover\:bg-stone-50:hover,
 .crm-shell.crm-theme-dark .hover\:bg-stone-100:hover,
-.crm-shell.crm-theme-dark .hover\:bg-\[\#f7f4f1\]:hover {
-  background-color: #2b2b2b !important;
+.crm-shell.crm-theme-dark .hover\:bg-\[\#f7f4f1\]:hover,
+.crm-shell.crm-theme-dark .hover\:bg-\[\#efe5e1\]:hover,
+.crm-shell.crm-theme-dark .hover\:bg-white:hover {
+  background-color: #2f2927 !important;
 }
 
 .crm-shell.crm-theme-dark .hover\:text-\[\#ea938c\]:hover,
-.crm-shell.crm-theme-dark .text-\[\#ea938c\] {
+.crm-shell.crm-theme-dark .hover\:text-\[\#c46f67\]:hover,
+.crm-shell.crm-theme-dark .text-\[\#ea938c\],
+.crm-shell.crm-theme-dark .text-\[\#c46f67\] {
   color: #f0a69d !important;
 }
 
 .crm-shell.crm-theme-dark .bg-black,
 .crm-shell.crm-theme-dark .bg-stone-900,
-.crm-shell.crm-theme-dark .bg-\[\#1f1f1f\] {
+.crm-shell.crm-theme-dark .bg-\[\#1f1f1f\],
+.crm-shell.crm-theme-dark .bg-\[\#ea938c\] {
   background-color: #f0a69d !important;
 }
 
@@ -127,10 +153,13 @@
 
 .crm-shell.crm-theme-dark .hover\:bg-\[\#ea938c\]:hover {
   background-color: #f4b0a7 !important;
+  color: #161616 !important;
 }
 
 .crm-shell.crm-theme-dark .hover\:border-stone-300:hover,
 .crm-shell.crm-theme-dark .hover\:border-stone-400:hover,
+.crm-shell.crm-theme-dark .hover\:border-black\/15:hover,
+.crm-shell.crm-theme-dark .hover\:border-black\/20:hover,
 .crm-shell.crm-theme-dark .hover\:border-\[\#ea938c\]:hover {
   border-color: #f0a69d !important;
 }
@@ -161,6 +190,54 @@
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32) !important;
 }
 
+.crm-shell .crm-table-shell {
+  background-color: #ffffff !important;
+  border-color: rgba(31, 31, 31, 0.08) !important;
+}
+
+.crm-shell .crm-table-head {
+  background-color: #ffffff !important;
+}
+
+.crm-shell .crm-table-body {
+  background-color: #ffffff !important;
+}
+
+.crm-shell .crm-table-cell {
+  color: #44403c !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table-shell {
+  background-color: #191615 !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table,
+.crm-shell.crm-theme-dark .crm-table-body {
+  background-color: #141414 !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table-head {
+  background-color: #1c1c1c !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table thead,
+.crm-shell.crm-theme-dark .crm-table tbody {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table-row {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table-row.hover\:bg-stone-50:hover {
+  background-color: #232323 !important;
+}
+
+.crm-shell.crm-theme-dark .crm-table-cell {
+  color: #e8e1db !important;
+}
+
 .crm-shell.crm-theme-dark .bg-emerald-100 {
   background-color: rgba(16, 185, 129, 0.18) !important;
 }
@@ -176,7 +253,7 @@
 }
 
 .crm-shell.crm-theme-dark .crm-modal-info-callout {
-  background-color: rgba(240, 166, 157, 0.08) !important;
+  background-color: rgba(235, 223, 222, 0.08) !important;
   border-color: rgba(240, 166, 157, 0.22) !important;
   color: #cbbdb4 !important;
 }
