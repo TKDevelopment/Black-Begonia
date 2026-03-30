@@ -34,13 +34,13 @@ export class WeddingServicesComponent {
       title: 'INQUIRE AND CONNECT',
       showInquiry: false,
       description: `Start by reaching out through our inquiry form. We’ll review your event details, get a feel for your floral vision, and schedule a consultation to learn more about your style, priorities, and what matters most for your day.`,
-      image: 'assets/images/website/1000005135.jpg'
+      image: 'assets/images/website/1000005135.webp'
     },
     {
       title: 'DESIGN AND PROPOSAL',
       showInquiry: false,
       description: `After our conversation, we’ll begin shaping your floral concept and preparing a custom proposal. This gives you a clear picture of the aesthetic direction, recommended florals, and the overall scope of your event design.`,
-      image: 'assets/images/website/JJ-7-100.jpg'
+      image: 'assets/images/472549697_1141939340838255_5188480389234737517_n.jpg'
     },
     {
       title: 'BOOKING AND PLANNING',
@@ -58,7 +58,7 @@ export class WeddingServicesComponent {
       title: 'INQUIRE TODAY',
       showInquiry: true,
       description: `On the day of your event, we handle delivery, installation, styling, and all floral setup so everything is beautifully in place. Our goal is for you to be fully present, knowing every detail has been thoughtfully taken care of.`,
-      image: 'assets/images/website/JJ-7-100.jpg'
+      image: 'assets/images/website/JJ-7-100.webp'
     }
   ]
 

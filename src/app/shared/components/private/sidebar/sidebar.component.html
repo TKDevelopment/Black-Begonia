@@ -1,0 +1,120 @@
+<aside class="flex h-screen w-full flex-col bg-white">
+  <div class="border-b border-black/10 px-2.5 py-4 lg:px-3 xl:py-5 xl:px-3.5 2xl:px-5 2xl:py-6">
+    <div *ngIf="isMobile" class="mb-4 flex items-center justify-between">
+      <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">Navigation</p>
+      <button
+        type="button"
+        (click)="onNavigate()"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#1f1f1f] transition hover:bg-[#efe5e1]"
+      >
+        Close
+      </button>
+    </div>
+
+    <a routerLink="/admin/dashboard" class="block">
+      <p class="font-oswald text-[9px] uppercase tracking-[0.28em] text-[#ea938c] lg:text-[10px] lg:tracking-[0.3em] xl:text-[11px] xl:tracking-[0.35em]">
+        Black Begonia
+      </p>
+      <h2 class="mt-2 font-cormorant text-[1.4rem] leading-none text-[#1f1f1f] lg:text-[1.5rem] xl:text-[1.8rem] 2xl:text-[2rem]">
+        Admin CRM
+      </h2>
+    </a>
+
+    <div class="mt-4 h-px w-14 bg-[#ea938c] xl:w-16"></div>
+
+    <div class="mt-4">
+      <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
+        Signed in as
+      </p>
+      <p class="mt-1.5 font-cormorant text-[1.05rem] leading-tight text-[#1f1f1f] lg:text-[1.15rem] xl:text-[1.45rem] 2xl:text-[1.65rem]">
+        {{ userDisplayName }}
+      </p>
+      <p class="mt-1 break-all text-[10px] text-[#6a6a6a] xl:text-[12px]">
+        {{ userEmail }}
+      </p>
+    </div>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto px-2 py-3.5 lg:px-2.5 lg:py-4.5 xl:px-3 xl:py-5">
+    <ul class="space-y-1">
+      <li *ngFor="let item of navItems">
+        <a
+          [routerLink]="item.route"
+          (click)="onNavigate()"
+          [routerLinkActive]="'bg-[#ea938c] text-[#1f1f1f] shadow-[0_12px_28px_rgba(234,147,140,0.3)]'"
+          [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+          class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
+        >
+          <span [routerLinkActive]="'text-[#1f1f1f]'">{{ item.label }}</span>
+          <span class="h-2 w-2 rounded-full bg-transparent transition duration-300 group-hover:bg-[#c46f67]"></span>
+        </a>
+      </li>
+
+      <li *ngFor="let group of groupedNav" class="pt-2">
+        <button
+          type="button"
+          (click)="toggleProposalSettings()"
+          class="flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-left font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
+        >
+          <span>{{ group.label }}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#ea938c] transition-transform duration-300" [ngClass]="proposalSettingsOpen() ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+
+        <div *ngIf="proposalSettingsOpen()" class="mt-1 space-y-1 pl-1 lg:pl-1.5 xl:pl-2">
+          <a
+            *ngFor="let child of group.children"
+            [routerLink]="child.route"
+            (click)="onNavigate()"
+            class="group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[8px] uppercase tracking-[0.16em] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] dark:hover:bg-white/10 dark:hover:text-[#f0b0aa] lg:px-2.5 lg:text-[9px] xl:px-3 xl:py-1.5 xl:text-[10px]"
+            [ngClass]="isRouteActive(child.route) ? 'bg-[#ea938c] text-[#1f1f1f] shadow-[0_10px_24px_rgba(234,147,140,0.24)]' : ''"
+          >
+            <span [style.color]="isRouteActive(child.route) ? '#1f1f1f' : (crmThemeService.isDarkMode ? '#d6d3d1' : '#171717')">{{ child.label }}</span>
+            <span
+              class="h-1.5 w-1.5 rounded-full bg-transparent transition duration-300"
+              [ngClass]="isRouteActive(child.route) ? 'bg-[#1f1f1f]' : 'group-hover:bg-[#c46f67]'"
+            ></span>
+          </a>
+        </div>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="border-t border-black/10 px-2 py-2.5 lg:px-2.5 lg:py-3.5 xl:px-3 xl:py-4">
+    <div class="mb-2.5 rounded-2xl border border-black/10 bg-[#f7f4f1] p-2.5 xl:mb-3 xl:p-3">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
+            CRM Theme
+          </p>
+          <p class="mt-1 text-[11px] text-[#5e5e5e] xl:text-[12px]">
+            {{ crmThemeService.isDarkMode ? 'Dark mode' : 'Light mode' }}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="toggleTheme()"
+          class="relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border border-black/10 bg-white transition duration-300"
+          [attr.aria-pressed]="crmThemeService.isDarkMode"
+          [attr.aria-label]="crmThemeService.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+        >
+          <span
+            class="absolute left-1 top-1 h-5 w-5 rounded-full bg-[#1f1f1f] shadow-sm transition duration-300"
+            [ngClass]="crmThemeService.isDarkMode ? 'translate-x-7 bg-[#ea938c]' : 'translate-x-0'"
+          ></span>
+        </button>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      (click)="logout()"
+      class="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-3.5 py-2 font-oswald text-[10px] uppercase tracking-[0.16em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-[#1f1f1f] lg:text-[11px] xl:py-2.5 xl:text-[12px]"
+    >
+      Log Out
+    </button>
+  </div>
+</aside>
+

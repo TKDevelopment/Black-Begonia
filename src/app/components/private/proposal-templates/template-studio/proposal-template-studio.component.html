@@ -1,0 +1,761 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+    <app-loading-state-block
+      *ngIf="loading()"
+      title="Loading Template Studio"
+      description="Please wait while we load the template workspace."
+      minHeightClass="min-h-[640px]"
+    />
+    <app-error-state-block
+      *ngIf="!loading() && error()"
+      title="Unable to load Template Studio"
+      [description]="error()!"
+      (retry)="retry()"
+      minHeightClass="min-h-[640px]"
+    />
+
+    <app-entity-detail-shell
+      *ngIf="!loading() && !error() && template()"
+      moduleLabel="Proposal Templates"
+      [title]="template()!.name"
+      subtitle="Template Studio"
+      [loading]="false"
+      [fullWidth]="true"
+      backLabel="Back to Template Overview"
+      (back)="goBack()"
+    >
+      <div detail-main class="text-[13px]">
+        <div class="rounded-2xl border border-black/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">Template Studio Workspace</h2>
+              <p class="mt-1.5 text-[13px] leading-5 text-stone-600 dark:text-stone-300">
+                Edit the real block-based draft, preview it against sample proposal data, and save versioned presentation logic without touching the proposal authoring workflow.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                (click)="publishTemplateStudioVersion()"
+                [disabled]="saving() || !studioDraft()"
+                class="inline-flex items-center justify-center rounded-xl border border-[#6f2f29]/10 bg-[#6f2f29] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {{ saving() ? 'Working...' : 'Publish Version' }}
+              </button>
+              <button
+                type="button"
+                (click)="saveTemplateStudioDraft()"
+                [disabled]="saving() || !studioDraft()"
+                class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {{ saving() ? 'Saving...' : 'Save Draft' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3.5 dark:border-white/10 dark:bg-[#171413]"><p class="text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Blocks</p><p class="mt-2.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ templateBlockSummaries().length }}</p></div>
+            <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3.5 dark:border-white/10 dark:bg-[#171413]"><p class="text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Enabled Blocks</p><p class="mt-2.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ enabledTemplateBlockCount() }}</p></div>
+            <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3.5 dark:border-white/10 dark:bg-[#171413]"><p class="text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Published Version</p><p class="mt-2.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ lastPublishedVersion() || 'None' }}</p></div>
+          </div>
+        </div>
+
+        <div class="my-3 grid gap-6 xl:grid-cols-[260px_minmax(320px,0.8fr)_minmax(0,1.35fr)] 2xl:grid-cols-[280px_minmax(360px,0.78fr)_minmax(0,1.45fr)]">
+          <div class="rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Structure</p>
+            </div>
+            <div class="mt-4 grid gap-2">
+              <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Add Block</label>
+              <select
+                #blockTypeSelect
+                class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
+              >
+                <option *ngFor="let entry of templateBlockSummaries(); trackBy: controlTrackBy" hidden></option>
+                <option *ngFor="let registryEntry of (blockRegistry | keyvalue); trackBy: controlTrackBy" [value]="registryEntry.key">
+                  {{ registryEntry.value.label }}
+                </option>
+              </select>
+              <button
+                type="button"
+                (click)="addBlock(blockTypeSelect.value)"
+                class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]"
+              >
+                Add Block
+              </button>
+            </div>
+            <div class="mt-4 space-y-2">
+              <button
+                *ngFor="let block of templateBlockSummaries()"
+                type="button"
+                (click)="selectStudioBlock(block.id)"
+                class="flex w-full items-center justify-between rounded-2xl border px-3 py-2.5 text-left transition"
+                [ngClass]="selectedStudioBlock()?.id === block.id ? 'border-[#ea938c] bg-[#fff5f2] dark:border-[#ea938c] dark:bg-[#2a201e]' : 'border-black/10 bg-[#fcfaf8] hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:hover:bg-[#221d1b]'"
+              >
+                <div>
+                  <p class="text-[13px] font-semibold text-stone-900 dark:text-stone-100">{{ block.label }}</p>
+                  <p class="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">{{ block.variantLabel }}</p>
+                </div>
+                <span
+                  class="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                  [ngClass]="block.enabled ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-stone-200 text-stone-600 dark:bg-white/10 dark:text-stone-300'"
+                >
+                  {{ block.enabled ? 'On' : 'Off' }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <button
+                type="button"
+                (click)="toggleStudioPanel('selectedBlockControls')"
+                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Selected Block Controls</h3>
+                  <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Edit the selected block’s variant, content, styles, and visibility.</p>
+                </div>
+                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                  <svg
+                    class="h-3.5 w-3.5 transition-transform"
+                    [ngClass]="isStudioPanelExpanded('selectedBlockControls') ? 'rotate-180' : ''"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 7.5 10 12.5 15 7.5" />
+                  </svg>
+                  {{ isStudioPanelExpanded('selectedBlockControls') ? 'Collapse' : 'Expand' }}
+                </span>
+              </button>
+              <div *ngIf="isStudioPanelExpanded('selectedBlockControls')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
+              <div *ngIf="selectedStudioBlock() as block; else noBlockSelected">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Selected Block</p>
+                    <h3 class="mt-1.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ blockRegistry[block.type].label }}</h3>
+                  </div>
+                  <label class="inline-flex items-center gap-2 rounded-full border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[13px] text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
+                    <input
+                      type="checkbox"
+                      [ngModel]="block.enabled"
+                      (ngModelChange)="updateSelectedBlockEnabled($event)"
+                      class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]"
+                    />
+                    Enabled
+                  </label>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <button type="button" (click)="moveSelectedBlock('up')" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">Move Up</button>
+                  <button type="button" (click)="moveSelectedBlock('down')" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">Move Down</button>
+                  <button type="button" (click)="duplicateSelectedBlock()" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">Duplicate</button>
+                  <button type="button" (click)="resetSelectedBlockStyles()" class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-medium text-amber-800 transition hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">Reset Styles</button>
+                  <button type="button" (click)="removeSelectedBlock()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">Remove</button>
+                </div>
+
+                <div class="mt-4">
+                  <label class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Variant</label>
+                  <select
+                    [ngModel]="block.layout_variant"
+                    (ngModelChange)="updateSelectedBlockVariant($event)"
+                    class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
+                  >
+                    <option *ngFor="let variant of blockRegistry[block.type].variants; trackBy: controlTrackBy" [ngValue]="variant.id">
+                      {{ variant.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div *ngFor="let group of selectedStudioBlockControlGroups(); trackBy: controlTrackBy" class="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-[#fcfaf8] dark:border-white/10 dark:bg-[#171413]">
+                  <button
+                    type="button"
+                    (click)="toggleSelectedBlockSection(group.id)"
+                    class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  >
+                    <div>
+                      <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">{{ group.label }}</h4>
+                      <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">{{ group.controls.length }} controls</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                      <svg
+                        class="h-3.5 w-3.5 transition-transform"
+                        [ngClass]="isSelectedBlockSectionExpanded(group.id) ? 'rotate-180' : ''"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 7.5 10 12.5 15 7.5" />
+                      </svg>
+                      {{ isSelectedBlockSectionExpanded(group.id) ? 'Collapse' : 'Expand' }}
+                    </span>
+                  </button>
+                  <div *ngIf="isSelectedBlockSectionExpanded(group.id)" class="grid gap-3 border-t border-black/10 px-4 py-3 dark:border-white/10">
+                    <div *ngFor="let control of group.controls; trackBy: controlTrackBy" [ngSwitch]="control.type">
+                      <div *ngSwitchCase="'text'">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                        <input
+                          type="text"
+                          [ngModel]="getBlockControlValue(control.key)"
+                          (ngModelChange)="updateSelectedBlockContent(control.key.split('.')[1], $event)"
+                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        />
+                      </div>
+
+                      <div *ngSwitchCase="'textarea'">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                        <textarea
+                          rows="4"
+                          [ngModel]="getBlockControlValue(control.key)"
+                          (ngModelChange)="updateSelectedBlockContent(control.key.split('.')[1], $event)"
+                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        ></textarea>
+                      </div>
+
+                      <div *ngSwitchCase="'toggle'">
+                        <label class="flex items-center justify-between rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-700 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200">
+                          <span>{{ control.label }}</span>
+                          <input
+                            type="checkbox"
+                            [ngModel]="getBlockControlValue(control.key)"
+                            (ngModelChange)="updateSelectedBlockContent(control.key.split('.')[1], $event)"
+                            class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]"
+                          />
+                        </label>
+                      </div>
+
+                      <div *ngSwitchCase="'select'">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                        <select
+                          [ngModel]="getBlockControlValue(control.key)"
+                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], $event) : updateSelectedBlockContent(control.key.split('.')[1], $event)"
+                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        >
+                          <option *ngFor="let option of getSelectControlOptions(control); trackBy: controlTrackBy" [ngValue]="option.value">
+                            {{ option.label }}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div *ngSwitchCase="'number'">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                        <input
+                          type="number"
+                          [ngModel]="getBlockControlValue(control.key)"
+                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], $event) : updateSelectedBlockContent(control.key.split('.')[1], $event)"
+                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        />
+                      </div>
+
+                      <div *ngSwitchCase="'range'">
+                        <div class="flex items-center justify-between gap-3">
+                          <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                          <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getBlockControlValue(control.key) || 0 }}</span>
+                        </div>
+                        <input
+                          type="range"
+                          [min]="getRangeControlMin(control)"
+                          [max]="getRangeControlMax(control)"
+                          [step]="getRangeControlStep(control)"
+                          [ngModel]="getBlockControlValue(control.key)"
+                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], +$event) : updateSelectedBlockContent(control.key.split('.')[1], +$event)"
+                          class="mt-3 w-full accent-[#ea938c]"
+                        />
+                      </div>
+
+                      <div *ngSwitchCase="'color'">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                        <div class="mt-1.5 flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-2 dark:border-white/10 dark:bg-[#211d1b]">
+                          <input
+                            type="color"
+                            [ngModel]="getBlockControlValue(control.key) || '#ffffff'"
+                            (ngModelChange)="updateSelectedBlockStyle(control.key.split('.')[1], $event)"
+                            class="h-11 w-12 rounded-xl border border-black/10 bg-transparent p-0"
+                          />
+                          <input
+                            type="text"
+                            [ngModel]="getBlockControlValue(control.key)"
+                            (ngModelChange)="updateSelectedBlockStyle(control.key.split('.')[1], $event)"
+                            class="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#292321] dark:text-stone-100"
+                          />
+                        </div>
+                      </div>
+
+                      <div *ngSwitchCase="'asset-picker'">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
+                        <select
+                          [ngModel]="getBlockControlValue(control.key)"
+                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], $event) : updateSelectedBlockContent(control.key.split('.')[1], $event)"
+                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        >
+                          <option [ngValue]="null">No asset selected</option>
+                          <option *ngFor="let option of getAssetControlOptions(control); trackBy: controlTrackBy" [ngValue]="option.value">
+                            {{ option.label }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-[#fcfaf8] dark:border-white/10 dark:bg-[#171413]">
+                  <button
+                    type="button"
+                    (click)="toggleSelectedBlockSection('visibility')"
+                    class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  >
+                    <div>
+                      <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Visibility Rules</h4>
+                      <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Event filters and required proposal data</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                      <svg
+                        class="h-3.5 w-3.5 transition-transform"
+                        [ngClass]="isSelectedBlockSectionExpanded('visibility') ? 'rotate-180' : ''"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 7.5 10 12.5 15 7.5" />
+                      </svg>
+                      {{ isSelectedBlockSectionExpanded('visibility') ? 'Collapse' : 'Expand' }}
+                    </span>
+                  </button>
+                  <div *ngIf="isSelectedBlockSectionExpanded('visibility')" class="grid gap-3 border-t border-black/10 px-4 py-3 dark:border-white/10">
+                    <div>
+                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Event Types</label>
+                      <input
+                        type="text"
+                        [ngModel]="getSelectedBlockVisibilityValue('event_types')"
+                        (ngModelChange)="updateSelectedBlockVisibility('event_types', $event)"
+                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        placeholder="Wedding, Private Dinner, Corporate"
+                      />
+                      <p class="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+                        Leave blank to show this block for every event type.
+                      </p>
+                    </div>
+                    <div>
+                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Required Data Paths</label>
+                      <input
+                        type="text"
+                        [ngModel]="getSelectedBlockVisibilityValue('requires_data_paths')"
+                        (ngModelChange)="updateSelectedBlockVisibility('requires_data_paths', $event)"
+                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        placeholder="gallery.mood_images, intro.welcome_message"
+                      />
+                      <p class="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+                        These paths must exist in the proposal render model or the block stays hidden.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ng-template #noBlockSelected>
+                <div class="rounded-2xl border border-dashed border-black/10 bg-[#fcfaf8] px-4 py-6 text-[13px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+                  Select a block from the structure rail to edit its controls.
+                </div>
+              </ng-template>
+              </div>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <button
+                type="button"
+                (click)="toggleStudioPanel('themeTokens')"
+                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Theme Tokens</h3>
+                  <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Global color and typography defaults for the full template.</p>
+                </div>
+                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                  <svg
+                    class="h-3.5 w-3.5 transition-transform"
+                    [ngClass]="isStudioPanelExpanded('themeTokens') ? 'rotate-180' : ''"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 7.5 10 12.5 15 7.5" />
+                  </svg>
+                  {{ isStudioPanelExpanded('themeTokens') ? 'Collapse' : 'Expand' }}
+                </span>
+              </button>
+              <div *ngIf="isStudioPanelExpanded('themeTokens')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
+              <div class="grid gap-5">
+                <div>
+                  <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Color System</h4>
+                  <div class="mt-2.5 grid gap-3 sm:grid-cols-2">
+                    <div *ngFor="let colorKey of ['primary', 'accent', 'canvas', 'surface', 'text', 'muted_text', 'border']; trackBy: controlTrackBy">
+                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ formatLabel(colorKey) }}</label>
+                      <div class="mt-1.5 flex items-center gap-3 rounded-2xl border border-black/10 bg-[#fcfaf8] p-2 dark:border-white/10 dark:bg-[#171413]">
+                        <input
+                          type="color"
+                          [ngModel]="getThemeColorValue($any(colorKey))"
+                          (ngModelChange)="updateThemeColor($any(colorKey), $event)"
+                          class="h-11 w-12 rounded-xl border border-black/10 bg-transparent p-0"
+                        />
+                        <input
+                          type="text"
+                          [ngModel]="getThemeColorValue($any(colorKey))"
+                          (ngModelChange)="updateThemeColor($any(colorKey), $event)"
+                          class="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Typography System</h4>
+                  <div class="mt-2.5 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Heading Font</label>
+                      <select
+                        [ngModel]="studioDraft()?.tokens?.typography?.heading_font_family"
+                        (ngModelChange)="updateThemeFont('heading_font_family', $event)"
+                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
+                      >
+                        <option value="Cormorant Garamond, Georgia, serif">Cormorant Garamond</option>
+                        <option value="Playfair Display, Georgia, serif">Playfair Display</option>
+                        <option value="Bodoni Moda, Georgia, serif">Bodoni Moda</option>
+                        <option value="Libre Baskerville, Georgia, serif">Libre Baskerville</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Body Font</label>
+                      <select
+                        [ngModel]="studioDraft()?.tokens?.typography?.body_font_family"
+                        (ngModelChange)="updateThemeFont('body_font_family', $event)"
+                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
+                      >
+                        <option value="Source Sans 3, Arial, sans-serif">Source Sans 3</option>
+                        <option value="Lora, Georgia, serif">Lora</option>
+                        <option value="Libre Franklin, Arial, sans-serif">Libre Franklin</option>
+                        <option value="DM Sans, Arial, sans-serif">DM Sans</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <div class="flex items-center justify-between gap-3">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">H1 Size</label>
+                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('sizes', 'h1') }}px</span>
+                      </div>
+                      <input type="range" min="36" max="80" step="2" [ngModel]="getThemeTypographyValue('sizes', 'h1')" (ngModelChange)="updateThemeTypographyScale('sizes', 'h1', +$event)" class="mt-3 w-full accent-[#ea938c]" />
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between gap-3">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Body Size</label>
+                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('sizes', 'body') }}px</span>
+                      </div>
+                      <input type="range" min="12" max="22" step="1" [ngModel]="getThemeTypographyValue('sizes', 'body')" (ngModelChange)="updateThemeTypographyScale('sizes', 'body', +$event)" class="mt-3 w-full accent-[#ea938c]" />
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between gap-3">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Heading Weight</label>
+                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('weights', 'heading') }}</span>
+                      </div>
+                      <input type="range" min="300" max="800" step="100" [ngModel]="getThemeTypographyValue('weights', 'heading')" (ngModelChange)="updateThemeTypographyScale('weights', 'heading', +$event)" class="mt-3 w-full accent-[#ea938c]" />
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between gap-3">
+                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Body Weight</label>
+                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('weights', 'body') }}</span>
+                      </div>
+                      <input type="range" min="300" max="700" step="100" [ngModel]="getThemeTypographyValue('weights', 'body')" (ngModelChange)="updateThemeTypographyScale('weights', 'body', +$event)" class="mt-3 w-full accent-[#ea938c]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <button
+                type="button"
+                (click)="toggleStudioPanel('advancedCss')"
+                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Advanced CSS</h3>
+                  <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Optional scoped overrides for power-user styling.</p>
+                </div>
+                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                  <svg
+                    class="h-3.5 w-3.5 transition-transform"
+                    [ngClass]="isStudioPanelExpanded('advancedCss') ? 'rotate-180' : ''"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 7.5 10 12.5 15 7.5" />
+                  </svg>
+                  {{ isStudioPanelExpanded('advancedCss') ? 'Collapse' : 'Expand' }}
+                </span>
+              </button>
+              <div *ngIf="isStudioPanelExpanded('advancedCss')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
+                <textarea
+                  rows="8"
+                  [ngModel]="studioDraft()?.advanced?.custom_css"
+                  (ngModelChange)="updateAdvancedCss($event)"
+                  class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 font-mono text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
+                  placeholder="/* Optional scoped CSS overrides for Template Studio */"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <button
+                type="button"
+                (click)="toggleStudioPanel('publishWorkflow')"
+                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Publish Workflow</h3>
+                  <p class="mt-1 text-[13px] leading-5 text-stone-600 dark:text-stone-300">
+                    Save the draft as often as you like. Publish creates an immutable released version and keeps you in a new editable draft.
+                  </p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="inline-flex rounded-full bg-[#fcfaf8] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-600 dark:bg-[#171413] dark:text-stone-300">
+                    Latest {{ lastPublishedVersion() || 'None' }}
+                  </span>
+                  <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                    <svg
+                      class="h-3.5 w-3.5 transition-transform"
+                      [ngClass]="isStudioPanelExpanded('publishWorkflow') ? 'rotate-180' : ''"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M5 7.5 10 12.5 15 7.5" />
+                    </svg>
+                    {{ isStudioPanelExpanded('publishWorkflow') ? 'Collapse' : 'Expand' }}
+                  </span>
+                </div>
+              </button>
+              <div *ngIf="isStudioPanelExpanded('publishWorkflow')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
+                <div class="mt-0">
+                <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Version Notes</label>
+                <textarea
+                  rows="3"
+                  [ngModel]="publishNotes()"
+                  (ngModelChange)="updatePublishNotes($event)"
+                  class="mt-1.5 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
+                  placeholder="Summarize what changed in this release."
+                ></textarea>
+              </div>
+              <div class="mt-4 space-y-3">
+                <div *ngIf="!publishedVersions().length" class="rounded-2xl border border-dashed border-black/10 bg-[#fcfaf8] px-4 py-4 text-[13px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+                  No published versions yet.
+                </div>
+                <div *ngFor="let version of publishedVersions(); trackBy: controlTrackBy" class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-4 dark:border-white/10 dark:bg-[#171413]">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <p class="text-[13px] font-semibold text-stone-900 dark:text-stone-100">Version {{ version.version }}</p>
+                      <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">{{ version.published_at | date:'medium' }}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-600 dark:bg-[#211d1b] dark:text-stone-300">
+                        {{ version.definition.status }}
+                      </span>
+                      <button
+                        type="button"
+                        (click)="restorePublishedVersion(version)"
+                        [disabled]="saving()"
+                        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#292321]"
+                      >
+                        Restore as Draft
+                      </button>
+                    </div>
+                  </div>
+                  <p *ngIf="version.notes" class="mt-3 text-[13px] text-stone-600 dark:text-stone-300">{{ version.notes }}</p>
+                </div>
+              </div>
+              </div>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <button
+                type="button"
+                (click)="toggleStudioPanel('assetLibrary')"
+                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Asset Library</h3>
+                  <p class="mt-1 text-[13px] leading-5 text-stone-600 dark:text-stone-300">
+                    Upload template-specific images and logos, then bind them through asset-aware controls like the cover hero asset.
+                  </p>
+                </div>
+                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
+                  <svg
+                    class="h-3.5 w-3.5 transition-transform"
+                    [ngClass]="isStudioPanelExpanded('assetLibrary') ? 'rotate-180' : ''"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 7.5 10 12.5 15 7.5" />
+                  </svg>
+                  {{ isStudioPanelExpanded('assetLibrary') ? 'Collapse' : 'Expand' }}
+                </span>
+              </button>
+              <div *ngIf="isStudioPanelExpanded('assetLibrary')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap gap-2">
+                  <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" (change)="uploadTemplateAsset($event, 'logo')" />
+                    Upload Logo
+                  </label>
+                  <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" (change)="uploadTemplateAsset($event, 'image')" />
+                    Upload Image
+                  </label>
+                  <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" (change)="uploadTemplateAsset($event, 'background')" />
+                    Upload Background
+                  </label>
+                </div>
+              </div>
+
+              <div class="mt-4 grid gap-3">
+                <div *ngIf="!draftAssets().length" class="rounded-2xl border border-dashed border-black/10 bg-[#fcfaf8] px-4 py-6 text-[13px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+                  No template assets uploaded yet.
+                </div>
+
+                <div *ngFor="let asset of draftAssets(); trackBy: controlTrackBy" class="rounded-2xl border border-black/10 bg-[#fcfaf8] p-4 dark:border-white/10 dark:bg-[#171413]">
+                  <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-600 dark:bg-[#211d1b] dark:text-stone-300">{{ formatLabel(asset.type) }}</span>
+                        <p class="text-[13px] font-semibold text-stone-900 dark:text-stone-100">{{ asset.alt || asset.id }}</p>
+                      </div>
+                      <p class="mt-1 break-all text-xs text-stone-500 dark:text-stone-400">{{ asset.id }}</p>
+                    </div>
+                    <button type="button" (click)="removeTemplateAsset(asset.id)" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                      Remove
+                    </button>
+                  </div>
+                  <div *ngIf="asset.url" class="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-[#211d1b]">
+                    <img [src]="asset.url" [alt]="asset.alt || asset.id" class="h-44 w-full object-cover" />
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Live Preview</h3>
+                  <p class="mt-0.5 text-[12px] leading-5 text-stone-600 dark:text-stone-300">
+                    Rendered from the current draft and sample proposal data through Gotenberg.
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex rounded-full bg-[#fcfaf8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-600 dark:bg-[#171413] dark:text-stone-300">
+                    {{ previewRenderStatus() }}
+                  </span>
+                  <button
+                    type="button"
+                    (click)="refreshPdfPreview()"
+                    [disabled]="previewPdfLoading()"
+                    class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]"
+                  >
+                    {{ previewPdfLoading() ? 'Refreshing...' : 'Refresh PDF Preview' }}
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="previewPdfLoading()" class="mt-3 rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-2.5 text-[12px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
+                  Coalescing edits into the latest preview request...
+              </div>
+
+              <div
+                *ngIf="previewPdfError()"
+                class="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-[12px] text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+              >
+                {{ previewPdfError() }}
+              </div>
+
+              <div class="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white dark:border-white/10">
+                <div *ngIf="previewPdfLoading()" class="flex h-[1040px] items-center justify-center bg-[#fcfaf8] text-[13px] text-stone-500 dark:bg-[#171413] dark:text-stone-300">
+                  Rendering PDF preview through Gotenberg...
+                </div>
+                <iframe
+                  *ngIf="!previewPdfLoading() && previewPdfUrl()"
+                  title="Template Studio Preview"
+                  class="h-[1040px] w-full bg-white"
+                  [src]="previewPdfUrl()"
+                ></iframe>
+                <div *ngIf="!previewPdfLoading() && !previewPdfUrl()" class="flex h-[1040px] items-center justify-center bg-[#fcfaf8] px-6 text-center text-[13px] text-stone-500 dark:bg-[#171413] dark:text-stone-300">
+                  PDF preview is unavailable right now. Resolve any validation issues or retry once the preview service is reachable.
+                </div>
+              </div>
+
+              <div class="mt-2.5 text-[11px] text-stone-500 dark:text-stone-400">
+                <span class="font-medium text-stone-900 dark:text-stone-100">Last Gotenberg render:</span>
+                {{ previewLastRenderedLabel() }}
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
+              <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Validation Feed</h3>
+              <div class="mt-3 space-y-3 text-[13px]">
+                <div *ngIf="!templateStudioErrors().length && !templateStudioWarnings().length" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  This draft currently validates cleanly against the Template Studio rules.
+                </div>
+
+                <div *ngFor="let issue of templateStudioErrors()" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                  <p class="font-semibold">{{ issue.code }}</p>
+                  <p class="mt-1">{{ issue.message }}</p>
+                </div>
+
+                <div *ngFor="let issue of templateStudioWarnings()" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                  <p class="font-semibold">{{ issue.code }}</p>
+                  <p class="mt-1">{{ issue.message }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-entity-detail-shell>
+  </div>
+</div>

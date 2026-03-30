@@ -1,0 +1,163 @@
+<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+  <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div>
+      <div class="flex items-center gap-4">
+        <h3 class="font-cormorant text-3xl text-stone-900">Floral Proposals</h3>
+      </div>
+      <p class="mt-2 text-sm leading-6 text-stone-600">
+        Review current and past Floral Proposal versions attached to this lead, including client responses.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 md:justify-end">
+      <button
+        *ngIf="canSubmitProposal"
+        type="button"
+        (click)="onSubmitProposal()"
+        class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+      >
+        Generate New Floral Proposal
+      </button>
+
+      <button
+        *ngIf="selectedProposal()?.is_active && canResendProposal"
+        type="button"
+        (click)="onResend(selectedProposal()!.floral_proposal_id)"
+        [disabled]="resending"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {{ resending ? 'Resending...' : 'Resend Floral Proposal Email' }}
+      </button>
+
+      <button
+        *ngIf="selectedProposal() as proposal"
+        type="button"
+        (click)="onOpen(proposal.signed_url)"
+        [disabled]="!proposal.signed_url"
+        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Open in New Tab
+      </button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="proposals.length; else emptyState">
+    <div class="mt-4" *ngIf="selectedProposal() as proposal">
+      <p class="text-sm text-stone-500">
+        Viewing version {{ proposal.version }}
+      </p>
+      <p class="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+        Floral Proposal Preview
+      </p>
+      <p class="mt-1 text-sm text-stone-600">
+        Floral Proposal v{{ proposal.version }}{{ proposal.is_active ? ' is currently active.' : ' is an archived version.' }}
+      </p>
+    </div>
+
+    <div class="mt-6 grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+      <div class="space-y-3">
+        <button
+          *ngFor="let proposal of proposals"
+          type="button"
+          (click)="onSelect(proposal.floral_proposal_id)"
+          class="w-full rounded-2xl border p-4 text-left transition"
+          [ngClass]="
+            selectedProposalId === proposal.floral_proposal_id
+              ? 'border-black/10 bg-stone-100 shadow-sm'
+              : 'border-black/10 bg-white hover:border-black/15 hover:bg-stone-50'
+          "
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-stone-900">
+                Proposal v{{ proposal.version }}
+              </p>
+              <p class="mt-1 text-xs text-stone-500">
+                {{ formatDateTime(proposal.created_at) }}
+              </p>
+            </div>
+
+            <span
+              *ngIf="proposal.is_active"
+              class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700"
+            >
+              Active
+            </span>
+          </div>
+
+          <div
+            *ngIf="selectedProposalId === proposal.floral_proposal_id && getLatestResponse(proposal.floral_proposal_id) as response"
+            class="mt-4 rounded-2xl border px-3 py-3 text-xs leading-6"
+            [ngClass]="response.action === 'decline' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'"
+          >
+            <p class="font-semibold uppercase tracking-[0.14em]">
+              {{ response.action === 'decline' ? 'Declined' : 'Accepted' }}
+            </p>
+            <p class="mt-1 text-[11px] opacity-80">
+              {{ formatDateTime(response.created_at) }}
+            </p>
+            <p *ngIf="response.feedback" class="mt-2 line-clamp-3 text-xs normal-case tracking-normal">
+              {{ response.feedback }}
+            </p>
+          </div>
+        </button>
+      </div>
+
+      <div *ngIf="selectedProposal() as proposal" class="rounded-[24px] border border-black/10 bg-[#fcfaf8] p-4">
+        <div *ngIf="getLatestResponse(proposal.floral_proposal_id) as response" class="rounded-2xl border px-4 py-4 text-sm leading-7"
+          [ngClass]="response.action === 'decline' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'"
+        >
+          <p class="text-xs font-semibold uppercase tracking-[0.16em]">
+            Client {{ response.action === 'decline' ? 'Declined' : 'Accepted' }}
+          </p>
+          <p class="mt-1 text-xs opacity-80">
+            {{ formatDateTime(response.created_at) }}
+          </p>
+          <p *ngIf="response.feedback" class="mt-3 whitespace-pre-line text-sm leading-7">
+            {{ response.feedback }}
+          </p>
+        </div>
+
+        <div
+          *ngIf="proposal.signed_url && getPreviewUrl(proposal.signed_url) as previewUrl; else unavailablePreview"
+          class="mt-4 h-[900px] overflow-hidden rounded-2xl border border-black/10 bg-white"
+        >
+          <iframe
+            [src]="previewUrl"
+            class="h-full w-full"
+            [title]="'Floral Proposal version ' + proposal.version"
+          ></iframe>
+        </div>
+
+        <ng-template #unavailablePreview>
+          <div class="mt-4 flex h-[720px] items-center justify-center rounded-2xl border border-dashed border-black/10 bg-stone-50 px-6 text-center text-sm leading-6 text-stone-500">
+            Signed preview URL is unavailable for this Floral Proposal right now.
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #emptyState>
+    <div class="mt-6 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-6 py-12 text-center">
+      <p class="text-sm font-medium text-stone-700">
+        No Floral Proposals have been attached to this lead yet.
+      </p>
+      <p class="mt-2 text-sm text-stone-500">
+        Once a Floral Proposal is submitted, version history and previews will appear here.
+      </p>
+      <button
+        *ngIf="canSubmitProposal"
+        type="button"
+        (click)="onSubmitProposal()"
+        class="mt-5 inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+      >
+        Generate New Floral Proposal
+      </button>
+    </div>
+  </ng-template>
+</div>
+
+
+
+

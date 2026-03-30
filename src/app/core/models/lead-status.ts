@@ -1,0 +1,12 @@
+export type LeadStatus =
+  | 'new'
+  | 'contacted'
+  | 'consultation_scheduled'
+  | 'nurturing'
+  | 'proposal_submitted'
+  | 'proposal_declined'
+  | 'proposal_accepted'
+  | 'accepted'
+  | 'declined'
+  | 'converted'
+  | 'closed_unbooked';

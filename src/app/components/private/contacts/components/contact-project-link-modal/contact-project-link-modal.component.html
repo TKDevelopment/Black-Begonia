@@ -1,0 +1,118 @@
+<div
+  *ngIf="open"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,25,23,0.42)] px-4 py-4 backdrop-blur-[2px]"
+>
+  <div class="flex w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#f7f4f1] shadow-[0_28px_80px_rgba(28,25,23,0.22)]">
+    <div class="border-b border-black/10 bg-white/95 px-6 py-5 md:px-8">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <span class="inline-flex rounded-full border border-[#ead7d0] bg-[#f8ebe7] px-3 py-1 font-oswald text-[11px] uppercase tracking-[0.24em] text-[#c46f67]">
+            Contact Workflow
+          </span>
+          <h3 class="mt-4 font-cormorant text-4xl leading-none text-stone-900">
+            Link Contact To Project
+          </h3>
+          <p class="mt-3 max-w-xl text-sm leading-6 text-stone-600">
+            Attach this contact to an existing project and define how they relate to the event.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="onClose()"
+          [disabled]="saving"
+          class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 bg-stone-50 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 disabled:opacity-50"
+          aria-label="Close link contact modal"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="space-y-5 px-6 py-6 md:px-8">
+      <div class="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm md:p-6">
+        <div class="grid gap-4">
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+              Project
+            </label>
+            <select
+              [ngModel]="projectId()"
+              (ngModelChange)="projectId.set($event)"
+              class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]"
+            >
+              <option value="">Select a project</option>
+              <option *ngFor="let project of projects" [value]="project.project_id">
+                {{ formatProjectLabel(project) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+            <div>
+              <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Relationship Type
+              </label>
+              <select
+                [ngModel]="relationshipType()"
+                (ngModelChange)="relationshipType.set($event)"
+                class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]"
+              >
+                <option *ngFor="let option of relationshipOptions" [value]="option">
+                  {{ formatLabel(option) }}
+                </option>
+              </select>
+            </div>
+
+            <label class="mt-7 inline-flex items-center gap-3 rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                [ngModel]="isPrimary()"
+                (ngModelChange)="isPrimary.set(!!$event)"
+                class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#f3dfdc]"
+              />
+              Set as primary project contact
+            </label>
+          </div>
+        </div>
+
+        <div
+          *ngIf="validationError()"
+          class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+        >
+          {{ validationError() }}
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-black/10 bg-white/95 px-6 py-4 md:px-8">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm text-stone-500">
+          This adds a relationship record to the selected project and updates the contact timeline.
+        </p>
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            (click)="onClose()"
+            [disabled]="saving"
+            class="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-5 py-3 font-oswald text-xs uppercase tracking-[0.22em] text-stone-700 transition hover:border-black/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            (click)="onConfirm()"
+            [disabled]="saving"
+            class="inline-flex items-center justify-center rounded-full bg-[#1f1f1f] px-5 py-3 font-oswald text-xs uppercase tracking-[0.22em] text-white transition hover:bg-[#ea938c] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ saving ? 'Linking...' : 'Link To Project' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

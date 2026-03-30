@@ -176,15 +176,15 @@
               </div>
             </div>
 
-            <div class="col-span-2 flex justify-between">
+            <div class="flex justify-between">
               <label
                 for="eventDate"
-                class="text-left w-1/3 sm:w-1/5 my-auto text-gray-600 text-base sm:text-lg"
+                class="text-left w-1/3 my-auto text-gray-600 text-sm"
               >
-                Event Date: *
+                Event Date:
               </label>
 
-              <div class="relative w-5/6">
+              <div class="relative w-2/3">
                 <input
                   id="eventDate"
                   formControlName="eventDate"
@@ -212,6 +212,54 @@
               </div>
             </div> 
 
+            <div class="relative w-full">
+              <select
+                formControlName="serviceType"
+                class="appearance-none w-full bg-gray-50 border px-2 py-1.5 pr-8 focus:outline-none focus:ring-2"
+                [ngClass]="
+                  (weddingInquiryForm.get('serviceType')?.invalid && weddingInquiryForm.get('serviceType')?.touched)
+                    ? 'border-[#ea938c] ring-2 ring-[#ea938c]/40 focus:ring-[#ea938c]/50 text-black'
+                    : (weddingInquiryForm.get('serviceType')?.value
+                        ? 'border-gray-300 focus:ring-gray-400 text-black'
+                        : 'border-gray-300 focus:ring-gray-400 text-gray-400')
+                "
+              >
+                <option value="" disabled>Service Type *</option>
+                <option value="full-service wedding">Full-Service Wedding</option>
+                <option value="ceremony-only wedding">Ceremony-Only Wedding</option>
+                <option value="reception-only wedding">Reception-Only Wedding</option>
+                <option value="elopement">Elopement</option>
+                <option value="engagement">Engagement</option>
+              </select>
+
+              <!-- Arrow Icon -->
+              <div class="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <svg
+                  class="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+
+              <!-- Tooltip (right aligned) -->
+              <div
+                *ngIf="invalidTooltips['serviceType'] === 'visible' || invalidTooltips['serviceType'] === 'fading'"
+                class="absolute -right-[61px] -top-2 -translate-y-full
+                      bg-[#ea938c] text-white text-xs px-3 py-1 rounded-md shadow-lg
+                      whitespace-nowrap z-50 pointer-events-none"
+                [ngClass]="{
+                  'tooltip-fade-in': invalidTooltips['serviceType'] === 'visible',
+                  'tooltip-fade-out': invalidTooltips['serviceType'] === 'fading'
+                }"
+              >
+                Service type required
+              </div>
+            </div>
+
             <input formControlName="ceremonyVenue" type="text" placeholder="Ceremony Venue" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             <input formControlName="receptionVenue" type="text" placeholder="Reception Venue" class="border border-gray-300 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
             
@@ -228,11 +276,9 @@
                 "
               >
                 <option value="" disabled>Budget *</option>
-                <option value="$2,000 + Tax">Our minimum is $2,000 + Tax</option>
-                <option value="$2,000-$5,000">$2,000-$5,000</option>
-                <option value="$5,000-$8,000">$5,000-$8,000</option>
-                <option value="$8,000-$10,000">$8,000-$10,000</option>
-                <option value="$10,000+">$10,000+</option>
+                <option *ngFor="let option of budgetOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
               </select>
 
               <!-- Arrow Icon -->

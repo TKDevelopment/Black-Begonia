@@ -1,0 +1,54 @@
+<div>
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h3 class="text-lg font-semibold text-stone-900">Related Tasks</h3>
+      <p class="mt-1 text-sm text-stone-600">
+        Track follow-ups and internal next steps for this lead.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      (click)="createTask.emit()"
+      [disabled]="createDisabled"
+      class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
+    >
+      Create Task
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="mt-5 text-sm text-stone-500">
+    Loading tasks...
+  </div>
+
+  <div *ngIf="!loading && !tasks.length" class="mt-5 rounded-xl border border-dashed border-black/10 bg-stone-50 p-4 text-sm text-stone-500">
+    No tasks have been created for this lead yet.
+  </div>
+
+  <div *ngIf="!loading && tasks.length" class="mt-5 space-y-3">
+    <button
+      *ngFor="let task of tasks"
+      type="button"
+      (click)="openTask.emit(task)"
+      class="flex w-full items-start justify-between gap-4 rounded-xl border border-black/10 bg-white p-4 text-left transition hover:border-black/15 hover:bg-stone-50"
+    >
+      <div class="min-w-0">
+        <p class="font-medium text-stone-900">
+          {{ task.title }}
+        </p>
+
+        <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">
+          <span>Due: {{ formatDate(task.due_at) }}</span>
+          <span *ngIf="task.assignee_name">&bull; {{ task.assignee_name }}</span>
+        </div>
+      </div>
+
+      <span
+        class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+        [ngClass]="getStatusClasses(task.status)"
+      >
+        {{ formatStatus(task.status) }}
+      </span>
+    </button>
+  </div>
+</div>

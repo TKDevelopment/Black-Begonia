@@ -1,0 +1,107 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] space-y-5 px-3 py-5 sm:px-4 md:px-6 md:space-y-6 md:py-8 2xl:px-8">
+    <app-crm-page-header
+      title="Leads"
+      subtitle="Manage incoming inquiries, track outreach, and convert qualified opportunities into structured CRM records."
+      primaryActionLabel="Create Lead"
+      secondaryActionLabel="Export"
+      (primaryAction)="openCreateLeadModal()"
+      (secondaryAction)="exportLeads()"
+    />
+
+    <app-search-filter-bar
+      searchPlaceholder="Search by name, email, event type, or service type"
+      [searchValue]="searchTerm()"
+      [filters]="filters()"
+      (searchChange)="onSearchChange($event)"
+      (filterChange)="onFilterChange($event)"
+      (reset)="resetFilters()"
+    />
+
+    <app-entity-table-shell
+      [columns]="columns"
+      [rows]="filteredLeads()"
+      [loading]="loading()"
+      [clickableRows]="true"
+      trackByField="lead_id"
+      emptyTitle="No leads found"
+      emptyDescription="Try adjusting your filters or create a new lead to get started."
+      (rowClick)="openLead($event)"
+    >
+      <ng-template appEntityTableCell="lead" let-row>
+        <div class="space-y-0.5">
+          <div class="font-medium text-stone-900">{{ formatLeadName(row) }}</div>
+        </div>
+      </ng-template>
+
+      <ng-template appEntityTableCell="proposal" let-row>
+        <ng-container *ngIf="getProposalForLead(row.lead_id) as proposal; else noProposal">
+          <div class="space-y-0.5">
+            <div class="flex flex-wrap items-center gap-2 font-medium text-stone-900">
+              <span>v{{ proposal.version }}</span>
+              <span
+                *ngIf="proposal.is_active"
+                class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700"
+              >
+                Active
+              </span>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #noProposal>
+          <span class="text-xs text-stone-400">No proposal yet</span>
+        </ng-template>
+      </ng-template>
+
+      <ng-template appEntityTableCell="proposal_response" let-row>
+        <ng-container *ngIf="getProposalResponseForLead(row.lead_id) as response; else noResponse">
+          <div class="space-y-0.5">
+            <div
+              class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+              [ngClass]="response.action === 'decline' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'"
+            >
+              {{ response.action === 'decline' ? 'Declined' : 'Accepted' }}
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #noResponse>
+          <span class="text-xs text-stone-400">Awaiting response</span>
+        </ng-template>
+      </ng-template>
+
+      <ng-template appEntityTableCell="service_type" let-row>
+        <span class="text-stone-700">{{ formatDisplayValue(row.service_type) }}</span>
+      </ng-template>
+
+      <ng-template appEntityTableCell="event_date" let-row>
+        <span class="text-stone-700">{{ formatEventDate(row.event_date) }}</span>
+      </ng-template>
+
+      <ng-template appEntityTableCell="status" let-row>
+        <app-status-badge [label]="row.status" [tone]="getLeadStatusTone(row.status)" />
+      </ng-template>
+
+      <ng-template appEntityTableCell="action" let-row>
+        <ng-container *ngIf="getLeadAction(row.status) as action; else noAction">
+          <app-status-badge [label]="action.label" [tone]="action.tone" />
+        </ng-container>
+
+        <ng-template #noAction>
+          <span class="text-xs text-stone-400">-</span>
+        </ng-template>
+      </ng-template>
+    </app-entity-table-shell>
+
+    <app-lead-upsert-modal
+      [open]="createModalOpen()"
+      [saving]="createSaving()"
+      mode="create"
+      [lead]="null"
+      (close)="closeCreateLeadModal()"
+      (confirm)="createLead($event)"
+    />
+  </div>
+</div>
+

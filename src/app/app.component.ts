@@ -1,21 +1,23 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ToastComponent } from './components/shared/toast/toast.component';
-import { AuthService } from './services/auth.service';
-import { SeoRouteListenerService } from './core/seo-route-listener.service';
+import { ToastComponent } from './shared/components/toast/toast.component';
+import { AuthService } from './core/auth/auth.service';
+import { SeoRouteListenerService } from './core/seo/seo-route-listener.service';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   imports: [RouterOutlet, ToastComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'Black-Begonia';
-  private listener = inject(SeoRouteListenerService);
-  
-  constructor(private authService: AuthService) {
-    this.listener.init('https://blackbegoniaflorals.com');
+
+  private readonly seoListener = inject(SeoRouteListenerService);
+
+  constructor(private readonly authService: AuthService) {
+    this.seoListener.init('https://blackbegoniaflorals.com');
   }
 
   async ngOnInit(): Promise<void> {

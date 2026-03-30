@@ -1,1 +1,156 @@
-<p>login works!</p>
+<section class="min-h-screen bg-[#f7f4f1] text-[#1f1f1f]">
+  <div class="grid min-h-screen lg:grid-cols-2">
+    <!-- Left: Branding / visual panel -->
+    <div class="relative hidden overflow-hidden lg:flex">
+      <img
+        src="assets/images/website/E+T-849.webp"
+        alt="Black Begonia floral arrangement"
+        class="absolute inset-0 h-full w-full object-cover"
+      />
+
+      <div class="absolute inset-0 bg-black/45"></div>
+
+      <div class="relative z-10 flex h-full w-full flex-col justify-between p-12 text-white">
+        <div>
+          <p class="font-oswald text-sm uppercase tracking-[0.35em] text-white/80">
+            Black Begonia Florals
+          </p>
+        </div>
+
+        <div class="max-w-xl">
+          <h1 class="font-cormorant text-6xl leading-none md:text-7xl">
+            Admin Login
+          </h1>
+          <div class="mt-6 h-px w-32 bg-[#ea938c]"></div>
+          <p class="mt-6 max-w-lg font-cormorant text-2xl leading-relaxed text-white/90">
+            Access the private floral CRM to manage leads, projects, tasks, and the
+            full client journey with elegance and ease.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-oswald text-xs uppercase tracking-[0.25em] text-white/70">
+            Internal access only
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Login form -->
+    <div class="flex items-center justify-center px-6 py-16 sm:px-10 lg:px-16">
+      <div class="w-full max-w-md">
+        <div class="mb-10 text-center lg:text-left">
+          <p class="font-oswald text-xs uppercase tracking-[0.3em] text-[#ea938c]">
+            Welcome back
+          </p>
+          <h2 class="mt-3 font-cormorant text-5xl leading-none text-[#1f1f1f]">
+            Sign in
+          </h2>
+          <p class="mt-4 text-sm leading-6 text-[#4a4a4a]">
+            Use your admin credentials to continue into the Black Begonia CRM.
+          </p>
+        </div>
+
+        <div class="rounded-[2rem] border border-black/10 bg-white/90 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)] backdrop-blur">
+          <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+            <!-- Error -->
+            <div
+              *ngIf="errorMessage()"
+              class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {{ errorMessage() }}
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label
+                for="email"
+                class="mb-2 block font-oswald text-xs uppercase tracking-[0.25em] text-[#1f1f1f]/80"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                class="w-full rounded-full border border-black/10 bg-[#f7f4f1] px-5 py-4 text-base text-[#1f1f1f] outline-none transition duration-200 placeholder:text-[#8d8d8d] focus:border-[#ea938c] focus:ring-2 focus:ring-[#ea938c]/20"
+                placeholder="you@example.com"
+              />
+
+              <p
+                *ngIf="emailControl.touched && emailControl.invalid"
+                class="mt-2 text-sm text-red-600"
+              >
+                Please enter a valid email address.
+              </p>
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label
+                for="password"
+                class="mb-2 block font-oswald text-xs uppercase tracking-[0.25em] text-[#1f1f1f]/80"
+              >
+                Password
+              </label>
+
+              <div class="relative">
+                <input
+                  id="password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  class="w-full rounded-full border border-black/10 bg-[#f7f4f1] px-5 py-4 pr-14 text-base text-[#1f1f1f] outline-none transition duration-200 placeholder:text-[#8d8d8d] focus:border-[#ea938c] focus:ring-2 focus:ring-[#ea938c]/20"
+                  placeholder="Enter your password"
+                />
+
+                <button
+                  type="button"
+                  (click)="togglePasswordVisibility()"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[#5f5f5f] transition hover:text-[#ea938c]"
+                >
+                  {{ showPassword() ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+
+              <p
+                *ngIf="passwordControl.touched && passwordControl.invalid"
+                class="mt-2 text-sm text-red-600"
+              >
+                Please enter your password.
+              </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between gap-4 pt-2">
+              <a
+                routerLink="/password-recovery"
+                class="text-sm text-[#5a5a5a] transition hover:text-[#ea938c]"
+              >
+                Forgot password?
+              </a>
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="isSubmitting()"
+              class="w-full rounded-full bg-[#1f1f1f] px-6 py-4 font-oswald text-sm uppercase tracking-[0.25em] text-white transition duration-300 hover:bg-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {{ isSubmitting() ? 'Signing In...' : 'Sign In' }}
+            </button>
+          </form>
+        </div>
+
+        <div class="mt-8 text-center lg:text-left">
+          <a
+            routerLink="/"
+            class="font-oswald text-xs uppercase tracking-[0.25em] text-[#5f5f5f] transition hover:text-[#ea938c]"
+          >
+            ← Back to website
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,10 +1,35 @@
 import { Routes } from '@angular/router';
-import { PublicLayoutComponent } from './layouts/public-layout/public-layout.component';
+import { PublicLayoutComponent } from './core/layouts/public-layout/public-layout.component';
+import { PrivateLayoutComponent } from './core/layouts/private-layout/private-layout.component';
+import { ProposalAccessLayoutComponent } from './core/layouts/proposal-access-layout/proposal-access-layout.component';
 import { LandingComponent } from './components/public/landing/landing.component';
-import { PrivateLayoutComponent } from './layouts/private-layout/private-layout.component';
-import { authGuard } from './guards/auth.guard';
+import { authGuard, authChildGuard } from './core/guards/auth.guard';
+import { adminRoleGuard, adminRoleChildGuard } from './core/guards/admin-role.guard';
+import { guestGuard } from './core/guards/guest.guard';
+import { proposalAccessGuard } from './core/guards/proposal-access.guard';
 
 export const routes: Routes = [
+  {
+    path: 'proposal',
+    component: ProposalAccessLayoutComponent,
+    children: [
+      {
+        path: 'auth',
+        loadComponent: () =>
+          import('./components/proposal-access/proposal-auth/proposal-auth.component').then(
+            m => m.ProposalAuthComponent
+          ),
+      },
+      {
+        path: 'review',
+        canActivate: [proposalAccessGuard],
+        loadComponent: () =>
+          import('./components/proposal-access/proposal-review/proposal-review.component').then(
+            m => m.ProposalReviewComponent
+          ),
+      },
+    ],
+  },
   {
     path: '',
     component: PublicLayoutComponent,
@@ -14,16 +39,12 @@ export const routes: Routes = [
       {
         path: 'about',
         loadComponent: () =>
-          import('./components/public/about/about.component').then(
-            m => m.AboutComponent
-          ),
+          import('./components/public/about/about.component').then(m => m.AboutComponent),
       },
       {
         path: 'portfolio',
         loadComponent: () =>
-          import('./components/public/portfolio/portfolio.component').then(
-            m => m.PortfolioComponent
-          ),
+          import('./components/public/portfolio/portfolio.component').then(m => m.PortfolioComponent),
       },
       {
         path: 'portfolio/:slug',
@@ -33,10 +54,29 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'locations',
+        loadComponent: () =>
+          import('./components/public/locations-hub/locations-hub.component').then(
+            (m) => m.LocationsHubComponent
+          )
+      },
+      {
+        path: 'locations/:slug',
+        loadComponent: () =>
+          import('./components/public/locations/locations.component').then(
+            (m) => m.LocationsComponent
+          )
+      },
+      {
         path: 'inquiries',
         loadComponent: () =>
-          import('./components/public/inquiries/inquiries.component').then(
-            m => m.InquiriesComponent
+          import('./components/public/inquiries/inquiries.component').then(m => m.InquiriesComponent),
+      },
+      {
+        path: 'inquiries/success',
+        loadComponent: () =>
+          import('./components/public/inquiries/inquiry-success/inquiry-success.component').then(
+            m => m.InquirySuccessComponent
           ),
       },
       {
@@ -70,36 +110,13 @@ export const routes: Routes = [
       {
         path: 'workshops',
         loadComponent: () =>
-          import('./components/public/workshops/workshops.component').then(
-            m => m.WorkshopsComponent
-          ),
+          import('./components/public/workshops/workshops.component').then(m => m.WorkshopsComponent),
       },
       {
         path: 'testimonials',
         loadComponent: () =>
           import('./components/public/testimonials/testimonials.component').then(
             m => m.TestimonialsComponent
-          ),
-      },
-      {
-        path: 'login',
-        loadComponent: () =>
-          import('./components/public/login/login.component').then(
-            m => m.LoginComponent
-          ),
-      },
-      {
-        path: 'password-recovery',
-        loadComponent: () =>
-          import('./components/public/password-recovery/password-recovery.component').then(
-            m => m.PasswordRecoveryComponent
-          ),
-      },
-      {
-        path: 'passcode',
-        loadComponent: () =>
-          import('./components/public/passcode/passcode.component').then(
-            m => m.PasscodeComponent
           ),
       },
       {
@@ -116,96 +133,172 @@ export const routes: Routes = [
             m => m.TermsAndConditionsComponent
           ),
       },
+      {
+        path: 'login',
+        canActivate: [guestGuard],
+        loadComponent: () =>
+          import('./components/public/login/login.component').then(m => m.LoginComponent),
+      },
+      {
+        path: 'password-recovery',
+        canActivate: [guestGuard],
+        loadComponent: () =>
+          import('./components/public/password-recovery/password-recovery.component').then(
+            m => m.PasswordRecoveryComponent
+          ),
+      },
+      {
+        path: 'change-password',
+        loadComponent: () =>
+          import('./components/public/change-password/change-password.component').then(
+            m => m.ChangePasswordComponent
+          ),
+      },
     ],
   },
   {
-    path: '',
+    path: 'admin',
     component: PrivateLayoutComponent,
-    canActivateChild: [authGuard],
+    canActivate: [authGuard, adminRoleGuard],
+    canActivateChild: [authChildGuard, adminRoleChildGuard],
     children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./components/private/calendar/calendar.component').then(
-            m => m.CalendarComponent
+          import('./components/private/dashboard/dashboard.component').then(
+            m => m.DashboardComponent
           ),
       },
       {
-        path: 'events',
+        path: 'leads',
+        pathMatch: 'full',
         loadComponent: () =>
-          import('./components/private/events/events.component').then(
-            m => m.EventsComponent
+          import('./components/private/leads/leads.component').then(m => m.LeadsComponent),
+      },
+      {
+        path: 'leads/:leadId/floral-proposal-builder',
+        loadComponent: () =>
+          import('./components/private/floral-proposal-builder/floral-proposal-builder.component').then(
+            m => m.FloralProposalBuilderComponent
           ),
       },
       {
-        path: 'payments',
+        path: 'leads/:leadId',
         loadComponent: () =>
-          import('./components/private/payments/payments.component').then(
-            m => m.PaymentsComponent
+          import('./components/private/leads/lead-detail/lead-detail.component').then(m => m.LeadDetailComponent),
+      },
+      {
+        path: 'contacts',
+        loadComponent: () =>
+          import('./components/private/contacts/contacts.component').then(m => m.ContactsComponent),
+      },
+      {
+        path: 'contacts/:contactId',
+        loadComponent: () =>
+          import('./components/private/contacts/contacts.component').then(m => m.ContactsComponent),
+      },
+      {
+        path: 'organizations',
+        loadComponent: () =>
+          import('./components/private/organizations/organizations.component').then(
+            m => m.OrganizationsComponent
           ),
       },
       {
-        path: 'clients',
+        path: 'organizations/:organizationId',
         loadComponent: () =>
-          import('./components/private/clients/clients.component').then(
-            m => m.ClientsComponent
+          import('./components/private/organizations/organizations.component').then(
+            m => m.OrganizationsComponent
           ),
       },
       {
-        path: 'coordinators',
+        path: 'proposal-templates',
         loadComponent: () =>
-          import('./components/private/coordinators/coordinators.component').then(
-            m => m.CoordinatorsComponent
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
           ),
+      },
+      {
+        path: 'proposal-templates/:templateId/studio',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
+            m => m.ProposalTemplateStudioComponent
+          ),
+      },
+      {
+        path: 'proposal-templates/:templateId',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
+        path: 'catalog-items',
+        loadComponent: () =>
+          import('./components/private/catalog-items/catalog-items.component').then(
+            m => m.CatalogItemsComponent
+          ),
+      },
+      {
+        path: 'catalog-items/:itemId',
+        loadComponent: () =>
+          import('./components/private/catalog-items/catalog-items.component').then(
+            m => m.CatalogItemsComponent
+          ),
+      },
+      {
+        path: 'vendors',
+        redirectTo: 'catalog-items',
+        pathMatch: 'full',
+      },
+      {
+        path: 'vendors/:vendorId',
+        redirectTo: 'catalog-items',
+      },
+
+      {
+        path: 'tax-regions',
+        loadComponent: () =>
+          import('./components/private/tax-regions/tax-regions.component').then(
+            m => m.TaxRegionsComponent
+          ),
+      },
+      {
+        path: 'tax-regions/:taxRegionId',
+        loadComponent: () =>
+          import('./components/private/tax-regions/tax-regions.component').then(
+            m => m.TaxRegionsComponent
+          ),
+      },
+      {
+        path: 'projects',
+        loadComponent: () =>
+          import('./components/private/projects/projects.component').then(m => m.ProjectsComponent),
+      },
+      {
+        path: 'projects/:projectId',
+        loadComponent: () =>
+          import('./components/private/projects/projects.component').then(m => m.ProjectsComponent),
+      },
+      {
+        path: 'tasks',
+        loadComponent: () =>
+          import('./components/private/tasks/tasks.component').then(m => m.TasksComponent),
       },
     ],
   },
   {
-    path: 'view',
-    component: PublicLayoutComponent,
-    children: [
-      {
-        path: 'proposal',
-        loadComponent: () =>
-          import('./components/view/proposal/proposal.component').then(
-            m => m.ProposalComponent
-          ),
-      },
-      {
-        path: 'proposal/decline',
-        loadComponent: () =>
-          import('./components/view/decline-proposal/decline-proposal.component').then(
-            m => m.DeclineProposalComponent
-          ),
-      },
-      {
-        path: 'payment',
-        loadComponent: () =>
-          import('./components/view/payment/payment.component').then(
-            m => m.PaymentComponent
-          ),
-      },
-      {
-        path: 'payment/success',
-        loadComponent: () =>
-          import('./components/view/payment-success/payment-success.component').then(
-            m => m.PaymentSuccessComponent
-          ),
-      },
-      {
-        path: 'payment/cancel',
-        loadComponent: () =>
-          import('./components/view/payment-cancel/payment-cancel.component').then(
-            m => m.PaymentCancelComponent
-          ),
-      },
-      {
-        path: 'reviews',
-        loadComponent: () =>
-          import('./components/view/submit-review/submit-review.component').then(
-            m => m.SubmitReviewComponent
-          ),
-      },
-    ],
+    path: '**',
+    redirectTo: '',
   },
 ];
+
+
+
+
+

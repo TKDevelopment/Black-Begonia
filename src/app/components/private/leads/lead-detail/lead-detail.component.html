@@ -1,0 +1,635 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+    <app-loading-state-block
+      *ngIf="loading()"
+      title="Loading lead details"
+      description="Please wait while we load the lead record, event details, and activity timeline."
+      minHeightClass="min-h-[520px]"
+    />
+
+    <app-error-state-block
+      *ngIf="!loading() && error()"
+      title="Unable to load lead"
+      [description]="error() || 'Something went wrong while loading this lead.'"
+      retryLabel="Retry"
+      (retry)="retryLoad()"
+    />
+
+    <app-entity-detail-shell
+      *ngIf="!loading() && !error() && lead()"
+      moduleLabel="Leads"
+      [title]="title()"
+      [subtitle]="subtitle()"
+      [loading]="false"
+      backLabel="Back to Leads"
+      (back)="goBack()"
+    >
+      <div detail-main>
+        <ng-container *ngIf="lead() as lead">
+          <app-lead-summary-card
+            [lead]="lead"
+            [actionLoading]="actionLoading()"
+            [consultationButtonLabel]="consultationButtonLabel()"
+            [consultationButtonDisabled]="consultationButtonDisabled()"
+            [detailsLocked]="isLeadLocked()"
+            (markContacted)="markContacted()"
+            (consultationAction)="handleConsultationAction()"
+            (editLead)="editLead()"
+            (convertLead)="convertLead()"
+            (declineLead)="openDeclineModal()"
+          />
+
+          <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Event Details</h3>
+
+            <div class="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Service Type</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.service_type | titlecase }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Type</p>
+                <p class="mt-1 text-sm text-stone-800">{{ (lead.event_type || 'Not provided') | titlecase }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p>
+                <p class="mt-1 text-sm text-stone-800">{{ formatDate(lead.event_date) }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Guest Count</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.guest_count ?? 'Not provided' }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Ceremony Venue</p>
+                <p class="mt-1 text-sm text-stone-800">{{ (lead.ceremony_venue_name || 'Not provided') | titlecase }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Location</p>
+                <p class="mt-1 text-sm text-stone-800">
+                  <ng-container *ngIf="lead.ceremony_venue_city || lead.ceremony_venue_state; else noCeremonyLocation">
+                    {{ (lead.ceremony_venue_city || '-') | titlecase }}
+                    <ng-container *ngIf="lead.ceremony_venue_state">, {{ lead.ceremony_venue_state | titlecase }}</ng-container>
+                  </ng-container>
+                  <ng-template #noCeremonyLocation>Not provided</ng-template>
+                </p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Reception Venue</p>
+                <p class="mt-1 text-sm text-stone-800">{{ (lead.reception_venue_name || 'Not provided') | titlecase }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Location</p>
+                <p class="mt-1 text-sm text-stone-800">
+                  <ng-container *ngIf="lead.reception_venue_city || lead.reception_venue_state; else noReceptionLocation">
+                    {{ (lead.reception_venue_city || '-') | titlecase }}
+                    <ng-container *ngIf="lead.reception_venue_state">, {{ lead.reception_venue_state | titlecase }}</ng-container>
+                  </ng-container>
+                  <ng-template #noReceptionLocation>Not provided</ng-template>
+                </p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p>
+                <p class="mt-1 text-sm text-stone-800">{{ getBudgetRange() | titlecase }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Preferred Contact</p>
+                <p class="mt-1 text-sm text-stone-800">{{ (lead.preferred_contact_method || 'Not provided') | titlecase }}</p>
+              </div>
+
+              <div *ngIf="lead.event_type === 'wedding'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Planner Name</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.planner_name || 'Not provided' }}</p>
+              </div>
+
+              <div *ngIf="lead.event_type === 'wedding'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Planner Email</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.planner_email || 'Not provided' }}</p>
+              </div>
+
+              <div *ngIf="lead.event_type === 'wedding'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Planner Phone</p>
+                <p class="mt-1 text-sm text-stone-800">{{ lead.planner_phone || 'Not provided' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-semibold text-stone-900">Inspiration Photos</h3>
+                <p class="mt-1 text-sm text-stone-600">
+                  Upload or review visual references saved to Supabase Storage for this lead.
+                </p>
+              </div>
+              <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">
+                {{ inspirationUrls().length }}
+              </span>
+            </div>
+
+            <input
+              #inspirationFileInput
+              type="file"
+              accept="image/*"
+              multiple
+              class="hidden"
+              (change)="onInspirationFilesSelected($event)"
+            />
+
+            <div
+              class="mt-5 rounded-2xl border border-dashed px-4 py-5 transition"
+              [ngClass]="inspirationDropActive()
+                ? 'border-[#ea938c] bg-[#fff4f2]'
+                : 'border-black/10 bg-stone-50'"
+              (dragover)="onInspirationDragOver($event)"
+              (dragleave)="onInspirationDragLeave($event)"
+              (drop)="onInspirationDrop($event)"
+            >
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p class="text-sm font-medium text-stone-900">
+                    Drag photos here or choose files to upload
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    Uploaded images are stored in Supabase and listed below as links.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  (click)="openInspirationPicker(inspirationFileInput)"
+                  [disabled]="inspirationUploadLoading() || isLeadReadOnly()"
+                  class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {{ inspirationUploadLoading() ? 'Uploading...' : 'Upload Photos' }}
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="inspirationUrls().length; else noInspirationLinks" class="mt-5 space-y-3">
+              <div
+                *ngFor="let inspiration of inspirationUrls()"
+                class="flex items-start justify-between gap-4 rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3"
+              >
+                <button
+                  type="button"
+                  (click)="openInspirationUrl(inspiration.url)"
+                  class="min-w-0 flex-1 text-left"
+                >
+                  <p class="truncate text-sm font-medium text-stone-900">{{ inspiration.url }}</p>
+                  <p class="mt-1 text-xs text-stone-500">Added {{ formatDateTime(inspiration.created_at) }}</p>
+                </button>
+
+                <div class="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    (click)="openInspirationUrl(inspiration.url)"
+                    class="text-sm font-medium text-[#ea938c] transition hover:opacity-80"
+                  >
+                    Open
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="deleteInspirationPhoto(inspiration)"
+                    [disabled]="deletingInspirationId() === inspiration.lead_inspiration_url_id || inspirationUploadLoading()"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                    [ngClass]="crmThemeService.isDarkMode
+                      ? 'border border-rose-300/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20'
+                      : 'border bg-[#fff7f5] text-[#8f2f28] hover:bg-[#fbe7e3]'"
+                    [style.borderColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.3)' : '#c97972'"
+                    aria-label="Delete inspiration photo"
+                  >
+                    <svg
+                      *ngIf="deletingInspirationId() !== inspiration.lead_inspiration_url_id; else deletingIcon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                    </svg>
+
+                    <ng-template #deletingIcon>
+                      <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"></span>
+                    </ng-template>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <ng-template #noInspirationLinks>
+              <div class="mt-5 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                No inspiration photos have been uploaded for this lead yet.
+              </div>
+            </ng-template>
+          </div>
+
+          <div class="mb-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Inquiry Message</h3>
+
+            <p class="mt-4 whitespace-pre-line text-sm leading-7 text-stone-700">
+              {{ lead.inquiry_message || 'No inquiry message provided.' }}
+            </p>
+          </div>
+
+          <div class="mb-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-semibold text-stone-900">Notes</h3>
+                <p class="mt-1 text-sm text-stone-600">
+                  Internal notes for follow-up, context, and handoff details.
+                </p>
+              </div>
+              <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">
+                {{ noteActivities().length }}
+              </span>
+            </div>
+
+            <div *ngIf="noteDraftError()" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {{ noteDraftError() }}
+            </div>
+
+            <div class="mt-5 rounded-2xl border border-black/10 bg-[#fcfaf8] p-4">
+              <label class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Add Note
+              </label>
+              <textarea
+                rows="4"
+                [ngModel]="noteDraft()"
+                (ngModelChange)="noteDraft.set($event); noteDraftError.set(null)"
+                class="mt-3 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm leading-7 text-stone-800 outline-none transition focus:border-[#ea938c]"
+                placeholder="Add internal context, next steps, reminders, or client details."
+              ></textarea>
+
+              <div class="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  (click)="saveInternalNote()"
+                  [disabled]="noteSaving()"
+                  class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {{ noteSaving() ? 'Saving...' : 'Add Note' }}
+                </button>
+              </div>
+            </div>
+            
+            <div *ngIf="noteActivities().length; else noNotes" class="mt-5 space-y-4">
+              <div
+                *ngFor="let note of noteActivities()"
+                class="rounded-2xl border border-black/10 bg-[#fcfaf8] p-4"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      {{ formatDateTime(note.created_at) }}
+                    </p>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button
+                      *ngIf="editingNoteId() !== note.lead_activity_id"
+                      type="button"
+                      (click)="startEditingNote(note)"
+                      [disabled]="noteSaving() || deletingNoteId() === note.lead_activity_id"
+                      class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="deleteNote(note)"
+                      [disabled]="noteSaving() || deletingNoteId() === note.lead_activity_id"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                      [ngClass]="crmThemeService.isDarkMode
+                        ? 'border border-rose-300/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20'
+                        : 'border bg-[#fff7f5] text-[#8f2f28] hover:bg-[#fbe7e3]'"
+                      [style.borderColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.3)' : '#c97972'"
+                      aria-label="Delete note"
+                    >
+                      <svg
+                        *ngIf="deletingNoteId() !== note.lead_activity_id; else deletingNoteIcon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                      </svg>
+
+                      <ng-template #deletingNoteIcon>
+                        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"></span>
+                      </ng-template>
+                    </button>
+                  </div>
+                </div>
+
+                <div *ngIf="editingNoteId() === note.lead_activity_id; else noteMessage" class="mt-3">
+                  <div *ngIf="editingNoteError()" class="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {{ editingNoteError() }}
+                  </div>
+
+                  <textarea
+                    rows="4"
+                    [ngModel]="editingNoteDraft()"
+                    (ngModelChange)="editingNoteDraft.set($event); editingNoteError.set(null)"
+                    class="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm leading-7 text-stone-800 outline-none transition focus:border-[#ea938c]"
+                  ></textarea>
+
+                  <div class="mt-3 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      (click)="cancelEditingNote()"
+                      [disabled]="noteSaving()"
+                      class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="saveEditedNote(note)"
+                      [disabled]="noteSaving()"
+                      class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {{ noteSaving() ? 'Saving...' : 'Save' }}
+                    </button>
+                  </div>
+                </div>
+
+                <ng-template #noteMessage>
+                  <p class="mt-3 whitespace-pre-line text-sm leading-7 text-stone-700">
+                    {{ note.activity_description }}
+                  </p>
+                </ng-template>
+              </div>
+            </div>
+
+            <ng-template #noNotes>
+              <div class="mt-5 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                No internal notes have been added yet.
+              </div>
+            </ng-template>
+          </div>
+
+          <div class="mb-3">
+            <app-lead-proposal-history-card
+              [proposals]="proposals()"
+              [selectedProposalId]="selectedProposalId()"
+              [proposalResponses]="proposalResponses()"
+              [resending]="proposalResending()"
+              [canSubmitProposal]="canSubmitProposal()"
+              [canResendProposal]="canResendProposalAccess()"
+              (selectProposal)="selectProposal($event)"
+              (openProposal)="openProposal($event)"
+              (resendProposal)="resendProposalAccess($event)"
+              (submitProposal)="openProposalModal()"
+            />
+          </div>
+        </ng-container>
+      </div>
+
+      <div detail-sidebar>
+        <ng-container *ngIf="lead() as lead">
+          <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Quick Actions</h3>
+
+            <div class="mt-5 flex flex-col gap-3">
+              <button
+                type="button"
+                (click)="handleConsultationAction()"
+                [disabled]="consultationButtonDisabled()"
+                class="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
+                [ngClass]="consultationButtonDisabled() ? 'bg-stone-300' : 'bg-[#ea938c] hover:opacity-90'"
+              >
+                {{ consultationButtonLabel() }}
+              </button>
+
+              <button
+                type="button"
+                (click)="editLead()"
+                [disabled]="actionLoading() || proposalSubmitting() || editSaving() || isLeadLocked()"
+                class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Edit Lead
+              </button>
+
+              <button
+                *ngIf="showQuickActionConvertButton()"
+                type="button"
+                (click)="convertLead()"
+                [disabled]="actionLoading() || proposalSubmitting() || isLeadLocked()"
+                class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Convert to Project
+              </button>
+
+              <button
+                type="button"
+                (click)="openDeclineModal()"
+                [disabled]="actionLoading() || proposalSubmitting() || isLeadLocked()"
+                class="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Decline Lead
+              </button>
+            </div>
+          </div>
+
+          <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Lead Status</h3>
+
+            <div class="mt-4">
+              <app-status-badge [label]="lead.status" [tone]="getLeadStatusTone(lead.status)" size="md" />
+            </div>
+
+            <p class="mt-4 text-sm text-stone-600">
+              Keep this lead moving forward as consultation, proposal review,
+              and qualification progress.
+            </p>
+
+            <app-lead-status-selector
+              class="mt-5"
+              [value]="lead.status"
+              [allowedStatuses]="allowedStatuses()"
+              [disabled]="actionLoading() || isLeadLocked()"
+              (statusChange)="updateLeadStatus($event)"
+            />
+          </div>
+
+          <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <app-task-list-panel
+              [tasks]="relatedTaskItems"
+              [loading]="taskLoading()"
+              [createDisabled]="isLeadLocked()"
+              (createTask)="createTaskFromLead()"
+              (openTask)="openTask($event)"
+            />
+          </div>
+
+          <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Activity Timeline</h3>
+
+            <div class="mt-5 space-y-5">
+              <ng-container *ngIf="timelineActivities().length; else noActivity">
+                <div *ngFor="let activity of timelineActivities()" class="flex gap-4">
+                  <div
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                    [class]="getActivityIconClasses(activity.activity_type)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="mt-[3px] block h-[1.12rem] w-[1.12rem] shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path [attr.d]="getActivityIconPath(activity.activity_type)"></path>
+                    </svg>
+                  </div>
+
+                  <div class="min-w-0 flex-1 border-b border-black/10 pb-5 last:border-b-0 last:pb-0">
+                    <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                      <h4 class="text-sm font-semibold text-stone-900">{{ activity.activity_label }}</h4>
+                      <p class="text-xs text-stone-500">{{ formatDateTime(activity.created_at) }}</p>
+                    </div>
+
+                    <p *ngIf="activity.activity_description" class="mt-2 text-sm text-stone-600">
+                      {{ activity.activity_description }}
+                    </p>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-template #noActivity>
+                <p class="text-sm text-stone-500">No activity has been logged for this lead yet.</p>
+              </ng-template>
+            </div>
+          </div>
+
+          <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Record Metadata</h3>
+
+            <div class="mt-5 space-y-4 text-sm">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Lead ID</p>
+                <p class="mt-1 break-all text-stone-800">{{ lead.lead_id }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Assigned User</p>
+                <p class="mt-1 text-stone-800">{{ assignedUserName() }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Contacted</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.last_contacted_at) }}</p>
+              </div>
+
+              <div *ngIf="lead.declined_at">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Declined At</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.declined_at) }}</p>
+              </div>
+
+              <div *ngIf="lead.converted_at">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Converted At</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.converted_at) }}</p>
+              </div>
+
+              <div *ngIf="lead.consultation_scheduled_at">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Consultation Scheduled</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.consultation_scheduled_at) }}</p>
+              </div>
+
+              <div *ngIf="lead.consultation_completed_at">
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Consultation Completed</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.consultation_completed_at) }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Created</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.created_at) }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Updated</p>
+                <p class="mt-1 text-stone-800">{{ formatDateTime(lead.updated_at) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="lead.decline_reason" class="mt-3 rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-stone-900">Decline Reason</h3>
+            <p class="mt-4 text-sm leading-7 text-stone-700">{{ lead.decline_reason }}</p>
+          </div>
+        </ng-container>
+      </div>
+    </app-entity-detail-shell>
+
+    <app-lead-decline-modal
+      [open]="declineModalOpen()"
+      [saving]="actionLoading()"
+      (close)="closeDeclineModal()"
+      (confirm)="confirmDecline($event)"
+    />
+
+    <app-lead-convert-modal
+      [open]="convertModalOpen()"
+      [saving]="convertLoading()"
+      [lead]="lead()"
+      (close)="closeConvertModal()"
+      (confirm)="confirmConvert($event)"
+    />
+
+    <app-confirm-dialog
+      [open]="confirmDialogOpen()"
+      [loading]="actionLoading()"
+      title="Confirm Action"
+      description="Are you sure you want to continue?"
+      confirmLabel="Confirm"
+      cancelLabel="Cancel"
+      (close)="confirmDialogOpen.set(false)"
+      (confirm)="confirmDialogOpen.set(false)"
+    />
+
+    <app-lead-upsert-modal
+      [open]="editModalOpen()"
+      [saving]="editSaving()"
+      mode="edit"
+      [lead]="lead()"
+      (close)="closeEditModal()"
+      (confirm)="saveLeadEdits($event)"
+    />
+
+    <app-task-upsert-modal
+      [open]="taskModalOpen()"
+      [saving]="taskSaving()"
+      [mode]="taskModalMode()"
+      [task]="selectedTask()"
+      [internalUsers]="internalUsers()"
+      [relatedLeadLabel]="title()"
+      (close)="closeTaskModal()"
+      (confirm)="saveTask($event)"
+    />
+
+  </div>
+</div>
+
+
+
+
+

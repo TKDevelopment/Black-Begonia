@@ -32,6 +32,8 @@
       style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com data:;
       frame-src
+        'self'
+        blob:
         https://js.stripe.com
         https://*.supabase.co
         https://accounts.google.com
@@ -42,7 +44,7 @@
       base-uri 'self';
       form-action 'self' https://accounts.google.com;
     '''
-    Link = "</assets/seo/og-default.jpg>; rel=preload; as=image"
+
     X-Robots-Tag = "all"
 
 [[headers]]
@@ -73,3 +75,4 @@
   to = "/sitemap.xml"
   status = 200
   force = true
+

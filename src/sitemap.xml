@@ -16,7 +16,12 @@
     <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://blackbegoniaflorals.com/services</loc>
+    <loc>https://blackbegoniaflorals.com/services/weddings</loc>
+    <lastmod>2025-08-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/services/general</loc>
     <lastmod>2025-08-29</lastmod>
     <priority>0.80</priority>
   </url>
@@ -31,9 +36,79 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://blackbegoniaflorals.com/inquiries/weddings</loc>
+    <lastmod>2025-08-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/inquiries/general</loc>
+    <lastmod>2025-08-29</lastmod>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://blackbegoniaflorals.com/workshops</loc>
     <lastmod>2025-08-29</lastmod>
     <priority>1.00</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.86</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/newport-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/watch-hill-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/providence-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/bristol-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/south-kingstown-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/narragansett-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/westerly-ri-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/north-kingstown-ri-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/mystic-ct-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/stonington-ct-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://blackbegoniaflorals.com/locations/boston-ma-wedding-florist</loc>
+    <lastmod>2026-03-24</lastmod>
+    <priority>0.80</priority>
   </url>
   <url>
     <loc>https://blackbegoniaflorals.com/terms-and-conditions</loc>

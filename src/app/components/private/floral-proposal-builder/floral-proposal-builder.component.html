@@ -1,0 +1,552 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] px-3 py-4 sm:px-4 md:px-5 md:py-6 xl:px-4 xl:py-5 2xl:px-8">
+    <app-loading-state-block
+      *ngIf="loading()"
+      title="Loading Floral Proposal builder"
+      description="Please wait while we load the lead, proposal versions, templates, tax settings, and catalog items."
+      minHeightClass="min-h-[560px]"
+    />
+
+    <app-error-state-block
+      *ngIf="!loading() && error()"
+      title="Unable to load Floral Proposal builder"
+      [description]="error()!"
+      retryLabel="Retry"
+      (retry)="retry()"
+      minHeightClass="min-h-[560px]"
+    />
+
+    <app-entity-detail-shell
+      *ngIf="!loading() && !error() && lead()"
+      moduleLabel="Proposals"
+      [title]="title()"
+      [subtitle]="subtitle()"
+      [loading]="false"
+      backLabel="Back to Lead"
+      (back)="goBack()"
+    >
+      <div detail-main>
+        <div class="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5 xl:p-3.5 2xl:p-5">
+          <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <p class="font-oswald text-[11px] uppercase tracking-[0.32em] text-[#ea938c]">
+                Floral Proposal Builder
+              </p>
+              <h2 class="mt-2 font-cormorant text-[2rem] text-stone-900 xl:text-[1.65rem] 2xl:text-[2.1rem]">
+                {{ lead()!.first_name }} {{ lead()!.last_name }}
+              </h2>
+              <p class="mt-2 max-w-3xl text-[13px] leading-6 text-stone-600 xl:text-[11px] xl:leading-5 2xl:text-[14px] 2xl:leading-6">
+                Build the client-facing Floral Proposal line items here, then expand each row to compose the internal catalog-item recipe that drives pricing and the shopping list.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
+              <app-status-badge
+                *ngIf="activeProposal()"
+                [label]="activeProposal()!.status"
+                [tone]="getProposalStatusTone(activeProposal()!.status)"
+              />
+              <button type="button" (click)="exportFloralProposalPdf()" [disabled]="!lineItems().length" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3.5 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
+                Export PDF
+              </button>
+              <button type="button" (click)="saveDraft()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3.5 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
+                Save Draft
+              </button>
+              <button type="button" (click)="openPreview()" [disabled]="!canSubmit() || saving()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
+                Preview Floral Proposal
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+          <div class="grid gap-3 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_200px_minmax(0,1fr)]">
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Proposal Template</label>
+              <select [ngModel]="selectedTemplateId()" (ngModelChange)="onTemplateChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
+                <option value="">Select a template</option>
+                <option *ngFor="let template of templates(); trackBy: trackByTemplate" [value]="template.template_id">
+                  {{ template.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Default Markup</label>
+              <div class="mt-2 relative">
+                <input [ngModel]="defaultMarkupPercent()" (ngModelChange)="onDefaultMarkupChange($event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[13px] text-stone-500">%</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Tax Region</label>
+              <select [ngModel]="selectedTaxRegionId()" (ngModelChange)="onTaxRegionChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
+                <option value="">Select a tax region</option>
+                <option *ngFor="let region of taxRegions(); trackBy: trackByTaxRegion" [value]="region.tax_region_id">
+                  {{ region.name }} - {{ formatPercent(region.tax_rate) }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[17px]">Line Items</h3>
+              <p class="mt-1 text-[13px] leading-5 text-stone-600 xl:text-[11px] 2xl:text-[14px] 2xl:leading-6">
+                Add client-facing line items, then expand each row to compose the internal catalog-item recipe or manual fee amount.
+              </p>
+            </div>
+
+            <button type="button" (click)="addLineItem()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
+              Add Line Item
+            </button>
+          </div>
+
+          <datalist id="catalog-item-options">
+            <option *ngFor="let item of activeCatalogItems(); trackBy: trackByCatalogItem" [value]="item.name">
+              {{ item.name }}
+            </option>
+          </datalist>
+
+          <div *ngIf="lineItems().length; else emptyState" class="mt-4 overflow-hidden rounded-2xl border border-black/10">
+            <div class="overflow-x-auto">
+              <table cdkDropList [cdkDropListData]="lineItems()" (cdkDropListDropped)="reorderLineItems($event)" class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/15">
+                <thead class="bg-[#fcfaf8]">
+                  <tr class="text-left text-[11px] uppercase tracking-[0.22em] text-stone-500 xl:text-[10px] 2xl:text-[11px] ">
+                    <th class="px-4 py-3 font-semibold xl:px-4 xl:py-2.5 2xl:px-4 2xl:py-3">Item</th>
+                    <th class="w-28 px-4 py-3 font-semibold xl:px-1.5 xl:py-2.5 max-w-[80px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">Qty</th>
+                    <th class="w-40 px-4 py-3 font-semibold xl:px-1.5 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">Unit Price</th>
+                    <th class="w-40 px-4 py-3 font-semibold xl:px-1.5 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">Subtotal</th>
+                    <th class="w-12"></th>
+                  </tr>
+                </thead>
+
+                <ng-container *ngFor="let line of lineItems(); trackBy: trackByLine">
+                  <tbody cdkDrag [cdkDragData]="line" (cdkDragStarted)="onLineDragStarted(line.local_id)" (cdkDragEnded)="onLineDragEnded()" class="border-t border-black/10">
+                    <ng-template cdkDragPreview>
+                      <div class="flex min-w-[720px] items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-2xl">
+                        <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] text-stone-500">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M7 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM16 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                          </svg>
+                        </span>
+                        <span class="inline-flex h-9 w-24 shrink-0 items-center justify-center rounded-full bg-stone-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-600">{{ formatStatusLabel(line.line_item_type) }}</span>
+                        <span class="min-w-0 flex-1 truncate text-sm font-semibold text-stone-900">{{ line.item_name || 'Untitled line item' }}</span>
+                        <span class="w-24 text-right text-sm text-stone-600">{{ line.quantity }}</span>
+                        <span class="w-32 text-right text-sm text-stone-600">{{ formatCurrency(line.unit_price) }}</span>
+                        <span class="w-32 text-right text-sm font-semibold text-stone-900">{{ formatCurrency(line.subtotal) }}</span>
+                      </div>
+                    </ng-template>
+
+                    <tr (click)="toggleExpanded(line.local_id)" class="cursor-pointer bg-white align-top transition hover:bg-stone-50/80">
+                      <td class="px-4 py-3 xl:px-1 xl:py-2.5 2xl:px-4 2xl:py-3">
+                        <div class="flex items-center gap-2 ml-3">
+                          <button type="button" cdkDragHandle (click)="$event.stopPropagation()" class="inline-flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] text-stone-500 transition hover:bg-stone-100 active:cursor-grabbing xl:h-7 xl:w-7 2xl:h-8 2xl:w-8" aria-label="Drag to reorder line item">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M7 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM16 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                            </svg>
+                          </button>
+                          <span class="inline-flex h-8 w-24 shrink-0 items-center justify-center rounded-full bg-stone-100 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-stone-600 xl:h-8 xl:w-20 xl:text-[9px] 2xl:w-24 2xl:text-[10px]">{{ formatStatusLabel(line.line_item_type) }}</span>
+                          <input (click)="$event.stopPropagation()" [ngModel]="line.item_name" (ngModelChange)="updateLineName(line.local_id, $event)" [disabled]="!canEdit()" type="text" maxlength="60" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]" placeholder="Bridal Bouquet" />
+                        </div>
+                      </td>
+                      <td class="px-4 py-3 xl:px-1 xl:py-2.5 max-w-[80px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
+                        <input (click)="$event.stopPropagation()" [ngModel]="line.quantity" (ngModelChange)="updateLineQuantity(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]" />
+                      </td>
+                      <td class="px-4 py-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
+                        <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] font-medium text-stone-900 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]">{{ formatCurrency(line.unit_price) }}</div>
+                      </td>
+                      <td class="px-4 py-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
+                        <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] font-medium text-stone-900 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]">{{ formatCurrency(line.subtotal) }}</div>
+                      </td>
+                      <td class="px-4 py-3 mr-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                            <button 
+                            type="button" 
+                            (click)="$event.stopPropagation(); removeLine(line.local_id)" 
+                            [disabled]="!canEdit()" 
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                            [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
+                            [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
+                            [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+
+                    <tr *ngIf="line.expanded" class="bg-[#fcfaf8]">
+                      <td colspan="5" class="px-4 py-4">
+                        <div class="space-y-4">
+                          <div class="rounded-2xl border border-black/10 bg-white p-4 xl:p-3.5 2xl:p-5">
+                            <div class="space-y-4">
+                              <div class="grid gap-4 md:grid-cols-4">
+                                <div class="md:col-span-1">
+                                  <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Line Type</label>
+                                  <select (click)="$event.stopPropagation()" [ngModel]="line.line_item_type" (ngModelChange)="updateLineType(line.local_id, $event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
+                                    <option value="product">Product</option>
+                                    <option value="fee">Fee</option>
+                                    <option value="discount">Discount</option>
+                                  </select>
+                                </div>
+
+                                <div class="md:col-span-3">
+                                  <div
+                                    *ngIf="line.line_item_type === 'product'; else manualPriceSection"
+                                    (click)="$event.stopPropagation()"
+                                    (dragover)="onLineImageDragOver(line.local_id, $event)"
+                                    (dragleave)="onLineImageDragLeave(line.local_id, $event)"
+                                    (drop)="onLineImageDrop(line.local_id, $event)"
+                                    [class.border-[#ea938c]]="dragOverImageLineId() === line.local_id"
+                                    [class.bg-[#fff7f5]]="dragOverImageLineId() === line.local_id"
+                                    class="rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-3 text-sm text-stone-600 transition hover:border-black/20 xl:px-3.5 xl:py-2.5 xl:text-[12px] 2xl:px-5 2xl:py-3.5 2xl:text-[13px]"
+                                  >
+                                    <div class="flex items-center justify-between gap-3">
+                                      <p class="font-medium text-stone-800">Line Item Image</p>
+                                      <span class="text-[11px] font-medium text-stone-400" *ngIf="dragOverImageLineId() === line.local_id">Drop image to upload</span>
+                                    </div>
+                                    <div class="mt-2.5 flex flex-col gap-2.5 lg:flex-row lg:items-stretch">
+                                      <input
+                                        [value]="getLineImageFileName(line.image_storage_path)"
+                                        disabled
+                                        type="text"
+                                        class="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-stone-700 outline-none transition placeholder:text-stone-400 disabled:cursor-default disabled:bg-white disabled:text-stone-700 disabled:opacity-100 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
+                                        [placeholder]="dragOverImageLineId() === line.local_id ? 'Drop image here to upload' : 'No image selected'"
+                                      />
+                                      <label class="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]">
+                                        <input type="file" accept="image/*" class="hidden" (click)="$event.stopPropagation()" (change)="onLineImageSelected(line.local_id, $event)" [disabled]="!canEdit()" />
+                                        {{ line.image_storage_path ? 'Replace Image' : 'Upload Image' }}
+                                      </label>
+                                      <button
+                                        *ngIf="lineHasImage(line)"
+                                        type="button"
+                                        (click)="$event.stopPropagation(); removeLineImage(line.local_id)"
+                                        [disabled]="!canEdit()"
+                                        class="inline-flex min-w-[132px] items-center justify-center rounded-xl px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
+                                        [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
+                                        [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
+                                        [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
+                                      >
+                                        Clear Image
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <ng-template #manualPriceSection>
+                                    <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Manual Unit Price</label>
+                                    <input (click)="$event.stopPropagation()" [ngModel]="line.unit_price" (ngModelChange)="updateManualUnitPrice(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                    <p class="mt-2 text-xs leading-5 text-stone-500">
+                                      Fee and discount rows use this manual amount instead of catalog-item composition.
+                                    </p>
+                                  </ng-template>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="rounded-2xl border border-black/10 bg-white p-4 xl:p-3.5 2xl:p-5">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <h4 class="text-sm font-semibold text-stone-900">Internal Catalog Composition</h4>
+                                <p class="mt-1 text-xs leading-5 text-stone-500">This internal build drives the client-facing price and the shopping list. Fee and discount lines can stay manual.</p>
+                              </div>
+                              <button type="button" (click)="$event.stopPropagation(); addComponentRow(line.local_id)" [disabled]="!canEdit() || line.line_item_type !== 'product'" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+                                Add Catalog Row
+                              </button>
+                            </div>
+
+                            <div *ngIf="line.line_item_type === 'product'" class="mt-4 overflow-x-auto">
+                              <table class="min-w-full text-sm">
+                                <thead>
+                                  <tr class="text-left text-[11px] uppercase tracking-[0.18em] text-stone-500">
+                                    <th class="pb-3 pr-2 font-semibold">Catalog Item</th>
+                                    <th class="w-28 pb-3 pr-2 font-semibold">Qty</th>
+                                    <th class="w-32 pb-3 pr-2 font-semibold">Unit Price</th>
+                                    <th class="w-32 pb-3 pr-2 font-semibold">Markup %</th>
+                                    <th class="w-32 pb-3 pr-1 font-semibold">Subtotal</th>
+                                    <th class="w-8"></th>
+                                  </tr>
+                                </thead>
+                                <tbody class="">
+                                  <tr *ngFor="let component of line.components; trackBy: trackByComponent">
+                                    <td class="py-1.5 pr-2">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
+                                    </td>
+                                    <td class="pr-2">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                    </td>
+                                    <td class="pr-2">
+                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
+                                    </td>
+                                    <td class="pr-2">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                    </td>
+                                    <td class="pr-1">
+                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div>
+                                    </td>
+                                    <td class="text-left">
+                                      <button
+                                        type="button"
+                                        (click)="$event.stopPropagation(); removeComponentRow(line.local_id, component.local_id)"
+                                        [disabled]="!canEdit()"
+                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                                        [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
+                                        [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
+                                        [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
+                                        aria-label="Remove catalog row"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                                        </svg>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+
+                              <div *ngIf="!line.components.length" class="rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                                No catalog rows yet. Add the flowers, greens, and materials that make up this line item.
+                              </div>
+                            </div>
+
+                            <div *ngIf="line.line_item_type !== 'product'" class="mt-4 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                              This line item is configured as a {{ line.line_item_type }}. Set the manual unit price above and it will roll up into the Floral Proposal totals.
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </ng-container>
+              </table>
+            </div>
+          </div>
+
+        <div class="mt-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[17px]">Shopping List Preview</h3>
+              <p class="mt-1 text-[13px] text-stone-600 xl:text-[11px] 2xl:text-[14px]">Generated automatically from the internal catalog composition and native pack quantities on catalog items.</p>
+            </div>
+            <span class="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">{{ shoppingList().length }}</span>
+          </div>
+
+          <div *ngIf="shoppingList().length; else noShoppingList" class="mt-4 overflow-x-auto">
+            <table class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/15">
+              <thead>
+                <tr class="text-left text-[11px] uppercase tracking-[0.18em] text-stone-500">
+                  <th class="pb-3 pr-4">Item</th>
+                  <th class="pb-3 pr-4">Needed</th>
+                  <th class="pb-3 pr-4">Reserve %</th>
+                  <th class="pb-3 pr-4">Reserve</th>
+                  <th class="pb-3 pr-4">Total to Buy</th>
+                  <th class="pb-3 pr-4">Pack Count</th>
+                  <th class="pb-3 pr-4">Estimated Cost</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-black dark:divide-white/20">
+                <tr *ngFor="let item of shoppingList()">
+                  <td class="py-3 pr-4 font-medium text-stone-900">{{ item.item_name }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.required_units }}</td>
+                  <td class="py-3 pr-4 text-stone-700">
+                    <input
+                      [ngModel]="item.reserve_percent"
+                      (ngModelChange)="updateShoppingListReserve(item, $event)"
+                      [disabled]="!canEdit()"
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="w-24 rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.reserve_units }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.total_units_to_buy }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.required_pack_count ?? '' }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ formatCurrency(item.total_estimated_cost) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="pt-4 text-left text-sm font-semibold text-stone-900">Shopping List Subtotal</td>
+                  <td class="pt-4 text-sm font-semibold text-stone-900">{{ formatCurrency(shoppingListSubtotal()) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <ng-template #noShoppingList>
+            <div class="mt-5 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+              Add catalog composition rows to product lines and the shopping list will populate automatically.
+            </div>
+          </ng-template>
+        </div>
+
+          <ng-template #emptyState>
+            <div class="mt-5 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-10 text-sm text-stone-500">
+              No line items yet. Start by adding the client-facing items that should appear on the Floral Proposal.
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div detail-sidebar>
+        <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
+          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Lead Context</h3>
+          <div class="mt-5 space-y-4 text-sm xl:mt-3 xl:space-y-3 xl:text-[12px] 2xl:mt-4 2xl:space-y-4 2xl:text-[14px]">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Lead Status</p>
+              <p class="mt-1 text-stone-800">{{ formatStatusLabel(lead()!.status) }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.budget_range || 'Not provided' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Guest Count</p>
+              <p class="mt-1 text-stone-800">{{ lead()!.guest_count ?? 'Not provided' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Summary</h3>
+          <div class="mt-4 space-y-3 text-sm xl:mt-3 xl:space-y-2.5 xl:text-[12px] 2xl:mt-4 2xl:space-y-3 2xl:text-[14px]">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current Version</p>
+              <p class="mt-1 text-stone-800">{{ activeProposal()?.version || 1 }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Template</p>
+              <p class="mt-1 text-stone-800">{{ selectedTemplate()?.name || 'Not selected yet' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Tax Region</p>
+              <p class="mt-1 text-stone-800">{{ selectedTaxRegion()?.name || 'Not selected yet' }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Markup</p>
+              <p class="mt-1 text-stone-800">{{ defaultMarkupPercent() }}%</p>
+            </div>
+            <div *ngIf="activeProposal()">
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Saved</p>
+              <p class="mt-1 text-stone-800">{{ formatDateTime(activeProposal()!.updated_at) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Totals</h3>
+          <div class="mt-4 space-y-3 text-sm xl:mt-3 xl:space-y-2.5 xl:text-[12px] 2xl:mt-4 2xl:space-y-3 2xl:text-[14px]">
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Products</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().productsTotal) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Fees</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().feesTotal) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Discounts</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().discountsTotal) }}</p>
+            </div>
+            <div class="border-t border-black/10 pt-3">
+              <div class="flex items-center justify-between gap-4">
+                <p class="text-stone-700">Subtotal</p>
+                <p class="font-semibold text-stone-900">{{ formatCurrency(totalsBreakdown().subtotal) }}</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Tax</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().taxAmount) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 border-t border-black/10 pt-3">
+              <p class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[16px]">Total</p>
+              <p class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[16px]">{{ formatCurrency(totalsBreakdown().totalAmount) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
+          <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Versions</h3>
+          <div class="mt-5 space-y-3 xl:mt-3 xl:space-y-2.5 2xl:mt-4 2xl:space-y-3" *ngIf="proposals().length; else noVersions">
+            <div *ngFor="let proposal of proposals()" class="rounded-2xl border border-black/10 bg-[#fcfaf8] p-4 xl:p-3 2xl:p-4">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-stone-900">Version {{ proposal.version }}</p>
+                <app-status-badge [label]="proposal.status" [tone]="getProposalStatusTone(proposal.status)" size="sm" />
+              </div>
+              <p class="mt-2 text-xs text-stone-500 xl:text-[11px] 2xl:text-[12px]">Updated {{ formatDateTime(proposal.updated_at) }}</p>
+              <p class="mt-2 text-sm text-stone-700 xl:text-[12px] 2xl:text-[14px]">{{ formatCurrency(proposal.total_amount) }}</p>
+            </div>
+          </div>
+          <ng-template #noVersions>
+            <p class="mt-4 text-sm text-stone-500">No Floral Proposal versions have been saved yet.</p>
+          </ng-template>
+        </div>
+      </div>
+    </app-entity-detail-shell>
+  </div>
+</div>
+
+<div *ngIf="previewOpen()" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+  <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fcfaf8] shadow-2xl">
+    <div class="flex items-center justify-between gap-4 border-b border-black/10 px-6 py-5">
+      <div>
+        <p class="font-oswald text-[11px] uppercase tracking-[0.3em] text-[#ea938c]">Floral Proposal</p>
+        <h2 class="mt-2 font-cormorant text-3xl text-stone-900">Approve Before Sending</h2>
+      </div>
+      <button type="button" (click)="closePreview()" [disabled]="saving()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-stone-500 transition hover:border-black/15 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-hidden bg-stone-100 p-4">
+      <div *ngIf="previewLoading()" class="flex h-full min-h-[640px] w-full flex-col items-center justify-center rounded-2xl border border-black/10 bg-white px-6 text-center">
+        <div class="h-12 w-12 animate-spin rounded-full border-4 border-[#ea938c]/25 border-t-[#ea938c]"></div>
+        <h3 class="mt-6 font-cormorant text-3xl text-stone-900">Generating Proposal Preview</h3>
+        <p class="mt-3 max-w-xl text-sm leading-7 text-stone-600">
+          We're rendering the Floral Proposal PDF now. This can take a few moments while images, styling, and pages are prepared.
+        </p>
+      </div>
+      <ng-container *ngIf="!previewLoading()">
+        <iframe *ngIf="previewPdfUrl() as previewPdfUrl; else htmlPreview" [src]="previewPdfUrl" class="h-full min-h-[640px] w-full rounded-2xl border border-black/10 bg-white"></iframe>
+        <ng-template #htmlPreview>
+          <iframe [attr.srcdoc]="previewHtml()" class="h-full min-h-[640px] w-full rounded-2xl border border-black/10 bg-white"></iframe>
+        </ng-template>
+      </ng-container>
+    </div>
+
+    <div class="flex items-center justify-between gap-4 border-t border-black/10 px-6 py-5">
+      <p class="max-w-2xl text-sm leading-6 text-stone-600">
+        This approved preview PDF is the exact document that will be stored and sent to the client. We will not regenerate it again when you send.
+      </p>
+      <div class="flex items-center justify-end gap-3">
+      <button type="button" (click)="closePreview()" [disabled]="saving() || previewLoading()" class="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+        Back to Edit
+      </button>
+      <button type="button" (click)="submitFloralProposal()" [disabled]="saving() || previewLoading()" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+        Send Floral Proposal
+      </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
