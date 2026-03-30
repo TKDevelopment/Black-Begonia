@@ -1,0 +1,104 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.crm-sidebar {
+  background: var(--crm-surface, #ffffff);
+  color: var(--crm-text, #1f1f1f);
+}
+
+.crm-sidebar-section {
+  border-color: var(--crm-border, rgba(31, 31, 31, 0.08));
+}
+
+.crm-sidebar-card {
+  background: var(--crm-surface-muted, #f7f4f1);
+  border-color: var(--crm-border, rgba(31, 31, 31, 0.08));
+}
+
+.crm-sidebar-button,
+.crm-theme-toggle,
+.crm-sidebar-logout {
+  background: var(--crm-surface-elevated, #ffffff);
+  border-color: var(--crm-border-strong, rgba(31, 31, 31, 0.12));
+  color: var(--crm-text, #1f1f1f);
+}
+
+.crm-sidebar-link {
+  color: var(--crm-text-strong, #2d2d2d);
+}
+
+.crm-sidebar .active-link,
+.crm-sidebar .active-link span {
+  color: #ffffff !important;
+}
+
+.crm-sidebar .active-link .active-link-dot {
+  background: #ffffff !important;
+}
+
+.crm-sidebar .active-link:hover,
+.crm-sidebar .active-link:hover span {
+  color: #161311 !important;
+}
+
+.crm-sidebar .active-link:hover .active-link-dot {
+  background: #161311 !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar {
+  background: #181311;
+  color: #f6ebe3;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-section {
+  border-color: #3a2c23;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-card {
+  background: #211916;
+  border-color: #4c3a30;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-button,
+:host-context(.crm-theme-dark) .crm-theme-toggle,
+:host-context(.crm-theme-dark) .crm-sidebar-logout {
+  background: #241c18;
+  border-color: #4f3d33;
+  color: #f4e8df;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-button:hover,
+:host-context(.crm-theme-dark) .crm-sidebar-link:hover {
+  background: #2c221d !important;
+  color: #f0b0aa !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-link span {
+  color: #dbc8bb !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link,
+:host-context(.crm-theme-dark) .crm-sidebar .active-link span {
+  color: #161311 !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link .active-link-dot {
+  background: #161311 !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link:hover,
+:host-context(.crm-theme-dark) .crm-sidebar .active-link:hover span {
+  color: #ffffff !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link:hover .active-link-dot {
+  background: #ffffff !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-logout:hover {
+  border-color: #f0a69d !important;
+  background: #f0a69d !important;
+  color: #161311 !important;
+}

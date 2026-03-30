@@ -7,7 +7,7 @@ export type FloralProposalStatus =
   | 'accepted'
   | 'expired';
 
-export type FloralProposalLineItemType = 'product' | 'fee' | 'discount';
+export type FloralProposalLineItemType = 'product' | 'fee' | 'discount' | 'labor';
 export type FloralProposalShoppingListStatus = 'generated' | 'exported';
 export type DocumentTemplateKind = 'floral_proposal';
 export type DocumentTemplateHeaderLayout = 'editorial' | 'minimal' | 'classic';
@@ -77,6 +77,7 @@ export interface FloralProposalRenderLineItem {
   line_item_type: FloralProposalLineItemType;
   line_type_label: string;
   item_name: string;
+  description?: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -100,11 +101,13 @@ export interface FloralProposalRenderContract {
   };
   pricing: {
     default_markup_percent: number;
+    labor_percent: number;
   };
   line_items: FloralProposalRenderLineItem[];
   shopping_list: FloralProposalShoppingListItem[];
   totals: {
     products_total: number;
+    labor_total: number;
     fees_total: number;
     discounts_total: number;
     subtotal: number;

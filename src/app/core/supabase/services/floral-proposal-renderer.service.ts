@@ -478,6 +478,11 @@ export class FloralProposalRendererService {
         <div class="line-item-top">
           <div>
             <h3 class="line-item-title">${this.escapeHtml(line.item_name)}</h3>
+            ${
+              line.description
+                ? `<p class="line-item-description">${this.escapeHtml(line.description)}</p>`
+                : ''
+            }
           </div>
           <div class="line-item-price">
             <span>Qty ${line.quantity}</span>
@@ -524,6 +529,7 @@ export class FloralProposalRendererService {
         <p class="proposal-eyebrow">Pricing</p>
         <h2 class="section-title" style="font-size:30px;">Investment</h2>
         <div class="totals-row"><span>Products</span><span>${this.formatCurrency(contract.totals.products_total)}</span></div>
+        <div class="totals-row"><span>Labor</span><span>${this.formatCurrency(contract.totals.labor_total)}</span></div>
         <div class="totals-row"><span>Fees</span><span>${this.formatCurrency(contract.totals.fees_total)}</span></div>
         <div class="totals-row"><span>Discounts</span><span>${this.formatCurrency(contract.totals.discounts_total)}</span></div>
         <div class="totals-row"><span>Subtotal</span><span>${this.formatCurrency(contract.totals.subtotal)}</span></div>

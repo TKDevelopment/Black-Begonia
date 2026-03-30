@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-[#f7f4f1]">
+<div class="floral-proposal-builder-page min-h-screen bg-[#f4ede6]" [class.crm-dark]="isDarkMode()">
   <div class="mx-auto w-full max-w-[1880px] px-3 py-4 sm:px-4 md:px-5 md:py-6 xl:px-4 xl:py-5 2xl:px-8">
     <app-loading-state-block
       *ngIf="loading()"
@@ -26,7 +26,7 @@
       (back)="goBack()"
     >
       <div detail-main>
-        <div class="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5 xl:p-3.5 2xl:p-5">
+        <div class="builder-panel rounded-2xl border border-[#d5c2b3] bg-white p-4 shadow-[0_10px_30px_rgba(84,57,38,0.06)] sm:p-5 xl:p-3.5 2xl:p-5">
           <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p class="font-oswald text-[11px] uppercase tracking-[0.32em] text-[#ea938c]">
@@ -59,11 +59,11 @@
           </div>
         </div>
 
-        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
-          <div class="grid gap-3 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_200px_minmax(0,1fr)]">
+        <div class="builder-configuration-panel my-3 rounded-2xl border border-[#d5c2b3] bg-[#fbf7f3] p-3.5 shadow-[0_10px_30px_rgba(84,57,38,0.05)] sm:p-4 xl:p-3 2xl:p-5">
+          <div class="grid gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_180px_minmax(0,1fr)]">
             <div>
               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Proposal Template</label>
-              <select [ngModel]="selectedTemplateId()" (ngModelChange)="onTemplateChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
+              <select [ngModel]="selectedTemplateId()" (ngModelChange)="onTemplateChange($event)" [disabled]="!canEdit()" class="builder-control mt-2 w-full rounded-2xl border border-[#c9b19d] bg-white px-3.5 py-2.5 text-[13px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-[#fffdfb] disabled:cursor-not-allowed disabled:opacity-60">
                 <option value="">Select a template</option>
                 <option *ngFor="let template of templates(); trackBy: trackByTemplate" [value]="template.template_id">
                   {{ template.name }}
@@ -74,14 +74,22 @@
             <div>
               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Default Markup</label>
               <div class="mt-2 relative">
-                <input [ngModel]="defaultMarkupPercent()" (ngModelChange)="onDefaultMarkupChange($event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                <input [ngModel]="defaultMarkupPercent()" (ngModelChange)="onDefaultMarkupChange($event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="builder-control w-full rounded-2xl border border-[#c9b19d] bg-white px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-[#fffdfb] disabled:cursor-not-allowed disabled:opacity-60" />
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[13px] text-stone-500">%</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Labor Percentage</label>
+              <div class="mt-2 relative">
+                <input [ngModel]="laborPercent()" (ngModelChange)="onLaborPercentChange($event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="builder-control w-full rounded-2xl border border-[#c9b19d] bg-white px-3.5 py-2.5 pr-8 text-[13px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-[#fffdfb] disabled:cursor-not-allowed disabled:opacity-60" />
                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[13px] text-stone-500">%</span>
               </div>
             </div>
 
             <div>
               <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Tax Region</label>
-              <select [ngModel]="selectedTaxRegionId()" (ngModelChange)="onTaxRegionChange($event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3.5 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
+              <select [ngModel]="selectedTaxRegionId()" (ngModelChange)="onTaxRegionChange($event)" [disabled]="!canEdit()" class="builder-control mt-2 w-full rounded-2xl border border-[#c9b19d] bg-white px-3.5 py-2.5 text-[13px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-[#fffdfb] disabled:cursor-not-allowed disabled:opacity-60">
                 <option value="">Select a tax region</option>
                 <option *ngFor="let region of taxRegions(); trackBy: trackByTaxRegion" [value]="region.tax_region_id">
                   {{ region.name }} - {{ formatPercent(region.tax_rate) }}
@@ -91,7 +99,7 @@
           </div>
         </div>
 
-        <div class="rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+        <div class="builder-panel rounded-2xl border border-[#d5c2b3] bg-white p-3.5 shadow-[0_10px_30px_rgba(84,57,38,0.05)] sm:p-4 xl:p-3 2xl:p-5">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[17px]">Line Items</h3>
@@ -111,10 +119,10 @@
             </option>
           </datalist>
 
-          <div *ngIf="lineItems().length; else emptyState" class="mt-4 overflow-hidden rounded-2xl border border-black/10">
+          <div *ngIf="lineItems().length; else emptyState" class="line-items-table-shell mt-4 overflow-hidden rounded-2xl border border-[#d1bbaa] bg-[#fcf8f4]">
             <div class="overflow-x-auto">
               <table cdkDropList [cdkDropListData]="lineItems()" (cdkDropListDropped)="reorderLineItems($event)" class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/15">
-                <thead class="bg-[#fcfaf8]">
+                <thead class="line-items-table-header bg-[#f4ede6]">
                   <tr class="text-left text-[11px] uppercase tracking-[0.22em] text-stone-500 xl:text-[10px] 2xl:text-[11px] ">
                     <th class="px-4 py-3 font-semibold xl:px-4 xl:py-2.5 2xl:px-4 2xl:py-3">Item</th>
                     <th class="w-28 px-4 py-3 font-semibold xl:px-1.5 xl:py-2.5 max-w-[80px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">Qty</th>
@@ -125,7 +133,7 @@
                 </thead>
 
                 <ng-container *ngFor="let line of lineItems(); trackBy: trackByLine">
-                  <tbody cdkDrag [cdkDragData]="line" (cdkDragStarted)="onLineDragStarted(line.local_id)" (cdkDragEnded)="onLineDragEnded()" class="border-t border-black/10">
+                  <tbody cdkDrag [cdkDragData]="line" (cdkDragStarted)="onLineDragStarted(line.local_id)" (cdkDragEnded)="onLineDragEnded()" class="border-t border-[#d8c5b6] bg-[#f7eee6]">
                     <ng-template cdkDragPreview>
                       <div class="flex min-w-[720px] items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-2xl">
                         <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] text-stone-500">
@@ -141,26 +149,26 @@
                       </div>
                     </ng-template>
 
-                    <tr (click)="toggleExpanded(line.local_id)" class="cursor-pointer bg-white align-top transition hover:bg-stone-50/80">
+                    <tr (click)="toggleExpanded(line.local_id)" class="cursor-pointer bg-white align-top transition hover:bg-[#f8f8f8]">
                       <td class="px-4 py-3 xl:px-1 xl:py-2.5 2xl:px-4 2xl:py-3">
                         <div class="flex items-center gap-2 ml-3">
-                          <button type="button" cdkDragHandle (click)="$event.stopPropagation()" class="inline-flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] text-stone-500 transition hover:bg-stone-100 active:cursor-grabbing xl:h-7 xl:w-7 2xl:h-8 2xl:w-8" aria-label="Drag to reorder line item">
+                          <button type="button" cdkDragHandle (click)="$event.stopPropagation()" class="line-item-drag-handle inline-flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] text-stone-500 transition hover:bg-stone-100 active:cursor-grabbing xl:h-7 xl:w-7 2xl:h-8 2xl:w-8" aria-label="Drag to reorder line item">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                               <path d="M7 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM16 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
                             </svg>
                           </button>
-                          <span class="inline-flex h-8 w-24 shrink-0 items-center justify-center rounded-full bg-stone-100 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-stone-600 xl:h-8 xl:w-20 xl:text-[9px] 2xl:w-24 2xl:text-[10px]">{{ formatStatusLabel(line.line_item_type) }}</span>
-                          <input (click)="$event.stopPropagation()" [ngModel]="line.item_name" (ngModelChange)="updateLineName(line.local_id, $event)" [disabled]="!canEdit()" type="text" maxlength="60" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]" placeholder="Bridal Bouquet" />
+                          <span class="line-item-type-badge inline-flex h-8 w-24 shrink-0 items-center justify-center rounded-full bg-[#f4ede6] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-stone-700 xl:h-8 xl:w-20 xl:text-[9px] 2xl:w-24 2xl:text-[10px]">{{ formatStatusLabel(line.line_item_type) }}</span>
+                          <input (click)="$event.stopPropagation()" [ngModel]="line.item_name" (ngModelChange)="updateLineName(line.local_id, $event)" [disabled]="!canEdit()" type="text" maxlength="60" class="line-item-row-input w-full rounded-xl border border-[#ccb5a2] bg-[#fffdfa] px-3 py-2 text-[13px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]" placeholder="Bridal Bouquet" />
                         </div>
                       </td>
                       <td class="px-4 py-3 xl:px-1 xl:py-2.5 max-w-[80px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
-                        <input (click)="$event.stopPropagation()" [ngModel]="line.quantity" (ngModelChange)="updateLineQuantity(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]" />
+                        <input (click)="$event.stopPropagation()" [ngModel]="line.quantity" (ngModelChange)="updateLineQuantity(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="1" class="line-item-row-input w-full rounded-xl border border-[#ccb5a2] bg-[#fffdfa] px-3 py-2 text-[13px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]" />
                       </td>
                       <td class="px-4 py-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
-                        <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] font-medium text-stone-900 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]">{{ formatCurrency(line.unit_price) }}</div>
+                        <div class="builder-readonly-field rounded-xl border border-[#d9c7b8] bg-[#f4ede6] px-3 py-2 text-[13px] font-medium text-stone-900 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]">{{ formatCurrency(line.unit_price) }}</div>
                       </td>
                       <td class="px-4 py-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
-                        <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[13px] font-medium text-stone-900 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]">{{ formatCurrency(line.subtotal) }}</div>
+                        <div class="builder-readonly-field rounded-xl border border-[#d9c7b8] bg-[#f4ede6] px-3 py-2 text-[13px] font-medium text-stone-900 xl:px-2.5 xl:py-1.5 xl:text-[12px] 2xl:px-3 2xl:py-2 2xl:text-[13px]">{{ formatCurrency(line.subtotal) }}</div>
                       </td>
                       <td class="px-4 py-3 mr-3 xl:px-1 xl:py-2.5 max-w-[120px] 2xl:max-w-[250px] 2xl:px-3 2xl:py-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -168,7 +176,7 @@
                             type="button" 
                             (click)="$event.stopPropagation(); removeLine(line.local_id)" 
                             [disabled]="!canEdit()" 
-                            class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                            class="builder-destructive-button inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
                             [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
                             [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
                             [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
@@ -181,17 +189,17 @@
                       </td>
                     </tr>
 
-
-                    <tr *ngIf="line.expanded" class="bg-[#fcfaf8]">
+                    <tr *ngIf="line.expanded" class="line-item-expanded-row bg-[#f4ede6]">
                       <td colspan="5" class="px-4 py-4">
                         <div class="space-y-4">
-                          <div class="rounded-2xl border border-black/10 bg-white p-4 xl:p-3.5 2xl:p-5">
+                          <div class="line-item-settings-card rounded-2xl border border-[#cfb4a0] bg-[#fffdfa] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.48)] xl:p-3.5 2xl:p-5">
                             <div class="space-y-4">
                               <div class="grid gap-4 md:grid-cols-4">
-                                <div class="md:col-span-1">
+                                <div class="md:col-span-1 my-auto">
                                   <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Line Type</label>
-                                  <select (click)="$event.stopPropagation()" [ngModel]="line.line_item_type" (ngModelChange)="updateLineType(line.local_id, $event)" [disabled]="!canEdit()" class="mt-2 w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60">
+                                  <select (click)="$event.stopPropagation()" [ngModel]="line.line_item_type" (ngModelChange)="updateLineType(line.local_id, $event)" [disabled]="!canEdit()" class="builder-control mt-2 w-full rounded-xl border border-[#b99884] bg-[#fffdfa] px-3 py-2 text-sm text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-white disabled:cursor-not-allowed disabled:opacity-60">
                                     <option value="product">Product</option>
+                                    <option value="labor">Labor</option>
                                     <option value="fee">Fee</option>
                                     <option value="discount">Discount</option>
                                   </select>
@@ -206,7 +214,7 @@
                                     (drop)="onLineImageDrop(line.local_id, $event)"
                                     [class.border-[#ea938c]]="dragOverImageLineId() === line.local_id"
                                     [class.bg-[#fff7f5]]="dragOverImageLineId() === line.local_id"
-                                    class="rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-3 text-sm text-stone-600 transition hover:border-black/20 xl:px-3.5 xl:py-2.5 xl:text-[12px] 2xl:px-5 2xl:py-3.5 2xl:text-[13px]"
+                                    class="line-item-image-dropzone rounded-2xl border border-dashed border-[#bc9f8a] bg-[#f4ede6] px-4 py-3 text-sm text-stone-600 transition hover:border-[#a98368] xl:px-3.5 xl:py-2.5 xl:text-[12px] 2xl:px-5 2xl:py-3.5 2xl:text-[13px]"
                                   >
                                     <div class="flex items-center justify-between gap-3">
                                       <p class="font-medium text-stone-800">Line Item Image</p>
@@ -217,10 +225,10 @@
                                         [value]="getLineImageFileName(line.image_storage_path)"
                                         disabled
                                         type="text"
-                                        class="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-stone-700 outline-none transition placeholder:text-stone-400 disabled:cursor-default disabled:bg-white disabled:text-stone-700 disabled:opacity-100 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
+                                        class="builder-control min-w-0 flex-1 rounded-xl border border-[#b99884] bg-white px-3 py-2 text-[13px] text-stone-700 shadow-sm outline-none transition placeholder:text-stone-400 disabled:cursor-default disabled:bg-white disabled:text-stone-700 disabled:opacity-100 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
                                         [placeholder]="dragOverImageLineId() === line.local_id ? 'Drop image here to upload' : 'No image selected'"
                                       />
-                                      <label class="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]">
+                                      <label class="builder-secondary-button image-action-button inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-xl border border-[#b99884] bg-white px-3 py-2 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-[#f8efe8] xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]">
                                         <input type="file" accept="image/*" class="hidden" (click)="$event.stopPropagation()" (change)="onLineImageSelected(line.local_id, $event)" [disabled]="!canEdit()" />
                                         {{ line.image_storage_path ? 'Replace Image' : 'Upload Image' }}
                                       </label>
@@ -229,7 +237,7 @@
                                         type="button"
                                         (click)="$event.stopPropagation(); removeLineImage(line.local_id)"
                                         [disabled]="!canEdit()"
-                                        class="inline-flex min-w-[132px] items-center justify-center rounded-xl px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
+                                        class="image-action-button inline-flex min-w-[132px] items-center justify-center rounded-xl px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:min-w-[144px] 2xl:px-4 2xl:py-2 2xl:text-[13px]"
                                         [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
                                         [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
                                         [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
@@ -241,23 +249,37 @@
 
                                   <ng-template #manualPriceSection>
                                     <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Manual Unit Price</label>
-                                    <input (click)="$event.stopPropagation()" [ngModel]="line.unit_price" (ngModelChange)="updateManualUnitPrice(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                    <input (click)="$event.stopPropagation()" [ngModel]="line.unit_price" (ngModelChange)="updateManualUnitPrice(line.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="builder-control mt-2 w-full rounded-xl border border-[#b99884] bg-[#fffdfa] px-3 py-2 text-sm text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-white disabled:cursor-not-allowed disabled:opacity-60" />
                                     <p class="mt-2 text-xs leading-5 text-stone-500">
-                                      Fee and discount rows use this manual amount instead of catalog-item composition.
+                                      Labor, fee, and discount rows use this manual amount instead of catalog-item composition.
                                     </p>
                                   </ng-template>
                                 </div>
                               </div>
+
+                              <div>
+                                <label class="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">Line Description</label>
+                                <textarea
+                                  (click)="$event.stopPropagation()"
+                                  [ngModel]="line.description"
+                                  (ngModelChange)="updateLineDescription(line.local_id, $event)"
+                                  [disabled]="!canEdit()"
+                                  rows="3"
+                                  maxlength="600"
+                                  class="builder-control mt-2 w-full rounded-xl border border-[#b99884] bg-[#fffdfa] px-3 py-2 text-sm text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                                  placeholder="Add a client-facing description for this floral line item."
+                                ></textarea>
+                              </div>
                             </div>
                           </div>
 
-                          <div class="rounded-2xl border border-black/10 bg-white p-4 xl:p-3.5 2xl:p-5">
+                          <div class="line-item-composition-card rounded-2xl border border-[#d4bfae] bg-[#fffdfa] p-4 shadow-sm xl:p-3.5 2xl:p-5">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <h4 class="text-sm font-semibold text-stone-900">Internal Catalog Composition</h4>
                                 <p class="mt-1 text-xs leading-5 text-stone-500">This internal build drives the client-facing price and the shopping list. Fee and discount lines can stay manual.</p>
                               </div>
-                              <button type="button" (click)="$event.stopPropagation(); addComponentRow(line.local_id)" [disabled]="!canEdit() || line.line_item_type !== 'product'" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+                              <button type="button" (click)="$event.stopPropagation(); addComponentRow(line.local_id)" [disabled]="!canEdit() || line.line_item_type !== 'product'" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#ea938c] hover:bg-[#f6a8a2] px-3 py-2 text-xs font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50">
                                 Add Catalog Row
                               </button>
                             </div>
@@ -277,26 +299,26 @@
                                 <tbody class="">
                                   <tr *ngFor="let component of line.components; trackBy: trackByComponent">
                                     <td class="py-1.5 pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="builder-control w-full rounded-xl border border-[#ccb5a2] bg-white px-3 py-2 text-[12px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
                                     </td>
                                     <td class="pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="1" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="1" class="builder-control w-full rounded-xl border border-[#ccb5a2] bg-white px-3 py-2 text-[12px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="pr-2">
-                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
+                                      <div class="builder-readonly-field rounded-xl border border-[#d9c7b8] bg-[#f4ede6] px-3 py-2 text-[12px] text-stone-700">{{ formatCurrency(component.base_unit_cost) }}</div>
                                     </td>
                                     <td class="pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="w-full rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60" />
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.applied_markup_percent" (ngModelChange)="updateComponentMarkup(line.local_id, component.local_id, $event)" [disabled]="!canEdit()" type="number" min="0" step="0.01" class="builder-control w-full rounded-xl border border-[#ccb5a2] bg-white px-3 py-2 text-[12px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
                                     <td class="pr-1">
-                                      <div class="rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div>
+                                      <div class="builder-readonly-field rounded-xl border border-[#d9c7b8] bg-[#f4ede6] px-3 py-2 text-[12px] font-medium text-stone-900">{{ formatCurrency(component.subtotal) }}</div>
                                     </td>
                                     <td class="text-left">
                                       <button
                                         type="button"
                                         (click)="$event.stopPropagation(); removeComponentRow(line.local_id, component.local_id)"
                                         [disabled]="!canEdit()"
-                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
+                                        class="builder-destructive-button inline-flex h-9 w-9 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60 xl:h-8 xl:w-8"
                                         [style.border]="crmThemeService.isDarkMode ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid #c97972'"
                                         [style.backgroundColor]="crmThemeService.isDarkMode ? 'rgba(244, 63, 94, 0.1)' : '#fff7f5'"
                                         [style.color]="crmThemeService.isDarkMode ? '#fecdd3' : '#8f2f28'"
@@ -311,12 +333,12 @@
                                 </tbody>
                               </table>
 
-                              <div *ngIf="!line.components.length" class="rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                              <div *ngIf="!line.components.length" class="rounded-2xl border border-dashed border-[#ccb7a6] bg-[#f8f0e9] px-4 py-6 text-sm text-stone-500">
                                 No catalog rows yet. Add the flowers, greens, and materials that make up this line item.
                               </div>
                             </div>
 
-                            <div *ngIf="line.line_item_type !== 'product'" class="mt-4 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+                            <div *ngIf="line.line_item_type !== 'product'" class="mt-4 rounded-2xl border border-dashed border-[#ccb7a6] bg-[#f8f0e9] px-4 py-6 text-sm text-stone-500">
                               This line item is configured as a {{ line.line_item_type }}. Set the manual unit price above and it will roll up into the Floral Proposal totals.
                             </div>
                           </div>
@@ -329,7 +351,7 @@
             </div>
           </div>
 
-        <div class="mt-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+        <div class="builder-panel mt-3 rounded-2xl border border-[#d5c2b3] bg-white p-3.5 shadow-[0_10px_30px_rgba(84,57,38,0.05)] sm:p-4 xl:p-3 2xl:p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <h3 class="text-base font-semibold text-stone-900 xl:text-[14px] 2xl:text-[17px]">Shopping List Preview</h3>
@@ -363,7 +385,7 @@
                       type="number"
                       min="0"
                       step="1"
-                      class="w-24 rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60"
+                      class="builder-control shopping-list-input w-24 rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   </td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.reserve_units }}</td>
@@ -382,14 +404,14 @@
           </div>
 
           <ng-template #noShoppingList>
-            <div class="mt-5 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-6 text-sm text-stone-500">
+            <div class="mt-5 rounded-2xl border border-dashed border-[#ccb7a6] bg-[#f8f0e9] px-4 py-6 text-sm text-stone-500">
               Add catalog composition rows to product lines and the shopping list will populate automatically.
             </div>
           </ng-template>
         </div>
 
           <ng-template #emptyState>
-            <div class="mt-5 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-4 py-10 text-sm text-stone-500">
+            <div class="mt-5 rounded-2xl border border-dashed border-[#ccb7a6] bg-[#f8f0e9] px-4 py-10 text-sm text-stone-500">
               No line items yet. Start by adding the client-facing items that should appear on the Floral Proposal.
             </div>
           </ng-template>
@@ -397,7 +419,7 @@
       </div>
 
       <div detail-sidebar>
-        <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
+        <div class="builder-panel rounded-2xl border border-[#d5c2b3] bg-white p-6 shadow-[0_10px_30px_rgba(84,57,38,0.05)] xl:p-4 2xl:p-6">
           <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Lead Context</h3>
           <div class="mt-5 space-y-4 text-sm xl:mt-3 xl:space-y-3 xl:text-[12px] 2xl:mt-4 2xl:space-y-4 2xl:text-[14px]">
             <div>
@@ -419,7 +441,7 @@
           </div>
         </div>
 
-        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+        <div class="builder-panel my-3 rounded-2xl border border-[#d5c2b3] bg-[#fbf7f3] p-3.5 shadow-[0_10px_30px_rgba(84,57,38,0.05)] sm:p-4 xl:p-3 2xl:p-5">
           <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Summary</h3>
           <div class="mt-4 space-y-3 text-sm xl:mt-3 xl:space-y-2.5 xl:text-[12px] 2xl:mt-4 2xl:space-y-3 2xl:text-[14px]">
             <div>
@@ -438,6 +460,10 @@
               <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Default Markup</p>
               <p class="mt-1 text-stone-800">{{ defaultMarkupPercent() }}%</p>
             </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Labor Percentage</p>
+              <p class="mt-1 text-stone-800">{{ laborPercent() }}%</p>
+            </div>
             <div *ngIf="activeProposal()">
               <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Last Saved</p>
               <p class="mt-1 text-stone-800">{{ formatDateTime(activeProposal()!.updated_at) }}</p>
@@ -445,12 +471,26 @@
           </div>
         </div>
 
-        <div class="my-3 rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm sm:p-4 xl:p-3 2xl:p-5">
+        <div class="builder-panel my-3 rounded-2xl border border-[#d5c2b3] bg-white p-3.5 shadow-[0_10px_30px_rgba(84,57,38,0.05)] sm:p-4 xl:p-3 2xl:p-5">
           <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Totals</h3>
           <div class="mt-4 space-y-3 text-sm xl:mt-3 xl:space-y-2.5 xl:text-[12px] 2xl:mt-4 2xl:space-y-3 2xl:text-[14px]">
             <div class="flex items-center justify-between gap-4">
               <p class="text-stone-600">Products</p>
               <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().productsTotal) }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-stone-600">Labor</p>
+              <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().laborTotal) }}</p>
+            </div>
+            <div class="labor-breakdown-box rounded-2xl border border-[#d8c4b5] bg-[#f4ebe4] px-3 py-2 text-xs text-stone-600">
+              <div class="flex items-center justify-between gap-4">
+                <p>Calculated labor</p>
+                <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().calculatedLaborAmount) }}</p>
+              </div>
+              <div class="mt-1 flex items-center justify-between gap-4">
+                <p>Manual labor line items</p>
+                <p class="font-medium text-stone-900">{{ formatCurrency(totalsBreakdown().manualLaborTotal) }}</p>
+              </div>
             </div>
             <div class="flex items-center justify-between gap-4">
               <p class="text-stone-600">Fees</p>
@@ -477,10 +517,10 @@
           </div>
         </div>
 
-        <div class="my-3 rounded-2xl border border-black/10 bg-white p-6 shadow-sm xl:p-4 2xl:p-6">
+        <div class="builder-panel my-3 rounded-2xl border border-[#d5c2b3] bg-white p-6 shadow-[0_10px_30px_rgba(84,57,38,0.05)] xl:p-4 2xl:p-6">
           <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Proposal Versions</h3>
           <div class="mt-5 space-y-3 xl:mt-3 xl:space-y-2.5 2xl:mt-4 2xl:space-y-3" *ngIf="proposals().length; else noVersions">
-            <div *ngFor="let proposal of proposals()" class="rounded-2xl border border-black/10 bg-[#fcfaf8] p-4 xl:p-3 2xl:p-4">
+            <div *ngFor="let proposal of proposals()" class="proposal-version-card rounded-2xl border border-[#d8c6b7] bg-[#f4ede6] p-4 xl:p-3 2xl:p-4">
               <div class="flex items-center justify-between gap-3">
                 <p class="text-sm font-semibold text-stone-900">Version {{ proposal.version }}</p>
                 <app-status-badge [label]="proposal.status" [tone]="getProposalStatusTone(proposal.status)" size="sm" />

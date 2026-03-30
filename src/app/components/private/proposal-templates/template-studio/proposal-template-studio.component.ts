@@ -1178,11 +1178,13 @@ export class ProposalTemplateStudioComponent implements OnInit {
       },
       pricing: {
         default_markup_percent: 300,
+        labor_percent: 0,
       },
       line_items: lineItems,
       shopping_list: [],
       totals: {
         products_total: productsTotal,
+        labor_total: 0,
         fees_total: proposal.investment.service_fee_total ?? 0,
         discounts_total: proposal.investment.discount_total ?? 0,
         subtotal: proposal.investment.subtotal,
