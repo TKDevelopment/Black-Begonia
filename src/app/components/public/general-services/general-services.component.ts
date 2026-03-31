@@ -33,7 +33,7 @@ export class GeneralServicesComponent {
       title: 'Bi-Weekly/Monthly Subscriptions',
       description:
         `Bring fresh florals into your home with a thoughtfully designed arrangement delivered on a bi-weekly or monthly basis. Each design is created with your home décor, personal style, and the beauty of seasonal blooms in mind, ensuring every arrangement feels natural, intentional, and perfectly suited to your space. Subscription deliveries begin at a minimum of $150 per arrangement.`,
-      image: 'assets/images/website/Photo Dec 06, 4 23 21 PM.webp'
+      image: 'assets/images/website/photo-dec-06-4-23-21-pm.webp'
     },
     {
       title: 'Event Florals',
