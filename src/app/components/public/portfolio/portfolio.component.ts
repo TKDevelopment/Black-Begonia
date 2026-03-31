@@ -1,5 +1,5 @@
-import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { CommonModule, NgOptimizedImage, isPlatformBrowser } from '@angular/common';
+import { Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 
@@ -54,11 +54,15 @@ export class PortfolioComponent implements OnInit {
   heroImage = 'assets/images/weddings/Fizz-Frites/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg';
   navigatingSlug: string | null = null;
   isMobileOrSmall = false;
+  private readonly isBrowser: boolean;
 
   constructor(
     private supabase: SupabaseService,
-    private router: Router
-  ) {}
+    private router: Router,
+    @Inject(PLATFORM_ID) platformId: object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   async ngOnInit(): Promise<void> {
     this.updateScreenMode();
@@ -164,6 +168,11 @@ export class PortfolioComponent implements OnInit {
   }
 
   private updateScreenMode(): void {
+    if (!this.isBrowser) {
+      this.isMobileOrSmall = false;
+      return;
+    }
+
     this.isMobileOrSmall = window.innerWidth < 768;
   }
 }

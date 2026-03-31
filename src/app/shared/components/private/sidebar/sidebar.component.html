@@ -1,7 +1,7 @@
 <aside class="crm-sidebar flex h-screen w-full flex-col bg-white">
   <div class="crm-sidebar-section border-b border-black/10 px-2.5 py-4 lg:px-3 xl:py-5 xl:px-3.5 2xl:px-5 2xl:py-6">
     <div *ngIf="isMobile" class="mb-4 flex items-center justify-between">
-      <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">Navigation</p>
+      <p class="font-body text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">Navigation</p>
       <button
         type="button"
         (click)="onNavigate()"
@@ -12,7 +12,7 @@
     </div>
 
     <a routerLink="/admin/dashboard" class="block">
-      <p class="font-oswald text-[9px] uppercase tracking-[0.28em] text-[#ea938c] lg:text-[10px] lg:tracking-[0.3em] xl:text-[11px] xl:tracking-[0.35em]">
+      <p class="font-body text-[9px] uppercase tracking-[0.28em] text-[#ea938c] lg:text-[10px] lg:tracking-[0.3em] xl:text-[11px] xl:tracking-[0.35em]">
         Black Begonia
       </p>
       <h2 class="mt-2 font-cormorant text-[1.4rem] leading-none text-[#1f1f1f] lg:text-[1.5rem] xl:text-[1.8rem] 2xl:text-[2rem]">
@@ -23,7 +23,7 @@
     <div class="mt-4 h-px w-14 bg-[#ea938c] xl:w-16"></div>
 
     <div class="mt-4">
-      <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
+      <p class="font-body text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
         Signed in as
       </p>
       <p class="mt-1.5 font-cormorant text-[1.05rem] leading-tight text-[#1f1f1f] lg:text-[1.15rem] xl:text-[1.45rem] 2xl:text-[1.65rem]">
@@ -43,7 +43,7 @@
           (click)="onNavigate()"
           [routerLinkActive]="'active-link bg-[#ea938c] text-white shadow-[0_12px_28px_rgba(234,147,140,0.3)]'"
           [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
-          class="crm-sidebar-link group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
+          class="crm-sidebar-link group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-body text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
         >
           <span [routerLinkActive]="'text-white'">{{ item.label }}</span>
           <span class="h-2 w-2 rounded-full bg-transparent transition duration-300 group-hover:bg-[#c46f67]"></span>
@@ -54,7 +54,7 @@
         <button
           type="button"
           (click)="toggleProposalSettings()"
-          class="crm-sidebar-link flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-left font-oswald text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
+          class="crm-sidebar-link flex w-full items-center justify-between rounded-2xl px-2.5 py-1.5 text-left font-body text-[9px] uppercase tracking-[0.14em] text-[#2d2d2d] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] lg:px-2.5 lg:text-[10px] xl:px-3 xl:py-2 xl:text-[11px] 2xl:text-[12px]"
         >
           <span>{{ group.label }}</span>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#ea938c] transition-transform duration-300" [ngClass]="proposalSettingsOpen() ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -67,7 +67,7 @@
             *ngFor="let child of group.children"
             [routerLink]="child.route"
             (click)="onNavigate()"
-            class="crm-sidebar-link group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-oswald text-[8px] uppercase tracking-[0.16em] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] dark:hover:bg-white/10 dark:hover:text-[#f0b0aa] lg:px-2.5 lg:text-[9px] xl:px-3 xl:py-1.5 xl:text-[10px]"
+            class="crm-sidebar-link group flex items-center justify-between rounded-2xl px-2.5 py-1.5 font-body text-[8px] uppercase tracking-[0.16em] transition duration-300 hover:bg-[#efe5e1] hover:text-[#c46f67] dark:hover:bg-white/10 dark:hover:text-[#f0b0aa] lg:px-2.5 lg:text-[9px] xl:px-3 xl:py-1.5 xl:text-[10px]"
             [ngClass]="isRouteActive(child.route) ? 'active-link bg-[#ea938c] text-white shadow-[0_10px_24px_rgba(234,147,140,0.24)]' : ''"
           >
             <span [style.color]="isRouteActive(child.route) ? null : (crmThemeService.isDarkMode ? '#d6d3d1' : '#171717')">{{ child.label }}</span>
@@ -85,7 +85,7 @@
     <div class="crm-sidebar-card mb-2.5 rounded-2xl border border-black/10 bg-[#f7f4f1] p-2.5 xl:mb-3 xl:p-3">
       <div class="flex items-center justify-between gap-4">
         <div>
-          <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
+          <p class="font-body text-[10px] uppercase tracking-[0.28em] text-[#7a7a7a]">
             CRM Theme
           </p>
           <p class="mt-1 text-[11px] text-[#5e5e5e] xl:text-[12px]">
@@ -111,7 +111,7 @@
     <button
       type="button"
       (click)="logout()"
-      class="crm-sidebar-logout flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-3.5 py-2 font-oswald text-[10px] uppercase tracking-[0.16em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-[#1f1f1f] lg:text-[11px] xl:py-2.5 xl:text-[12px]"
+      class="crm-sidebar-logout flex w-full items-center justify-center rounded-2xl border border-black/10 bg-[#f7f4f1] px-3.5 py-2 font-body text-[10px] uppercase tracking-[0.16em] text-[#1f1f1f] transition duration-300 hover:border-[#ea938c] hover:bg-[#ea938c] hover:text-[#1f1f1f] lg:text-[11px] xl:py-2.5 xl:text-[12px]"
     >
       Log Out
     </button>

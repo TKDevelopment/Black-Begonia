@@ -416,6 +416,29 @@ export class FloralProposalRepositoryService {
     }
   }
 
+  async clearLineItemImage(
+    floralProposalLineItemId: string
+  ): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('floral_proposal_line_items')
+      .update({
+        image_storage_path: null,
+        image_alt_text: null,
+        image_caption: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('floral_proposal_line_item_id', floralProposalLineItemId);
+
+    if (error) {
+      console.error(
+        '[FloralProposalRepositoryService] clearLineItemImage error:',
+        error
+      );
+      throw error;
+    }
+  }
+
   async upsertShoppingList(
     floralProposalId: string,
     items: FloralProposalShoppingListItem[]
