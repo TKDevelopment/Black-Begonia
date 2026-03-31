@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, inject, Injector } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { ToastComponent } from './shared/components/toast/toast.component';
 import { AuthService } from './core/auth/auth.service';
@@ -15,12 +16,18 @@ export class AppComponent implements OnInit {
   title = 'Black-Begonia';
 
   private readonly seoListener = inject(SeoRouteListenerService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly injector = inject(Injector);
 
-  constructor(private readonly authService: AuthService) {
+  constructor() {
     this.seoListener.init('https://blackbegoniaflorals.com');
   }
 
   async ngOnInit(): Promise<void> {
-    await this.authService.init();
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    await this.injector.get(AuthService).init();
   }
 }
