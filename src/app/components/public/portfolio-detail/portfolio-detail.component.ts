@@ -1,5 +1,5 @@
-import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
+import { CommonModule, NgOptimizedImage, isPlatformBrowser } from '@angular/common';
+import { Component, HostListener, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 import { SeoService } from '../../../core/seo/seo.service';
@@ -61,14 +61,18 @@ export class PortfolioDetailComponent implements OnInit {
   loadedImages: Record<string, boolean> = {};
   selectedImage: PortfolioGalleryImageViewModel | null = null;
   isDesktop = false;
+  private readonly isBrowser: boolean;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private supabase: SupabaseService,
     private seo: SeoService,
-    private jsonLd: JsonLdService
-  ) {}
+    private jsonLd: JsonLdService,
+    @Inject(PLATFORM_ID) platformId: object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   async ngOnInit(): Promise<void> {
     this.updateScreenSize();
@@ -129,7 +133,7 @@ export class PortfolioDetailComponent implements OnInit {
   }
 
   openImageModal(image: PortfolioGalleryImageViewModel): void {
-    if (!this.isDesktop) {
+    if (!this.isBrowser || !this.isDesktop) {
       return;
     }
 
@@ -139,6 +143,11 @@ export class PortfolioDetailComponent implements OnInit {
 
   closeImageModal(): void {
     this.selectedImage = null;
+
+    if (!this.isBrowser) {
+      return;
+    }
+
     document.body.style.overflow = '';
   }
 
@@ -150,6 +159,11 @@ export class PortfolioDetailComponent implements OnInit {
   }
 
   private updateScreenSize(): void {
+    if (!this.isBrowser) {
+      this.isDesktop = false;
+      return;
+    }
+
     this.isDesktop = window.innerWidth >= 768;
   }
 
