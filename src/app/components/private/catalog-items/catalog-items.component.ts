@@ -40,7 +40,7 @@ export class CatalogItemsComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   readonly itemTypeOptions: CatalogItemType[] = ['flower', 'greenery', 'hardgood', 'packaging', 'labor', 'fee', 'other'];
-  readonly unitTypeOptions: CatalogUnitType[] = ['stem', 'bunch', 'block', 'piece', 'hour', 'foot', 'bundle', 'other'];
+  readonly unitTypeOptions: CatalogUnitType[] = ['stem', 'bunch', 'box', 'block', 'piece', 'hour', 'foot', 'bundle', 'other'];
   readonly columns: AdminTableColumn[] = [
     { key: 'name', label: 'Item' },
     { key: 'item_type', label: 'Type' },
@@ -312,7 +312,17 @@ export class CatalogItemsComponent implements OnInit {
   }
 
   formatPackQuantity(item: CatalogItem): string {
-    if (item.unit_type !== 'bunch' && item.unit_type !== 'bundle') return '-';
+    if (
+      item.unit_type !== 'bunch' &&
+      item.unit_type !== 'bundle' &&
+      item.unit_type !== 'box' &&
+      item.unit_type !== 'stem' &&
+      item.unit_type !== 'block' &&
+      item.unit_type !== 'piece'
+    ) {
+      return '-';
+    }
+
     return item.pack_quantity != null ? String(item.pack_quantity) : 'Not set';
   }
 

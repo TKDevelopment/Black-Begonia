@@ -202,7 +202,7 @@ export class FloralProposalBuilderService {
     const appliedMarkupPercent = component.applied_markup_percent ?? defaultMarkupPercent;
     const packQuantity = this.getPackQuantity(item);
     const purchaseUnitCost = this.roundCurrency(item.base_unit_cost);
-    const compositionBaseUnitCost = packQuantity
+    const compositionBaseUnitCost = packQuantity && this.isPackPricedUnit(item.unit_type)
       ? this.roundCurrency(purchaseUnitCost / packQuantity)
       : purchaseUnitCost;
 
@@ -524,23 +524,41 @@ export class FloralProposalBuilderService {
           `${component.catalog_item_name}:${component.unit_type ?? 'other'}`;
         const requiredUnits = this.roundNumber(component.extended_quantity, 2);
         const reservePercent = this.roundNumber(component.reserve_percent, 2);
-        const reserveUnits = this.roundNumber(
-          requiredUnits * (reservePercent / 100),
-          2
+        const reserveTargetUnits = Math.ceil(
+          this.roundNumber(requiredUnits * (reservePercent / 100), 2)
         );
-        const totalUnitsToBuy = this.roundNumber(requiredUnits + reserveUnits, 2);
+        const totalPlusReserve = this.roundNumber(requiredUnits + reserveTargetUnits, 2);
         const packQuantity = this.normalizePackQuantity(
           component.pack_quantity,
           component.unit_type
         );
+        const requiredPackCount = packQuantity
+          ? Math.max(Math.ceil(totalPlusReserve / packQuantity), 1)
+          : null;
+        const totalUnitsToBuy = packQuantity
+          ? this.roundNumber((requiredPackCount ?? 0) * packQuantity, 2)
+          : totalPlusReserve;
+        const reserveUnits = this.roundNumber(totalUnitsToBuy - totalPlusReserve, 2);
         const purchaseUnitCost = this.roundCurrency(
           component.purchase_unit_cost || component.base_unit_cost
         );
+        const estimatedPackCost = this.getEstimatedPackCost(
+          purchaseUnitCost,
+          packQuantity,
+          component.unit_type
+        );
+        const totalEstimatedCost = packQuantity
+          ? this.roundCurrency((estimatedPackCost ?? 0) * (requiredPackCount ?? 0))
+          : this.roundCurrency(purchaseUnitCost * totalUnitsToBuy);
         const existing = itemMap.get(key);
 
         if (existing) {
           existing.required_units = this.roundNumber(
             existing.required_units + requiredUnits,
+            2
+          );
+          existing.total_plus_reserve = this.roundNumber(
+            (existing.total_plus_reserve ?? 0) + totalPlusReserve,
             2
           );
           existing.reserve_units = this.roundNumber(
@@ -551,13 +569,14 @@ export class FloralProposalBuilderService {
             existing.total_units_to_buy + totalUnitsToBuy,
             2
           );
-          existing.total_estimated_cost = packQuantity
-            ? existing.total_estimated_cost
-            : this.roundCurrency(
-                (existing.total_estimated_cost ?? 0) + component.base_unit_cost * totalUnitsToBuy
-              );
+          existing.required_pack_count = packQuantity
+            ? (existing.required_pack_count ?? 0) + (requiredPackCount ?? 0)
+            : null;
+          existing.total_estimated_cost = this.roundCurrency(
+            (existing.total_estimated_cost ?? 0) + totalEstimatedCost
+          );
           existing.estimated_pack_cost = packQuantity
-            ? purchaseUnitCost
+            ? estimatedPackCost
             : existing.estimated_pack_cost ?? null;
           existing.reserve_percent = Math.max(
             existing.reserve_percent,
@@ -576,13 +595,13 @@ export class FloralProposalBuilderService {
           unit_type: component.unit_type ?? 'other',
           required_units: requiredUnits,
           reserve_percent: reservePercent,
+          total_plus_reserve: totalPlusReserve,
           reserve_units: reserveUnits,
           total_units_to_buy: totalUnitsToBuy,
           units_per_pack: packQuantity,
-          estimated_pack_cost: packQuantity ? purchaseUnitCost : null,
-          total_estimated_cost: packQuantity
-            ? purchaseUnitCost
-            : this.roundCurrency(component.base_unit_cost * totalUnitsToBuy),
+          required_pack_count: requiredPackCount,
+          estimated_pack_cost: packQuantity ? estimatedPackCost : null,
+          total_estimated_cost: totalEstimatedCost,
           notes: null,
         });
       });
@@ -590,16 +609,11 @@ export class FloralProposalBuilderService {
     return Array.from(itemMap.values())
       .map((item) => {
         const unitsPerPack = item.units_per_pack ?? null;
-        const requiredPackCount = unitsPerPack
-          ? Math.max(Math.ceil(item.total_units_to_buy / unitsPerPack), 1)
-          : null;
+        const requiredPackCount = unitsPerPack ? item.required_pack_count ?? null : null;
         const estimatedPackCost = unitsPerPack
           ? this.roundCurrency(item.estimated_pack_cost ?? item.total_estimated_cost ?? 0)
           : null;
-        const totalEstimatedCost =
-          requiredPackCount && estimatedPackCost != null
-            ? this.roundCurrency(requiredPackCount * estimatedPackCost)
-            : this.roundCurrency(item.total_estimated_cost ?? 0);
+        const totalEstimatedCost = this.roundCurrency(item.total_estimated_cost ?? 0);
 
         return {
           ...item,
@@ -714,13 +728,48 @@ export class FloralProposalBuilderService {
     unitType: CatalogItem['unit_type'] | null | undefined
   ): number | null {
     const normalized = Number(packQuantity);
-    const isPackedUnit = unitType === 'bunch' || unitType === 'bundle';
+    const isPackTrackedUnit = this.isPackTrackedUnit(unitType);
 
-    if (!isPackedUnit || !Number.isFinite(normalized) || normalized <= 0) {
+    if (!isPackTrackedUnit || !Number.isFinite(normalized) || normalized <= 0) {
       return null;
     }
 
     return this.roundNumber(normalized, 2);
+  }
+
+  private isPackTrackedUnit(
+    unitType: CatalogItem['unit_type'] | null | undefined
+  ): boolean {
+    return (
+      unitType === 'bunch' ||
+      unitType === 'bundle' ||
+      unitType === 'box' ||
+      unitType === 'stem' ||
+      unitType === 'block' ||
+      unitType === 'piece'
+    );
+  }
+
+  private isPackPricedUnit(
+    unitType: CatalogItem['unit_type'] | null | undefined
+  ): boolean {
+    return unitType === 'bunch' || unitType === 'bundle' || unitType === 'box';
+  }
+
+  private getEstimatedPackCost(
+    purchaseUnitCost: number,
+    packQuantity: number | null,
+    unitType: CatalogItem['unit_type'] | null | undefined
+  ): number | null {
+    if (!packQuantity) {
+      return null;
+    }
+
+    if (this.isPackPricedUnit(unitType)) {
+      return this.roundCurrency(purchaseUnitCost);
+    }
+
+    return this.roundCurrency(purchaseUnitCost * packQuantity);
   }
 
   private createLocalId(prefix: string): string {
