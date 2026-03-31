@@ -1000,15 +1000,30 @@ export class FloralProposalBuilderComponent implements OnInit {
           return { ...line, image_signed_url: null };
         }
 
-        try {
-          const signedUrl = await this.proposalWorkflow.getSignedLineItemImageUrl(
-            line.image_storage_path
-          );
-          return {
-            ...line,
-            image_signed_url: signedUrl,
-          };
-        } catch (error) {
+          try {
+            const signedUrl = await this.proposalWorkflow.getSignedLineItemImageUrl(
+              line.image_storage_path
+            );
+
+            if (!signedUrl) {
+              if (this.isPersistedLineItemId(line.local_id)) {
+                await this.proposalWorkflow.clearMissingLineItemImage(line.local_id);
+              }
+
+              return {
+                ...line,
+                image_storage_path: null,
+                image_alt_text: null,
+                image_caption: null,
+                image_signed_url: null,
+              };
+            }
+
+            return {
+              ...line,
+              image_signed_url: signedUrl,
+            };
+          } catch (error) {
           console.error(
             '[FloralProposalBuilderComponent] populateLineItemSignedUrls error:',
             error
@@ -1018,7 +1033,13 @@ export class FloralProposalBuilderComponent implements OnInit {
             image_signed_url: null,
           };
         }
-      })
+        })
+      );
+    }
+
+  private isPersistedLineItemId(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
     );
   }
 

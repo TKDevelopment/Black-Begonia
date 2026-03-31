@@ -172,6 +172,10 @@ export class FloralProposalWorkflowService {
       storagePath
     );
 
+    if (!signedUrl) {
+      throw new Error('We could not generate a secure file preview right now.');
+    }
+
     return { storagePath, signedUrl };
   }
 
@@ -195,7 +199,13 @@ export class FloralProposalWorkflowService {
 
   async getSignedLineItemImageUrl(storagePath: string): Promise<string | null> {
     if (!storagePath) return null;
-    return this.createSignedStorageUrl(this.lineItemImageBucket, storagePath);
+    return this.createSignedStorageUrl(this.lineItemImageBucket, storagePath, {
+      allowMissing: true,
+    });
+  }
+
+  async clearMissingLineItemImage(lineItemId: string): Promise<void> {
+    await this.floralProposalRepository.clearLineItemImage(lineItemId);
   }
 
   async submitProposal(payload: SubmitFloralProposalPayload): Promise<{
@@ -447,15 +457,35 @@ export class FloralProposalWorkflowService {
 
   private async createSignedStorageUrl(
     bucket: string,
-    storagePath: string
-  ): Promise<string> {
+    storagePath: string,
+    options?: {
+      allowMissing?: boolean;
+    }
+  ): Promise<string | null> {
+    const normalizedStoragePath = this.normalizeStoragePath(bucket, storagePath);
+
+    if (!normalizedStoragePath) {
+      if (options?.allowMissing) {
+        return null;
+      }
+
+      throw new Error('We could not determine the file path for this storage asset.');
+    }
+
     const { data, error } = await this.supabaseService
       .getClient()
       .storage
       .from(bucket)
-      .createSignedUrl(storagePath, this.signedUrlExpirySeconds);
+      .createSignedUrl(normalizedStoragePath, this.signedUrlExpirySeconds);
 
     if (error || !data?.signedUrl) {
+      const message = (error as { message?: string } | null)?.message?.toLowerCase() ?? '';
+      const isMissingObject = message.includes('object not found');
+
+      if (options?.allowMissing && isMissingObject) {
+        return null;
+      }
+
       console.error(
         '[FloralProposalWorkflowService] createSignedStorageUrl error:',
         error
@@ -464,6 +494,32 @@ export class FloralProposalWorkflowService {
     }
 
     return data.signedUrl;
+  }
+
+  private normalizeStoragePath(bucket: string, storagePath: string): string | null {
+    const trimmedPath = storagePath.trim();
+
+    if (!trimmedPath) {
+      return null;
+    }
+
+    let normalizedPath = trimmedPath;
+
+    if (/^https?:\/\//i.test(normalizedPath)) {
+      try {
+        normalizedPath = new URL(normalizedPath).pathname;
+      } catch {
+        return null;
+      }
+    }
+
+    normalizedPath = normalizedPath
+      .replace(/^\/+/, '')
+      .replace(/^storage\/v1\/object\/(?:sign|public)\/[^/]+\//, '')
+      .replace(/^storage\/v1\/object\/(?:sign|public)\/?/, '')
+      .replace(new RegExp(`^${bucket}/`), '');
+
+    return normalizedPath || null;
   }
 
   private async resolveTemplateLogoUrl(
