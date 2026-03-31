@@ -1,0 +1,8 @@
+/
+/about
+/services/weddings
+/services/general
+/workshops
+/testimonials
+/privacy-policy
+/terms-and-conditions
