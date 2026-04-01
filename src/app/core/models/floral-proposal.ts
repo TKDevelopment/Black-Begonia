@@ -257,6 +257,7 @@ export interface FloralProposalShoppingListItem {
   unit_type: CatalogUnitType;
   required_units: number;
   reserve_percent: number;
+  total_plus_reserve?: number;
   reserve_units: number;
   total_units_to_buy: number;
   units_per_pack?: number | null;

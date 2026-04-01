@@ -386,7 +386,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     void this.refreshShoppingList();
   }
 
-  commitCatalogItemSelection(lineId: string, componentId: string, rawValue: string): void {
+  updateCatalogItemQuery(lineId: string, componentId: string, rawValue: string): void {
     if (!this.canEdit()) return;
 
     this.lineItems.update((lines) =>
@@ -396,7 +396,7 @@ export class FloralProposalBuilderComponent implements OnInit {
         const nextComponents = line.components.map((component) => {
           if (component.local_id !== componentId) return component;
 
-          const matchedItem = this.findCatalogItemByName(rawValue);
+          const matchedItem = this.findCatalogItemForQuery(rawValue);
           if (!matchedItem) {
             return {
               ...component,
@@ -413,13 +413,16 @@ export class FloralProposalBuilderComponent implements OnInit {
             };
           }
 
-          return this.floralProposalBuilderService.applyCatalogItemToComponent(
-            component,
-            matchedItem,
-            line.quantity,
-            this.defaultMarkupPercent(),
-            this.getDefaultReservePercent()
-          );
+          return {
+            ...this.floralProposalBuilderService.applyCatalogItemToComponent(
+              component,
+              matchedItem,
+              line.quantity,
+              this.defaultMarkupPercent(),
+              this.getDefaultReservePercent()
+            ),
+            catalog_item_name: this.formatCatalogItemOptionLabel(matchedItem),
+          };
         });
 
         return this.floralProposalBuilderService.recalculateLine({
@@ -430,6 +433,10 @@ export class FloralProposalBuilderComponent implements OnInit {
     );
 
     void this.refreshShoppingList();
+  }
+
+  commitCatalogItemSelection(lineId: string, componentId: string, rawValue: string): void {
+    this.updateCatalogItemQuery(lineId, componentId, rawValue);
   }
 
   updateComponentQuantity(lineId: string, componentId: string, rawValue: string): void {
@@ -809,19 +816,24 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   getCatalogItemOptions(component: FloralProposalBuilderComponentRow): CatalogItem[] {
-    const query = component.catalog_item_name.trim().toLowerCase();
+    const query = this.normalizeCatalogItemQuery(component.catalog_item_name);
     if (!query) {
       return this.activeCatalogItems().slice(0, 15);
     }
 
     return this.activeCatalogItems()
-      .filter((item) =>
-        [item.name, item.sku ?? '', item.color ?? '', item.variety ?? '']
-          .join(' ')
-          .toLowerCase()
-          .includes(query)
-      )
+      .filter((item) => this.matchesCatalogItemQuery(item, query))
       .slice(0, 15);
+  }
+
+  getCatalogItemDatalistId(componentId: string): string {
+    return `catalog-item-options-${componentId}`;
+  }
+
+  formatCatalogItemOptionLabel(item: CatalogItem): string {
+    return [item.color?.trim(), item.variety?.trim(), item.name.trim()]
+      .filter((part) => !!part)
+      .join(' ');
   }
 
   trackByLine = (_: number, line: FloralProposalBuilderLine) => line.local_id;
@@ -1043,14 +1055,58 @@ export class FloralProposalBuilderComponent implements OnInit {
     );
   }
 
-  private findCatalogItemByName(value: string): CatalogItem | null {
-    const normalized = value.trim().toLowerCase();
+  private findCatalogItemForQuery(value: string): CatalogItem | null {
+    const normalized = this.normalizeCatalogItemQuery(value);
     if (!normalized) return null;
 
-    return (
-      this.activeCatalogItems().find((item) => item.name.trim().toLowerCase() === normalized) ??
-      null
+    const exactLabelMatch =
+      this.activeCatalogItems().find(
+        (item) => this.normalizeCatalogItemQuery(this.formatCatalogItemOptionLabel(item)) === normalized
+      ) ?? null;
+
+    if (exactLabelMatch) {
+      return exactLabelMatch;
+    }
+
+    const exactNameMatches = this.activeCatalogItems().filter(
+      (item) => this.normalizeCatalogItemQuery(item.name) === normalized
     );
+
+    if (exactNameMatches.length === 1) {
+      return exactNameMatches[0];
+    }
+
+    const filteredMatches = this.activeCatalogItems().filter((item) =>
+      this.matchesCatalogItemQuery(item, normalized)
+    );
+
+    return filteredMatches.length === 1 ? filteredMatches[0] : null;
+  }
+
+  private matchesCatalogItemQuery(item: CatalogItem, normalizedQuery: string): boolean {
+    const queryTokens = normalizedQuery.split(' ').filter((token) => token.length > 0);
+    if (!queryTokens.length) {
+      return true;
+    }
+
+    const haystack = this.normalizeCatalogItemQuery(
+      [
+        item.name,
+        item.color ?? '',
+        item.variety ?? '',
+        item.sku ?? '',
+        this.formatCatalogItemOptionLabel(item),
+      ].join(' ')
+    );
+
+    return queryTokens.every((token) => haystack.includes(token));
+  }
+
+  private normalizeCatalogItemQuery(value: string | null | undefined): string {
+    return (value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
   }
 
   private getNormalizedLines(): FloralProposalBuilderLine[] {
