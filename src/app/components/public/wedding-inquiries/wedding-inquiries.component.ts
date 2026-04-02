@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -33,7 +33,7 @@ type BudgetOption = {
   templateUrl: './wedding-inquiries.component.html',
   styleUrl: './wedding-inquiries.component.scss',
 })
-export class WeddingInquiriesComponent {
+export class WeddingInquiriesComponent implements OnInit {
   private readonly inquiryEmailMaxAttempts = 3;
   private readonly inquiryEmailRetryDelayMs = 1200;
   private readonly weddingBudgetOptions: Record<WeddingServiceType, BudgetOption[]> = {
@@ -124,6 +124,22 @@ export class WeddingInquiriesComponent {
     });
 
     this.addInspirationUrl();
+  }
+
+  ngOnInit(): void {
+    this.seo.setPageMeta({
+      title: 'Wedding Inquiry | Black Begonia Florals',
+      description:
+        'Submit your wedding floral inquiry with Black Begonia Florals to begin planning bouquets, ceremony flowers, reception florals, and custom floral design for your celebration.',
+      url: 'https://blackbegoniaflorals.com/inquiries/weddings',
+      image: 'https://blackbegoniaflorals.com/assets/images/og-default.png',
+      keywords: [
+        'Wedding inquiry form',
+        'Wedding florist inquiry',
+        'Rhode Island wedding florist',
+        'New England wedding flowers',
+      ],
+    });
   }
 
   get budgetOptions(): BudgetOption[] {

@@ -25,10 +25,22 @@ export interface FloralProposalRenderLeadContext {
   lead_id: string;
   first_name: string;
   last_name: string;
+  partner_first_name?: string | null;
+  partner_last_name?: string | null;
   email: string;
+  phone?: string | null;
   service_type: string;
   event_type?: string | null;
   event_date?: string | null;
+  ceremony_venue_name?: string | null;
+  ceremony_venue_city?: string | null;
+  ceremony_venue_state?: string | null;
+  ceremony_start_time?: string | null;
+  reception_venue_name?: string | null;
+  reception_venue_city?: string | null;
+  reception_venue_state?: string | null;
+  reception_start_time?: string | null;
+  event_start_time?: string | null;
   status: string;
 }
 
@@ -144,27 +156,31 @@ export interface DocumentTemplate {
   is_default: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  primary_color?: string | null;
-  accent_color?: string | null;
-  heading_font_family?: string | null;
-  body_font_family?: string | null;
-  header_layout: DocumentTemplateHeaderLayout;
-  line_item_layout: DocumentTemplateLineItemLayout;
-  footer_layout: DocumentTemplateFooterLayout;
-  show_cover_page: boolean;
-  show_intro_message: boolean;
-  intro_title?: string | null;
-  intro_body?: string | null;
   show_terms_section: boolean;
   show_privacy_section: boolean;
   show_signature_section: boolean;
-  agreement_clauses: Record<string, unknown>[];
-  header_content: Record<string, unknown>;
-  footer_content: Record<string, unknown>;
-  body_config: Record<string, unknown>;
   template_config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+export interface GrapesJsStoredTemplateConfig {
+  schema_version: '1.0';
+  project_data?: Record<string, unknown>;
+  published_html?: string | null;
+  published_css?: string | null;
+  published_at?: string | null;
+  theme?: {
+    primary_color?: string | null;
+    accent_color?: string | null;
+    heading_font_family?: string | null;
+    body_font_family?: string | null;
+  };
+  settings?: {
+    show_terms_section?: boolean;
+    show_privacy_section?: boolean;
+    show_signature_section?: boolean;
+  };
 }
 
 export interface FloralProposal {
@@ -257,6 +273,7 @@ export interface FloralProposalShoppingListItem {
   unit_type: CatalogUnitType;
   required_units: number;
   reserve_percent: number;
+  total_plus_reserve?: number;
   reserve_units: number;
   total_units_to_buy: number;
   units_per_pack?: number | null;
@@ -299,24 +316,9 @@ export interface DocumentTemplateUpsertInput {
   is_default?: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  primary_color?: string | null;
-  accent_color?: string | null;
-  heading_font_family?: string | null;
-  body_font_family?: string | null;
-  header_layout?: DocumentTemplateHeaderLayout;
-  line_item_layout?: DocumentTemplateLineItemLayout;
-  footer_layout?: DocumentTemplateFooterLayout;
-  show_cover_page?: boolean;
-  show_intro_message?: boolean;
-  intro_title?: string | null;
-  intro_body?: string | null;
   show_terms_section?: boolean;
   show_privacy_section?: boolean;
   show_signature_section?: boolean;
-  agreement_clauses?: Record<string, unknown>[];
-  header_content?: Record<string, unknown>;
-  footer_content?: Record<string, unknown>;
-  body_config?: Record<string, unknown>;
   template_config?: Record<string, unknown>;
 }
 

@@ -1,6 +1,8 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { SeoService } from '../../../core/seo/seo.service';
+import { JsonLdService } from '../../../core/seo/jsonld.service';
 
 type ProcessStep = {
   title: string;
@@ -26,7 +28,7 @@ type WeddingFaq = {
   templateUrl: './wedding-services.component.html',
   styleUrl: './wedding-services.component.scss'
 })
-export class WeddingServicesComponent {
+export class WeddingServicesComponent implements OnInit {
   currentStep = 0;
 
   steps: ProcessStep[] = [
@@ -108,6 +110,52 @@ export class WeddingServicesComponent {
       isOpen: false
     }
   ];
+
+  constructor(
+    private readonly seo: SeoService,
+    private readonly jsonLd: JsonLdService
+  ) {}
+
+  ngOnInit(): void {
+    const url = 'https://blackbegoniaflorals.com/services/weddings';
+    const description =
+      'Discover Black Begonia Florals wedding floral services, from bouquets and ceremony flowers to reception centerpieces and large-scale floral installations across Rhode Island and New England.';
+
+    this.seo.setPageMeta({
+      title: 'Wedding Florist Services | Black Begonia Florals',
+      description,
+      url,
+      image: 'https://blackbegoniaflorals.com/assets/images/website/1000005135.webp',
+      keywords: [
+        'Wedding florist services',
+        'Rhode Island wedding florist',
+        'Luxury wedding flowers',
+        'Ceremony flowers',
+        'Reception centerpieces',
+      ],
+    });
+
+    this.jsonLd.clearPageSchemas();
+    this.jsonLd.setLocalBusiness();
+    this.jsonLd.setWebsite();
+    this.jsonLd.setWebPage({
+      name: 'Wedding Florist Services | Black Begonia Florals',
+      url,
+      description,
+      image: 'https://blackbegoniaflorals.com/assets/images/website/1000005135.webp',
+      keywords: ['Wedding florist services', 'Luxury wedding flowers', 'Rhode Island wedding florist'],
+    });
+    this.jsonLd.setBreadcrumbs([
+      { name: 'Home', url: 'https://blackbegoniaflorals.com/' },
+      { name: 'Wedding Services', url },
+    ]);
+    this.jsonLd.setFaq(
+      this.faqs.map((faq) => ({
+        question: faq.question,
+        answer: faq.answer,
+      }))
+    );
+  }
 
   nextStep(): void {
     this.currentStep = (this.currentStep + 1) % this.steps.length;

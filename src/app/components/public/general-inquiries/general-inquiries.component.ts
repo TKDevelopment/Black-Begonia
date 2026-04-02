@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -21,7 +21,7 @@ import { Router } from '@angular/router';
   templateUrl: './general-inquiries.component.html',
   styleUrl: './general-inquiries.component.scss',
 })
-export class GeneralInquiriesComponent {
+export class GeneralInquiriesComponent implements OnInit {
   private readonly inquiryEmailMaxAttempts = 3;
   private readonly inquiryEmailRetryDelayMs = 1200;
   generalInquiryForm!: FormGroup;
@@ -78,6 +78,22 @@ export class GeneralInquiriesComponent {
     });
 
     this.addInspirationUrl();
+  }
+
+  ngOnInit(): void {
+    this.seo.setPageMeta({
+      title: 'General Floral Inquiry | Black Begonia Florals',
+      description:
+        'Reach out to Black Begonia Florals for event flowers, sympathy flowers, subscriptions, and custom floral design inquiries.',
+      url: 'https://blackbegoniaflorals.com/inquiries/general',
+      image: 'https://blackbegoniaflorals.com/assets/images/og-default.png',
+      keywords: [
+        'General floral inquiry',
+        'Event florist inquiry',
+        'Rhode Island florist',
+        'Custom flower arrangements',
+      ],
+    });
   }
 
   get inspirationUrls(): FormArray {

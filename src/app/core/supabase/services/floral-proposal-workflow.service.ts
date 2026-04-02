@@ -4,6 +4,7 @@ import { Lead } from '../../models/lead';
 import {
   DocumentTemplate,
   FloralProposal,
+  GrapesJsStoredTemplateConfig,
   FloralProposalRenderContract,
   FloralProposalRenderLineItem,
   FloralProposalShoppingListItem,
@@ -317,6 +318,7 @@ export class FloralProposalWorkflowService {
     input: FloralProposalRenderContractInput
   ): Promise<FloralProposalRenderContract> {
     const templateLogoUrl = await this.resolveTemplateLogoUrl(input.template);
+    const grapeJsConfig = this.getGrapeJsConfig(input.template);
     const lineItems = await Promise.all(
       input.renderPayload.line_items.map((line) =>
         this.resolveRenderLineItemAssets(line)
@@ -331,35 +333,46 @@ export class FloralProposalWorkflowService {
         lead_id: input.lead.lead_id,
         first_name: input.lead.first_name,
         last_name: input.lead.last_name,
+        partner_first_name: input.lead.partner_first_name ?? null,
+        partner_last_name: input.lead.partner_last_name ?? null,
         email: input.lead.email,
+        phone: input.lead.phone ?? null,
         service_type: input.lead.service_type,
         event_type: input.lead.event_type ?? null,
         event_date: input.lead.event_date ?? null,
+        ceremony_venue_name: input.lead.ceremony_venue_name ?? null,
+        ceremony_venue_city: input.lead.ceremony_venue_city ?? null,
+        ceremony_venue_state: input.lead.ceremony_venue_state ?? null,
+        ceremony_start_time: input.lead.ceremony_start_time ?? null,
+        reception_venue_name: input.lead.reception_venue_name ?? null,
+        reception_venue_city: input.lead.reception_venue_city ?? null,
+        reception_venue_state: input.lead.reception_venue_state ?? null,
+        reception_start_time: input.lead.reception_start_time ?? null,
+        event_start_time: input.lead.event_start_time ?? null,
         status: input.lead.status,
       },
       template: {
         template_id: input.template?.template_id ?? input.renderPayload.template_id ?? null,
         name: input.template?.name ?? input.renderPayload.template_name ?? null,
         template_key: input.template?.template_key ?? null,
-        header_layout: input.template?.header_layout ?? null,
-        line_item_layout: input.template?.line_item_layout ?? null,
-        footer_layout: input.template?.footer_layout ?? null,
+        primary_color: grapeJsConfig?.theme?.primary_color ?? null,
+        accent_color: grapeJsConfig?.theme?.accent_color ?? null,
+        heading_font_family: grapeJsConfig?.theme?.heading_font_family ?? null,
+        body_font_family: grapeJsConfig?.theme?.body_font_family ?? null,
         logo_url: templateLogoUrl,
-        primary_color: input.template?.primary_color ?? null,
-        accent_color: input.template?.accent_color ?? null,
-        heading_font_family: input.template?.heading_font_family ?? null,
-        body_font_family: input.template?.body_font_family ?? null,
-        show_cover_page: input.template?.show_cover_page ?? false,
-        show_intro_message: input.template?.show_intro_message ?? false,
-        intro_title: input.template?.intro_title ?? null,
-        intro_body: input.template?.intro_body ?? null,
-        show_terms_section: input.template?.show_terms_section ?? true,
-        show_privacy_section: input.template?.show_privacy_section ?? true,
-        show_signature_section: input.template?.show_signature_section ?? true,
-        agreement_clauses: input.template?.agreement_clauses ?? [],
-        header_content: input.template?.header_content ?? {},
-        footer_content: input.template?.footer_content ?? {},
-        body_config: input.template?.body_config ?? {},
+        show_intro_message: false,
+        show_terms_section:
+          grapeJsConfig?.settings?.show_terms_section ??
+          input.template?.show_terms_section ??
+          true,
+        show_privacy_section:
+          grapeJsConfig?.settings?.show_privacy_section ??
+          input.template?.show_privacy_section ??
+          true,
+        show_signature_section:
+          grapeJsConfig?.settings?.show_signature_section ??
+          input.template?.show_signature_section ??
+          true,
         template_config: input.template?.template_config ?? {},
       },
       tax_region: {
@@ -395,6 +408,14 @@ export class FloralProposalWorkflowService {
           })),
       },
     };
+  }
+
+  private getGrapeJsConfig(
+    template?: DocumentTemplate | null
+  ): GrapesJsStoredTemplateConfig | null {
+    return (
+      template?.template_config as { grapejs_sdk?: GrapesJsStoredTemplateConfig } | null
+    )?.grapejs_sdk ?? null;
   }
 
   buildSubmissionPayload(args: {

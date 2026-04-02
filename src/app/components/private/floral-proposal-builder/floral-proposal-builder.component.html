@@ -113,12 +113,6 @@
             </button>
           </div>
 
-          <datalist id="catalog-item-options">
-            <option *ngFor="let item of activeCatalogItems(); trackBy: trackByCatalogItem" [value]="item.name">
-              {{ item.name }}
-            </option>
-          </datalist>
-
           <div *ngIf="lineItems().length; else emptyState" class="line-items-table-shell mt-4 overflow-hidden rounded-2xl border border-[#d1bbaa] bg-[#fcf8f4]">
             <div class="overflow-x-auto">
               <table cdkDropList [cdkDropListData]="lineItems()" (cdkDropListDropped)="reorderLineItems($event)" class="min-w-full divide-y divide-stone-200 text-sm dark:divide-white/15">
@@ -297,10 +291,15 @@
                                   </tr>
                                 </thead>
                                 <tbody class="">
-                                  <tr *ngFor="let component of line.components; trackBy: trackByComponent">
-                                    <td class="py-1.5 pr-2">
-                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="commitCatalogItemSelection(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" list="catalog-item-options" class="builder-control w-full rounded-xl border border-[#ccb5a2] bg-white px-3 py-2 text-[12px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
-                                    </td>
+                                    <tr *ngFor="let component of line.components; trackBy: trackByComponent">
+                                      <td class="py-1.5 pr-2">
+                                      <input (click)="$event.stopPropagation()" [ngModel]="component.catalog_item_name" (ngModelChange)="updateCatalogItemQuery(line.local_id, component.local_id, $event)" (blur)="commitCatalogItemSelection(line.local_id, component.local_id, component.catalog_item_name)" [disabled]="!canEdit()" type="text" [attr.list]="getCatalogItemDatalistId(component.local_id)" class="builder-control w-full rounded-xl border border-[#ccb5a2] bg-white px-3 py-2 text-[12px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60" placeholder="Red Rose" />
+                                      <datalist [id]="getCatalogItemDatalistId(component.local_id)">
+                                        <option *ngFor="let item of getCatalogItemOptions(component); trackBy: trackByCatalogItem" [value]="formatCatalogItemOptionLabel(item)">
+                                          {{ formatCatalogItemOptionLabel(item) }}
+                                        </option>
+                                      </datalist>
+                                      </td>
                                     <td class="pr-2">
                                       <input (click)="$event.stopPropagation()" [ngModel]="component.quantity_per_unit" (ngModelChange)="updateComponentQuantity(line.local_id, component.local_id, $event)" (keydown.enter)="handleComponentQuantityAdvance($event, line.local_id, component.local_id)" [disabled]="!canEdit()" type="number" min="0" step="1" class="builder-control w-full rounded-xl border border-[#ccb5a2] bg-white px-3 py-2 text-[12px] text-stone-900 shadow-sm outline-none transition focus:border-[#d08a78] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </td>
@@ -367,9 +366,11 @@
                   <th class="pb-3 pr-4">Item</th>
                   <th class="pb-3 pr-4">Needed</th>
                   <th class="pb-3 pr-4">Reserve %</th>
-                  <th class="pb-3 pr-4">Reserve</th>
-                  <th class="pb-3 pr-4">Total to Buy</th>
+                  <th class="pb-3 pr-4">Total + Reserve</th>
+                  <th class="pb-3 pr-4">Pack Qty</th>
                   <th class="pb-3 pr-4">Pack Count</th>
+                  <th class="pb-3 pr-4">Total to Buy</th>
+                  <th class="pb-3 pr-4">Reserve</th>
                   <th class="pb-3 pr-4">Estimated Cost</th>
                 </tr>
               </thead>
@@ -388,15 +389,17 @@
                       class="builder-control shopping-list-input w-24 rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-2 text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   </td>
-                  <td class="py-3 pr-4 text-stone-700">{{ item.reserve_units }}</td>
-                  <td class="py-3 pr-4 text-stone-700">{{ item.total_units_to_buy }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.total_plus_reserve ?? item.required_units }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.units_per_pack ?? '' }}</td>
                   <td class="py-3 pr-4 text-stone-700">{{ item.required_pack_count ?? '' }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.total_units_to_buy }}</td>
+                  <td class="py-3 pr-4 text-stone-700">{{ item.reserve_units }}</td>
                   <td class="py-3 pr-4 text-stone-700">{{ formatCurrency(item.total_estimated_cost) }}</td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="6" class="pt-4 text-left text-sm font-semibold text-stone-900">Shopping List Subtotal</td>
+                  <td colspan="8" class="pt-4 text-left text-sm font-semibold text-stone-900">Shopping List Subtotal</td>
                   <td class="pt-4 text-sm font-semibold text-stone-900">{{ formatCurrency(shoppingListSubtotal()) }}</td>
                 </tr>
               </tfoot>

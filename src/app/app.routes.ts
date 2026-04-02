@@ -188,6 +188,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'proposal-templates',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
+        path: 'proposal-templates/:templateId/studio',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
+            m => m.ProposalTemplateStudioComponent
+          ),
+      },
+      {
         path: 'leads/:leadId',
         loadComponent: () =>
           import('./components/private/leads/lead-detail/lead-detail.component').then(m => m.LeadDetailComponent),
@@ -214,27 +228,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/private/organizations/organizations.component').then(
             m => m.OrganizationsComponent
-          ),
-      },
-      {
-        path: 'proposal-templates',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/proposal-templates.component').then(
-            m => m.ProposalTemplatesComponent
-          ),
-      },
-      {
-        path: 'proposal-templates/:templateId/studio',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
-            m => m.ProposalTemplateStudioComponent
-          ),
-      },
-      {
-        path: 'proposal-templates/:templateId',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/proposal-templates.component').then(
-            m => m.ProposalTemplatesComponent
           ),
       },
       {

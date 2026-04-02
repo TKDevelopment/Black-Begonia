@@ -1,0 +1,130 @@
+:host {
+  display: block;
+}
+
+.bb-studio-shell {
+  min-height: calc(100vh - 8rem);
+  padding: 1.25rem;
+  display: flex;
+}
+
+.bb-studio-app {
+  display: grid;
+  gap: 1rem;
+  min-height: 100%;
+  width: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.bb-studio-header,
+.bb-studio-editor-card {
+  border: 1px solid rgba(34, 24, 20, 0.1);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 34px rgba(56, 38, 24, 0.08);
+}
+
+.bb-studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  background: rgba(255, 253, 250, 0.96);
+  border-color: rgba(201, 177, 157, 0.7);
+  box-shadow: 0 14px 34px rgba(56, 38, 24, 0.08);
+}
+
+.bb-studio-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.bb-studio-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  background: transparent;
+  color: #c76f64;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.bb-studio-link-arrow {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.bb-studio-editor-card {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f7f0e8 0%, #efe4d8 100%);
+}
+
+.bb-editor-host {
+  flex: 1 1 auto;
+  min-height: calc(100vh - 12rem);
+  height: 100%;
+}
+
+.bb-studio-primary {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: #ea938c;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bb-studio-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+:host ::ng-deep .gjs-editor,
+:host ::ng-deep .gs-editor,
+:host ::ng-deep .gs-app {
+  min-height: 100%;
+  height: 100%;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-header {
+  background: rgba(28, 22, 19, 0.96);
+  border-color: rgba(79, 61, 51, 0.9);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+}
+
+:host-context(.crm-theme-dark) .bb-studio-link {
+  color: #f0a69d;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-primary {
+  background: #f0a69d;
+  color: #161311;
+}
+
+@media (max-width: 960px) {
+  .bb-studio-shell {
+    padding: 0.9rem;
+  }
+
+  .bb-studio-header {
+    display: grid;
+  }
+
+  .bb-studio-header-actions {
+    justify-content: flex-start;
+  }
+
+  .bb-editor-host,
+  :host ::ng-deep .gjs-editor,
+  :host ::ng-deep .gs-editor,
+  :host ::ng-deep .gs-app {
+    min-height: calc(100vh - 10rem);
+  }
+}
