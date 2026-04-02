@@ -221,6 +221,7 @@ export class PortfolioDetailComponent implements OnInit {
         galleryRecord as PortfolioGalleryRecord,
         (images ?? []) as PortfolioImage[]
       );
+      this.applyGallerySeo(this.gallery);
     } catch (error) {
       console.error('Unexpected gallery load error:', error);
       this.errorMessage = 'Failed to load gallery.';
@@ -247,5 +248,45 @@ export class PortfolioDetailComponent implements OnInit {
         viewOrder: img.view_order
       }))
     };
+  }
+
+  private applyGallerySeo(gallery: PortfolioGalleryViewModel): void {
+    const url = `https://blackbegoniaflorals.com/portfolio/${gallery.slug}`;
+    const image = gallery.heroImage || gallery.coverImage;
+    const description =
+      gallery.description?.trim() ||
+      `Explore the ${gallery.coupleNames} floral gallery from ${gallery.venue}, designed by Black Begonia Florals.`;
+
+    this.seo.setPageMeta({
+      title: `${gallery.coupleNames} | Wedding Flower Portfolio | Black Begonia Florals`,
+      description,
+      url,
+      image,
+      type: 'article',
+      keywords: [
+        gallery.coupleNames,
+        gallery.venue,
+        'Wedding flower portfolio',
+        'Rhode Island wedding florist',
+        'Black Begonia Florals',
+      ],
+    });
+
+    this.jsonLd.clearPageSchemas();
+    this.jsonLd.setLocalBusiness();
+    this.jsonLd.setWebsite();
+    this.jsonLd.setBreadcrumbs([
+      { name: 'Home', url: 'https://blackbegoniaflorals.com/' },
+      { name: 'Portfolio', url: 'https://blackbegoniaflorals.com/portfolio' },
+      { name: gallery.coupleNames, url },
+    ]);
+    this.jsonLd.setPortfolioGallery({
+      name: `${gallery.coupleNames} Wedding Flower Portfolio`,
+      url,
+      description,
+      image,
+      location: gallery.venue,
+      images: gallery.images.map((item) => item.fullUrl || item.imageUrl).filter((item) => !!item),
+    });
   }
 }

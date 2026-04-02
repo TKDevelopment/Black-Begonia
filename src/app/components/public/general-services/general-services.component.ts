@@ -1,6 +1,8 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { JsonLdService } from '../../../core/seo/jsonld.service';
+import { SeoService } from '../../../core/seo/seo.service';
 
 type FloralOffering = {
   title: string;
@@ -27,7 +29,7 @@ type FaqItem = {
   templateUrl: './general-services.component.html',
   styleUrl: './general-services.component.scss'
 })
-export class GeneralServicesComponent {
+export class GeneralServicesComponent implements OnInit {
   featuredOfferings: FloralOffering[] = [
     {
       title: 'Bi-Weekly/Monthly Subscriptions',
@@ -106,6 +108,52 @@ export class GeneralServicesComponent {
       isOpen: false
     }
   ];
+
+  constructor(
+    private readonly seo: SeoService,
+    private readonly jsonLd: JsonLdService
+  ) {}
+
+  ngOnInit(): void {
+    const url = 'https://blackbegoniaflorals.com/services/general';
+    const description =
+      'Explore Black Begonia Florals custom floral subscriptions, event flowers, sympathy florals, and installations across Rhode Island and New England.';
+
+    this.seo.setPageMeta({
+      title: 'Event Florals, Subscriptions & Custom Arrangements | Black Begonia Florals',
+      description,
+      url,
+      image: 'https://blackbegoniaflorals.com/assets/images/website/photo-dec-06-4-23-21-pm.webp',
+      keywords: [
+        'Event florals',
+        'Floral subscriptions',
+        'Sympathy flowers',
+        'Floral installations',
+        'Rhode Island florist',
+      ],
+    });
+
+    this.jsonLd.clearPageSchemas();
+    this.jsonLd.setLocalBusiness();
+    this.jsonLd.setWebsite();
+    this.jsonLd.setWebPage({
+      name: 'General Floral Services | Black Begonia Florals',
+      url,
+      description,
+      image: 'https://blackbegoniaflorals.com/assets/images/website/photo-dec-06-4-23-21-pm.webp',
+      keywords: ['Event florals', 'Floral subscriptions', 'Rhode Island florist'],
+    });
+    this.jsonLd.setBreadcrumbs([
+      { name: 'Home', url: 'https://blackbegoniaflorals.com/' },
+      { name: 'General Services', url },
+    ]);
+    this.jsonLd.setFaq(
+      this.faqs.map((faq) => ({
+        question: faq.question,
+        answer: faq.answer,
+      }))
+    );
+  }
 
   toggleFaq(index: number): void {
     this.faqs[index].isOpen = !this.faqs[index].isOpen;

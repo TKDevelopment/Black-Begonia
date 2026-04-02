@@ -5,12 +5,6 @@ import {
   DocumentTemplateLogoUploadResult,
   DocumentTemplateUpsertInput,
 } from '../../models/floral-proposal';
-import { DocumentTemplateStudioBridgeService } from '../../templates/document-template-studio-bridge.service';
-import {
-  StoredTemplateStudioConfig,
-  TemplateAssetRef,
-  TemplateDefinition,
-} from '../../templates/template-studio.models';
 import { DocumentTemplateRepositoryService } from '../repositories/document-template-repository.service';
 import { SupabaseService } from '../clients/supabase.service';
 
@@ -23,8 +17,7 @@ export class DocumentTemplateService {
 
   constructor(
     private readonly documentTemplateRepository: DocumentTemplateRepositoryService,
-    private readonly supabaseService: SupabaseService,
-    private readonly documentTemplateStudioBridge: DocumentTemplateStudioBridgeService
+    private readonly supabaseService: SupabaseService
   ) {}
 
   async createDocumentTemplate(
@@ -38,67 +31,6 @@ export class DocumentTemplateService {
     updates: Partial<DocumentTemplateUpsertInput>
   ): Promise<DocumentTemplate> {
     return this.documentTemplateRepository.updateDocumentTemplate(templateId, updates);
-  }
-
-  async createTemplateStudioDocumentTemplate(
-    payload: DocumentTemplateUpsertInput,
-    templateDefinition: TemplateDefinition
-  ): Promise<DocumentTemplate> {
-    const now = new Date().toISOString();
-    const studioPayload = this.documentTemplateStudioBridge.buildUpsertInput(templateDefinition, {
-      template_id: '',
-      name: payload.name,
-      template_key: payload.template_key,
-      template_kind: payload.template_kind ?? 'floral_proposal',
-      is_active: payload.is_active ?? true,
-      is_default: payload.is_default ?? false,
-      logo_storage_path: payload.logo_storage_path ?? null,
-      logo_url: payload.logo_url ?? null,
-      primary_color: payload.primary_color ?? null,
-      accent_color: payload.accent_color ?? null,
-      heading_font_family: payload.heading_font_family ?? null,
-      body_font_family: payload.body_font_family ?? null,
-      header_layout: payload.header_layout ?? 'editorial',
-      line_item_layout: payload.line_item_layout ?? 'image_left',
-      footer_layout: payload.footer_layout ?? 'signature_focused',
-      show_cover_page: payload.show_cover_page ?? true,
-      show_intro_message: payload.show_intro_message ?? true,
-      intro_title: payload.intro_title ?? null,
-      intro_body: payload.intro_body ?? null,
-      show_terms_section: payload.show_terms_section ?? true,
-      show_privacy_section: payload.show_privacy_section ?? true,
-      show_signature_section: payload.show_signature_section ?? true,
-      agreement_clauses: payload.agreement_clauses ?? [],
-      header_content: payload.header_content ?? {},
-      footer_content: payload.footer_content ?? {},
-      body_config: payload.body_config ?? {},
-      template_config: payload.template_config ?? {},
-      created_at: now,
-      updated_at: now,
-    });
-
-    return this.createDocumentTemplate({
-      ...payload,
-      ...studioPayload,
-    });
-  }
-
-  async updateTemplateStudioDocumentTemplate(
-    currentTemplate: DocumentTemplate,
-    templateDefinition: TemplateDefinition,
-    updates: Partial<DocumentTemplateUpsertInput> = {},
-    storedConfigOverrides: Partial<StoredTemplateStudioConfig> = {}
-  ): Promise<DocumentTemplate> {
-    const studioPayload = this.documentTemplateStudioBridge.buildUpsertInput(
-      templateDefinition,
-      currentTemplate,
-      storedConfigOverrides
-    );
-
-    return this.updateDocumentTemplate(currentTemplate.template_id, {
-      ...updates,
-      ...studioPayload,
-    });
   }
 
   async deactivateTemplate(template: DocumentTemplate): Promise<DocumentTemplate> {
@@ -141,8 +73,14 @@ export class DocumentTemplateService {
   async uploadTemplateAsset(
     templateId: string,
     file: File,
-    assetType: TemplateAssetRef['type']
-  ): Promise<TemplateAssetRef> {
+    assetType: 'logo' | 'background' | 'texture' | 'image'
+  ): Promise<{
+    id: string;
+    type: 'logo' | 'background' | 'texture' | 'image';
+    url: string;
+    storage_path: string;
+    alt: string;
+  }> {
     const sanitizedFileName = file.name
       .trim()
       .toLowerCase()
