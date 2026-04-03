@@ -128,25 +128,22 @@ export class FloralProposalRendererService {
               padding: 24px 0 8px;
             }
             .proposal-event-header {
-              padding: 34px 42px 30px;
-              border-radius: 30px;
+              margin-top: 15px;
+              margin-left: -38px;
+              margin-right: -38px;
+              padding: 18px 38px 16px;
+              border-radius: 0;
               background:
-                radial-gradient(circle at top center, rgba(193, 169, 128, 0.12), transparent 42%),
-                linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245, 241, 234, 0.95)),
-                var(--proposal-paper);
-              border: 1px solid rgba(135, 151, 103, 0.18);
-              box-shadow: 0 18px 40px rgba(56, 38, 24, 0.08);
+                linear-gradient(180deg, rgba(154, 168, 117, 0.20), rgba(154, 168, 117, 0.14)),
+                rgba(154, 168, 117, 0.18);
+              border-top: 1px solid rgba(135, 151, 103, 0.22);
+              border-bottom: 1px solid rgba(135, 151, 103, 0.22);
+              border-left: 0;
+              border-right: 0;
+              box-shadow: none;
               position: relative;
               overflow: hidden;
               text-align: center;
-            }
-            .proposal-event-header::before {
-              content: '';
-              position: absolute;
-              inset: 18px;
-              border: 1px solid rgba(135, 151, 103, 0.08);
-              border-radius: 24px;
-              pointer-events: none;
             }
             .proposal-event-header-copy {
               position: relative;
@@ -160,28 +157,30 @@ export class FloralProposalRendererService {
               justify-content: center;
               gap: 10px;
               width: fit-content;
-              margin: 0 auto 14px;
-              padding: 8px 16px;
+              margin: 0 auto 8px;
+              padding: 6px 12px;
               border-radius: 999px;
               background: rgba(135, 151, 103, 0.12);
               color: #6f7d4f;
-              font-size: 10px;
+              font-size: 9px;
               font-weight: 700;
               letter-spacing: 0.18em;
               text-transform: uppercase;
             }
             .proposal-event-couple {
               margin: 0;
-              color: var(--proposal-primary);
-              font-family: ${headingFont};
-              font-size: 46px;
-              line-height: 0.96;
+              color: #6f7d4f;
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 28px;
+              font-style: italic;
+              letter-spacing: 4px;
+              line-height: 0.98;
             }
             .proposal-event-service {
-              margin: 12px auto 0;
+              margin: 6px auto 0;
               color: rgba(31, 27, 25, 0.72);
-              font-size: 18px;
-              line-height: 1.5;
+              font-size: 14px;
+              line-height: 1.35;
               max-width: 38rem;
             }
             .proposal-event-meta {
@@ -201,32 +200,32 @@ export class FloralProposalRendererService {
               line-height: 1.2;
             }
             .proposal-event-contact {
-              margin: 26px auto 0;
+              margin: 10px auto 0;
               display: flex;
               justify-content: center;
               align-items: center;
               flex-wrap: wrap;
-              gap: 14px;
+              gap: 10px;
               color: #8b9b67;
               font-family: ${headingFont};
-              font-size: 26px;
+              font-size: 18px;
               line-height: 1.1;
             }
             .proposal-event-contact-divider {
               width: 1px;
-              height: 24px;
+              height: 16px;
               background: rgba(135, 151, 103, 0.42);
             }
             .proposal-event-details {
-              margin-top: 10px;
+              margin-top: 8px;
               display: grid;
-              gap: 8px;
+              gap: 3px;
             }
             .proposal-event-detail-row {
               margin: 0;
               color: var(--proposal-primary);
-              font-size: 15px;
-              line-height: 1.5;
+              font-size: 12px;
+              line-height: 1.25;
             }
             .proposal-event-detail-label {
               font-weight: 700;
@@ -319,9 +318,11 @@ export class FloralProposalRendererService {
             }
             .compact-line-item-title {
               margin: 0;
-              color: var(--proposal-primary);
-              font-family: ${headingFont};
+              color: #6f7d4f;
+              font-family: 'Times New Roman', Times, serif;
               font-size: 20px;
+              font-style: italic;
+              letter-spacing: 4px;
               line-height: 1;
             }
             .compact-line-item-description {
@@ -344,23 +345,13 @@ export class FloralProposalRendererService {
               font-weight: 700;
             }
             .immersive-line-items {
-              gap: 18px;
+              gap: 6px;
             }
             .immersive-line-items-header {
-              margin-bottom: 4px;
+              margin-bottom: -2px;
             }
-            .immersive-line-items-kicker {
-              color: #6f7d4f;
-              font-size: 11px;
-              font-weight: 700;
-              letter-spacing: 0.16em;
-              text-transform: uppercase;
-            }
-            .immersive-line-items-title {
-              margin: 6px 0 0;
-              color: var(--proposal-primary);
-              font-family: ${headingFont};
-              font-size: 30px;
+            .immersive-line-item-page-spacer {
+              height: 100px;
             }
             .immersive-line-item {
               display: grid;
@@ -370,8 +361,8 @@ export class FloralProposalRendererService {
               break-inside: avoid;
               page-break-inside: avoid;
             }
-            .immersive-line-item + .immersive-line-item {
-              margin-top: 12px;
+            .immersive-line-item:not(.no-media) + .immersive-line-item:not(.no-media) {
+              margin-top: -22px;
             }
             .immersive-line-item.image-left {
               grid-template-columns: 200px minmax(0, 1fr);
@@ -416,9 +407,11 @@ export class FloralProposalRendererService {
             }
             .immersive-line-item-title {
               margin: 6px 0 8px;
-              color: #1f2417;
-              font-family: ${headingFont};
+              color: #6f7d4f;
+              font-family: 'Times New Roman', Times, serif;
               font-size: 34px;
+              font-style: italic;
+              letter-spacing: 4px;
               line-height: 0.95;
             }
             .immersive-line-item-florals,
@@ -895,25 +888,22 @@ export class FloralProposalRendererService {
         padding: 24px 0 8px;
       }
       .proposal-event-header {
-        padding: 34px 42px 30px;
-        border-radius: 30px;
+        margin-top: 15px;
+        margin-left: -38px;
+        margin-right: -38px;
+        padding: 18px 38px 16px;
+        border-radius: 0;
         background:
-          radial-gradient(circle at top center, rgba(193, 169, 128, 0.12), transparent 42%),
-          linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245, 241, 234, 0.95)),
-          var(--proposal-paper);
-        border: 1px solid rgba(135, 151, 103, 0.18);
-        box-shadow: 0 18px 40px rgba(56, 38, 24, 0.08);
+          linear-gradient(180deg, rgba(154, 168, 117, 0.20), rgba(154, 168, 117, 0.14)),
+          rgba(154, 168, 117, 0.18);
+        border-top: 1px solid rgba(135, 151, 103, 0.22);
+        border-bottom: 1px solid rgba(135, 151, 103, 0.22);
+        border-left: 0;
+        border-right: 0;
+        box-shadow: none;
         position: relative;
         overflow: hidden;
         text-align: center;
-      }
-      .proposal-event-header::before {
-        content: '';
-        position: absolute;
-        inset: 18px;
-        border: 1px solid rgba(135, 151, 103, 0.08);
-        border-radius: 24px;
-        pointer-events: none;
       }
       .proposal-event-header-copy {
         position: relative;
@@ -927,28 +917,30 @@ export class FloralProposalRendererService {
         justify-content: center;
         gap: 10px;
         width: fit-content;
-        margin: 0 auto 14px;
-        padding: 8px 16px;
+        margin: 0 auto 8px;
+        padding: 6px 12px;
         border-radius: 999px;
         background: rgba(135, 151, 103, 0.12);
         color: #6f7d4f;
-        font-size: 10px;
+        font-size: 9px;
         font-weight: 700;
         letter-spacing: 0.18em;
         text-transform: uppercase;
       }
       .proposal-event-couple {
         margin: 0;
-        color: var(--proposal-primary);
-        font-family: ${headingFont};
-        font-size: 46px;
-        line-height: 0.96;
+        color: #6f7d4f;
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 28px;
+        font-style: italic;
+        letter-spacing: 4px;
+        line-height: 0.98;
       }
       .proposal-event-service {
-        margin: 12px auto 0;
+        margin: 6px auto 0;
         color: rgba(31, 27, 25, 0.72);
-        font-size: 18px;
-        line-height: 1.5;
+        font-size: 14px;
+        line-height: 1.35;
         max-width: 38rem;
       }
       .proposal-event-meta {
@@ -968,32 +960,32 @@ export class FloralProposalRendererService {
         line-height: 1.2;
       }
       .proposal-event-contact {
-        margin: 26px auto 0;
+        margin: 10px auto 0;
         display: flex;
         justify-content: center;
         align-items: center;
         flex-wrap: wrap;
-        gap: 14px;
+        gap: 10px;
         color: #8b9b67;
         font-family: ${headingFont};
-        font-size: 26px;
+        font-size: 18px;
         line-height: 1.1;
       }
       .proposal-event-contact-divider {
         width: 1px;
-        height: 24px;
+        height: 16px;
         background: rgba(135, 151, 103, 0.42);
       }
       .proposal-event-details {
-        margin-top: 10px;
+        margin-top: 8px;
         display: grid;
-        gap: 8px;
+        gap: 3px;
       }
       .proposal-event-detail-row {
         margin: 0;
         color: var(--proposal-primary);
-        font-size: 15px;
-        line-height: 1.5;
+        font-size: 12px;
+        line-height: 1.25;
       }
       .proposal-event-detail-label {
         font-weight: 700;
@@ -1186,9 +1178,11 @@ export class FloralProposalRendererService {
       }
       .compact-line-item-title {
         margin: 0;
-        color: var(--proposal-primary);
-        font-family: ${headingFont};
+        color: #6f7d4f;
+        font-family: 'Times New Roman', Times, serif;
         font-size: 16px;
+        font-style: italic;
+        letter-spacing: 4px;
         line-height: 1;
       }
       .compact-line-item-description {
@@ -1215,23 +1209,13 @@ export class FloralProposalRendererService {
         margin-top: 18px;
       }
       .immersive-line-items {
-        gap: 18px;
+        gap: 6px;
       }
       .immersive-line-items-header {
-        margin-bottom: 4px;
+        margin-bottom: -2px;
       }
-      .immersive-line-items-kicker {
-        color: #6f7d4f;
-        font-size: 9px;
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-      }
-      .immersive-line-items-title {
-        margin: 4px 0 0;
-        color: var(--proposal-primary);
-        font-family: ${headingFont};
-        font-size: 22px;
+      .immersive-line-item-page-spacer {
+        height: 100px;
       }
       .immersive-line-item {
         display: grid;
@@ -1241,6 +1225,9 @@ export class FloralProposalRendererService {
       }
       .immersive-line-item.image-left {
         grid-template-columns: 200px minmax(0, 1fr);
+      }
+      .immersive-line-item:not(.no-media) + .immersive-line-item:not(.no-media) {
+        margin-top: -22px;
       }
       .immersive-line-item.no-media,
       .immersive-line-item.no-media.image-left,
@@ -1282,9 +1269,11 @@ export class FloralProposalRendererService {
       }
       .immersive-line-item-title {
         margin: 4px 0 6px;
-        color: #1f2417;
-        font-family: ${headingFont};
+        color: #6f7d4f;
+        font-family: 'Times New Roman', Times, serif;
         font-size: 24px;
+        font-style: italic;
+        letter-spacing: 4px;
         line-height: 0.95;
       }
       .immersive-line-item-florals,
@@ -1625,44 +1614,27 @@ export class FloralProposalRendererService {
     overline: string
   ): string {
     const detailRows = this.getProposalHeaderDetailRows(contract);
-    const metaPills = this.getProposalHeaderMetaPills(contract);
     const contactLine = this.renderProposalHeaderContactLine(contract);
 
     return `
       <section class="proposal-event-header">
-        <div class="proposal-event-header-copy">
-          <p class="proposal-event-overline">${this.escapeHtml(overline)}</p>
-          <h2 class="proposal-event-couple">${this.escapeHtml(this.formatProposalHeaderPrimaryNames(contract))}</h2>
-          <p class="proposal-event-service">
-            ${this.escapeHtml(this.formatDisplay(contract.lead.service_type, 'Event Floral Services'))}
-          </p>
-          ${
-            metaPills.length
-              ? `
-                <div class="proposal-event-meta">
-                  ${metaPills
-                    .map(
-                      (pill) =>
-                        `<span class="proposal-event-meta-pill">${this.escapeHtml(pill)}</span>`
-                    )
-                    .join('')}
-                </div>
+        <p class="proposal-event-overline">${this.escapeHtml(overline)}</p>
+        <h2 class="proposal-event-couple">${this.escapeHtml(this.formatProposalHeaderPrimaryNames(contract))}</h2>
+        <p class="proposal-event-service">
+          ${this.escapeHtml(this.formatDisplay(contract.lead.service_type, 'Event Floral Services'))}
+        </p>
+        ${contactLine}
+        <div class="proposal-event-details">
+          ${detailRows
+            .map(
+              (row) => `
+                <p class="proposal-event-detail-row">
+                  <span class="proposal-event-detail-label">${this.escapeHtml(row.label)}:</span>
+                  <span class="proposal-event-detail-value">${this.escapeHtml(row.value)}</span>
+                </p>
               `
-              : ''
-          }
-          ${contactLine}
-          <div class="proposal-event-details">
-            ${detailRows
-              .map(
-                (row) => `
-                  <p class="proposal-event-detail-row">
-                    <span class="proposal-event-detail-label">${this.escapeHtml(row.label)}:</span>
-                    <span class="proposal-event-detail-value">${this.escapeHtml(row.value)}</span>
-                  </p>
-                `
-              )
-              .join('')}
-          </div>
+            )
+            .join('')}
         </div>
       </section>
     `;
@@ -1758,15 +1730,25 @@ export class FloralProposalRendererService {
   }
 
   private renderAlternatingLineItemsSection(contract: FloralProposalRenderContract): string {
+    const shouldInsertPageSpacer = contract.line_items.length > 3;
+    const lineItemsMarkup = contract.line_items
+      .map((line, index) => {
+        const itemNumber = index + 1;
+        const shouldRenderSpacer =
+          shouldInsertPageSpacer &&
+          itemNumber < contract.line_items.length &&
+          (itemNumber === 3 || (itemNumber > 3 && (itemNumber - 3) % 4 === 0));
+        const spacerHtml = shouldRenderSpacer
+          ? '<div class="immersive-line-item-page-spacer" aria-hidden="true"></div>'
+          : '';
+
+        return `${this.renderAlternatingLineItem(line, index)}${spacerHtml}`;
+      })
+      .join('');
+
     return `
       <section class="line-items immersive-line-items">
-        <div class="immersive-line-items-header">
-          <div class="immersive-line-items-kicker">Featured Selections</div>
-          <h2 class="immersive-line-items-title">Floral Story</h2>
-        </div>
-        ${contract.line_items
-          .map((line, index) => this.renderAlternatingLineItem(line, index))
-          .join('')}
+        ${lineItemsMarkup}
       </section>
     `;
   }
@@ -2121,20 +2103,11 @@ export class FloralProposalRendererService {
     ];
   }
 
-  private getProposalHeaderMetaPills(contract: FloralProposalRenderContract): string[] {
-    const pills = [
-      this.formatEventType(contract),
-      this.formatContractDate(contract.lead.event_date),
-      `Generated ${this.formatDateTime(contract.generated_at)}`,
-    ];
-
-    return pills.filter((value) => !!value);
-  }
-
   private renderProposalHeaderContactLine(contract: FloralProposalRenderContract): string {
-    const contactValues = [contract.lead.phone?.trim(), contract.lead.email?.trim()].filter(
-      (value): value is string => !!value
-    );
+    const contactValues = [
+      this.formatPhoneNumber(contract.lead.phone),
+      contract.lead.email?.trim(),
+    ].filter((value): value is string => !!value);
 
     if (!contactValues.length) {
       return '';
@@ -2262,6 +2235,27 @@ export class FloralProposalRendererService {
     const normalizedHour = ((hours + 11) % 12) + 1;
     const meridiem = hours >= 12 ? 'PM' : 'AM';
     return `${normalizedHour}:${minutes.toString().padStart(2, '0')} ${meridiem}`;
+  }
+
+  private formatPhoneNumber(value: string | null | undefined): string {
+    const trimmed = value?.trim() ?? '';
+
+    if (!trimmed) {
+      return '';
+    }
+
+    const digits = trimmed.replace(/\D/g, '');
+    const normalizedDigits = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+
+    if (normalizedDigits.length !== 10) {
+      return trimmed;
+    }
+
+    const areaCode = normalizedDigits.slice(0, 3);
+    const prefix = normalizedDigits.slice(3, 6);
+    const lineNumber = normalizedDigits.slice(6);
+
+    return `(${areaCode}) ${prefix}-${lineNumber}`;
   }
 
   private formatFinalBalanceDueDate(value: string | null | undefined): string {
