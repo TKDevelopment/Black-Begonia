@@ -41,6 +41,23 @@ export class DocumentTemplateService {
     return this.updateDocumentTemplate(template.template_id, { is_active: true });
   }
 
+  async deleteTemplate(template: DocumentTemplate): Promise<void> {
+    await this.documentTemplateRepository.deleteDocumentTemplate(template.template_id);
+
+    if (!template.logo_storage_path) {
+      return;
+    }
+
+    try {
+      await this.removeTemplateLogo(template.logo_storage_path);
+    } catch (error) {
+      console.warn(
+        '[DocumentTemplateService] deleteTemplate logo cleanup warning:',
+        error
+      );
+    }
+  }
+
   async uploadTemplateLogo(
     templateId: string,
     file: File

@@ -6,6 +6,11 @@ import {
   DocumentTemplate,
   GrapesJsStoredTemplateConfig,
 } from '../models/floral-proposal';
+import { resolveTemplateRendererKey } from './proposal-renderer-registry';
+import {
+  getProposalTemplateStudioPreset,
+  ProposalTemplateStudioPreset,
+} from './proposal-template-presets';
 
 export interface ProposalTemplateStudioSlotDefinition {
   id: string;
@@ -56,23 +61,24 @@ export class GrapeJsTemplateStudioService {
   }
 
   buildDefaultProject(template: DocumentTemplate): ProjectData {
-    const starter = this.resolveStarterTemplate(template);
-    return this.buildProject(template, starter);
+    const studioPreset = this.resolveStudioPreset(template);
+    const starter = this.resolveStarterTemplate(template, studioPreset);
+    return this.buildProject(template, starter, studioPreset);
   }
 
   buildDraftConfig(projectData: ProjectData, previous: GrapesJsStoredTemplateConfig | null): GrapesJsStoredTemplateConfig {
+    const { settings: _settings, ...previousWithoutSettings } = (previous ?? {}) as
+      GrapesJsStoredTemplateConfig & {
+        settings?: unknown;
+      };
+
     return {
-      ...previous,
+      ...previousWithoutSettings,
       schema_version: '1.0',
       project_data: projectData as Record<string, unknown>,
       published_html: previous?.published_html ?? null,
       published_css: previous?.published_css ?? null,
       published_at: previous?.published_at ?? null,
-      settings: {
-        show_terms_section: previous?.settings?.show_terms_section ?? true,
-        show_privacy_section: previous?.settings?.show_privacy_section ?? true,
-        show_signature_section: previous?.settings?.show_signature_section ?? true,
-      },
     };
   }
 
@@ -105,75 +111,226 @@ export class GrapeJsTemplateStudioService {
     editor.BlockManager.add('bb-contract-signature', { label: 'Signature Section', category: 'Contract', media: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17c2-3 4-5 6-5 2 0 3 2 5 2 1 0 2-.5 3-2"></path><path d="M4 20h16"></path></svg>', content: this.signatureSection() });
   }
 
-  private buildProject(template: DocumentTemplate, starter: ProposalTemplateStudioStarterDefinition): ProjectData {
+  private buildProject(
+    template: DocumentTemplate,
+    starter: ProposalTemplateStudioStarterDefinition,
+    studioPreset: ProposalTemplateStudioPreset | null
+  ): ProjectData {
     return {
-      pages: [{ id: 'proposal-template', name: 'Proposal Template', component: this.buildProjectMarkup(template, starter) }],
+      pages: [{
+        id: 'proposal-template',
+        name: 'Proposal Template',
+        component: this.buildProjectMarkup(template, starter, studioPreset),
+      }],
       styles: this.buildProjectCss(starter),
     };
   }
 
-  private resolveStarterTemplate(template: DocumentTemplate): ProposalTemplateStudioStarterDefinition {
+  private resolveStudioPreset(template: DocumentTemplate): ProposalTemplateStudioPreset | null {
+    return getProposalTemplateStudioPreset(resolveTemplateRendererKey(template));
+  }
+
+  private resolveStarterTemplate(
+    template: DocumentTemplate,
+    studioPreset: ProposalTemplateStudioPreset | null
+  ): ProposalTemplateStudioStarterDefinition {
+    if (studioPreset?.starterTemplateId) {
+      const matchedStarter = this.starterTemplates.find(
+        (starter) => starter.id === studioPreset.starterTemplateId
+      );
+
+      if (matchedStarter) {
+        return matchedStarter;
+      }
+    }
+
     return this.starterTemplates.find((starter) => starter.templateKey === template.template_key) ??
       this.starterTemplates.find((starter) => template.template_key.includes(starter.templateKey)) ??
       this.starterTemplates[0];
   }
 
-  private buildProjectMarkup(template: DocumentTemplate, starter: ProposalTemplateStudioStarterDefinition): string {
+  private buildProjectMarkup(
+    template: DocumentTemplate,
+    starter: ProposalTemplateStudioStarterDefinition,
+    studioPreset: ProposalTemplateStudioPreset | null
+  ): string {
     return `
       <div class="bb-doc bb-${starter.id}">
-        ${this.frontPage(template, starter)}
-        ${this.agreementPage()}
+        ${this.frontPage(template, starter, studioPreset)}
+        ${this.agreementPage(studioPreset)}
       </div>
     `;
   }
 
-  private frontPage(template: DocumentTemplate, starter: ProposalTemplateStudioStarterDefinition): string {
+  private frontPage(
+    template: DocumentTemplate,
+    starter: ProposalTemplateStudioStarterDefinition,
+    studioPreset: ProposalTemplateStudioPreset | null
+  ): string {
+    if (studioPreset?.layoutVariant === 'agreement-focused') {
+      return this.agreementFocusedFrontPage(template, starter, studioPreset);
+    }
+
+    return this.standardFrontPage(template, starter, studioPreset);
+  }
+
+  private standardFrontPage(
+    template: DocumentTemplate,
+    starter: ProposalTemplateStudioStarterDefinition,
+    studioPreset: ProposalTemplateStudioPreset | null
+  ): string {
+    const galleryCaptions = this.getGalleryCaptions(studioPreset);
+
     return `
-      <section class="bb-front">
+      <section class="bb-front${studioPreset?.layoutVariant === 'highlights' ? ' bb-front-highlights' : ''}">
         <div class="bb-top">
           <div class="bb-brand">Black Begonia<br />Floral Design</div>
           <div class="bb-date"><span data-bb-field="event_date">October 24, 2026</span></div>
           <div class="bb-created">Created: <span data-bb-field="proposal_created_date">3/30/2026</span></div>
         </div>
-        <div class="bb-banner"><div class="bb-script"><span data-bb-field="customer_name">Customer Name</span>'s <span data-bb-field="service_type">Event Floral Services</span></div></div>
-        <div class="bb-summary">
-          <div><div class="bb-kicker">Event Type</div><div class="bb-value"><span data-bb-field="event_type">Event</span></div></div>
-          <div><div class="bb-kicker">Service Type</div><div class="bb-value"><span data-bb-field="service_type">Event Floral Services</span></div></div>
-          <div><div class="bb-kicker">Delivery & Setup</div><div class="bb-value"><span data-bb-field="delivery_setup_location">Event location</span></div></div>
-        </div>
+        ${this.renderBanner(studioPreset)}
+        ${this.renderSummaryStrip()}
+        ${this.renderHighlights(studioPreset)}
         <div class="bb-grid">
           <div class="bb-main">
-            <div class="bb-note">${this.escapeHtml(starter.name)} starter for ${this.escapeHtml(template.name)}. Keep the structure flexible here, then let the renderer strategy inject service-specific pricing, contract language, and signatures at runtime.</div>
-            <div class="bb-card"><section data-bb-slot="proposal-header" class="bb-slot" data-gjs-name="Proposal Header">Proposal Header Slot</section></div>
-            <div class="bb-card"><section data-bb-slot="proposal-intro" class="bb-slot" data-gjs-name="Proposal Intro">Proposal Intro Slot</section></div>
-            <div class="bb-card"><section data-bb-slot="proposal-line-items" class="bb-slot" data-gjs-name="Proposal Line Items">Proposal Line Items Slot</section></div>
-            <div class="bb-card"><section data-bb-slot="proposal-totals" class="bb-slot" data-gjs-name="Proposal Totals">Proposal Totals Slot</section></div>
+            ${this.frontPageNoteCard(template, starter, studioPreset)}
+            <div class="bb-card">${this.runtimeSlotMarkup('proposal-header', 'Proposal Header')}</div>
+            <div class="bb-card">${this.runtimeSlotMarkup('proposal-intro', 'Proposal Intro')}</div>
+            <div class="bb-card">${this.runtimeSlotMarkup('proposal-line-items', 'Proposal Line Items')}</div>
+            <div class="bb-card">${this.runtimeSlotMarkup('proposal-totals', 'Proposal Totals')}</div>
           </div>
           <aside class="bb-side">
-            ${this.galleryCard('Replace with a featured installation or event vignette', true)}
+            ${this.galleryCard(galleryCaptions[0], true)}
             <div class="bb-gallery-grid">
-              ${this.galleryCard('Tablescape or centerpiece reference')}
-              ${this.galleryCard('Personal flowers or accent details')}
-              ${this.galleryCard('Statement arrangement or floral moment')}
-              ${this.galleryCard('Event styling vignette')}
+              ${this.galleryCard(galleryCaptions[1])}
+              ${this.galleryCard(galleryCaptions[2])}
+              ${this.galleryCard(galleryCaptions[3])}
+              ${this.galleryCard(galleryCaptions[4])}
             </div>
           </aside>
         </div>
-        <div class="bb-card bb-footer-card"><section data-bb-slot="proposal-footer" class="bb-slot" data-gjs-name="Proposal Footer">Proposal Footer Slot</section></div>
+        <div class="bb-card bb-footer-card">${this.runtimeSlotMarkup('proposal-footer', 'Proposal Footer')}</div>
       </section>
     `;
   }
 
-  private galleryCard(caption: string, hero = false): string {
-    return `<div class="bb-gallery-card${hero ? ' bb-gallery-card-hero' : ''}"><div class="bb-gallery-image"></div><div class="bb-gallery-caption">${caption}</div></div>`;
+  private agreementFocusedFrontPage(
+    template: DocumentTemplate,
+    starter: ProposalTemplateStudioStarterDefinition,
+    studioPreset: ProposalTemplateStudioPreset
+  ): string {
+    return `
+      <section class="bb-front bb-front-agreement">
+        <div class="bb-top">
+          <div class="bb-brand">Black Begonia<br />Floral Design</div>
+          <div class="bb-date"><span data-bb-field="event_date">October 24, 2026</span></div>
+          <div class="bb-created">Created: <span data-bb-field="proposal_created_date">3/30/2026</span></div>
+        </div>
+        ${this.renderBanner(studioPreset)}
+        ${this.renderSummaryStrip()}
+        ${this.renderHighlights(studioPreset)}
+        <div class="bb-main bb-main-stack">
+          ${this.frontPageNoteCard(template, starter, studioPreset)}
+          <div class="bb-card">${this.runtimeSlotMarkup('proposal-header', 'Proposal Header')}</div>
+          <div class="bb-card">${this.runtimeSlotMarkup('proposal-intro', 'Proposal Intro')}</div>
+          <div class="bb-card">${this.runtimeSlotMarkup('proposal-line-items', 'Proposal Line Items')}</div>
+          <div class="bb-card">${this.runtimeSlotMarkup('proposal-totals', 'Proposal Totals')}</div>
+          <div class="bb-card bb-footer-card">${this.runtimeSlotMarkup('proposal-footer', 'Proposal Footer')}</div>
+        </div>
+      </section>
+    `;
   }
 
-  private agreementPage(): string {
+  private renderBanner(studioPreset: ProposalTemplateStudioPreset | null): string {
+    const bannerContent =
+      studioPreset?.bannerMode === 'document-title'
+        ? `<div class="bb-script"><span data-bb-field="document_title">Floral Proposal</span></div>`
+        : `<div class="bb-script"><span data-bb-field="customer_name">Customer Name</span>'s <span data-bb-field="service_type">Event Floral Services</span></div>`;
+
+    return `
+      <div class="bb-banner">
+        ${bannerContent}
+        ${
+          studioPreset?.bannerSubtitle
+            ? `<p class="bb-banner-subtitle">${this.escapeHtml(studioPreset.bannerSubtitle)}</p>`
+            : ''
+        }
+      </div>
+    `;
+  }
+
+  private renderSummaryStrip(): string {
+    return `
+      <div class="bb-summary">
+        <div><div class="bb-kicker">Document</div><div class="bb-value"><span data-bb-field="document_title">Floral Proposal</span></div></div>
+        <div><div class="bb-kicker"><span data-bb-field="service_type_label">Service Type</span></div><div class="bb-value"><span data-bb-field="service_type">Event Floral Services</span></div></div>
+        <div><div class="bb-kicker"><span data-bb-field="service_date_label">Event Date</span></div><div class="bb-value"><span data-bb-field="event_date">October 24, 2026</span></div></div>
+        <div><div class="bb-kicker"><span data-bb-field="delivery_location_label">Delivery & Setup Location</span></div><div class="bb-value"><span data-bb-field="delivery_setup_location">Event location</span></div></div>
+      </div>
+    `;
+  }
+
+  private frontPageNoteCard(
+    template: DocumentTemplate,
+    starter: ProposalTemplateStudioStarterDefinition,
+    studioPreset: ProposalTemplateStudioPreset | null
+  ): string {
+    const note =
+      studioPreset?.frontPageNote ??
+      `${starter.name} starter for ${template.name}. Keep the structure flexible here, then let the renderer strategy inject service-specific pricing, contract language, and signatures at runtime.`;
+
+    return `<div class="bb-note">${this.escapeHtml(note)}</div>`;
+  }
+
+  private renderHighlights(studioPreset: ProposalTemplateStudioPreset | null): string {
+    const highlights = studioPreset?.highlights ?? [];
+
+    if (!highlights.length) {
+      return '';
+    }
+
+    return `
+      <div class="bb-highlights">
+        ${highlights
+          .map(
+            (highlight) => `
+              <div class="bb-highlight-card">
+                <div class="bb-highlight-title">${this.escapeHtml(highlight.title)}</div>
+                <p class="bb-highlight-copy">${this.escapeHtml(highlight.copy)}</p>
+              </div>
+            `
+          )
+          .join('')}
+      </div>
+    `;
+  }
+
+  private getGalleryCaptions(studioPreset: ProposalTemplateStudioPreset | null): string[] {
+    const defaultCaptions = [
+      'Replace with a featured installation or event vignette',
+      'Tablescape or centerpiece reference',
+      'Personal flowers or accent details',
+      'Statement arrangement or floral moment',
+      'Event styling vignette',
+    ];
+    const presetCaptions = studioPreset?.galleryCaptions ?? [];
+
+    return defaultCaptions.map((caption, index) => presetCaptions[index] ?? caption);
+  }
+
+  private galleryCard(caption: string, hero = false): string {
+    return `<div class="bb-gallery-card${hero ? ' bb-gallery-card-hero' : ''}"><div class="bb-gallery-image"></div><div class="bb-gallery-caption">${this.escapeHtml(caption)}</div></div>`;
+  }
+
+  private agreementPage(studioPreset: ProposalTemplateStudioPreset | null): string {
     return `
       <section class="bb-contract">
         ${this.buildContractHeader()}
         <div class="bb-copy">
-          <p>This agreement space is designed to stay service-neutral inside Studio. Use the runtime slots below so each renderer strategy can inject the right contract language, privacy copy, and acceptance blocks for weddings, elopements, showers, engagements, or general event work.</p>
+          <p>${this.escapeHtml(
+            studioPreset?.agreementIntro ??
+              'This agreement space is designed to stay service-neutral inside Studio. Use the runtime slots below so each renderer strategy can inject the right contract language, privacy copy, and acceptance blocks for weddings, elopements, showers, engagements, or general event work.'
+          )}</p>
         </div>
         <div class="bb-card">
           ${this.runtimeSlotMarkup('proposal-terms', 'Terms & Contract')}
@@ -206,9 +363,9 @@ export class GrapeJsTemplateStudioService {
   private eventDetailsTable(): string {
     return `
       <section class="bb-section">
-        <div class="bb-section-title"><h2>1. Event Details</h2></div>
+        <div class="bb-section-title"><h2><span data-bb-field="details_section_title">1. Event Details</span></h2></div>
         <table class="bb-table">
-          <thead><tr><th>Service Type</th><th>Event Date</th><th>Delivery & Setup Location</th></tr></thead>
+          <thead><tr><th><span data-bb-field="service_type_label">Service Type</span></th><th><span data-bb-field="service_date_label">Event Date</span></th><th><span data-bb-field="delivery_location_label">Delivery & Setup Location</span></th></tr></thead>
           <tbody><tr><td><span class="bb-field" data-bb-field="service_type">Event Floral Services</span></td><td><span class="bb-field" data-bb-field="event_date">October 24, 2026</span></td><td><span class="bb-field" data-bb-field="delivery_setup_location">Event location</span></td></tr></tbody>
         </table>
       </section>
@@ -218,16 +375,16 @@ export class GrapeJsTemplateStudioService {
   private paymentTermsTable(): string {
     return `
       <section class="bb-section">
-        <div class="bb-section-title"><h2>4. Payment Terms</h2></div>
+        <div class="bb-section-title"><h2><span data-bb-field="payment_terms_title">4. Payment Terms</span></h2></div>
         <div class="bb-copy">
-          <p>A signed agreement and retainer are required before floral production, sourcing, and event scheduling are confirmed.</p>
+          <p><span data-bb-field="retainer_copy">A signed agreement and retainer are required before floral production, sourcing, and event scheduling are confirmed.</span></p>
           <p>The remaining balance is due by <span class="bb-field" data-bb-field="final_balance_due_date">September 24, 2026</span>, unless your service agreement states otherwise.</p>
         </div>
         <table class="bb-table">
-          <thead><tr><th>Deposit Due</th><th>Final Balance Due</th><th>Payment Methods</th></tr></thead>
-          <tbody><tr><td>Retainer<br />per contract terms</td><td><span class="bb-field" data-bb-field="final_balance_due_date">September 24, 2026</span><br />standard due date</td><td>Credit/Debit Card (3% processing fee)<br />Other approved methods</td></tr></tbody>
+          <thead><tr><th><span data-bb-field="retainer_label">Deposit Due</span></th><th><span data-bb-field="final_balance_label">Final Balance Due</span></th><th>Payment Methods</th></tr></thead>
+          <tbody><tr><td><span data-bb-field="retainer_label">Retainer</span><br />per contract terms</td><td><span class="bb-field" data-bb-field="final_balance_due_date">September 24, 2026</span><br />standard due date</td><td>Credit/Debit Card (3% processing fee)<br />Other approved methods</td></tr></tbody>
         </table>
-        <p class="bb-note">Important: No services, materials, or scheduling are guaranteed until the retainer is received. Late payments may affect sourcing, scheduling, or event execution.</p>
+        <p class="bb-note"><span data-bb-field="late_payment_copy">Important: No services, materials, or scheduling are guaranteed until the retainer is received. Late payments may affect sourcing, scheduling, or event execution.</span></p>
       </section>
     `;
   }
@@ -270,15 +427,16 @@ export class GrapeJsTemplateStudioService {
       *{box-sizing:border-box}html,body{margin:0;padding:0;min-height:100%}body{background:var(--bb-surface);color:var(--bb-ink);font-family:var(--bb-body)}
       .bb-doc{width:100%;max-width:none;margin:0;display:grid;gap:0}.bb-front,.bb-contract{width:100%;background:var(--bb-surface);border:0;border-radius:0;overflow:hidden;box-shadow:none}
       .bb-front{padding:28px 36px}.bb-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:center;justify-items:center}.bb-brand{font-size:14px;font-weight:700;letter-spacing:.02em;line-height:1.2;text-transform:uppercase;text-align:center}.bb-date{color:var(--bb-accent);font-family:var(--bb-head);font-size:26px;line-height:1;text-align:center}.bb-created{font-size:13px;font-weight:700;text-align:center;white-space:nowrap}
-      .bb-banner{margin:18px -28px;padding:16px 28px;background:var(--bb-banner);color:var(--bb-banner-text);text-align:center}.bb-banner h1{margin:0;color:var(--bb-banner-text);font-family:var(--bb-head);font-size:36px;font-weight:500;line-height:1.08}.bb-script{font-family:var(--bb-head);font-size:${starter.id === 'modern-botanical' ? '30px' : '34px'};line-height:1.08}
-      .bb-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:18px 0 22px;border-bottom:1px solid var(--bb-border);text-align:center;align-items:start}.bb-kicker{margin-bottom:6px;color:var(--bb-muted);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.bb-value{font-size:14px;line-height:1.45}
-      .bb-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:22px;margin-top:20px}.bb-main,.bb-side{display:grid;gap:16px;align-content:start}.bb-gallery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .bb-banner{margin:18px -28px;padding:16px 28px;background:var(--bb-banner);color:var(--bb-banner-text);text-align:center}.bb-banner h1{margin:0;color:var(--bb-banner-text);font-family:var(--bb-head);font-size:36px;font-weight:500;line-height:1.08}.bb-script{font-family:var(--bb-head);font-size:${starter.id === 'modern-botanical' ? '30px' : '34px'};line-height:1.08}.bb-banner-subtitle{max-width:42rem;margin:10px auto 0;color:var(--bb-banner-text);font-size:12px;line-height:1.6;letter-spacing:.04em;text-transform:none;opacity:.92}
+      .bb-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:18px 0 22px;border-bottom:1px solid var(--bb-border);text-align:center;align-items:start}.bb-kicker{margin-bottom:6px;color:var(--bb-muted);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.bb-value{font-size:14px;line-height:1.45}
+      .bb-highlights{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:18px}.bb-highlight-card{border:1px solid var(--bb-border);border-radius:${soft ? '12px' : '18px'};background:${dark ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.88)'};padding:14px 16px}.bb-highlight-title{margin-bottom:8px;color:var(--bb-primary);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.bb-highlight-copy{margin:0;color:var(--bb-muted);font-size:13px;line-height:1.65}
+      .bb-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:22px;margin-top:20px}.bb-main,.bb-side{display:grid;gap:16px;align-content:start}.bb-main-stack{margin-top:20px}.bb-gallery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.bb-front-agreement .bb-footer-card{margin-top:0}
       .bb-card,.bb-gallery-card,.bb-note{border:1px solid var(--bb-border);border-radius:${soft ? '14px' : '22px'};background:${dark ? 'rgba(255,255,255,.025)' : 'rgba(255,255,255,.82)'};overflow:hidden}.bb-card{padding:14px}.bb-note{padding:14px 18px;color:var(--bb-muted);font-size:13px;line-height:1.65}.bb-gallery-card{padding:12px}.bb-gallery-card-hero{padding:14px}.bb-gallery-image{min-height:180px;border-radius:${soft ? '12px' : '18px'};background:var(--bb-image);border:1px solid ${dark ? 'rgba(255,255,255,.06)' : '#e4d5c7'}}.bb-gallery-card-hero .bb-gallery-image{min-height:260px}.bb-gallery-caption{padding:10px 6px 2px;color:var(--bb-muted);font-size:12px;line-height:1.5}
       .bb-slot{min-height:88px;padding:18px 20px;border:1px dashed ${dark ? 'rgba(219,208,195,.38)' : '#d9b8a4'};border-radius:${soft ? '12px' : '18px'};background:${dark ? 'rgba(255,255,255,.02)' : 'rgba(255,248,242,.92)'};color:var(--bb-muted);font-size:14px;line-height:1.6}.bb-footer-card{margin-top:18px}
       .bb-contract{padding:28px 36px 34px;page-break-before:always}.bb-ref{margin:0 0 14px;color:var(--bb-muted);font-size:13px;line-height:1.6;text-align:center}.bb-divider{height:2px;margin:0 0 18px;background:${dark ? 'rgba(235,227,219,.14)' : '#ead7cf'}}.bb-contract .bb-copy p,.bb-contract .bb-copy li{margin:0 0 10px;color:var(--bb-ink);font-size:14px !important;line-height:1.75;font-weight:400}.bb-contract .bb-copy ul{margin:10px 0 0 1.1rem;padding:0}.bb-contract .bb-copy li{margin-bottom:6px}.bb-contract .bb-card,.bb-contract .bb-section{margin-top:18px}.bb-contract .bb-section-title{margin-bottom:10px}.bb-contract .bb-section-title h2{margin:0;color:var(--bb-primary);font-family:var(--bb-head);font-size:23px !important;line-height:1.15;font-weight:600}
       .bb-table{width:100%;border-collapse:collapse;table-layout:fixed}.bb-table th,.bb-table td{width:33.333%;padding:12px 14px;border:1px solid var(--bb-border);font-size:13px;text-align:left;vertical-align:top}.bb-table thead th{background:${dark ? '#25221f' : '#dfe5d5'};color:var(--bb-banner-text);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.bb-field{display:inline-block;min-width:0;padding-bottom:2px;border-bottom:1px dashed ${dark ? 'rgba(219,208,195,.45)' : 'rgba(124,148,83,.45)'};color:var(--bb-ink);font-weight:600}
       .bb-note{margin:0}.bb-note-italic{font-style:italic}.bb-signatures{display:grid;gap:18px}.bb-sign-card{border:1px solid var(--bb-border);background:${dark ? 'rgba(255,255,255,.03)' : '#fffdfa'}}.bb-sign-head{padding:8px 12px;background:${dark ? '#25221f' : '#dfe5d5'};color:var(--bb-banner-text);font-size:15px;font-weight:700}.bb-sign-body{padding:0 0 12px}.bb-sign-party{margin:0;padding:8px 12px;border-bottom:1px solid var(--bb-border);font-size:15px;font-weight:500}.bb-sign-grid{display:grid;gap:14px}.bb-sign-line{display:grid;gap:0;padding:0 12px}.bb-sign-line span{color:var(--bb-muted);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.bb-sign-fill{min-height:56px;border:1px solid var(--bb-border);border-top:0}.bb-sign-fill-lg{min-height:118px}.bb-sign-meta{display:grid;grid-template-columns:minmax(0,1fr) 140px}
-      @media (max-width:720px){.bb-front,.bb-contract{padding:18px}.bb-banner{margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px}.bb-top,.bb-summary,.bb-grid,.bb-gallery-grid,.bb-sign-meta{grid-template-columns:1fr}.bb-created,.bb-date,.bb-brand{text-align:left;justify-self:start}.bb-table th,.bb-table td{display:block;width:100%}}
+      @media (max-width:720px){.bb-front,.bb-contract{padding:18px}.bb-banner{margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px}.bb-top,.bb-summary,.bb-grid,.bb-gallery-grid,.bb-sign-meta,.bb-highlights{grid-template-columns:1fr}.bb-created,.bb-date,.bb-brand{text-align:left;justify-self:start}.bb-table th,.bb-table td{display:block;width:100%}}
     `;
   }
 

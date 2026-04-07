@@ -185,4 +185,17 @@ export class LeadRepositoryService {
 
     return data as Lead;
   }
+
+  async deleteLead(leadId: string): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('leads')
+      .delete()
+      .eq('lead_id', leadId);
+
+    if (error) {
+      console.error('[LeadRepositoryService] deleteLead error:', error);
+      throw error;
+    }
+  }
 }

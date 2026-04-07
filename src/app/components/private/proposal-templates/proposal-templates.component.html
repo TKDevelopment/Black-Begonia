@@ -1,7 +1,7 @@
-<div class="space-y-6">
+<div class="space-y-6 p-8">
   <app-crm-page-header
     title="Proposal Templates"
-    subtitle="Manage template records, renderer strategies, and proposal section settings here. Open Studio only when you want to edit layout."
+    subtitle="Manage template records and renderer strategies here. Open Studio only when you want to edit layout."
     primaryActionLabel="New Template"
     (primaryAction)="openCreateModal()"
   />
@@ -43,10 +43,18 @@
           </div>
 
           <div class="flex flex-wrap gap-3">
-            <button type="button" class="rounded-full border border-black/10 px-5 py-2.5 text-sm font-semibold text-stone-700" [disabled]="saving()" (click)="openEditModal(template)">Edit Details</button>
-            <button type="button" class="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white" (click)="openStudio(template)">Open Studio</button>
-            <button type="button" class="rounded-full border border-black/10 px-5 py-2.5 text-sm font-semibold text-stone-700" [disabled]="saving()" (click)="toggleTemplate(template)">
+            <button type="button" class="rounded-full border border-black/10 px-4 py-2 text-[13px] font-semibold text-stone-700" [disabled]="saving()" (click)="openEditModal(template)">Edit Details</button>
+            <button type="button" class="rounded-full bg-stone-900 px-4 py-2 text-[13px] font-semibold text-white" (click)="openStudio(template)">Open Studio</button>
+            <button type="button" class="rounded-full border border-black/10 px-4 py-2 text-[13px] font-semibold text-stone-700" [disabled]="saving()" (click)="toggleTemplate(template)">
               {{ template.is_active ? 'Deactivate' : 'Activate' }}
+            </button>
+            <button
+              type="button"
+              class="rounded-full border border-[#c97972] bg-[#fff7f5] px-4 py-2 text-[13px] font-semibold text-[#8f2f28] transition-colors duration-200 hover:bg-[#fce8e5] hover:text-[#7f1d1d] dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-900/30 dark:hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="saving()"
+              (click)="requestDeleteTemplate(template)"
+            >
+              Delete
             </button>
           </div>
         </div>

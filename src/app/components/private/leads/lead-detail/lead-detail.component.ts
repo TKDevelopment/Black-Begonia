@@ -34,7 +34,6 @@ import {
   LeadConvertModalComponent,
   LeadConvertPayload,
 } from '../components/lead-convert-modal/lead-convert-modal.component';
-import { ConfirmDialogComponent } from '../../../../shared/components/private/confirm-dialog/confirm-dialog.component';
 import { LeadProposalHistoryCardComponent } from '../components/lead-proposal-history-card/lead-proposal-history-card.component';
 import { LeadUpsertModalComponent } from '../components/lead-upsert-modal/lead-upsert-modal.component';
 import { LeadUpsertPayload } from '../components/lead-upsert-modal/lead-upsert.types';
@@ -73,7 +72,6 @@ type BadgeTone =
     LeadDeclineModalComponent,
     TaskListPanelComponent,
     LeadConvertModalComponent,
-    ConfirmDialogComponent,
     LeadProposalHistoryCardComponent,
     LeadUpsertModalComponent,
     TaskUpsertModalComponent,
@@ -133,8 +131,6 @@ export class LeadDetailComponent implements OnInit {
   editingNoteDraft = signal('');
   editingNoteError = signal<string | null>(null);
   deletingNoteId = signal<string | null>(null);
-
-  confirmDialogOpen = signal(false);
 
   private currentLeadId = signal<string | null>(null);
 
@@ -713,6 +709,43 @@ export class LeadDetailComponent implements OnInit {
     this.editModalOpen.set(true);
   }
 
+  async requestDeleteLead(): Promise<void> {
+    const lead = this.lead();
+    if (
+      !lead ||
+      this.actionLoading() ||
+      this.proposalSubmitting() ||
+      this.editSaving() ||
+      this.noteSaving() ||
+      this.taskSaving() ||
+      this.inspirationUploadLoading()
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${this.title()} permanently? This cannot be undone. If the lead is still linked to existing CRM records, deletion will be blocked.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      this.actionLoading.set(true);
+      await this.leadRepository.deleteLead(lead.lead_id);
+      this.toast.showToast('Lead deleted permanently.', 'success');
+      await this.router.navigate(['/admin/leads']);
+    } catch (error) {
+      console.error('[LeadDetailComponent] requestDeleteLead error:', error);
+      const message = this.getDeleteLeadErrorMessage(error);
+      this.error.set(message);
+      this.toast.showToast(message, 'error');
+    } finally {
+      this.actionLoading.set(false);
+    }
+  }
+
   closeEditModal(): void {
     this.editModalOpen.set(false);
   }
@@ -1095,6 +1128,28 @@ export class LeadDetailComponent implements OnInit {
     return Object.entries(updates)
       .filter(([key, value]) => currentValues[key] !== value)
       .map(([key]) => labels[key] ?? key.replace(/_/g, ' '));
+  }
+
+  private getDeleteLeadErrorMessage(error: unknown): string {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String(error['code'] ?? '')
+        : '';
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String(error['message'] ?? '').toLowerCase()
+        : '';
+
+    if (
+      code === '23503' ||
+      message.includes('foreign key') ||
+      message.includes('constraint') ||
+      message.includes('referenc')
+    ) {
+      return 'This lead is still linked to existing CRM records and cannot be deleted yet.';
+    }
+
+    return 'We were unable to delete this lead right now.';
   }
 
   get relatedTaskItems(): TaskListItem[] {

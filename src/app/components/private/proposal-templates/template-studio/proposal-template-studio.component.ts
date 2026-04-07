@@ -69,7 +69,7 @@ export class ProposalTemplateStudioComponent implements AfterViewInit, OnDestroy
   readonly draftSavedAt = computed(() => this.lastDraftSavedAt());
   readonly rendererLabel = computed(() => {
     const template = this.template();
-    return getProposalRendererOption(resolveTemplateRendererKey(template))?.label ?? 'General Event';
+    return getProposalRendererOption(resolveTemplateRendererKey(template))?.label ?? 'Event Standard';
   });
 
   constructor() {

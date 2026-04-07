@@ -5,7 +5,6 @@ import { Router } from '@angular/router';
 
 import {
   DocumentTemplate,
-  GrapesJsStoredTemplateConfig,
 } from '../../../core/models/floral-proposal';
 import { GrapeJsTemplateStudioService } from '../../../core/proposal-templates/grapejs-template-studio.service';
 import {
@@ -13,6 +12,8 @@ import {
   resolveTemplateRendererKey,
   withTemplateRendererKey,
 } from '../../../core/proposal-templates/proposal-renderer-registry';
+import { withTemplateServiceProfile } from '../../../core/proposal-templates/proposal-template-service-profile';
+import { getProposalTemplateServiceProfilePreset } from '../../../core/proposal-templates/proposal-template-presets';
 import { ToastService } from '../../../core/services/toast.service';
 import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
 import { DocumentTemplateService } from '../../../core/supabase/services/document-template.service';
@@ -126,10 +127,12 @@ export class ProposalTemplatesComponent implements OnInit {
           template_key: payload.template_key,
           is_active: payload.is_active,
           is_default: payload.is_default,
-          show_terms_section: payload.show_terms_section,
-          show_privacy_section: payload.show_privacy_section,
-          show_signature_section: payload.show_signature_section,
-          template_config: withTemplateRendererKey({}, payload.renderer_key),
+          template_config: withTemplateServiceProfile(
+            withTemplateRendererKey({}, payload.renderer_key),
+            Object.keys(payload.service_profile).length
+              ? payload.service_profile
+              : getProposalTemplateServiceProfilePreset(payload.renderer_key)
+          ),
         });
 
         this.resetModalState();
@@ -149,9 +152,6 @@ export class ProposalTemplatesComponent implements OnInit {
         template_key: payload.template_key,
         is_active: payload.is_active,
         is_default: payload.is_default,
-        show_terms_section: payload.show_terms_section,
-        show_privacy_section: payload.show_privacy_section,
-        show_signature_section: payload.show_signature_section,
         template_config: this.buildTemplateConfig(template, payload),
       });
 
@@ -183,6 +183,34 @@ export class ProposalTemplatesComponent implements OnInit {
     }
   }
 
+  async deleteTemplate(template: DocumentTemplate): Promise<void> {
+    try {
+      this.saving.set(true);
+      await this.documentTemplateService.deleteTemplate(template);
+      this.toast.showToast('Proposal template deleted permanently.', 'success');
+      await this.loadTemplates();
+    } catch (error) {
+      console.error('[ProposalTemplatesComponent] deleteTemplate error:', error);
+      this.toast.showToast(this.getDeleteTemplateErrorMessage(error), 'error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async requestDeleteTemplate(template: DocumentTemplate): Promise<void> {
+    if (this.saving()) return;
+
+    const confirmed = window.confirm(
+      `Delete ${template.name} permanently? This cannot be undone. If the template is still linked to existing floral proposals, deletion will be blocked.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await this.deleteTemplate(template);
+  }
+
   openStudio(template: DocumentTemplate): void {
     void this.router.navigate(['/admin/proposal-templates', template.template_id, 'studio']);
   }
@@ -190,7 +218,7 @@ export class ProposalTemplatesComponent implements OnInit {
   getRendererLabel(template: DocumentTemplate): string {
     return (
       getProposalRendererOption(resolveTemplateRendererKey(template))?.label ??
-      'General Event'
+      'Event Standard'
     );
   }
 
@@ -201,22 +229,40 @@ export class ProposalTemplatesComponent implements OnInit {
     const existingStoredConfig = this.templateStudio.getStoredConfig(template);
 
     if (existingStoredConfig) {
-      const nextStoredConfig: GrapesJsStoredTemplateConfig = {
-        ...existingStoredConfig,
-        settings: {
-          ...existingStoredConfig.settings,
-          show_terms_section: payload.show_terms_section,
-          show_privacy_section: payload.show_privacy_section,
-          show_signature_section: payload.show_signature_section,
-        },
-      };
-
       return withTemplateRendererKey(
-        this.templateStudio.buildTemplateConfig(template, nextStoredConfig),
+        withTemplateServiceProfile(
+          this.templateStudio.buildTemplateConfig(template, existingStoredConfig),
+          payload.service_profile
+        ),
         payload.renderer_key
       );
     }
 
-    return withTemplateRendererKey(template.template_config, payload.renderer_key);
+    return withTemplateRendererKey(
+      withTemplateServiceProfile(template.template_config, payload.service_profile),
+      payload.renderer_key
+    );
+  }
+
+  private getDeleteTemplateErrorMessage(error: unknown): string {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String(error['code'] ?? '')
+        : '';
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String(error['message'] ?? '').toLowerCase()
+        : '';
+
+    if (
+      code === '23503' ||
+      message.includes('foreign key') ||
+      message.includes('constraint') ||
+      message.includes('referenc')
+    ) {
+      return 'This template is still linked to existing proposal records and cannot be deleted yet.';
+    }
+
+    return 'We were unable to delete the proposal template right now.';
   }
 }

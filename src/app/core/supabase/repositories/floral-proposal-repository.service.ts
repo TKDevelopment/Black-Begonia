@@ -65,9 +65,6 @@ export class FloralProposalRepositoryService {
       is_active,
       logo_storage_path,
       logo_url,
-      show_terms_section,
-      show_privacy_section,
-      show_signature_section,
       template_config,
       created_at,
       updated_at

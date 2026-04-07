@@ -2,6 +2,9 @@ import { Injectable } from '@angular/core';
 
 import { Lead } from '../../models/lead';
 import {
+  normalizeFloralServiceEventType,
+} from '../../floral-services/floral-service-catalog';
+import {
   DocumentTemplate,
   FloralProposal,
   GrapesJsStoredTemplateConfig,
@@ -10,7 +13,10 @@ import {
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
 import { TaxRegion } from '../../models/tax-region';
-import { getTemplateRendererKey } from '../../proposal-templates/proposal-renderer-registry';
+import {
+  deriveProposalRendererKeyFromServiceType,
+  getTemplateRendererKey,
+} from '../../proposal-templates/proposal-renderer-registry';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
@@ -356,25 +362,18 @@ export class FloralProposalWorkflowService {
         template_id: input.template?.template_id ?? input.renderPayload.template_id ?? null,
         name: input.template?.name ?? input.renderPayload.template_name ?? null,
         template_key: input.template?.template_key ?? null,
-        renderer_key: getTemplateRendererKey(input.template),
+        renderer_key:
+          getTemplateRendererKey(input.template) ??
+          deriveProposalRendererKeyFromServiceType(
+            input.lead.service_type,
+            normalizeFloralServiceEventType(input.lead.event_type)
+          ),
         primary_color: grapeJsConfig?.theme?.primary_color ?? null,
         accent_color: grapeJsConfig?.theme?.accent_color ?? null,
         heading_font_family: grapeJsConfig?.theme?.heading_font_family ?? null,
         body_font_family: grapeJsConfig?.theme?.body_font_family ?? null,
         logo_url: templateLogoUrl,
         show_intro_message: false,
-        show_terms_section:
-          grapeJsConfig?.settings?.show_terms_section ??
-          input.template?.show_terms_section ??
-          true,
-        show_privacy_section:
-          grapeJsConfig?.settings?.show_privacy_section ??
-          input.template?.show_privacy_section ??
-          true,
-        show_signature_section:
-          grapeJsConfig?.settings?.show_signature_section ??
-          input.template?.show_signature_section ??
-          true,
         template_config: input.template?.template_config ?? {},
       },
       tax_region: {

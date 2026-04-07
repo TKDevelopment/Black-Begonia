@@ -1,11 +1,10 @@
-export type ProposalRendererKey =
-  | 'wedding-full-service'
-  | 'wedding-ceremony-only'
-  | 'wedding-reception-only'
-  | 'elopement'
-  | 'engagement'
-  | 'bridal-shower'
-  | 'general-event';
+import {
+  findFloralService,
+  FloralServiceEventType,
+} from '../floral-services/floral-service-catalog';
+import { ProposalRendererKey } from './proposal-renderer.types';
+
+export type { ProposalRendererKey } from './proposal-renderer.types';
 
 export interface ProposalRendererOption {
   key: ProposalRendererKey;
@@ -46,8 +45,28 @@ export const PROPOSAL_RENDERER_OPTIONS: ProposalRendererOption[] = [
   },
   {
     key: 'general-event',
-    label: 'General Event',
+    label: 'Event Standard',
     description: 'Flexible event rendering for parties, corporate work, and non-wedding services.',
+  },
+  {
+    key: 'memorial',
+    label: 'Memorial Florals',
+    description: 'Sensitive service framing for memorials, sympathy work, and celebration-of-life florals.',
+  },
+  {
+    key: 'flower-bar',
+    label: 'Flower Bar',
+    description: 'Interactive flower bar rendering with setup-focused language and payment timing.',
+  },
+  {
+    key: 'workshop-private',
+    label: 'Private Workshop',
+    description: 'Workshop-specific rendering for hosted floral classes and project-based instruction.',
+  },
+  {
+    key: 'basic-agreement',
+    label: 'Basic Agreement',
+    description: 'Service agreement rendering for subscriptions, private lessons, and non-proposal engagements.',
   },
 ];
 
@@ -71,8 +90,15 @@ export function normalizeProposalRendererKey(
 }
 
 export function deriveProposalRendererKeyFromServiceType(
-  value: string | null | undefined
+  value: string | null | undefined,
+  eventType?: FloralServiceEventType | null
 ): ProposalRendererKey {
+  const matchedService = findFloralService(value, eventType);
+
+  if (matchedService) {
+    return matchedService.rendererKey;
+  }
+
   const normalized = normalizeRendererHint(value);
 
   if (!normalized) {
@@ -101,6 +127,30 @@ export function deriveProposalRendererKeyFromServiceType(
 
   if (normalized.includes('bridal shower')) {
     return 'bridal-shower';
+  }
+
+  if (
+    normalized.includes('memorial') ||
+    normalized.includes('funeral') ||
+    normalized.includes('celebration of life')
+  ) {
+    return 'memorial';
+  }
+
+  if (normalized.includes('flower bar')) {
+    return 'flower-bar';
+  }
+
+  if (normalized.includes('workshop')) {
+    return 'workshop-private';
+  }
+
+  if (
+    normalized.includes('subscription') ||
+    normalized.includes('lesson') ||
+    normalized.includes('agreement')
+  ) {
+    return 'basic-agreement';
   }
 
   if (normalized.includes('wedding')) {

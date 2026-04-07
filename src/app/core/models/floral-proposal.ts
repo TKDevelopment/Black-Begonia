@@ -62,9 +62,6 @@ export interface FloralProposalRenderTemplateContext {
   show_intro_message?: boolean;
   intro_title?: string | null;
   intro_body?: string | null;
-  show_terms_section?: boolean;
-  show_privacy_section?: boolean;
-  show_signature_section?: boolean;
   agreement_clauses?: Record<string, unknown>[];
   header_content?: Record<string, unknown>;
   footer_content?: Record<string, unknown>;
@@ -149,9 +146,6 @@ export interface DocumentTemplate {
   is_default: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  show_terms_section: boolean;
-  show_privacy_section: boolean;
-  show_signature_section: boolean;
   template_config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -168,11 +162,6 @@ export interface GrapesJsStoredTemplateConfig {
     accent_color?: string | null;
     heading_font_family?: string | null;
     body_font_family?: string | null;
-  };
-  settings?: {
-    show_terms_section?: boolean;
-    show_privacy_section?: boolean;
-    show_signature_section?: boolean;
   };
 }
 
@@ -303,9 +292,6 @@ export interface DocumentTemplateUpsertInput {
   is_default?: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  show_terms_section?: boolean;
-  show_privacy_section?: boolean;
-  show_signature_section?: boolean;
   template_config?: Record<string, unknown>;
 }
 

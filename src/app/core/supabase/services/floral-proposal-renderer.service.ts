@@ -5,11 +5,19 @@ import {
   FloralProposalRenderContract,
   FloralProposalRenderLineItem,
 } from '../../models/floral-proposal';
+import { normalizeFloralServiceEventType } from '../../floral-services/floral-service-catalog';
 import {
   ProposalRendererKey,
   deriveProposalRendererKeyFromServiceType,
 } from '../../proposal-templates/proposal-renderer-registry';
-import { getProposalRendererStrategy } from '../../proposal-templates/proposal-renderer-strategies';
+import {
+  getProposalRendererStrategy,
+  ProposalRendererStrategy,
+} from '../../proposal-templates/proposal-renderer-strategies';
+import {
+  applyTemplateServiceProfile,
+  getTemplateServiceProfile,
+} from '../../proposal-templates/proposal-template-service-profile';
 
 interface ProposalHeaderDetailRow {
   label: string;
@@ -43,7 +51,7 @@ export class FloralProposalRendererService {
     return `
       <html>
         <head>
-          <title>Floral Proposal ${contract.proposal_version ? `v${contract.proposal_version}` : ''}</title>
+          <title>${this.escapeHtml(this.getDocumentTitle(contract))}${contract.proposal_version ? ` v${contract.proposal_version}` : ''}</title>
           <style>
             :root {
               --proposal-primary: ${primaryColor};
@@ -641,23 +649,10 @@ export class FloralProposalRendererService {
         ? this.renderCompactStarterLineItems(contract, publishedLineItemsStyle)
         : this.renderLineItemsSection(contract, publishedLineItemsStyle),
       'proposal-totals': this.renderTotals(contract, useStarterTemplateRuntime),
-      'proposal-terms': contract.template.show_terms_section
-        ? this.renderContractEventDetailsSection(contract) + this.renderPaymentTermsSection(contract)
-        : '',
-      'proposal-privacy': contract.template.show_privacy_section
-        ? `
-          <section class="agreement-section">
-            <p class="proposal-eyebrow">Privacy</p>
-            <h2 class="section-title">Privacy Policy</h2>
-            <div class="agreement-copy">
-              <p>Your contact information and event details are used solely for proposal preparation, booking communication, and service fulfillment.</p>
-            </div>
-          </section>
-        `
-        : '',
-      'proposal-signature': contract.template.show_signature_section
-        ? this.renderSignatureSection(contract)
-        : '',
+      'proposal-terms':
+        this.renderContractEventDetailsSection(contract) + this.renderPaymentTermsSection(contract),
+      'proposal-privacy': this.renderPrivacySection(contract),
+      'proposal-signature': this.renderSignatureSection(contract),
       'proposal-footer': this.renderFooter(contract),
     };
 
@@ -671,7 +666,7 @@ export class FloralProposalRendererService {
     return `
       <html>
         <head>
-          <title>${this.escapeHtml(contract.template.name || 'Floral Proposal')}</title>
+          <title>${this.escapeHtml(contract.template.name || this.getDocumentTitle(contract))}</title>
           <style>
             ${config?.published_css ?? ''}
             ${this.buildBaseStyles(contract)}
@@ -809,22 +804,41 @@ export class FloralProposalRendererService {
   }
 
   private buildTemplateFieldValues(
-    contract: FloralProposalRenderContract
+    contract: FloralProposalRenderContract,
+    strategy = this.getRendererStrategy(contract)
   ): Record<string, string> {
-    const strategy = this.getRendererStrategy(contract);
-
     return {
       agreement_title: strategy.agreementTitle,
       client_name: this.formatCustomerName(contract),
       customer_name: this.formatCustomerName(contract),
-      delivery_setup_location: this.formatDeliverySetupLocation(contract),
+      delivery_setup_location: this.formatDeliverySetupLocation(contract, strategy),
+      delivery_location_label: strategy.deliveryLocationLabel,
+      details_section_title: strategy.detailsSectionTitle,
+      document_title: strategy.documentTitle,
       event_date: this.formatContractDate(contract.lead.event_date),
       event_type: this.formatEventType(contract),
-      event_location_city_state: this.formatEventLocationCityState(contract),
-      final_balance_due_date: this.formatFinalBalanceDueDate(contract.lead.event_date),
+      event_location_city_state: this.formatEventLocationCityState(contract, strategy),
+      final_balance_due_date: this.formatFinalBalanceDueValue(contract, strategy),
+      final_balance_label: strategy.finalBalanceLabel,
+      investment_title: strategy.investmentTitle,
+      late_payment_label: strategy.latePaymentLabel,
+      late_payment_copy: strategy.latePaymentCopy,
+      line_items_kicker: strategy.lineItemsKicker,
+      line_items_title: strategy.lineItemsTitle,
+      payment_terms_title: strategy.paymentTermsTitle,
+      pricing_eyebrow: strategy.pricingEyebrow,
       proposal_created_date: this.formatShortDate(contract.generated_at),
+      privacy_copy: strategy.privacyCopy,
+      privacy_title: strategy.privacyTitle,
       reception_type: this.formatDisplay(contract.lead.service_type, 'Not set'),
+      retainer_label: strategy.retainerLabel,
+      retainer_copy: strategy.retainerCopy,
+      service_date_label: strategy.serviceDateLabel,
       service_type: this.formatDisplay(contract.lead.service_type, 'Not set'),
+      service_type_label: strategy.serviceTypeLabel,
+      signature_title: strategy.signatureTitle,
+      florist_signature_party: strategy.floristSignatureParty,
+      client_signature_party: strategy.clientSignatureParty,
     };
   }
 
@@ -1477,6 +1491,12 @@ export class FloralProposalRendererService {
       .contract-table td {
         color: var(--proposal-muted);
       }
+      .contract-table td p {
+        margin: 0 0 10px;
+      }
+      .contract-table td p:last-child {
+        margin-bottom: 0;
+      }
       .contract-field {
         display: inline-block;
         min-width: 140px;
@@ -1686,7 +1706,7 @@ export class FloralProposalRendererService {
   private renderHeader(contract: FloralProposalRenderContract): string {
     return this.renderProposalEventHeader(
       contract,
-      contract.template.name || 'Floral Proposal'
+      contract.template.name || this.getDocumentTitle(contract)
     );
   }
 
@@ -1772,13 +1792,15 @@ export class FloralProposalRendererService {
   }
 
   private renderCompactLineItemsSection(contract: FloralProposalRenderContract): string {
+    const strategy = this.getRendererStrategy(contract);
+
     return `
       <section class="line-items compact-line-items-shell">
         <div class="compact-line-items">
           <div class="compact-line-items-header">
             <div>
-              <div class="compact-line-items-kicker">Selections</div>
-              <h3 class="compact-line-items-title">Floral Line Items</h3>
+              <div class="compact-line-items-kicker">${this.escapeHtml(strategy.lineItemsKicker)}</div>
+              <h3 class="compact-line-items-title">${this.escapeHtml(strategy.lineItemsTitle)}</h3>
             </div>
             <div class="compact-line-items-count">${contract.line_items.length} items</div>
           </div>
@@ -1899,7 +1921,10 @@ export class FloralProposalRendererService {
   }
 
   private renderCompactStarterHeader(contract: FloralProposalRenderContract): string {
-    return this.renderProposalEventHeader(contract, 'Black Begonia Floral Proposal');
+    return this.renderProposalEventHeader(
+      contract,
+      `Black Begonia ${this.getDocumentTitle(contract)}`
+    );
   }
 
   private renderCompactStarterIntro(contract: FloralProposalRenderContract): string {
@@ -1923,10 +1948,12 @@ export class FloralProposalRendererService {
     contract: FloralProposalRenderContract,
     compact = false
   ): string {
+    const strategy = this.getRendererStrategy(contract);
+
     return `
       <section class="totals-card${compact ? ' compact' : ''}">
-        <p class="proposal-eyebrow">Pricing</p>
-        <h2 class="section-title" style="font-size:30px;">Investment</h2>
+        <p class="proposal-eyebrow">${this.escapeHtml(strategy.pricingEyebrow)}</p>
+        <h2 class="section-title" style="font-size:30px;">${this.escapeHtml(strategy.investmentTitle)}</h2>
         <div class="totals-row"><span>Products</span><span>${this.formatCurrency(contract.totals.products_total)}</span></div>
         <div class="totals-row"><span>Labor</span><span>${this.formatCurrency(contract.totals.labor_total)}</span></div>
         <div class="totals-row"><span>Fees</span><span>${this.formatCurrency(contract.totals.fees_total)}</span></div>
@@ -1939,30 +1966,26 @@ export class FloralProposalRendererService {
   }
 
   private renderAgreementSections(contract: FloralProposalRenderContract): string {
-    const sections: string[] = [];
+    return [
+      this.renderContractEventDetailsSection(contract),
+      this.renderPaymentTermsSection(contract),
+      this.renderPrivacySection(contract),
+      this.renderSignatureSection(contract),
+    ].join('');
+  }
 
-    if (contract.template.show_terms_section) {
-      sections.push(this.renderContractEventDetailsSection(contract));
-      sections.push(this.renderPaymentTermsSection(contract));
-    }
+  private renderPrivacySection(contract: FloralProposalRenderContract): string {
+    const strategy = this.getRendererStrategy(contract);
 
-    if (contract.template.show_privacy_section) {
-      sections.push(`
-        <section class="agreement-section">
-          <p class="proposal-eyebrow">Privacy</p>
-          <h2 class="section-title">Privacy Policy</h2>
-          <div class="agreement-copy">
-            <p>Your contact information and event details are used solely for proposal preparation, booking communication, and service fulfillment.</p>
-          </div>
-        </section>
-      `);
-    }
-
-    if (contract.template.show_signature_section) {
-      sections.push(this.renderSignatureSection(contract));
-    }
-
-    return sections.join('');
+    return `
+      <section class="agreement-section">
+        <p class="proposal-eyebrow">Privacy</p>
+        <h2 class="section-title">${this.escapeHtml(strategy.privacyTitle)}</h2>
+        <div class="agreement-copy">
+          ${this.renderCopyParagraphs(strategy.privacyCopy)}
+        </div>
+      </section>
+    `;
   }
 
   private renderFooter(contract: FloralProposalRenderContract): string {
@@ -1971,7 +1994,7 @@ export class FloralProposalRendererService {
     if (footerLayout === 'formal') {
       return `
         <div class="proposal-footer formal">
-          <span>${this.escapeHtml(contract.template.name || 'Floral Proposal')}</span>
+          <span>${this.escapeHtml(contract.template.name || this.getDocumentTitle(contract))}</span>
           <span>${this.escapeHtml(this.formatDateTime(contract.generated_at))}</span>
         </div>
       `;
@@ -1980,14 +2003,14 @@ export class FloralProposalRendererService {
     if (footerLayout === 'minimal') {
       return `
         <div class="proposal-footer minimal">
-          ${this.escapeHtml(contract.template.name || 'Floral Proposal')}
+          ${this.escapeHtml(contract.template.name || this.getDocumentTitle(contract))}
         </div>
       `;
     }
 
     return `
       <div class="proposal-footer signature_focused">
-        <span>${this.escapeHtml(contract.template.name || 'Floral Proposal')}</span>
+        <span>${this.escapeHtml(contract.template.name || this.getDocumentTitle(contract))}</span>
         <span>Prepared for ${this.escapeHtml(contract.lead.first_name)} ${this.escapeHtml(contract.lead.last_name)}</span>
       </div>
     `;
@@ -1998,22 +2021,24 @@ export class FloralProposalRendererService {
   }
 
   private renderContractEventDetailsSection(contract: FloralProposalRenderContract): string {
+    const strategy = this.getRendererStrategy(contract);
+
     return `
       <section class="agreement-section">
         <p class="proposal-eyebrow">Contract</p>
-        <h2 class="section-title">1. Event Details</h2>
+        <h2 class="section-title">${this.escapeHtml(strategy.detailsSectionTitle)}</h2>
         <table class="contract-table">
           <tbody>
             <tr>
-              <th>Service Type</th>
+              <th>${this.escapeHtml(strategy.serviceTypeLabel)}</th>
               <td><span class="contract-field">${this.escapeHtml(this.formatDisplay(contract.lead.service_type, 'Not set'))}</span></td>
             </tr>
             <tr>
-              <th>Event Date</th>
+              <th>${this.escapeHtml(strategy.serviceDateLabel)}</th>
               <td><span class="contract-field">${this.escapeHtml(this.formatContractDate(contract.lead.event_date))}</span></td>
             </tr>
             <tr>
-              <th>Delivery & Setup Location</th>
+              <th>${this.escapeHtml(strategy.deliveryLocationLabel)}</th>
               <td><span class="contract-field">${this.escapeHtml(this.formatDeliverySetupLocation(contract))}</span></td>
             </tr>
           </tbody>
@@ -2028,20 +2053,20 @@ export class FloralProposalRendererService {
     return `
       <section class="agreement-section">
         <p class="proposal-eyebrow">Contract</p>
-        <h2 class="section-title">4. Payment Terms</h2>
+        <h2 class="section-title">${this.escapeHtml(strategy.paymentTermsTitle)}</h2>
         <table class="contract-table">
           <tbody>
             <tr>
-              <th>Retainer</th>
-              <td>${this.escapeHtml(strategy.retainerCopy)}</td>
+              <th>${this.escapeHtml(strategy.retainerLabel)}</th>
+              <td>${this.renderCopyParagraphs(strategy.retainerCopy)}</td>
             </tr>
             <tr>
-              <th>Final Balance Due Date</th>
-              <td><span class="contract-field">${this.escapeHtml(this.formatFinalBalanceDueDate(contract.lead.event_date))}</span></td>
+              <th>${this.escapeHtml(strategy.finalBalanceLabel)}</th>
+              <td><span class="contract-field">${this.escapeHtml(this.formatFinalBalanceDueValue(contract))}</span></td>
             </tr>
             <tr>
-              <th>Late Payments</th>
-              <td>${this.escapeHtml(strategy.latePaymentCopy)}</td>
+              <th>${this.escapeHtml(strategy.latePaymentLabel)}</th>
+              <td>${this.renderCopyParagraphs(strategy.latePaymentCopy)}</td>
             </tr>
           </tbody>
         </table>
@@ -2050,12 +2075,14 @@ export class FloralProposalRendererService {
   }
 
   private renderSignatureSection(contract: FloralProposalRenderContract): string {
+    const strategy = this.getRendererStrategy(contract);
+
     return `
       <section class="agreement-section signature-section">
         <p class="proposal-eyebrow">Acceptance</p>
-        <h2 class="section-title">Signature & Acceptance</h2>
+        <h2 class="section-title">${this.escapeHtml(strategy.signatureTitle)}</h2>
         <div class="signature-card">
-          <p class="signature-party">Black Begonia Floral Design, LLC</p>
+          <p class="signature-party">${this.escapeHtml(strategy.floristSignatureParty)}</p>
           <div class="signature-grid">
             <div class="signature-line">
               <span>Signature</span>
@@ -2072,7 +2099,7 @@ export class FloralProposalRendererService {
           </div>
         </div>
         <div class="signature-card">
-          <p class="signature-party">${this.escapeHtml(this.formatCustomerName(contract))}</p>
+          <p class="signature-party">${this.escapeHtml(strategy.clientSignatureParty)}</p>
           <div class="signature-grid">
             <div class="signature-line">
               <span>Signature</span>
@@ -2326,19 +2353,42 @@ export class FloralProposalRendererService {
     return `(${areaCode}) ${prefix}-${lineNumber}`;
   }
 
-  private formatFinalBalanceDueDate(value: string | null | undefined): string {
-    if (!value) return '30 days prior to event';
+  private formatFinalBalanceDueValue(
+    contract: FloralProposalRenderContract,
+    strategy = this.getRendererStrategy(contract)
+  ): string {
+    switch (strategy.finalBalanceMode) {
+      case 'event-minus-14':
+        return this.formatRelativeDueDate(contract.lead.event_date, 14, strategy.finalBalanceFallback);
+      case 'upon-approval':
+      case 'subscription-schedule':
+        return strategy.finalBalanceFallback;
+      case 'event-minus-30':
+      default:
+        return this.formatRelativeDueDate(contract.lead.event_date, 30, strategy.finalBalanceFallback);
+    }
+  }
+
+  private formatRelativeDueDate(
+    value: string | null | undefined,
+    daysBeforeEvent: number,
+    fallback: string
+  ): string {
+    if (!value) return fallback;
 
     const date = new Date(value);
-    date.setDate(date.getDate() - 30);
+    date.setDate(date.getDate() - daysBeforeEvent);
     return this.formatContractDate(date.toISOString());
   }
 
-  private formatDeliverySetupLocation(contract: FloralProposalRenderContract): string {
+  private formatDeliverySetupLocation(
+    contract: FloralProposalRenderContract,
+    strategy = this.getRendererStrategy(contract)
+  ): string {
     const ceremonyLocation = this.formatCeremonyLocation(contract);
     const receptionLocation = this.formatReceptionLocation(contract);
 
-    switch (this.getRendererStrategy(contract).deliveryLocationMode) {
+    switch (strategy.deliveryLocationMode) {
       case 'dual-venue': {
         const parts = [
           ceremonyLocation !== 'Location to be confirmed' ? `Ceremony: ${ceremonyLocation}` : '',
@@ -2357,8 +2407,11 @@ export class FloralProposalRendererService {
     return preferredLocation !== 'Location to be confirmed' ? preferredLocation : 'To be confirmed';
   }
 
-  private formatEventLocationCityState(contract: FloralProposalRenderContract): string {
-    if (this.getRendererStrategy(contract).cityStatePreference === 'reception') {
+  private formatEventLocationCityState(
+    contract: FloralProposalRenderContract,
+    strategy = this.getRendererStrategy(contract)
+  ): string {
+    if (strategy.cityStatePreference === 'reception') {
       const receptionLocation = [
         contract.lead.reception_venue_city,
         contract.lead.reception_venue_state,
@@ -2397,12 +2450,80 @@ export class FloralProposalRendererService {
   ): ProposalRendererKey {
     return (
       contract.template.renderer_key ??
-      deriveProposalRendererKeyFromServiceType(contract.lead.service_type)
+      deriveProposalRendererKeyFromServiceType(
+        contract.lead.service_type,
+        normalizeFloralServiceEventType(contract.lead.event_type)
+      )
     );
   }
 
   private getRendererStrategy(contract: FloralProposalRenderContract) {
-    return getProposalRendererStrategy(this.resolveRendererKey(contract));
+    const baseStrategy = applyTemplateServiceProfile(
+      getProposalRendererStrategy(this.resolveRendererKey(contract)),
+      getTemplateServiceProfile(contract.template)
+    );
+    const firstPassFields = this.buildTemplateFieldValues(contract, baseStrategy);
+    const firstPassStrategy = this.resolveRendererStrategyTemplates(baseStrategy, firstPassFields);
+    const secondPassFields = this.buildTemplateFieldValues(contract, firstPassStrategy);
+
+    return this.resolveRendererStrategyTemplates(firstPassStrategy, secondPassFields);
+  }
+
+  private resolveRendererStrategyTemplates(
+    strategy: ProposalRendererStrategy,
+    fieldValues: Record<string, string>
+  ): ProposalRendererStrategy {
+    return {
+      ...strategy,
+      documentTitle: this.renderTemplateTokens(strategy.documentTitle, fieldValues),
+      agreementTitle: this.renderTemplateTokens(strategy.agreementTitle, fieldValues),
+      lineItemsKicker: this.renderTemplateTokens(strategy.lineItemsKicker, fieldValues),
+      lineItemsTitle: this.renderTemplateTokens(strategy.lineItemsTitle, fieldValues),
+      pricingEyebrow: this.renderTemplateTokens(strategy.pricingEyebrow, fieldValues),
+      investmentTitle: this.renderTemplateTokens(strategy.investmentTitle, fieldValues),
+      detailsSectionTitle: this.renderTemplateTokens(strategy.detailsSectionTitle, fieldValues),
+      serviceTypeLabel: this.renderTemplateTokens(strategy.serviceTypeLabel, fieldValues),
+      serviceDateLabel: this.renderTemplateTokens(strategy.serviceDateLabel, fieldValues),
+      deliveryLocationLabel: this.renderTemplateTokens(strategy.deliveryLocationLabel, fieldValues),
+      paymentTermsTitle: this.renderTemplateTokens(strategy.paymentTermsTitle, fieldValues),
+      retainerLabel: this.renderTemplateTokens(strategy.retainerLabel, fieldValues),
+      finalBalanceLabel: this.renderTemplateTokens(strategy.finalBalanceLabel, fieldValues),
+      finalBalanceFallback: this.renderTemplateTokens(strategy.finalBalanceFallback, fieldValues),
+      latePaymentLabel: this.renderTemplateTokens(strategy.latePaymentLabel, fieldValues),
+      retainerCopy: this.renderTemplateTokens(strategy.retainerCopy, fieldValues),
+      latePaymentCopy: this.renderTemplateTokens(strategy.latePaymentCopy, fieldValues),
+      privacyTitle: this.renderTemplateTokens(strategy.privacyTitle, fieldValues),
+      privacyCopy: this.renderTemplateTokens(strategy.privacyCopy, fieldValues),
+      signatureTitle: this.renderTemplateTokens(strategy.signatureTitle, fieldValues),
+      floristSignatureParty: this.renderTemplateTokens(
+        strategy.floristSignatureParty,
+        fieldValues
+      ),
+      clientSignatureParty: this.renderTemplateTokens(
+        strategy.clientSignatureParty,
+        fieldValues
+      ),
+    };
+  }
+
+  private renderTemplateTokens(value: string, fieldValues: Record<string, string>): string {
+    return value.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (_match, token) => {
+      const normalizedToken = String(token ?? '').toLowerCase();
+      return fieldValues[normalizedToken] ?? '';
+    });
+  }
+
+  private getDocumentTitle(contract: FloralProposalRenderContract): string {
+    return this.getRendererStrategy(contract).documentTitle;
+  }
+
+  private renderCopyParagraphs(copy: string): string {
+    return copy
+      .split(/\r?\n+/)
+      .map((paragraph) => paragraph.trim())
+      .filter((paragraph) => !!paragraph)
+      .map((paragraph) => `<p>${this.escapeHtml(paragraph)}</p>`)
+      .join('');
   }
 
   private formatCustomerName(contract: FloralProposalRenderContract): string {

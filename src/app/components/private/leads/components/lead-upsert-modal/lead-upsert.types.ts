@@ -1,5 +1,7 @@
+import { FloralServiceEventType } from '../../../../../core/floral-services/floral-service-catalog';
+
 export interface LeadUpsertPayload {
-  event_type: 'general' | 'wedding';
+  event_type: FloralServiceEventType;
   service_type: string;
   first_name: string;
   last_name: string;

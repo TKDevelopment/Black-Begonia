@@ -443,6 +443,15 @@
               >
                 Decline Lead
               </button>
+
+              <button
+                type="button"
+                (click)="requestDeleteLead()"
+                [disabled]="actionLoading() || proposalSubmitting() || editSaving() || noteSaving() || taskSaving() || inspirationUploadLoading()"
+                class="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 border-[#c97972] bg-[#fff7f5] text-[#8f2f28] hover:bg-[#fce8e5] hover:text-[#7f1d1d] dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-900/30 dark:hover:text-rose-100"
+              >
+                Delete
+              </button>
             </div>
           </div>
 
@@ -593,17 +602,6 @@
       [lead]="lead()"
       (close)="closeConvertModal()"
       (confirm)="confirmConvert($event)"
-    />
-
-    <app-confirm-dialog
-      [open]="confirmDialogOpen()"
-      [loading]="actionLoading()"
-      title="Confirm Action"
-      description="Are you sure you want to continue?"
-      confirmLabel="Confirm"
-      cancelLabel="Cancel"
-      (close)="confirmDialogOpen.set(false)"
-      (confirm)="confirmDialogOpen.set(false)"
     />
 
     <app-lead-upsert-modal
