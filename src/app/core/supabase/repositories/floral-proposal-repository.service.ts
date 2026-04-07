@@ -532,8 +532,6 @@ export class FloralProposalRepositoryService {
         items.map((item) => ({
           floral_proposal_shopping_list_id:
             shoppingList.floral_proposal_shopping_list_id,
-          vendor_id: item.vendor_id ?? null,
-          vendor_item_pack_id: item.vendor_item_pack_id ?? null,
           catalog_item_id: item.catalog_item_id ?? null,
           item_name: item.item_name,
           item_type: item.item_type,

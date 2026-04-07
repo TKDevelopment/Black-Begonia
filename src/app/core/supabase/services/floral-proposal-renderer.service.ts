@@ -5,6 +5,18 @@ import {
   FloralProposalRenderContract,
   FloralProposalRenderLineItem,
 } from '../../models/floral-proposal';
+import {
+  ProposalRendererKey,
+  deriveProposalRendererKeyFromServiceType,
+} from '../../proposal-templates/proposal-renderer-registry';
+import { getProposalRendererStrategy } from '../../proposal-templates/proposal-renderer-strategies';
+
+interface ProposalHeaderDetailRow {
+  label: string;
+  value: string;
+  sideLabel?: string;
+  sideValue?: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -219,19 +231,46 @@ export class FloralProposalRendererService {
             .proposal-event-details {
               margin-top: 8px;
               display: grid;
-              gap: 3px;
+              gap: 8px;
+              max-width: 760px;
+              margin-left: auto;
+              margin-right: auto;
             }
             .proposal-event-detail-row {
-              margin: 0;
+              margin: 0 auto;
+              width: fit-content;
+              max-width: 100%;
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: center;
+              gap: 8px 26px;
+              align-items: baseline;
               color: var(--proposal-primary);
               font-size: 12px;
               line-height: 1.25;
+              text-align: center;
+            }
+            .proposal-event-detail-main,
+            .proposal-event-detail-side {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: baseline;
+              gap: 6px;
+              justify-content: center;
             }
             .proposal-event-detail-label {
               font-weight: 700;
-              margin-right: 6px;
             }
             .proposal-event-detail-value {
+              color: rgba(31, 27, 25, 0.86);
+            }
+            .proposal-event-detail-side {
+              white-space: nowrap;
+            }
+            .proposal-event-detail-side-label {
+              font-weight: 700;
+            }
+            .proposal-event-detail-side-value {
               color: rgba(31, 27, 25, 0.86);
             }
             .line-items {
@@ -374,7 +413,7 @@ export class FloralProposalRendererService {
             }
             .immersive-line-item-copy {
               min-width: 0;
-              height: 175px;
+              height: auto;
               min-height: 175px;
               padding: 20px 24px;
               background: rgba(124, 148, 83, 0.18);
@@ -387,16 +426,20 @@ export class FloralProposalRendererService {
               width: 100%;
             }
             .immersive-line-item.no-media .immersive-line-item-copy {
-              height: 100px;
+              height: auto;
               min-height: 100px;
               padding-top: 14px;
               padding-bottom: 14px;
             }
             .immersive-line-item-heading {
-              display: flex;
-              justify-content: space-between;
-              gap: 18px;
-              align-items: start;
+              display: grid;
+              grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+              gap: 24px;
+              align-items: center;
+            }
+            .immersive-line-item-content {
+              min-width: 0;
+              text-align: left;
             }
             .immersive-line-item-type {
               color: rgba(31, 36, 23, 0.72);
@@ -422,12 +465,14 @@ export class FloralProposalRendererService {
               line-height: 1.5;
             }
             .immersive-line-item-pricing {
-              min-width: 128px;
+              min-width: 0;
+              align-self: center;
               text-align: right;
               color: rgba(31, 36, 23, 0.76);
               font-size: 14px;
               display: grid;
               gap: 6px;
+              justify-items: end;
             }
             .immersive-line-item-pricing strong {
               color: #1f2417;
@@ -766,7 +811,10 @@ export class FloralProposalRendererService {
   private buildTemplateFieldValues(
     contract: FloralProposalRenderContract
   ): Record<string, string> {
+    const strategy = this.getRendererStrategy(contract);
+
     return {
+      agreement_title: strategy.agreementTitle,
       client_name: this.formatCustomerName(contract),
       customer_name: this.formatCustomerName(contract),
       delivery_setup_location: this.formatDeliverySetupLocation(contract),
@@ -979,19 +1027,46 @@ export class FloralProposalRendererService {
       .proposal-event-details {
         margin-top: 8px;
         display: grid;
-        gap: 3px;
+        gap: 8px;
+        max-width: 760px;
+        margin-left: auto;
+        margin-right: auto;
       }
       .proposal-event-detail-row {
-        margin: 0;
+        margin: 0 auto;
+        width: fit-content;
+        max-width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 26px;
+        align-items: baseline;
         color: var(--proposal-primary);
         font-size: 12px;
         line-height: 1.25;
+        text-align: center;
+      }
+      .proposal-event-detail-main,
+      .proposal-event-detail-side {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px;
+        justify-content: center;
       }
       .proposal-event-detail-label {
         font-weight: 700;
-        margin-right: 6px;
       }
       .proposal-event-detail-value {
+        color: rgba(31, 27, 25, 0.86);
+      }
+      .proposal-event-detail-side {
+        white-space: nowrap;
+      }
+      .proposal-event-detail-side-label {
+        font-weight: 700;
+      }
+      .proposal-event-detail-side-value {
         color: rgba(31, 27, 25, 0.86);
       }
       .compact-starter-header {
@@ -1236,7 +1311,7 @@ export class FloralProposalRendererService {
       }
       .immersive-line-item-copy {
         min-width: 0;
-        height: 175px;
+        height: auto;
         min-height: 175px;
         padding: 18px 20px;
         background: rgba(124, 148, 83, 0.18);
@@ -1249,16 +1324,20 @@ export class FloralProposalRendererService {
         width: 100%;
       }
       .immersive-line-item.no-media .immersive-line-item-copy {
-        height: 100px;
+        height: auto;
         min-height: 100px;
         padding-top: 12px;
         padding-bottom: 12px;
       }
       .immersive-line-item-heading {
-        display: flex;
-        justify-content: space-between;
-        gap: 14px;
-        align-items: start;
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+        gap: 18px;
+        align-items: center;
+      }
+      .immersive-line-item-content {
+        min-width: 0;
+        text-align: left;
       }
       .immersive-line-item-type {
         color: rgba(31, 36, 23, 0.72);
@@ -1284,12 +1363,14 @@ export class FloralProposalRendererService {
         line-height: 1.45;
       }
       .immersive-line-item-pricing {
-        min-width: 96px;
+        min-width: 0;
+        align-self: center;
         text-align: right;
         color: rgba(31, 36, 23, 0.76);
         font-size: 12px;
         display: grid;
         gap: 4px;
+        justify-items: end;
       }
       .immersive-line-item-pricing strong {
         color: #1f2417;
@@ -1628,10 +1709,22 @@ export class FloralProposalRendererService {
           ${detailRows
             .map(
               (row) => `
-                <p class="proposal-event-detail-row">
-                  <span class="proposal-event-detail-label">${this.escapeHtml(row.label)}:</span>
-                  <span class="proposal-event-detail-value">${this.escapeHtml(row.value)}</span>
-                </p>
+                <div class="proposal-event-detail-row">
+                  <div class="proposal-event-detail-main">
+                    <span class="proposal-event-detail-label">${this.escapeHtml(row.label)}:</span>
+                    <span class="proposal-event-detail-value">${this.escapeHtml(row.value)}</span>
+                  </div>
+                  ${
+                    row.sideLabel && row.sideValue
+                      ? `
+                        <div class="proposal-event-detail-side">
+                          <span class="proposal-event-detail-side-label">${this.escapeHtml(row.sideLabel)}:</span>
+                          <span class="proposal-event-detail-side-value">${this.escapeHtml(row.sideValue)}</span>
+                        </div>
+                      `
+                      : ''
+                  }
+                </div>
               `
             )
             .join('')}
@@ -1772,7 +1865,7 @@ export class FloralProposalRendererService {
     const copyHtml = `
       <div class="immersive-line-item-copy">
         <div class="immersive-line-item-heading">
-          <div>
+          <div class="immersive-line-item-content">
             <span class="immersive-line-item-type">${this.escapeHtml(line.line_type_label)}</span>
             <h3 class="immersive-line-item-title">${this.escapeHtml(line.item_name)}</h3>
             ${
@@ -1912,7 +2005,7 @@ export class FloralProposalRendererService {
         <table class="contract-table">
           <tbody>
             <tr>
-              <th>Reception Type</th>
+              <th>Service Type</th>
               <td><span class="contract-field">${this.escapeHtml(this.formatDisplay(contract.lead.service_type, 'Not set'))}</span></td>
             </tr>
             <tr>
@@ -1930,6 +2023,8 @@ export class FloralProposalRendererService {
   }
 
   private renderPaymentTermsSection(contract: FloralProposalRenderContract): string {
+    const strategy = this.getRendererStrategy(contract);
+
     return `
       <section class="agreement-section">
         <p class="proposal-eyebrow">Contract</p>
@@ -1938,7 +2033,7 @@ export class FloralProposalRendererService {
           <tbody>
             <tr>
               <th>Retainer</th>
-              <td>A signed contract and non-refundable retainer are required to reserve the event date.</td>
+              <td>${this.escapeHtml(strategy.retainerCopy)}</td>
             </tr>
             <tr>
               <th>Final Balance Due Date</th>
@@ -1946,7 +2041,7 @@ export class FloralProposalRendererService {
             </tr>
             <tr>
               <th>Late Payments</th>
-              <td>Any payment received after the due date may delay production, delivery scheduling, or event execution.</td>
+              <td>${this.escapeHtml(strategy.latePaymentCopy)}</td>
             </tr>
           </tbody>
         </table>
@@ -2037,64 +2132,53 @@ export class FloralProposalRendererService {
 
   private getProposalHeaderDetailRows(
     contract: FloralProposalRenderContract
-  ): Array<{ label: string; value: string }> {
-    const serviceType = this.normalizeServiceType(contract.lead.service_type);
-
-    if (this.isFullServiceWedding(serviceType)) {
-      return [
-        {
-          label: 'Ceremony Venue',
-          value: this.formatCeremonyLocation(contract),
-        },
-        {
-          label: 'Ceremony Start',
-          value: this.formatEventTime(contract.lead.ceremony_start_time),
-        },
-        {
-          label: 'Reception Venue',
-          value: this.formatReceptionLocation(contract),
-        },
-        {
-          label: 'Reception Start',
-          value: this.formatEventTime(contract.lead.reception_start_time),
-        },
-      ];
-    }
-
-    if (this.isCeremonyOnlyWedding(serviceType)) {
-      return [
-        {
-          label: 'Venue',
-          value: this.formatCeremonyLocation(contract),
-        },
-        {
-          label: 'Ceremony Start',
-          value: this.formatEventTime(contract.lead.ceremony_start_time),
-        },
-      ];
-    }
-
-    if (this.isReceptionOnlyWedding(serviceType)) {
-      return [
-        {
-          label: 'Venue',
-          value: this.formatReceptionLocation(contract),
-        },
-        {
-          label: 'Reception Start',
-          value: this.formatEventTime(contract.lead.reception_start_time),
-        },
-      ];
+  ): ProposalHeaderDetailRow[] {
+    switch (this.getRendererStrategy(contract).detailLayout) {
+      case 'dual-venue':
+        return [
+          {
+            label: 'Ceremony Venue',
+            value: this.formatCeremonyLocation(contract),
+            sideLabel: 'Ceremony Start',
+            sideValue: this.formatEventTime(contract.lead.ceremony_start_time),
+          },
+          {
+            label: 'Reception Venue',
+            value: this.formatReceptionLocation(contract),
+            sideLabel: 'Reception Start',
+            sideValue: this.formatEventTime(contract.lead.reception_start_time),
+          },
+        ];
+      case 'ceremony-event':
+        return [
+          {
+            label: 'Venue',
+            value: this.formatCeremonyLocation(contract),
+            sideLabel: 'Event Start',
+            sideValue: this.formatEventTime(
+              contract.lead.ceremony_start_time ?? contract.lead.event_start_time
+            ),
+          },
+        ];
+      case 'reception-event':
+        return [
+          {
+            label: 'Venue',
+            value: this.formatReceptionLocation(contract),
+            sideLabel: 'Event Start',
+            sideValue: this.formatEventTime(
+              contract.lead.reception_start_time ?? contract.lead.event_start_time
+            ),
+          },
+        ];
     }
 
     return [
       {
-        label: 'Venue',
+        label: 'Event Location',
         value: this.formatPreferredEventLocation(contract),
-      },
-      {
-        label: 'Start Time',
-        value: this.formatEventTime(
+        sideLabel: 'Event Start',
+        sideValue: this.formatEventTime(
           contract.lead.event_start_time ??
             contract.lead.ceremony_start_time ??
             contract.lead.reception_start_time
@@ -2156,22 +2240,6 @@ export class FloralProposalRendererService {
       .filter((value) => !!value);
 
     return parts.join(', ') || 'Location to be confirmed';
-  }
-
-  private normalizeServiceType(value: string | null | undefined): string {
-    return (value ?? '').trim().toLowerCase().replace(/[_\s]+/g, ' ');
-  }
-
-  private isCeremonyOnlyWedding(serviceType: string): boolean {
-    return serviceType.includes('ceremony-only') || serviceType.includes('ceremony only');
-  }
-
-  private isReceptionOnlyWedding(serviceType: string): boolean {
-    return serviceType.includes('reception-only') || serviceType.includes('reception only');
-  }
-
-  private isFullServiceWedding(serviceType: string): boolean {
-    return serviceType.includes('full service');
   }
 
   private formatCurrency(value: number): string {
@@ -2267,26 +2335,74 @@ export class FloralProposalRendererService {
   }
 
   private formatDeliverySetupLocation(contract: FloralProposalRenderContract): string {
-    const parts = [
-      contract.lead.reception_venue_name,
-      [contract.lead.reception_venue_city, contract.lead.reception_venue_state]
-        .filter((part) => !!part)
-        .join(', '),
-    ].filter((part) => !!part);
+    const ceremonyLocation = this.formatCeremonyLocation(contract);
+    const receptionLocation = this.formatReceptionLocation(contract);
 
-    return parts.length ? parts.join(' - ') : 'To be confirmed';
+    switch (this.getRendererStrategy(contract).deliveryLocationMode) {
+      case 'dual-venue': {
+        const parts = [
+          ceremonyLocation !== 'Location to be confirmed' ? `Ceremony: ${ceremonyLocation}` : '',
+          receptionLocation !== 'Location to be confirmed' ? `Reception: ${receptionLocation}` : '',
+        ].filter((part) => !!part);
+
+        return parts.length ? parts.join(' | ') : 'To be confirmed';
+      }
+      case 'ceremony':
+        return ceremonyLocation !== 'Location to be confirmed' ? ceremonyLocation : 'To be confirmed';
+      case 'reception':
+        return receptionLocation !== 'Location to be confirmed' ? receptionLocation : 'To be confirmed';
+    }
+
+    const preferredLocation = this.formatPreferredEventLocation(contract);
+    return preferredLocation !== 'Location to be confirmed' ? preferredLocation : 'To be confirmed';
   }
 
   private formatEventLocationCityState(contract: FloralProposalRenderContract): string {
-    const location = [contract.lead.reception_venue_city, contract.lead.reception_venue_state]
+    if (this.getRendererStrategy(contract).cityStatePreference === 'reception') {
+      const receptionLocation = [
+        contract.lead.reception_venue_city,
+        contract.lead.reception_venue_state,
+      ]
+        .filter((part) => !!part)
+        .join(', ');
+
+      if (receptionLocation) {
+        return receptionLocation;
+      }
+    }
+
+    const ceremonyLocation = [
+      contract.lead.ceremony_venue_city,
+      contract.lead.ceremony_venue_state,
+    ]
       .filter((part) => !!part)
       .join(', ');
 
-    return location || 'Location to be confirmed';
+    const receptionLocation = [
+      contract.lead.reception_venue_city,
+      contract.lead.reception_venue_state,
+    ]
+      .filter((part) => !!part)
+      .join(', ');
+
+    return ceremonyLocation || receptionLocation || 'Location to be confirmed';
   }
 
   private formatEventType(contract: FloralProposalRenderContract): string {
     return this.formatDisplay(contract.lead.event_type || contract.lead.service_type, 'Not set');
+  }
+
+  private resolveRendererKey(
+    contract: FloralProposalRenderContract
+  ): ProposalRendererKey {
+    return (
+      contract.template.renderer_key ??
+      deriveProposalRendererKeyFromServiceType(contract.lead.service_type)
+    );
+  }
+
+  private getRendererStrategy(contract: FloralProposalRenderContract) {
+    return getProposalRendererStrategy(this.resolveRendererKey(contract));
   }
 
   private formatCustomerName(contract: FloralProposalRenderContract): string {

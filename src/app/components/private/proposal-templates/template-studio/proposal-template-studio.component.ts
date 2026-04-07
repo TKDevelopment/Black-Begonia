@@ -12,7 +12,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StudioCommands, type CreateEditorOptions, type ProjectData } from '@grapesjs/studio-sdk';
 import type { Editor } from 'grapesjs';
@@ -23,6 +22,10 @@ import {
   GrapesJsStoredTemplateConfig,
 } from '../../../../core/models/floral-proposal';
 import { GrapeJsTemplateStudioService } from '../../../../core/proposal-templates/grapejs-template-studio.service';
+import {
+  getProposalRendererOption,
+  resolveTemplateRendererKey,
+} from '../../../../core/proposal-templates/proposal-renderer-registry';
 import { CrmThemeService } from '../../../../core/services/crm-theme.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { DocumentTemplateRepositoryService } from '../../../../core/supabase/repositories/document-template-repository.service';
@@ -33,7 +36,7 @@ import { LoadingStateBlockComponent } from '../../../../shared/components/privat
 @Component({
   selector: 'app-proposal-template-studio',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateBlockComponent, ErrorStateBlockComponent],
+  imports: [CommonModule, LoadingStateBlockComponent, ErrorStateBlockComponent],
   templateUrl: './proposal-template-studio.component.html',
   styleUrl: './proposal-template-studio.component.scss',
 })
@@ -61,22 +64,13 @@ export class ProposalTemplateStudioComponent implements AfterViewInit, OnDestroy
   readonly ready = signal(false);
   readonly dirty = signal(false);
   readonly lastDraftSavedAt = signal<string | null>(null);
-  readonly form = signal({
-    name: '',
-    template_key: '',
-    is_active: true,
-    is_default: false,
-    primary_color: '#111111',
-    accent_color: '#ea938c',
-    heading_font_family: 'Cormorant Garamond',
-    body_font_family: 'Source Sans 3',
-    show_terms_section: true,
-    show_privacy_section: true,
-    show_signature_section: true,
-  });
 
   readonly publishedAt = computed(() => this.getStoredConfig()?.published_at ?? null);
   readonly draftSavedAt = computed(() => this.lastDraftSavedAt());
+  readonly rendererLabel = computed(() => {
+    const template = this.template();
+    return getProposalRendererOption(resolveTemplateRendererKey(template))?.label ?? 'General Event';
+  });
 
   constructor() {
     effect(() => {
@@ -106,27 +100,10 @@ export class ProposalTemplateStudioComponent implements AfterViewInit, OnDestroy
     this.destroyEditor();
   }
 
-  updateForm<K extends keyof ReturnType<typeof this.form>>(
-    key: K,
-    value: ReturnType<typeof this.form>[K]
-  ): void {
-    this.form.update((form) => ({
-      ...form,
-      [key]: value,
-    }));
-    this.dirty.set(true);
-  }
-
   async saveTemplate(): Promise<void> {
     const template = this.template();
     const editor = this.editorRef();
     if (!template || !editor) return;
-
-    const payload = this.form();
-    if (!payload.name.trim() || !/^[a-z0-9-_]+$/.test(payload.template_key.trim())) {
-      this.toast.showToast('Enter a template name and a lowercase template key.', 'error');
-      return;
-    }
 
     try {
       this.saving.set(true);
@@ -134,46 +111,13 @@ export class ProposalTemplateStudioComponent implements AfterViewInit, OnDestroy
         editor,
         this.getStoredConfig()
       );
-      grapesConfig.theme = {
-        primary_color: payload.primary_color,
-        accent_color: payload.accent_color,
-        heading_font_family: payload.heading_font_family,
-        body_font_family: payload.body_font_family,
-      };
-      grapesConfig.settings = {
-        show_terms_section: payload.show_terms_section,
-        show_privacy_section: payload.show_privacy_section,
-        show_signature_section: payload.show_signature_section,
-      };
 
       const updated = await this.templateService.updateDocumentTemplate(template.template_id, {
-        name: payload.name.trim(),
-        template_key: payload.template_key.trim().toLowerCase(),
-        is_active: payload.is_active,
-        is_default: payload.is_default,
-        show_terms_section: payload.show_terms_section,
-        show_privacy_section: payload.show_privacy_section,
-        show_signature_section: payload.show_signature_section,
         template_config: this.templateStudio.buildTemplateConfig(template, grapesConfig),
       });
 
       this.template.set(updated);
       this.lastDraftSavedAt.set(new Date().toISOString());
-      this.form.set({
-        name: updated.name,
-        template_key: updated.template_key,
-        is_active: updated.is_active,
-        is_default: updated.is_default,
-        primary_color: grapesConfig.theme?.primary_color ?? '#111111',
-        accent_color: grapesConfig.theme?.accent_color ?? '#ea938c',
-        heading_font_family: grapesConfig.theme?.heading_font_family ?? 'Cormorant Garamond',
-        body_font_family: grapesConfig.theme?.body_font_family ?? 'Source Sans 3',
-        show_terms_section: grapesConfig.settings?.show_terms_section ?? updated.show_terms_section,
-        show_privacy_section:
-          grapesConfig.settings?.show_privacy_section ?? updated.show_privacy_section,
-        show_signature_section:
-          grapesConfig.settings?.show_signature_section ?? updated.show_signature_section,
-      });
       this.dirty.set(false);
       this.toast.showToast('Template published from Studio SDK.', 'success');
     } catch (error) {
@@ -206,23 +150,7 @@ export class ProposalTemplateStudioComponent implements AfterViewInit, OnDestroy
       }
 
       this.template.set(template);
-      const storedConfig = this.templateStudio.getStoredConfig(template);
       this.lastDraftSavedAt.set(null);
-      this.form.set({
-        name: template.name,
-        template_key: template.template_key,
-        is_active: template.is_active,
-        is_default: template.is_default,
-        primary_color: storedConfig?.theme?.primary_color ?? '#111111',
-        accent_color: storedConfig?.theme?.accent_color ?? '#ea938c',
-        heading_font_family: storedConfig?.theme?.heading_font_family ?? 'Cormorant Garamond',
-        body_font_family: storedConfig?.theme?.body_font_family ?? 'Source Sans 3',
-        show_terms_section: storedConfig?.settings?.show_terms_section ?? template.show_terms_section,
-        show_privacy_section:
-          storedConfig?.settings?.show_privacy_section ?? template.show_privacy_section,
-        show_signature_section:
-          storedConfig?.settings?.show_signature_section ?? template.show_signature_section,
-      });
 
       if (!isPlatformBrowser(this.platformId)) {
         this.ready.set(false);
@@ -311,22 +239,9 @@ export class ProposalTemplateStudioComponent implements AfterViewInit, OnDestroy
     const template = this.template();
     if (!template) return;
 
-    const payload = this.form();
-
     try {
       this.autosaving.set(true);
       const draftConfig = this.templateStudio.buildDraftConfig(project, this.getStoredConfig());
-      draftConfig.theme = {
-        primary_color: payload.primary_color,
-        accent_color: payload.accent_color,
-        heading_font_family: payload.heading_font_family,
-        body_font_family: payload.body_font_family,
-      };
-      draftConfig.settings = {
-        show_terms_section: payload.show_terms_section,
-        show_privacy_section: payload.show_privacy_section,
-        show_signature_section: payload.show_signature_section,
-      };
 
       const updated = await this.templateService.updateDocumentTemplate(template.template_id, {
         template_config: this.templateStudio.buildTemplateConfig(template, draftConfig),

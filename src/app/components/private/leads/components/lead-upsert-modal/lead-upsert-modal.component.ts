@@ -70,9 +70,11 @@ export class LeadUpsertModalComponent {
   readonly ceremonyVenueName = signal('');
   readonly ceremonyVenueCity = signal('');
   readonly ceremonyVenueState = signal('');
+  readonly ceremonyStartTime = signal('');
   readonly receptionVenueName = signal('');
   readonly receptionVenueCity = signal('');
   readonly receptionVenueState = signal('');
+  readonly receptionStartTime = signal('');
   readonly budgetRange = signal('');
   readonly guestCount = signal<string>('');
   readonly inquiryMessage = signal('');
@@ -154,9 +156,11 @@ export class LeadUpsertModalComponent {
     this.ceremonyVenueName.set(lead?.ceremony_venue_name ?? '');
     this.ceremonyVenueCity.set(lead?.ceremony_venue_city ?? '');
     this.ceremonyVenueState.set(lead?.ceremony_venue_state ?? '');
+    this.ceremonyStartTime.set(lead?.ceremony_start_time ?? '');
     this.receptionVenueName.set(lead?.reception_venue_name ?? '');
     this.receptionVenueCity.set(lead?.reception_venue_city ?? '');
     this.receptionVenueState.set(lead?.reception_venue_state ?? '');
+    this.receptionStartTime.set(lead?.reception_start_time ?? '');
     this.budgetRange.set(lead?.budget_range ?? '');
     this.guestCount.set(lead?.guest_count != null ? String(lead.guest_count) : '');
     this.inquiryMessage.set(lead?.inquiry_message ?? '');
@@ -212,9 +216,11 @@ export class LeadUpsertModalComponent {
       ceremony_venue_name: this.ceremonyVenueName().trim() || null,
       ceremony_venue_city: this.ceremonyVenueCity().trim() || null,
       ceremony_venue_state: this.ceremonyVenueState().trim() || null,
+      ceremony_start_time: this.ceremonyStartTime().trim() || null,
       reception_venue_name: this.receptionVenueName().trim() || null,
       reception_venue_city: this.receptionVenueCity().trim() || null,
       reception_venue_state: this.receptionVenueState().trim() || null,
+      reception_start_time: this.receptionStartTime().trim() || null,
       budget_range: this.budgetRange().trim() || null,
       guest_count: guestCount,
       inquiry_message: this.inquiryMessage().trim() || null,

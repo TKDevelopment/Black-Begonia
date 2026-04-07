@@ -26,18 +26,79 @@
 
 .bb-studio-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.2rem;
   background: rgba(255, 253, 250, 0.96);
   border-color: rgba(201, 177, 157, 0.7);
-  box-shadow: 0 14px 34px rgba(56, 38, 24, 0.08);
+}
+
+.bb-studio-header-copy {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.bb-studio-eyebrow {
+  margin: 0 0 0.35rem;
+  color: #9a6a56;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bb-studio-title {
+  margin: 0;
+  color: #261b17;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.bb-studio-subtitle,
+.bb-studio-card-copy,
+.bb-studio-meta {
+  margin: 0;
+  color: #6f635a;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .bb-studio-header-actions {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: end;
+}
+
+.bb-studio-status {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.bb-studio-pill {
+  display: inline-flex;
   align-items: center;
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid rgba(34, 24, 20, 0.08);
+  background: #f4ede6;
+  color: #5f534a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bb-studio-pill.is-ready {
+  background: #edf6ee;
+  color: #2f6b46;
+}
+
+.bb-studio-pill.is-warning {
+  background: #fff3e7;
+  color: #a25d1c;
 }
 
 .bb-studio-link {
@@ -57,19 +118,6 @@
   line-height: 1;
 }
 
-.bb-studio-editor-card {
-  display: flex;
-  min-height: 0;
-  overflow: hidden;
-  background: linear-gradient(180deg, #f7f0e8 0%, #efe4d8 100%);
-}
-
-.bb-editor-host {
-  flex: 1 1 auto;
-  min-height: calc(100vh - 12rem);
-  height: 100%;
-}
-
 .bb-studio-primary {
   border: 0;
   border-radius: 999px;
@@ -86,6 +134,26 @@
   cursor: not-allowed;
 }
 
+.bb-studio-editor-card {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  background: linear-gradient(180deg, #f7f0e8 0%, #efe4d8 100%);
+}
+
+.bb-studio-editor-toolbar {
+  border-bottom: 1px solid rgba(34, 24, 20, 0.08);
+  background: rgba(255, 251, 247, 0.88);
+  padding: 1rem 1.2rem;
+}
+
+.bb-editor-host {
+  flex: 1 1 auto;
+  min-height: calc(100vh - 14rem);
+  height: 100%;
+}
+
 :host ::ng-deep .gjs-editor,
 :host ::ng-deep .gs-editor,
 :host ::ng-deep .gs-app {
@@ -93,19 +161,52 @@
   height: 100%;
 }
 
-:host-context(.crm-theme-dark) .bb-studio-header {
+:host-context(.crm-theme-dark) .bb-studio-header,
+:host-context(.crm-theme-dark) .bb-studio-editor-card {
   background: rgba(28, 22, 19, 0.96);
   border-color: rgba(79, 61, 51, 0.9);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
 }
 
-:host-context(.crm-theme-dark) .bb-studio-link {
+:host-context(.crm-theme-dark) .bb-studio-link,
+:host-context(.crm-theme-dark) .bb-studio-eyebrow {
   color: #f0a69d;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-title {
+  color: #f3ebe2;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-subtitle,
+:host-context(.crm-theme-dark) .bb-studio-card-copy,
+:host-context(.crm-theme-dark) .bb-studio-meta {
+  color: #c8baae;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #d3c4b8;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-pill.is-ready {
+  background: rgba(74, 128, 97, 0.2);
+  color: #bfe2c9;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-pill.is-warning {
+  background: rgba(175, 110, 54, 0.2);
+  color: #f0d1ae;
 }
 
 :host-context(.crm-theme-dark) .bb-studio-primary {
   background: #f0a69d;
   color: #161311;
+}
+
+:host-context(.crm-theme-dark) .bb-studio-editor-toolbar {
+  background: rgba(39, 31, 27, 0.9);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 960px) {
@@ -118,6 +219,10 @@
   }
 
   .bb-studio-header-actions {
+    justify-items: flex-start;
+  }
+
+  .bb-studio-status {
     justify-content: flex-start;
   }
 
@@ -125,6 +230,6 @@
   :host ::ng-deep .gjs-editor,
   :host ::ng-deep .gs-editor,
   :host ::ng-deep .gs-app {
-    min-height: calc(100vh - 10rem);
+    min-height: calc(100vh - 11rem);
   }
 }

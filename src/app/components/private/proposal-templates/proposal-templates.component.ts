@@ -3,14 +3,27 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { DocumentTemplate } from '../../../core/models/floral-proposal';
+import {
+  DocumentTemplate,
+  GrapesJsStoredTemplateConfig,
+} from '../../../core/models/floral-proposal';
 import { GrapeJsTemplateStudioService } from '../../../core/proposal-templates/grapejs-template-studio.service';
+import {
+  getProposalRendererOption,
+  resolveTemplateRendererKey,
+  withTemplateRendererKey,
+} from '../../../core/proposal-templates/proposal-renderer-registry';
 import { ToastService } from '../../../core/services/toast.service';
 import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
 import { DocumentTemplateService } from '../../../core/supabase/services/document-template.service';
 import { CrmPageHeaderComponent } from '../../../shared/components/private/crm-page-header/crm-page-header.component';
 import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
 import { LoadingStateBlockComponent } from '../../../shared/components/private/loading-state-block/loading-state-block.component';
+import { StatusBadgeComponent } from '../../../shared/components/private/status-badge/status-badge.component';
+import {
+  ProposalTemplateUpsertModalComponent,
+  ProposalTemplateUpsertPayload,
+} from './components/proposal-template-upsert-modal/proposal-template-upsert-modal.component';
 
 @Component({
   selector: 'app-proposal-templates',
@@ -21,6 +34,8 @@ import { LoadingStateBlockComponent } from '../../../shared/components/private/l
     CrmPageHeaderComponent,
     LoadingStateBlockComponent,
     ErrorStateBlockComponent,
+    StatusBadgeComponent,
+    ProposalTemplateUpsertModalComponent,
   ],
   templateUrl: './proposal-templates.component.html',
   styleUrl: './proposal-templates.component.scss',
@@ -36,22 +51,23 @@ export class ProposalTemplatesComponent implements OnInit {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly templates = signal<DocumentTemplate[]>([]);
-  readonly showCreateForm = signal(false);
   readonly searchTerm = signal('');
-  readonly starterTemplates = this.templateStudio.starterTemplates;
-
-  readonly form = signal({
-    name: '',
-    template_key: '',
-    is_active: true,
-    is_default: false,
-  });
+  readonly modalOpen = signal(false);
+  readonly modalMode = signal<'create' | 'edit'>('create');
+  readonly selectedTemplate = signal<DocumentTemplate | null>(null);
 
   readonly filteredTemplates = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     return this.templates().filter((template) => {
       if (!term) return true;
-      return [template.name, template.template_key].join(' ').toLowerCase().includes(term);
+      return [
+        template.name,
+        template.template_key,
+        this.getRendererLabel(template),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(term);
     });
   });
 
@@ -77,91 +93,74 @@ export class ProposalTemplatesComponent implements OnInit {
     this.searchTerm.set(value);
   }
 
-  openCreateForm(): void {
-    this.form.set({
-      name: '',
-      template_key: '',
-      is_active: true,
-      is_default: false,
-    });
-    this.showCreateForm.set(true);
+  openCreateModal(): void {
+    this.modalMode.set('create');
+    this.selectedTemplate.set(null);
+    this.modalOpen.set(true);
   }
 
-  closeCreateForm(): void {
+  openEditModal(template: DocumentTemplate): void {
+    this.modalMode.set('edit');
+    this.selectedTemplate.set(template);
+    this.modalOpen.set(true);
+  }
+
+  closeTemplateModal(): void {
     if (this.saving()) return;
-    this.showCreateForm.set(false);
+    this.resetModalState();
   }
 
-  updateForm<K extends keyof ReturnType<typeof this.form>>(key: K, value: ReturnType<typeof this.form>[K]): void {
-    this.form.update((form) => ({
-      ...form,
-      [key]: value,
-    }));
+  private resetModalState(): void {
+    this.modalOpen.set(false);
+    this.selectedTemplate.set(null);
+    this.modalMode.set('create');
   }
 
-  async createTemplate(): Promise<void> {
-    const payload = this.form();
-    if (!payload.name.trim() || !/^[a-z0-9-_]+$/.test(payload.template_key.trim())) {
-      this.toast.showToast('Enter a template name and a lowercase template key.', 'error');
-      return;
-    }
-
-    try {
-      this.saving.set(true);
-      const template = await this.documentTemplateService.createDocumentTemplate({
-        name: payload.name.trim(),
-        template_key: payload.template_key.trim().toLowerCase(),
-        is_active: payload.is_active,
-        is_default: payload.is_default,
-      });
-      this.showCreateForm.set(false);
-      this.toast.showToast('Proposal template created.', 'success');
-      await this.loadTemplates();
-      await this.router.navigate(['/admin/proposal-templates', template.template_id, 'studio']);
-    } catch (error) {
-      console.error('[ProposalTemplatesComponent] createTemplate error:', error);
-      this.toast.showToast('We were unable to create the proposal template right now.', 'error');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  async generateStarterCollection(): Promise<void> {
-    const existingKeys = new Set(this.templates().map((template) => template.template_key));
-    const startersToCreate = this.starterTemplates.filter(
-      (starter) => !existingKeys.has(starter.templateKey)
-    );
-
-    if (!startersToCreate.length) {
-      this.toast.showToast('The Black Begonia starter collection is already in your registry.', 'success');
-      return;
-    }
-
+  async saveTemplateRecord(payload: ProposalTemplateUpsertPayload): Promise<void> {
     try {
       this.saving.set(true);
 
-      for (const [index, starter] of startersToCreate.entries()) {
-        const created = await this.documentTemplateService.createDocumentTemplate({
-          name: starter.name,
-          template_key: starter.templateKey,
-          is_active: true,
-          is_default: index === 0 && !this.templates().some((template) => template.is_default),
-          show_terms_section: true,
-          show_privacy_section: true,
-          show_signature_section: true,
+      if (this.modalMode() === 'create') {
+        const template = await this.documentTemplateService.createDocumentTemplate({
+          name: payload.name,
+          template_key: payload.template_key,
+          is_active: payload.is_active,
+          is_default: payload.is_default,
+          show_terms_section: payload.show_terms_section,
+          show_privacy_section: payload.show_privacy_section,
+          show_signature_section: payload.show_signature_section,
+          template_config: withTemplateRendererKey({}, payload.renderer_key),
         });
 
-        const config = this.templateStudio.buildStarterConfig(created, starter.id);
-        await this.documentTemplateService.updateDocumentTemplate(created.template_id, {
-          template_config: this.templateStudio.buildTemplateConfig(created, config),
-        });
+        this.resetModalState();
+        this.toast.showToast('Proposal template created.', 'success');
+        await this.loadTemplates();
+        await this.router.navigate(['/admin/proposal-templates', template.template_id, 'studio']);
+        return;
       }
 
+      const template = this.selectedTemplate();
+      if (!template) {
+        throw new Error('A proposal template is required to save changes.');
+      }
+
+      await this.documentTemplateService.updateDocumentTemplate(template.template_id, {
+        name: payload.name,
+        template_key: payload.template_key,
+        is_active: payload.is_active,
+        is_default: payload.is_default,
+        show_terms_section: payload.show_terms_section,
+        show_privacy_section: payload.show_privacy_section,
+        show_signature_section: payload.show_signature_section,
+        template_config: this.buildTemplateConfig(template, payload),
+      });
+
+      this.resetModalState();
+      this.toast.showToast('Proposal template updated.', 'success');
       await this.loadTemplates();
-      this.toast.showToast('Starter proposal templates generated.', 'success');
     } catch (error) {
-      console.error('[ProposalTemplatesComponent] generateStarterCollection error:', error);
-      this.toast.showToast('We were unable to generate the starter template collection.', 'error');
+      console.error('[ProposalTemplatesComponent] saveTemplateRecord error:', error);
+      this.toast.showToast('We were unable to save the proposal template right now.', 'error');
     } finally {
       this.saving.set(false);
     }
@@ -186,5 +185,38 @@ export class ProposalTemplatesComponent implements OnInit {
 
   openStudio(template: DocumentTemplate): void {
     void this.router.navigate(['/admin/proposal-templates', template.template_id, 'studio']);
+  }
+
+  getRendererLabel(template: DocumentTemplate): string {
+    return (
+      getProposalRendererOption(resolveTemplateRendererKey(template))?.label ??
+      'General Event'
+    );
+  }
+
+  private buildTemplateConfig(
+    template: DocumentTemplate,
+    payload: ProposalTemplateUpsertPayload
+  ): Record<string, unknown> {
+    const existingStoredConfig = this.templateStudio.getStoredConfig(template);
+
+    if (existingStoredConfig) {
+      const nextStoredConfig: GrapesJsStoredTemplateConfig = {
+        ...existingStoredConfig,
+        settings: {
+          ...existingStoredConfig.settings,
+          show_terms_section: payload.show_terms_section,
+          show_privacy_section: payload.show_privacy_section,
+          show_signature_section: payload.show_signature_section,
+        },
+      };
+
+      return withTemplateRendererKey(
+        this.templateStudio.buildTemplateConfig(template, nextStoredConfig),
+        payload.renderer_key
+      );
+    }
+
+    return withTemplateRendererKey(template.template_config, payload.renderer_key);
   }
 }

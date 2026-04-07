@@ -10,6 +10,7 @@ import {
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
 import { TaxRegion } from '../../models/tax-region';
+import { getTemplateRendererKey } from '../../proposal-templates/proposal-renderer-registry';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
@@ -355,6 +356,7 @@ export class FloralProposalWorkflowService {
         template_id: input.template?.template_id ?? input.renderPayload.template_id ?? null,
         name: input.template?.name ?? input.renderPayload.template_name ?? null,
         template_key: input.template?.template_key ?? null,
+        renderer_key: getTemplateRendererKey(input.template),
         primary_color: grapeJsConfig?.theme?.primary_color ?? null,
         accent_color: grapeJsConfig?.theme?.accent_color ?? null,
         heading_font_family: grapeJsConfig?.theme?.heading_font_family ?? null,

@@ -249,6 +249,11 @@
                 <input type="text" [ngModel]="ceremonyVenueState()" (ngModelChange)="ceremonyVenueState.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
               </div>
 
+              <div>
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Ceremony Start Time</label>
+                <input type="time" [ngModel]="ceremonyStartTime()" (ngModelChange)="ceremonyStartTime.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
+              </div>
+
               <div class="xl:col-span-3">
                 <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Reception Venue</label>
                 <input type="text" [ngModel]="receptionVenueName()" (ngModelChange)="receptionVenueName.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
@@ -262,6 +267,11 @@
               <div>
                 <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Reception State</label>
                 <input type="text" [ngModel]="receptionVenueState()" (ngModelChange)="receptionVenueState.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Reception Start Time</label>
+                <input type="time" [ngModel]="receptionStartTime()" (ngModelChange)="receptionStartTime.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
               </div>
             </div>
           </div>

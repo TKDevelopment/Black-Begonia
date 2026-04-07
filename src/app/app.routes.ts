@@ -245,16 +245,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'vendors',
-        redirectTo: 'catalog-items',
-        pathMatch: 'full',
-      },
-      {
-        path: 'vendors/:vendorId',
-        redirectTo: 'catalog-items',
-      },
-
-      {
         path: 'tax-regions',
         loadComponent: () =>
           import('./components/private/tax-regions/tax-regions.component').then(

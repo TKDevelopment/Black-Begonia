@@ -16,12 +16,31 @@
 
   <div *ngIf="!loading() && !error() && template() as template" class="bb-studio-app">
     <header class="bb-studio-header">
-      <button type="button" class="bb-studio-link" (click)="openTemplateList()">
-        <span class="bb-studio-link-arrow" aria-hidden="true">←</span>
-        <span>Back to Templates</span>
-      </button>
+      <div class="bb-studio-header-copy">
+        <button type="button" class="bb-studio-link" (click)="openTemplateList()">
+          <span class="bb-studio-link-arrow" aria-hidden="true">&larr;</span>
+          <span>Back to Templates</span>
+        </button>
+
+        <div>
+          <p class="bb-studio-eyebrow">Studio Layout Editor</p>
+          <h1 class="bb-studio-title">{{ template.name }}</h1>
+          <p class="bb-studio-subtitle">
+            Key: <strong>{{ template.template_key }}</strong> &bull; Renderer: <strong>{{ rendererLabel() }}</strong>
+          </p>
+        </div>
+      </div>
 
       <div class="bb-studio-header-actions">
+        <div class="bb-studio-status">
+          <span class="bb-studio-pill" [class.is-ready]="ready()">{{ ready() ? 'Editor ready' : 'Loading editor' }}</span>
+          <span class="bb-studio-pill" [class.is-warning]="dirty()">{{ dirty() ? 'Draft changed' : 'Draft synced' }}</span>
+          <span class="bb-studio-pill">{{ autosaving() ? 'Saving draft...' : (draftSavedAt() ? 'Draft saved' : 'No autosave yet') }}</span>
+        </div>
+        <div class="bb-studio-meta">
+          <span>Published {{ publishedAt() ? (publishedAt() | date:'medium') : 'Not yet' }}</span>
+          <span>Updated {{ template.updated_at | date:'medium' }}</span>
+        </div>
         <button type="button" class="bb-studio-primary" [disabled]="saving() || !ready()" (click)="saveTemplate()">
           {{ saving() ? 'Publishing...' : 'Publish Template' }}
         </button>
@@ -29,6 +48,12 @@
     </header>
 
     <section class="bb-studio-editor-card">
+      <div class="bb-studio-editor-toolbar">
+        <div>
+          <p class="bb-studio-eyebrow">Layout Canvas</p>
+          <p class="bb-studio-card-copy">Template record settings now live in the registry modal. Use Studio here strictly for layout and visual editing.</p>
+        </div>
+      </div>
       <div #editorHost class="bb-editor-host"></div>
     </section>
   </div>
