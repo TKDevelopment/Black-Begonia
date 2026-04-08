@@ -7,7 +7,6 @@ import {
 import {
   DocumentTemplate,
   FloralProposal,
-  GrapesJsStoredTemplateConfig,
   FloralProposalRenderContract,
   FloralProposalRenderLineItem,
   FloralProposalShoppingListItem,
@@ -17,9 +16,11 @@ import {
   deriveProposalRendererKeyFromServiceType,
   getTemplateRendererKey,
 } from '../../proposal-templates/proposal-renderer-registry';
+import { ProposalTemplateDocumentService } from '../../proposal-templates/proposal-template-document.service';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
+import { DocumentTemplateService } from './document-template.service';
 import { FloralProposalRendererService } from './floral-proposal-renderer.service';
 
 export interface SubmitFloralProposalPayload {
@@ -99,7 +100,9 @@ export class FloralProposalWorkflowService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly floralProposalRepository: FloralProposalRepositoryService,
-    private readonly floralProposalRenderer: FloralProposalRendererService
+    private readonly floralProposalRenderer: FloralProposalRendererService,
+    private readonly proposalTemplateDocumentService: ProposalTemplateDocumentService,
+    private readonly documentTemplateService: DocumentTemplateService
   ) {}
 
   async getLeadProposals(leadId: string): Promise<FloralProposal[]> {
@@ -324,8 +327,11 @@ export class FloralProposalWorkflowService {
   async createRenderContract(
     input: FloralProposalRenderContractInput
   ): Promise<FloralProposalRenderContract> {
-    const templateLogoUrl = await this.resolveTemplateLogoUrl(input.template);
-    const grapeJsConfig = this.getGrapeJsConfig(input.template);
+    const hydratedTemplate = await this.hydrateTemplateForRendering(input.template);
+    const templateLogoUrl = await this.resolveTemplateLogoUrl(hydratedTemplate);
+    const templateTheme = this.proposalTemplateDocumentService.getPublishedDocument(
+      hydratedTemplate
+    ).theme;
     const lineItems = await Promise.all(
       input.renderPayload.line_items.map((line) =>
         this.resolveRenderLineItemAssets(line)
@@ -359,22 +365,22 @@ export class FloralProposalWorkflowService {
         status: input.lead.status,
       },
       template: {
-        template_id: input.template?.template_id ?? input.renderPayload.template_id ?? null,
-        name: input.template?.name ?? input.renderPayload.template_name ?? null,
-        template_key: input.template?.template_key ?? null,
+        template_id: hydratedTemplate?.template_id ?? input.renderPayload.template_id ?? null,
+        name: hydratedTemplate?.name ?? input.renderPayload.template_name ?? null,
+        template_key: hydratedTemplate?.template_key ?? null,
         renderer_key:
-          getTemplateRendererKey(input.template) ??
+          getTemplateRendererKey(hydratedTemplate) ??
           deriveProposalRendererKeyFromServiceType(
             input.lead.service_type,
             normalizeFloralServiceEventType(input.lead.event_type)
           ),
-        primary_color: grapeJsConfig?.theme?.primary_color ?? null,
-        accent_color: grapeJsConfig?.theme?.accent_color ?? null,
-        heading_font_family: grapeJsConfig?.theme?.heading_font_family ?? null,
-        body_font_family: grapeJsConfig?.theme?.body_font_family ?? null,
+        primary_color: templateTheme.primaryColor,
+        accent_color: templateTheme.accentColor,
+        heading_font_family: templateTheme.headingFontFamily,
+        body_font_family: templateTheme.bodyFontFamily,
         logo_url: templateLogoUrl,
         show_intro_message: false,
-        template_config: input.template?.template_config ?? {},
+        template_config: hydratedTemplate?.template_config ?? {},
       },
       tax_region: {
         tax_region_id: input.taxRegion?.tax_region_id ?? input.renderPayload.tax_region_id ?? null,
@@ -409,14 +415,6 @@ export class FloralProposalWorkflowService {
           })),
       },
     };
-  }
-
-  private getGrapeJsConfig(
-    template?: DocumentTemplate | null
-  ): GrapesJsStoredTemplateConfig | null {
-    return (
-      template?.template_config as { grapejs_sdk?: GrapesJsStoredTemplateConfig } | null
-    )?.grapejs_sdk ?? null;
   }
 
   buildSubmissionPayload(args: {
@@ -589,6 +587,44 @@ export class FloralProposalWorkflowService {
         ...line,
         image_signed_url: null,
       };
+    }
+  }
+
+  private async hydrateTemplateForRendering(
+    template?: DocumentTemplate | null
+  ): Promise<DocumentTemplate | null> {
+    if (!template) {
+      return null;
+    }
+
+    const stored = this.proposalTemplateDocumentService.getStoredConfig(template);
+    if (!stored?.assets?.length) {
+      return template;
+    }
+
+    try {
+      const refreshedAssets = await this.documentTemplateService.refreshTemplateAssets(
+        stored.assets
+      );
+      const refreshedConfig =
+        this.proposalTemplateDocumentService.applyResolvedAssetUrlsToConfig(
+          stored,
+          refreshedAssets
+        );
+
+      return {
+        ...template,
+        template_config: this.proposalTemplateDocumentService.buildTemplateConfig(
+          template,
+          refreshedConfig
+        ),
+      };
+    } catch (error) {
+      console.error(
+        '[FloralProposalWorkflowService] hydrateTemplateForRendering error:',
+        error
+      );
+      return template;
     }
   }
 }

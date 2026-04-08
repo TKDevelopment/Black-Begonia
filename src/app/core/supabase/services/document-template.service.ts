@@ -5,6 +5,9 @@ import {
   DocumentTemplateLogoUploadResult,
   DocumentTemplateUpsertInput,
 } from '../../models/floral-proposal';
+import {
+  ProposalTemplateEditorAsset,
+} from '../../proposal-templates/proposal-template-document.models';
 import { DocumentTemplateRepositoryService } from '../repositories/document-template-repository.service';
 import { SupabaseService } from '../clients/supabase.service';
 
@@ -147,6 +150,27 @@ export class DocumentTemplateService {
 
   async removeTemplateAsset(storagePath: string): Promise<void> {
     return this.removeTemplateLogo(storagePath);
+  }
+
+  async refreshTemplateAssets(
+    assets: ProposalTemplateEditorAsset[]
+  ): Promise<ProposalTemplateEditorAsset[]> {
+    return Promise.all(
+      assets.map(async (asset) => {
+        try {
+          return {
+            ...asset,
+            url: await this.getSignedTemplateLogoUrl(asset.storage_path),
+          };
+        } catch (error) {
+          console.warn(
+            '[DocumentTemplateService] refreshTemplateAssets warning:',
+            error
+          );
+          return asset;
+        }
+      })
+    );
   }
 
   async getSignedTemplateLogoUrl(storagePath: string): Promise<string> {

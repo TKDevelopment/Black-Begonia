@@ -48,44 +48,44 @@
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar {
-  background: #181311;
-  color: #f6ebe3;
+  background: var(--crm-surface, #101a26);
+  color: var(--crm-text, #ecf3fb);
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar-section {
-  border-color: #3a2c23;
+  border-color: var(--crm-border, #23364c);
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar-card {
-  background: #211916;
-  border-color: #4c3a30;
+  background: var(--crm-surface-subtle, #142031);
+  border-color: var(--crm-border-strong, #375471);
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar-button,
 :host-context(.crm-theme-dark) .crm-theme-toggle,
 :host-context(.crm-theme-dark) .crm-sidebar-logout {
-  background: #241c18;
-  border-color: #4f3d33;
-  color: #f4e8df;
+  background: var(--crm-surface-elevated, #172334);
+  border-color: var(--crm-border-strong, #375471);
+  color: var(--crm-text, #ecf3fb);
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar-button:hover,
 :host-context(.crm-theme-dark) .crm-sidebar-link:hover {
-  background: #2c221d !important;
-  color: #f0b0aa !important;
+  background: var(--crm-surface-highlight, #1f3046) !important;
+  color: var(--crm-accent, #f0a69d) !important;
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar-link span {
-  color: #dbc8bb !important;
+  color: var(--crm-text-muted, #c0cfe0) !important;
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar .active-link,
 :host-context(.crm-theme-dark) .crm-sidebar .active-link span {
-  color: #161311 !important;
+  color: #09111a !important;
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar .active-link .active-link-dot {
-  background: #161311 !important;
+  background: #09111a !important;
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar .active-link:hover,
@@ -98,7 +98,7 @@
 }
 
 :host-context(.crm-theme-dark) .crm-sidebar-logout:hover {
-  border-color: #f0a69d !important;
-  background: #f0a69d !important;
-  color: #161311 !important;
+  border-color: var(--crm-accent, #f0a69d) !important;
+  background: var(--crm-accent, #f0a69d) !important;
+  color: #09111a !important;
 }

@@ -6,12 +6,12 @@ import { Router } from '@angular/router';
 import {
   DocumentTemplate,
 } from '../../../core/models/floral-proposal';
-import { GrapeJsTemplateStudioService } from '../../../core/proposal-templates/grapejs-template-studio.service';
 import {
   getProposalRendererOption,
   resolveTemplateRendererKey,
   withTemplateRendererKey,
 } from '../../../core/proposal-templates/proposal-renderer-registry';
+import { ProposalTemplateDocumentService } from '../../../core/proposal-templates/proposal-template-document.service';
 import { withTemplateServiceProfile } from '../../../core/proposal-templates/proposal-template-service-profile';
 import { getProposalTemplateServiceProfilePreset } from '../../../core/proposal-templates/proposal-template-presets';
 import { ToastService } from '../../../core/services/toast.service';
@@ -45,7 +45,7 @@ export class ProposalTemplatesComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly documentTemplateRepository = inject(DocumentTemplateRepositoryService);
   private readonly documentTemplateService = inject(DocumentTemplateService);
-  private readonly templateStudio = inject(GrapeJsTemplateStudioService);
+  private readonly proposalTemplateDocumentService = inject(ProposalTemplateDocumentService);
   private readonly toast = inject(ToastService);
 
   readonly loading = signal(true);
@@ -81,7 +81,12 @@ export class ProposalTemplatesComponent implements OnInit {
     this.error.set(null);
 
     try {
-      this.templates.set(await this.documentTemplateRepository.getDocumentTemplates());
+      const templates = await this.documentTemplateRepository.getDocumentTemplates();
+      this.templates.set(
+        templates.filter(
+          (template) => !this.proposalTemplateDocumentService.isTemplateTrashed(template)
+        )
+      );
     } catch (error) {
       console.error('[ProposalTemplatesComponent] loadTemplates error:', error);
       this.error.set('We were unable to load proposal templates right now.');
@@ -226,22 +231,31 @@ export class ProposalTemplatesComponent implements OnInit {
     template: DocumentTemplate,
     payload: ProposalTemplateUpsertPayload
   ): Record<string, unknown> {
-    const existingStoredConfig = this.templateStudio.getStoredConfig(template);
-
-    if (existingStoredConfig) {
-      return withTemplateRendererKey(
-        withTemplateServiceProfile(
-          this.templateStudio.buildTemplateConfig(template, existingStoredConfig),
-          payload.service_profile
-        ),
-        payload.renderer_key
-      );
-    }
-
-    return withTemplateRendererKey(
+    const existingStoredConfig = this.proposalTemplateDocumentService.getStoredConfig(template);
+    const baseConfig = withTemplateRendererKey(
       withTemplateServiceProfile(template.template_config, payload.service_profile),
       payload.renderer_key
     );
+
+    if (existingStoredConfig) {
+      return this.proposalTemplateDocumentService.buildTemplateConfig(template, {
+        ...existingStoredConfig,
+        draft_document: {
+          ...existingStoredConfig.draft_document,
+          name: payload.name,
+          serviceType: payload.renderer_key,
+        },
+        published_document: existingStoredConfig.published_document
+          ? {
+              ...existingStoredConfig.published_document,
+              name: payload.name,
+              serviceType: payload.renderer_key,
+            }
+          : null,
+      });
+    }
+
+    return baseConfig;
   }
 
   private getDeleteTemplateErrorMessage(error: unknown): string {
