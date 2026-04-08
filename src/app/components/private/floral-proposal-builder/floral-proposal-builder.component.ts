@@ -12,7 +12,6 @@ import {
   FloralProposalRenderContract,
   FloralProposalLineItemType,
   FloralProposalShoppingListItem,
-  PricingSettings,
 } from '../../../core/models/floral-proposal';
 import { Lead } from '../../../core/models/lead';
 import { TaxRegion } from '../../../core/models/tax-region';
@@ -23,7 +22,6 @@ import { CatalogItemRepositoryService } from '../../../core/supabase/repositorie
 import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
 import { FloralProposalRepositoryService } from '../../../core/supabase/repositories/floral-proposal-repository.service';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
-import { PricingSettingsRepositoryService } from '../../../core/supabase/repositories/pricing-settings-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
 import {
   FloralProposalBuilderComponentRow,
@@ -63,7 +61,6 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly documentTemplateRepository = inject(DocumentTemplateRepositoryService);
-  private readonly pricingSettingsRepository = inject(PricingSettingsRepositoryService);
   private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
   private readonly floralProposalRenderer = inject(FloralProposalRendererService);
   private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
@@ -84,7 +81,6 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly taxRegions = signal<TaxRegion[]>([]);
   readonly templates = signal<DocumentTemplate[]>([]);
   readonly catalogItems = signal<CatalogItem[]>([]);
-  readonly pricingSettings = signal<PricingSettings | null>(null);
   readonly lineItems = signal<FloralProposalBuilderLine[]>([]);
   readonly shoppingList = signal<FloralProposalShoppingListItem[]>([]);
   readonly selectedTaxRegionId = signal<string>('');
@@ -188,14 +184,13 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const [lead, taxRegions, templates, proposals, catalogItems, pricingSettings] =
+      const [lead, taxRegions, templates, proposals, catalogItems] =
         await Promise.all([
           this.leadRepository.getLeadById(leadId),
           this.taxRegionRepository.getTaxRegions(),
           this.documentTemplateRepository.getDocumentTemplates(),
           this.floralProposalRepository.getLeadFloralProposals(leadId),
           this.catalogItemRepository.getCatalogItems(),
-          this.pricingSettingsRepository.getActivePricingSettings(),
         ]);
 
       if (!lead) {
@@ -207,16 +202,13 @@ export class FloralProposalBuilderComponent implements OnInit {
       this.taxRegions.set(taxRegions.filter((region) => region.is_active));
       this.templates.set(templates.filter((template) => template.is_active));
       this.catalogItems.set(catalogItems);
-      this.pricingSettings.set(pricingSettings);
       this.proposals.set(proposals);
 
       const activeProposal = proposals.find((proposal) => proposal.is_active) ?? proposals[0] ?? null;
       this.activeProposal.set(activeProposal);
       this.selectedTaxRegionId.set(activeProposal?.tax_region_id ?? '');
       this.selectedTemplateId.set(activeProposal?.template_id ?? '');
-      this.defaultMarkupPercent.set(
-        this.getInitialDefaultMarkupPercent(activeProposal, pricingSettings)
-      );
+      this.defaultMarkupPercent.set(this.getInitialDefaultMarkupPercent(activeProposal));
       this.laborPercent.set(this.getInitialLaborPercent(activeProposal));
 
       if (activeProposal) {
@@ -1207,15 +1199,14 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private getInitialDefaultMarkupPercent(
-    proposal: FloralProposal | null,
-    pricingSettings: PricingSettings | null
+    proposal: FloralProposal | null
   ): number {
     const snapshotValue = proposal?.snapshot?.['default_markup_percent'];
     if (typeof snapshotValue === 'number' && Number.isFinite(snapshotValue)) {
       return snapshotValue;
     }
 
-    return pricingSettings?.default_markup_percent ?? 300;
+    return 300;
   }
 
   private getInitialLaborPercent(proposal: FloralProposal | null): number {
@@ -1228,7 +1219,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private getDefaultReservePercent(): number {
-    return this.pricingSettings()?.default_reserve_percent ?? 0;
+    return 0;
   }
 
   private getComponentShoppingKey(component: FloralProposalBuilderComponentRow): string {

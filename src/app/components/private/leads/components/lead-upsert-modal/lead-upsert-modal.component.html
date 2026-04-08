@@ -62,12 +62,12 @@
               <div class="rounded-2xl border border-black/10 bg-[#faf8f6] px-4 py-3">
                 <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Service Type</p>
                 <p class="mt-1 text-sm font-medium text-stone-900">
-                  {{ serviceType() ? (serviceType() | titlecase) : 'Choose a service' }}
+                  {{ serviceType() || 'Choose a service' }}
                 </p>
               </div>
 
               <div class="crm-modal-info-callout rounded-2xl border border-dashed border-[#ead7d0] bg-[#fcf1ed] px-4 py-3 text-sm leading-6 text-stone-600">
-                Wedding leads unlock ceremony and reception planning fields. General leads keep the intake tighter and faster.
+                {{ serviceTypeLifecycleHint }}
               </div>
             </div>
           </div>
@@ -117,8 +117,9 @@
                 <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Service Type</label>
                 <select [ngModel]="serviceType()" (ngModelChange)="serviceType.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]">
                   <option value="" disabled>Select a service type</option>
-                  <option *ngFor="let option of serviceTypeOptions" [value]="option">{{ option | titlecase }}</option>
+                  <option *ngFor="let option of serviceTypeOptions" [value]="option.label">{{ option.label }}</option>
                 </select>
+                <p class="mt-2 text-xs leading-5 text-stone-500">{{ serviceTypeLifecycleHint }}</p>
               </div>
 
               <div>
@@ -249,6 +250,11 @@
                 <input type="text" [ngModel]="ceremonyVenueState()" (ngModelChange)="ceremonyVenueState.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
               </div>
 
+              <div>
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Ceremony Start Time</label>
+                <input type="time" [ngModel]="ceremonyStartTime()" (ngModelChange)="ceremonyStartTime.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
+              </div>
+
               <div class="xl:col-span-3">
                 <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Reception Venue</label>
                 <input type="text" [ngModel]="receptionVenueName()" (ngModelChange)="receptionVenueName.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
@@ -262,6 +268,11 @@
               <div>
                 <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Reception State</label>
                 <input type="text" [ngModel]="receptionVenueState()" (ngModelChange)="receptionVenueState.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">Reception Start Time</label>
+                <input type="time" [ngModel]="receptionStartTime()" (ngModelChange)="receptionStartTime.set($event)" class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3 text-sm text-stone-800 outline-none transition focus:border-[#ea938c] focus:ring-2 focus:ring-[#f3dfdc]" />
               </div>
             </div>
           </div>
