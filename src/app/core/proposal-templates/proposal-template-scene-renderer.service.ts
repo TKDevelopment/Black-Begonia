@@ -6,6 +6,8 @@ import {
 } from '../models/floral-proposal';
 import {
   ProposalTemplateDocument,
+  ProposalTemplateTableCell,
+  ProposalTemplateTableNode,
   ProposalTemplateNode,
   ProposalTemplatePage,
   ProposalTemplatePreviewData,
@@ -408,6 +410,8 @@ export class ProposalTemplateSceneRendererService {
         return `<div style="${baseStyle}background:${node.fill};border:${node.strokeWidth}px ${node.strokeStyle ?? 'solid'} ${node.stroke};border-radius:${node.shapeKind === 'ellipse' ? '999px' : `${node.cornerRadius}px`};"></div>`;
       case 'divider':
         return `<div style="${baseStyle}border-top:${node.strokeWidth}px ${node.dashed ? 'dashed' : 'solid'} ${node.stroke};"></div>`;
+      case 'table':
+        return this.renderTableNode(node, previewData, baseStyle);
       case 'image': {
         const source = node.source === 'binding'
           ? previewData.values[node.bindingKey ?? ''] ?? ''
@@ -422,7 +426,7 @@ export class ProposalTemplateSceneRendererService {
           <div
             class="bb-node-text"
             style="${baseStyle}font-family:${node.fontFamily};font-size:${node.fontSize}px;font-weight:${node.fontWeight};font-style:${node.fontStyle ?? 'normal'};line-height:${node.lineHeight};letter-spacing:${node.letterSpacing}px;color:${node.color};text-align:${node.align};text-transform:${node.textTransform ?? 'none'};text-decoration:${this.getTextDecoration(node)};"
-          >${this.escapeHtml(this.documentService.renderSegments(node.content, previewData, 'sample'))}</div>
+          >${this.escapeHtml(this.documentService.formatTextForDisplay(this.documentService.renderSegments(node.content, previewData, 'sample'), node.listStyle ?? 'none'))}</div>
         `;
       case 'totals':
         return this.renderTotalsNode(node, previewData, node.y, theme);
@@ -432,6 +436,73 @@ export class ProposalTemplateSceneRendererService {
       default:
         return '';
     }
+  }
+
+  private renderTableNode(
+    node: ProposalTemplateTableNode,
+    previewData: ProposalTemplatePreviewData,
+    baseStyle: string
+  ): string {
+    const cellsHtml = node.cells
+      .map((cell) => this.renderTableCell(cell, previewData))
+      .join('');
+
+    return `
+      <section
+        class="bb-table-node"
+        style="${baseStyle}display:grid;grid-template-columns:repeat(${node.columns}, minmax(0, 1fr));grid-template-rows:repeat(${node.rows}, minmax(0, 1fr));overflow:hidden;"
+      >
+        ${cellsHtml}
+      </section>
+    `;
+  }
+
+  private renderTableCell(
+    cell: ProposalTemplateTableCell,
+    previewData: ProposalTemplatePreviewData
+  ): string {
+    const contentHtml =
+      cell.content.kind === 'text'
+        ? `
+          <div
+            style="
+              width:100%;
+              white-space:pre-wrap;
+              overflow-wrap:anywhere;
+              color:${cell.content.color};
+              font-family:${cell.content.fontFamily};
+              font-size:${cell.content.fontSize}px;
+              font-weight:${cell.content.fontWeight};
+              font-style:${cell.content.fontStyle ?? 'normal'};
+              line-height:${cell.content.lineHeight};
+              letter-spacing:${cell.content.letterSpacing}px;
+              text-align:${cell.content.align};
+              text-transform:${cell.content.textTransform ?? 'none'};
+              text-decoration:${this.getTextDecoration(cell.content)};
+            "
+          >${this.escapeHtml(this.documentService.formatTextForDisplay(this.documentService.renderSegments(cell.content.content, previewData, 'sample'), cell.content.listStyle ?? 'none'))}</div>
+        `
+        : `<div style="width:100%;min-height:1em;"></div>`;
+
+    return `
+      <div
+        style="
+          grid-column:${cell.column + 1};
+          grid-row:${cell.row + 1};
+          display:flex;
+          align-items:stretch;
+          justify-content:stretch;
+          min-width:0;
+          min-height:0;
+          overflow:hidden;
+          padding:${cell.padding}px;
+          background:${cell.background};
+          border:${cell.strokeWidth}px solid ${cell.stroke};
+        "
+      >
+        ${contentHtml}
+      </div>
+    `;
   }
 
   private renderRepeater(

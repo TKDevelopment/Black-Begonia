@@ -238,9 +238,108 @@
             <p class="bb-drawer-title">{{ currentSidebarSection().label }}</p>
             <p class="bb-drawer-copy">{{ currentSidebarSection().description }}</p>
           </div>
-          <button type="button" class="bb-drawer-close" (click)="toggleSidebarDrawer()">Close</button>
+          <button
+            type="button"
+            class="bb-drawer-close"
+            (click)="colorDrawer() ? closeColorDrawer() : toggleSidebarDrawer()"
+          >
+            {{ colorDrawer() ? 'Close' : 'Close' }}
+          </button>
         </header>
 
+        <div *ngIf="colorDrawer() as colorDrawer; else standardDrawerBody" class="bb-drawer-body">
+          <section class="bb-drawer-section bb-color-drawer">
+            <div class="bb-color-search-row">
+              <input
+                type="search"
+                class="bb-search"
+                [ngModel]="colorDrawerSearch()"
+                (ngModelChange)="colorDrawerSearch.set($event)"
+                (keyup.enter)="applyCustomColorDrawerColor()"
+                placeholder='Try "blue" or "#00c4cc"'
+              />
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Document colors</span>
+              </div>
+              <div class="bb-color-grid">
+                <button
+                  *ngIf="colorDrawerSearch().trim()"
+                  type="button"
+                  class="bb-color-swatch is-add"
+                  [class.is-active]="isColorSwatchActive(colorDrawerSearch().trim())"
+                  [style.background]="colorDrawerSearch().trim()"
+                  (click)="applyCustomColorDrawerColor()"
+                >
+                  <span>+</span>
+                </button>
+                <button
+                  *ngFor="let color of documentColorSwatches()"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Brand Kit</span>
+              </div>
+              <div class="bb-brand-kit-copy">Color palette</div>
+              <div class="bb-color-grid">
+                <button
+                  *ngFor="let color of brandKitColorSwatches()"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Default solid colors</span>
+                <small>See all</small>
+              </div>
+              <div class="bb-color-grid">
+                <button
+                  *ngFor="let color of defaultSolidColors"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+
+            <div *ngIf="colorDrawerAllowsGradients()" class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Default gradient colors</span>
+                <small>See all</small>
+              </div>
+              <div class="bb-color-grid">
+                <button
+                  *ngFor="let color of defaultGradientColors"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <ng-template #standardDrawerBody>
         <div class="bb-drawer-body" [ngSwitch]="activeSidebarTab()">
           <section *ngSwitchCase="'templates'" class="bb-drawer-section">
             <div class="bb-canva-card">
@@ -435,6 +534,73 @@
                 <strong>{{ preset.label }}</strong>
               </button>
             </div>
+
+            <div class="bb-drawer-group bb-table-builder-card">
+              <div class="bb-drawer-group-header">
+                <span>Tables</span>
+                <small>{{ tableInsertRows() }} x {{ tableInsertColumns() }}</small>
+              </div>
+
+              <div class="bb-table-builder-preview-row">
+                <button
+                  type="button"
+                  class="bb-shape-card bb-shape-card-table"
+                  draggable="true"
+                  (click)="insertConfiguredTable()"
+                  (dragstart)="startInsertDrag(tableInsertToken(), $event)"
+                  (dragend)="endInsertDrag()"
+                >
+                  <span
+                    class="bb-shape-preview is-table-grid"
+                    [style.--bb-table-preview-columns]="tableInsertColumns()"
+                    [style.--bb-table-preview-rows]="tableInsertRows()"
+                  ></span>
+                  <strong>Table</strong>
+                </button>
+              </div>
+
+              <div class="bb-grid-two">
+                <label class="bb-table-stepper-field">
+                  <span>Rows</span>
+                  <div class="bb-context-stepper">
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertRows(tableInsertRows() - 1)">
+                      <lucide-icon [img]="iconMinus" [size]="14"></lucide-icon>
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="12"
+                      class="bb-context-number"
+                      [ngModel]="tableInsertRows()"
+                      (ngModelChange)="setTableInsertRows($event)"
+                    />
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertRows(tableInsertRows() + 1)">
+                      <lucide-icon [img]="iconPlus" [size]="14"></lucide-icon>
+                    </button>
+                  </div>
+                </label>
+
+                <label class="bb-table-stepper-field">
+                  <span>Columns</span>
+                  <div class="bb-context-stepper">
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertColumns(tableInsertColumns() - 1)">
+                      <lucide-icon [img]="iconMinus" [size]="14"></lucide-icon>
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      class="bb-context-number"
+                      [ngModel]="tableInsertColumns()"
+                      (ngModelChange)="setTableInsertColumns($event)"
+                    />
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertColumns(tableInsertColumns() + 1)">
+                      <lucide-icon [img]="iconPlus" [size]="14"></lucide-icon>
+                    </button>
+                  </div>
+                </label>
+              </div>
+            </div>
           </section>
 
           <section *ngSwitchCase="'vectors'" class="bb-drawer-section">
@@ -531,6 +697,7 @@
             </div>
           </section>
         </div>
+        </ng-template>
       </aside>
 
       <button
@@ -573,7 +740,7 @@
             (click)="$event.stopPropagation()"
             (mousedown)="$event.stopPropagation()"
           >
-            <ng-container *ngIf="selectedTextNode() as textNode">
+            <ng-container *ngIf="selectedTextToolbarTarget() as textTarget">
               <div class="bb-context-group">
                 <button
                   type="button"
@@ -586,7 +753,7 @@
                 </button>
                 <select
                   class="bb-context-select bb-context-select-font"
-                  [ngModel]="textNode.fontFamily"
+                  [ngModel]="textTarget.fontFamily"
                   (ngModelChange)="setSelectedTextFontFamily($event)"
                 >
                   <option *ngFor="let option of toolbarFontOptions()" [ngValue]="option.value">{{ option.label }}</option>
@@ -609,7 +776,7 @@
                     min="10"
                     max="240"
                     class="bb-context-number"
-                    [ngModel]="textNode.fontSize"
+                    [ngModel]="textTarget.fontSize"
                     (ngModelChange)="setSelectedTextFontSize($event)"
                   />
                   <button
@@ -651,7 +818,7 @@
                         max="24"
                         step="0.1"
                         class="bb-context-range"
-                        [ngModel]="textNode.letterSpacing"
+                        [ngModel]="textTarget.letterSpacing"
                         (ngModelChange)="setSelectedTextLetterSpacing($event)"
                       />
                       <input
@@ -660,7 +827,7 @@
                         max="24"
                         step="0.1"
                         class="bb-context-number is-short"
-                        [ngModel]="textNode.letterSpacing"
+                        [ngModel]="textTarget.letterSpacing"
                         (ngModelChange)="setSelectedTextLetterSpacing($event)"
                       />
                     </div>
@@ -669,18 +836,15 @@
               </div>
 
               <div class="bb-context-group">
-                <label
+                <button
+                  type="button"
                   class="bb-context-color-chip is-circle"
                   aria-label="Text color"
                   data-tooltip="Text color"
-                  [style.--swatch-color]="textNode.color"
+                  [style.--swatch-color]="textTarget.color"
+                  (click)="openSelectedTextColorDrawer($event)"
                 >
-                  <input
-                    type="color"
-                    [ngModel]="textNode.color"
-                    (ngModelChange)="setSelectedTextColor($event)"
-                  />
-                </label>
+                </button>
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
@@ -694,7 +858,7 @@
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="textNode.fontStyle === 'italic'"
+                  [class.is-active]="textTarget.fontStyle === 'italic'"
                   aria-label="Italic"
                   data-tooltip="Italic"
                   (click)="toggleSelectedTextItalic()"
@@ -704,7 +868,7 @@
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="!!textNode.underline"
+                  [class.is-active]="!!textTarget.underline"
                   aria-label="Underline"
                   data-tooltip="Underline"
                   (click)="toggleSelectedTextUnderline()"
@@ -714,7 +878,7 @@
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="!!textNode.strikethrough"
+                  [class.is-active]="!!textTarget.strikethrough"
                   aria-label="Strikethrough"
                   data-tooltip="Strikethrough"
                   (click)="toggleSelectedTextStrikethrough()"
@@ -724,7 +888,7 @@
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="textNode.textTransform === 'uppercase'"
+                  [class.is-active]="textTarget.textTransform === 'uppercase'"
                   aria-label="Uppercase"
                   data-tooltip="Uppercase"
                   (click)="toggleSelectedTextUppercase()"
@@ -737,62 +901,57 @@
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="textNode.align === 'left'"
-                  aria-label="Align left"
-                  data-tooltip="Align left"
-                  (click)="setSelectedTextAlign('left')"
+                  [attr.aria-label]="getSelectedTextAlignTooltip()"
+                  [attr.data-tooltip]="getSelectedTextAlignTooltip()"
+                  (click)="cycleSelectedTextAlign()"
                 >
-                  <lucide-icon [img]="iconAlignLeft" [size]="15"></lucide-icon>
+                  <lucide-icon [img]="getSelectedTextAlignIcon()" [size]="15"></lucide-icon>
                 </button>
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="textNode.align === 'center'"
-                  aria-label="Align center"
-                  data-tooltip="Align center"
-                  (click)="setSelectedTextAlign('center')"
+                  [class.is-active]="getSelectedTextListStyle() === 'unordered'"
+                  aria-label="Bulleted list"
+                  data-tooltip="Bulleted list"
+                  (click)="toggleSelectedTextListStyle('unordered')"
                 >
-                  <lucide-icon [img]="iconAlignCenter" [size]="15"></lucide-icon>
+                  <lucide-icon [img]="iconList" [size]="15"></lucide-icon>
+                  <span class="bb-context-glyph is-list" aria-hidden="true">• • •</span>
                 </button>
                 <button
                   type="button"
                   class="bb-context-button is-icon is-square"
-                  [class.is-active]="textNode.align === 'right'"
-                  aria-label="Align right"
-                  data-tooltip="Align right"
-                  (click)="setSelectedTextAlign('right')"
+                  [class.is-active]="getSelectedTextListStyle() === 'ordered'"
+                  aria-label="Numbered list"
+                  data-tooltip="Numbered list"
+                  (click)="toggleSelectedTextListStyle('ordered')"
                 >
-                  <lucide-icon [img]="iconAlignRight" [size]="15"></lucide-icon>
+                  <lucide-icon [img]="iconListOrdered" [size]="15"></lucide-icon>
+                  <span class="bb-context-glyph is-numbered-list" aria-hidden="true">1. 2. 3.</span>
                 </button>
               </div>
             </ng-container>
 
             <ng-container *ngIf="selectedShapeNode() as shapeNode">
               <div class="bb-context-group">
-                <label
+                <button
+                  type="button"
                   class="bb-context-color-chip is-circle"
                   aria-label="Fill color"
                   data-tooltip="Fill color"
                   [style.--swatch-color]="shapeNode.fill"
+                  (click)="openColorDrawer('shape-fill', $event)"
                 >
-                  <input
-                    type="color"
-                    [ngModel]="shapeNode.fill"
-                    (ngModelChange)="setSelectedShapeFill($event)"
-                  />
-                </label>
-                <label
+                </button>
+                <button
+                  type="button"
                   class="bb-context-color-chip is-circle"
                   aria-label="Border color"
                   data-tooltip="Border color"
                   [style.--swatch-color]="shapeNode.stroke"
+                  (click)="openColorDrawer('shape-stroke', $event)"
                 >
-                  <input
-                    type="color"
-                    [ngModel]="shapeNode.stroke"
-                    (ngModelChange)="setSelectedStrokeColor($event)"
-                  />
-                </label>
+                </button>
 
                 <div *ngIf="shapeNode.shapeKind !== 'ellipse'" class="bb-context-popover-anchor">
                   <button
@@ -944,18 +1103,15 @@
 
             <ng-container *ngIf="selectedDividerNode() as dividerNode">
               <div class="bb-context-group">
-                <label
+                <button
+                  type="button"
                   class="bb-context-color-chip is-circle"
                   aria-label="Stroke color"
                   data-tooltip="Stroke color"
                   [style.--swatch-color]="dividerNode.stroke"
+                  (click)="openColorDrawer('divider-stroke', $event)"
                 >
-                  <input
-                    type="color"
-                    [ngModel]="dividerNode.stroke"
-                    (ngModelChange)="setSelectedStrokeColor($event)"
-                  />
-                </label>
+                </button>
 
                 <div class="bb-context-popover-anchor">
                   <button
@@ -1057,7 +1213,68 @@
               </div>
             </ng-container>
 
-            <ng-container *ngIf="!selectedTextNode() && !selectedShapeNode() && !selectedDividerNode()">
+            <ng-container *ngIf="selectedTableCellData() as tableCell">
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Cell background"
+                  data-tooltip="Cell background"
+                  [style.--swatch-color]="tableCell.background"
+                  (click)="openColorDrawer('table-cell-background', $event)"
+                ></button>
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Cell border"
+                  data-tooltip="Cell border"
+                  [style.--swatch-color]="tableCell.stroke"
+                  (click)="openColorDrawer('table-cell-stroke', $event)"
+                ></button>
+
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('table-cell-stroke')"
+                    aria-label="Cell border weight"
+                    data-tooltip="Cell border weight"
+                    (click)="toggleToolbarPopover('table-cell-stroke', $event)"
+                  >
+                    <lucide-icon [img]="iconSlidersHorizontal" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('table-cell-stroke')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Cell border weight</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        class="bb-context-range"
+                        [ngModel]="tableCell.strokeWidth"
+                        (ngModelChange)="setSelectedTableCellStrokeWidth($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        class="bb-context-number is-short"
+                        [ngModel]="tableCell.strokeWidth"
+                        (ngModelChange)="setSelectedTableCellStrokeWidth($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="!selectedTextToolbarTarget() && !selectedShapeNode() && !selectedDividerNode() && !selectedTableNode()">
               <div class="bb-context-group">
                 <div class="bb-context-popover-anchor">
                   <button
@@ -1165,19 +1382,36 @@
                   (drop)="dropInsertOnPage($event, page)"
                 >
                 <ng-container *ngFor="let node of orderedNodes()">
-                  <button
+                  <div
                     *ngIf="node.type === 'rich-text'"
-                    type="button"
                     class="bb-node bb-node-text"
                     [class.is-selected]="isNodeSelected(node.id)"
                     [class.is-editing]="textEditor()?.nodeId === node.id"
                     [ngStyle]="getTextNodeStyle(node)"
+                    role="button"
+                    tabindex="0"
                     (click)="selectNode(page.id, node.id, $event)"
                     (mousedown)="startNodeDrag($event, node)"
                     (dblclick)="openTextEditor(node, $event)"
                   >
-                    {{ getTextNodeContent(node) }}
-                  </button>
+                    <ng-container *ngIf="getTextNodeRenderModel(node) as textModel">
+                      <span
+                        *ngIf="textModel.kind === 'plain'"
+                        class="bb-node-text-content"
+                        [textContent]="textModel.text"
+                      ></span>
+                      <span
+                        *ngIf="textModel.kind === 'list'"
+                        class="bb-text-list"
+                        [style.--bb-list-marker-width]="textModel.markerWidth"
+                      >
+                        <span *ngFor="let item of textModel.items" class="bb-text-list-item">
+                          <span class="bb-text-list-marker" [textContent]="item.marker"></span>
+                          <span class="bb-text-list-content" [textContent]="item.content"></span>
+                        </span>
+                      </span>
+                    </ng-container>
+                  </div>
 
                   <button
                     *ngIf="node.type === 'shape'"
@@ -1210,6 +1444,46 @@
                   >
                     <span class="bb-node-image-copy">{{ getImageNodeLabel(node) }}</span>
                   </button>
+
+                  <div
+                    *ngIf="node.type === 'table'"
+                    class="bb-node bb-node-table"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getTableStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  >
+                    <button
+                      *ngFor="let cell of node.cells"
+                      type="button"
+                      class="bb-table-cell"
+                      [class.is-selected]="isSelectedTableCell(cell.id)"
+                      [class.is-editing]="textEditor()?.cellId === cell.id"
+                      [ngStyle]="getTableCellStyle(cell)"
+                      (click)="selectTableCell(page.id, node.id, cell.id, $event)"
+                      (dblclick)="openTableCellEditor(node, cell, $event)"
+                    >
+                      <span class="bb-table-cell-text" [ngStyle]="getTableCellTextStyle(cell)">
+                        <ng-container *ngIf="getTableCellTextRenderModel(cell) as textModel">
+                          <span
+                            *ngIf="textModel.kind === 'plain'"
+                            class="bb-node-text-content"
+                            [textContent]="textModel.text"
+                          ></span>
+                          <span
+                            *ngIf="textModel.kind === 'list'"
+                            class="bb-text-list"
+                            [style.--bb-list-marker-width]="textModel.markerWidth"
+                          >
+                            <span *ngFor="let item of textModel.items" class="bb-text-list-item">
+                              <span class="bb-text-list-marker" [textContent]="item.marker"></span>
+                              <span class="bb-text-list-content" [textContent]="item.content"></span>
+                            </span>
+                          </span>
+                        </ng-container>
+                      </span>
+                    </button>
+                  </div>
 
                   <div
                     *ngIf="node.type === 'repeater'"
@@ -1382,7 +1656,7 @@
                     class="bb-layer-main"
                     (click)="selectNode(node.pageId, node.id, $event)"
                   >
-                    <span class="bb-layer-kind">{{ node.type === 'rich-text' ? 'T' : node.type === 'image' ? 'Img' : node.type === 'shape' ? 'Shp' : node.type === 'divider' ? 'Line' : node.type === 'repeater' ? 'Rpt' : 'Tot' }}</span>
+                    <span class="bb-layer-kind">{{ node.type === 'rich-text' ? 'T' : node.type === 'image' ? 'Img' : node.type === 'shape' ? 'Shp' : node.type === 'divider' ? 'Line' : node.type === 'table' ? 'Tbl' : node.type === 'repeater' ? 'Rpt' : 'Tot' }}</span>
                     <span class="bb-layer-name">{{ node.name }}</span>
                   </button>
                   <span class="bb-layer-actions">
