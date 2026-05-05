@@ -3,26 +3,42 @@ import { Component, EventEmitter, Input, Output, SimpleChanges, signal } from '@
 import { FormsModule } from '@angular/forms';
 
 import { DocumentTemplate } from '../../../../../core/models/floral-proposal';
+import {
+  PROPOSAL_RENDERER_OPTIONS,
+  ProposalRendererKey,
+  resolveTemplateRendererKey,
+} from '../../../../../core/proposal-templates/proposal-renderer-registry';
+import { getProposalRendererStrategy } from '../../../../../core/proposal-templates/proposal-renderer-strategies';
+import {
+  getTemplateServiceProfile,
+  hasProposalTemplateServiceProfile,
+  normalizeProposalTemplateServiceProfile,
+  ProposalTemplateServiceProfile,
+  PROPOSAL_TEMPLATE_FINAL_BALANCE_MODE_OPTIONS,
+} from '../../../../../core/proposal-templates/proposal-template-service-profile';
+import {
+  getProposalTemplatePreset,
+  getProposalTemplateServiceProfilePreset,
+  ProposalTemplatePreset,
+} from '../../../../../core/proposal-templates/proposal-template-presets';
+
+type ServiceProfileFieldKey = Exclude<keyof ProposalTemplateServiceProfile, 'finalBalanceMode'>;
+
+interface ServiceProfileFieldDefinition {
+  key: ServiceProfileFieldKey;
+  label: string;
+  description: string;
+  rows?: number;
+  fullWidth?: boolean;
+}
 
 export interface ProposalTemplateUpsertPayload {
   name: string;
   template_key: string;
+  renderer_key: ProposalRendererKey;
   is_active: boolean;
   is_default: boolean;
-  primary_color?: string | null;
-  accent_color?: string | null;
-  heading_font_family?: string | null;
-  body_font_family?: string | null;
-  header_layout: DocumentTemplate['header_layout'];
-  line_item_layout: DocumentTemplate['line_item_layout'];
-  footer_layout: DocumentTemplate['footer_layout'];
-  show_cover_page: boolean;
-  show_intro_message: boolean;
-  intro_title?: string | null;
-  intro_body?: string | null;
-  show_terms_section: boolean;
-  show_privacy_section: boolean;
-  show_signature_section: boolean;
+  service_profile: ProposalTemplateServiceProfile;
 }
 
 @Component({
@@ -32,6 +48,138 @@ export interface ProposalTemplateUpsertPayload {
   templateUrl: './proposal-template-upsert-modal.component.html',
 })
 export class ProposalTemplateUpsertModalComponent {
+  readonly rendererOptions = PROPOSAL_RENDERER_OPTIONS;
+  readonly finalBalanceModeOptions = PROPOSAL_TEMPLATE_FINAL_BALANCE_MODE_OPTIONS;
+  readonly supportedTokens = [
+    '{{customer_name}}',
+    '{{service_type}}',
+    '{{event_date}}',
+    '{{delivery_setup_location}}',
+    '{{final_balance_due_date}}',
+  ];
+  readonly framingFields: ServiceProfileFieldDefinition[] = [
+    {
+      key: 'documentTitle',
+      label: 'Document Title',
+      description: 'Used for the rendered document title and shared fallback header copy.',
+    },
+    {
+      key: 'agreementTitle',
+      label: 'Agreement Title',
+      description: 'Main agreement heading shown across fallback render output and Studio starter fields.',
+    },
+    {
+      key: 'lineItemsKicker',
+      label: 'Line Items Kicker',
+      description: 'Small overline above the line-item section.',
+    },
+    {
+      key: 'lineItemsTitle',
+      label: 'Line Items Title',
+      description: 'Primary heading for the line-item section.',
+    },
+    {
+      key: 'pricingEyebrow',
+      label: 'Investment Eyebrow',
+      description: 'Small label above the totals or investment card.',
+    },
+    {
+      key: 'investmentTitle',
+      label: 'Investment Title',
+      description: 'Primary heading for the totals or investment section.',
+    },
+  ];
+  readonly contractLabelFields: ServiceProfileFieldDefinition[] = [
+    {
+      key: 'detailsSectionTitle',
+      label: 'Details Section Title',
+      description: 'Heading used for the event or service details table.',
+    },
+    {
+      key: 'serviceTypeLabel',
+      label: 'Service Type Label',
+      description: 'Column or row label for the service type field.',
+    },
+    {
+      key: 'serviceDateLabel',
+      label: 'Service Date Label',
+      description: 'Column or row label for the event or service date.',
+    },
+    {
+      key: 'deliveryLocationLabel',
+      label: 'Location Label',
+      description: 'Column or row label for delivery, setup, or service location.',
+    },
+    {
+      key: 'paymentTermsTitle',
+      label: 'Payment Terms Title',
+      description: 'Heading used for the payment-terms section.',
+    },
+    {
+      key: 'retainerLabel',
+      label: 'Retainer Label',
+      description: 'Label for the retainer, deposit, or approval row.',
+    },
+    {
+      key: 'finalBalanceLabel',
+      label: 'Final Balance Label',
+      description: 'Label for the due-date or billing-schedule row.',
+    },
+    {
+      key: 'finalBalanceFallback',
+      label: 'Final Balance Fallback',
+      description: 'Shown when no event date exists or when the selected due mode uses copy instead of a calculated date.',
+    },
+    {
+      key: 'latePaymentLabel',
+      label: 'Late Payment Label',
+      description: 'Label for the final payment or billing notes row.',
+    },
+  ];
+  readonly contractCopyFields: ServiceProfileFieldDefinition[] = [
+    {
+      key: 'retainerCopy',
+      label: 'Retainer Copy',
+      description: 'Main copy describing what must be signed or paid to reserve service.',
+      rows: 4,
+      fullWidth: true,
+    },
+    {
+      key: 'latePaymentCopy',
+      label: 'Late Payment Copy',
+      description: 'Copy describing what happens if payment is delayed.',
+      rows: 4,
+      fullWidth: true,
+    },
+    {
+      key: 'privacyTitle',
+      label: 'Privacy Title',
+      description: 'Heading for the privacy section.',
+    },
+    {
+      key: 'privacyCopy',
+      label: 'Privacy Copy',
+      description: 'Privacy language rendered in the agreement section.',
+      rows: 4,
+      fullWidth: true,
+    },
+    {
+      key: 'signatureTitle',
+      label: 'Signature Title',
+      description: 'Heading for the signature and acceptance section.',
+    },
+    {
+      key: 'floristSignatureParty',
+      label: 'Florist Signature Party',
+      description: 'Name shown above the florist signature block.',
+    },
+    {
+      key: 'clientSignatureParty',
+      label: 'Client Signature Party',
+      description: 'Name or label shown above the client signature block. Tokens are supported here.',
+    },
+  ];
+
   @Input() open = false;
   @Input() saving = false;
   @Input() mode: 'create' | 'edit' = 'create';
@@ -42,24 +190,11 @@ export class ProposalTemplateUpsertModalComponent {
 
   readonly name = signal('');
   readonly templateKey = signal('');
+  readonly rendererKey = signal<ProposalRendererKey>('general-event');
   readonly isActive = signal(true);
   readonly isDefault = signal(false);
-  readonly primaryColor = signal('#111111');
-  readonly accentColor = signal('#ea938c');
-  readonly headingFontFamily = signal('Cormorant Garamond');
-  readonly bodyFontFamily = signal('Source Sans 3');
-  readonly headerLayout = signal<DocumentTemplate['header_layout']>('editorial');
-  readonly lineItemLayout = signal<DocumentTemplate['line_item_layout']>('image_left');
-  readonly footerLayout = signal<DocumentTemplate['footer_layout']>('signature_focused');
-  readonly showCoverPage = signal(true);
-  readonly showIntroMessage = signal(true);
-  readonly introTitle = signal('Your Floral Proposal');
-  readonly introBody = signal(
-    'We are honored to prepare floral designs for your event. Below is your curated floral proposal.'
-  );
-  readonly showTermsSection = signal(true);
-  readonly showPrivacySection = signal(true);
-  readonly showSignatureSection = signal(true);
+  readonly serviceProfile = signal<ProposalTemplateServiceProfile>({});
+  readonly appliedPresetKey = signal<ProposalRendererKey | null>(null);
   readonly validationError = signal<string | null>(null);
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -80,6 +215,41 @@ export class ProposalTemplateUpsertModalComponent {
     return this.mode === 'create' ? 'Create Template' : 'Save Changes';
   }
 
+  get rendererDescription(): string {
+    return (
+      this.rendererOptions.find((option) => option.key === this.rendererKey())?.description ??
+      'Choose the renderer strategy that best matches this floral service.'
+    );
+  }
+
+  get hasServiceProfileOverrides(): boolean {
+    return hasProposalTemplateServiceProfile(this.serviceProfile());
+  }
+
+  get finalBalanceModeValue(): string {
+    return this.serviceProfile().finalBalanceMode ?? '';
+  }
+
+  get finalBalanceModeDefaultLabel(): string {
+    const defaultMode = getProposalRendererStrategy(this.rendererKey()).finalBalanceMode;
+    return (
+      this.finalBalanceModeOptions.find((option) => option.value === defaultMode)?.label ??
+      'Renderer default'
+    );
+  }
+
+  get finalBalanceModeDescription(): string {
+    return (
+      this.finalBalanceModeOptions.find((option) => option.value === this.finalBalanceModeValue)
+        ?.description ??
+      'Keep this blank if the renderer strategy should decide how due dates are calculated.'
+    );
+  }
+
+  get recommendedPreset(): ProposalTemplatePreset | null {
+    return getProposalTemplatePreset(this.rendererKey());
+  }
+
   onClose(): void {
     if (this.saving) return;
     this.validationError.set(null);
@@ -92,29 +262,72 @@ export class ProposalTemplateUpsertModalComponent {
     this.confirm.emit(payload);
   }
 
+  updateRendererKey(value: ProposalRendererKey): void {
+    const shouldSyncPreset =
+      this.mode === 'create' &&
+      (!!this.appliedPresetKey() || !hasProposalTemplateServiceProfile(this.serviceProfile()));
+
+    this.rendererKey.set(value);
+
+    if (shouldSyncPreset) {
+      this.applyRecommendedServiceProfile();
+    }
+  }
+
+  getServiceProfileValue(key: ServiceProfileFieldKey): string {
+    return this.serviceProfile()[key] ?? '';
+  }
+
+  getServiceProfileDefault(key: ServiceProfileFieldKey): string {
+    const value = getProposalRendererStrategy(this.rendererKey())[key];
+    return typeof value === 'string' ? value : '';
+  }
+
+  updateServiceProfileValue(key: ServiceProfileFieldKey, value: string): void {
+    this.serviceProfile.update(
+      (current) =>
+        ({
+          ...current,
+          [key]: value ?? '',
+        }) as ProposalTemplateServiceProfile
+    );
+    this.appliedPresetKey.set(null);
+  }
+
+  updateFinalBalanceMode(value: string): void {
+    const nextValue =
+      this.finalBalanceModeOptions.find((option) => option.value === value)?.value;
+
+    this.serviceProfile.update((current) => ({
+      ...current,
+      finalBalanceMode: nextValue,
+    }));
+    this.appliedPresetKey.set(null);
+  }
+
+  applyRecommendedServiceProfile(): void {
+    const presetProfile = getProposalTemplateServiceProfilePreset(this.rendererKey());
+    this.serviceProfile.set(presetProfile);
+    this.appliedPresetKey.set(
+      Object.keys(presetProfile).length ? this.rendererKey() : null
+    );
+  }
+
+  clearServiceProfileOverrides(): void {
+    this.serviceProfile.set({});
+    this.appliedPresetKey.set(null);
+  }
+
   private hydrateForm(): void {
     const template = this.template;
+
     this.name.set(template?.name ?? '');
     this.templateKey.set(template?.template_key ?? '');
+    this.rendererKey.set(resolveTemplateRendererKey(template));
     this.isActive.set(template?.is_active ?? true);
     this.isDefault.set(template?.is_default ?? false);
-    this.primaryColor.set(template?.primary_color ?? '#111111');
-    this.accentColor.set(template?.accent_color ?? '#ea938c');
-    this.headingFontFamily.set(template?.heading_font_family ?? 'Cormorant Garamond');
-    this.bodyFontFamily.set(template?.body_font_family ?? 'Source Sans 3');
-    this.headerLayout.set(template?.header_layout ?? 'editorial');
-    this.lineItemLayout.set(template?.line_item_layout ?? 'image_left');
-    this.footerLayout.set(template?.footer_layout ?? 'signature_focused');
-    this.showCoverPage.set(template?.show_cover_page ?? true);
-    this.showIntroMessage.set(template?.show_intro_message ?? true);
-    this.introTitle.set(template?.intro_title ?? 'Your Floral Proposal');
-    this.introBody.set(
-      template?.intro_body ??
-        'We are honored to prepare floral designs for your event. Below is your curated floral proposal.'
-    );
-    this.showTermsSection.set(template?.show_terms_section ?? true);
-    this.showPrivacySection.set(template?.show_privacy_section ?? true);
-    this.showSignatureSection.set(template?.show_signature_section ?? true);
+    this.serviceProfile.set(getTemplateServiceProfile(template));
+    this.appliedPresetKey.set(null);
     this.validationError.set(null);
   }
 
@@ -127,9 +340,9 @@ export class ProposalTemplateUpsertModalComponent {
       return null;
     }
 
-    if (!templateKey || !/^[a-z0-9-_]+$/.test(templateKey)) {
+    if (!/^[a-z0-9-_]+$/.test(templateKey)) {
       this.validationError.set(
-        'Template key is required and should only use lowercase letters, numbers, hyphens, or underscores.'
+        'Template key must use lowercase letters, numbers, dashes, or underscores only.'
       );
       return null;
     }
@@ -139,22 +352,10 @@ export class ProposalTemplateUpsertModalComponent {
     return {
       name,
       template_key: templateKey,
+      renderer_key: this.rendererKey(),
       is_active: this.isActive(),
       is_default: this.isDefault(),
-      primary_color: this.primaryColor(),
-      accent_color: this.accentColor(),
-      heading_font_family: this.headingFontFamily(),
-      body_font_family: this.bodyFontFamily(),
-      header_layout: this.headerLayout(),
-      line_item_layout: this.lineItemLayout(),
-      footer_layout: this.footerLayout(),
-      show_cover_page: this.showCoverPage(),
-      show_intro_message: this.showIntroMessage(),
-      intro_title: this.introTitle().trim() || null,
-      intro_body: this.introBody().trim() || null,
-      show_terms_section: this.showTermsSection(),
-      show_privacy_section: this.showPrivacySection(),
-      show_signature_section: this.showSignatureSection(),
+      service_profile: normalizeProposalTemplateServiceProfile(this.serviceProfile()),
     };
   }
 }

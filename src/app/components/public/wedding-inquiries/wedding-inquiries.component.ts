@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -7,19 +7,17 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import {
+  FloralServiceDefinition,
+  findFloralService,
+  getFloralServicesForEventType,
+} from '../../../core/floral-services/floral-service-catalog';
 import { ToastService } from '../../../core/services/toast.service';
 import { SeoService } from '../../../core/seo/seo.service';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 import { CreateWeddingLeadInput } from '../../../core/models/create-wedding-lead-input';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { Router } from '@angular/router';
-
-type WeddingServiceType =
-  | 'full-service wedding'
-  | 'ceremony-only wedding'
-  | 'reception-only wedding'
-  | 'elopement'
-  | 'engagement';
 
 type BudgetOption = {
   label: string;
@@ -33,23 +31,25 @@ type BudgetOption = {
   templateUrl: './wedding-inquiries.component.html',
   styleUrl: './wedding-inquiries.component.scss',
 })
-export class WeddingInquiriesComponent {
+export class WeddingInquiriesComponent implements OnInit {
   private readonly inquiryEmailMaxAttempts = 3;
   private readonly inquiryEmailRetryDelayMs = 1200;
-  private readonly weddingBudgetOptions: Record<WeddingServiceType, BudgetOption[]> = {
-    'full-service wedding': [
+  readonly weddingServiceOptions: FloralServiceDefinition[] =
+    getFloralServicesForEventType('wedding');
+  private readonly weddingBudgetOptions: Record<string, BudgetOption[]> = {
+    'wedding-full-service': [
       { label: '$3,000 - $5,000', value: '$3,000 - $5,000' },
       { label: '$5,000 - $8,000', value: '$5,000 - $8,000' },
       { label: '$8,000 - $10,000', value: '$8,000 - $10,000' },
       { label: '$10,000+', value: '$10,000+' },
     ],
-    'ceremony-only wedding': [
+    'wedding-ceremony-only': [
       { label: '$2,800 - $5,000', value: '$2,800 - $5,000' },
       { label: '$5,000 - $8,000', value: '$5,000 - $8,000' },
       { label: '$8,000 - $10,000', value: '$8,000 - $10,000' },
       { label: '$10,000+', value: '$10,000+' },
     ],
-    'reception-only wedding': [
+    'wedding-reception-only': [
       { label: '$2,800 - $5,000', value: '$2,800 - $5,000' },
       { label: '$5,000 - $8,000', value: '$5,000 - $8,000' },
       { label: '$8,000 - $10,000', value: '$8,000 - $10,000' },
@@ -126,6 +126,22 @@ export class WeddingInquiriesComponent {
     this.addInspirationUrl();
   }
 
+  ngOnInit(): void {
+    this.seo.setPageMeta({
+      title: 'Wedding Inquiry | Black Begonia Florals',
+      description:
+        'Submit your wedding floral inquiry with Black Begonia Florals to begin planning bouquets, ceremony flowers, reception florals, and custom floral design for your celebration.',
+      url: 'https://blackbegoniaflorals.com/inquiries/weddings',
+      image: 'https://blackbegoniaflorals.com/assets/images/og-default.png',
+      keywords: [
+        'Wedding inquiry form',
+        'Wedding florist inquiry',
+        'Rhode Island wedding florist',
+        'New England wedding flowers',
+      ],
+    });
+  }
+
   get budgetOptions(): BudgetOption[] {
     return this.getBudgetOptionsForServiceType(
       this.weddingInquiryForm.get('serviceType')?.value
@@ -199,6 +215,10 @@ export class WeddingInquiriesComponent {
   }
 
   async onSubmit(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
     if (this.weddingInquiryForm.invalid) {
       this.weddingInquiryForm.markAllAsTouched();
       this.showInvalidTooltips();
@@ -351,11 +371,12 @@ export class WeddingInquiriesComponent {
   }
 
   private getBudgetOptionsForServiceType(serviceType: string | null | undefined): BudgetOption[] {
-    const normalizedServiceType = String(serviceType ?? '').trim().toLowerCase() as WeddingServiceType;
+    const serviceKey =
+      findFloralService(serviceType, 'wedding')?.key ?? 'wedding-full-service';
 
     return (
-      this.weddingBudgetOptions[normalizedServiceType] ??
-      this.weddingBudgetOptions['full-service wedding']
+      this.weddingBudgetOptions[serviceKey] ??
+      this.weddingBudgetOptions['wedding-full-service']
     );
   }
 

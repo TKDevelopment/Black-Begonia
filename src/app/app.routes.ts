@@ -188,6 +188,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'proposal-templates',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/proposal-templates.component').then(
+            m => m.ProposalTemplatesComponent
+          ),
+      },
+      {
+        path: 'proposal-templates/:templateId/studio',
+        loadComponent: () =>
+          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
+            m => m.ProposalTemplateStudioComponent
+          ),
+      },
+      {
         path: 'leads/:leadId',
         loadComponent: () =>
           import('./components/private/leads/lead-detail/lead-detail.component').then(m => m.LeadDetailComponent),
@@ -217,27 +231,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'proposal-templates',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/proposal-templates.component').then(
-            m => m.ProposalTemplatesComponent
-          ),
-      },
-      {
-        path: 'proposal-templates/:templateId/studio',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
-            m => m.ProposalTemplateStudioComponent
-          ),
-      },
-      {
-        path: 'proposal-templates/:templateId',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/proposal-templates.component').then(
-            m => m.ProposalTemplatesComponent
-          ),
-      },
-      {
         path: 'catalog-items',
         loadComponent: () =>
           import('./components/private/catalog-items/catalog-items.component').then(
@@ -251,16 +244,6 @@ export const routes: Routes = [
             m => m.CatalogItemsComponent
           ),
       },
-      {
-        path: 'vendors',
-        redirectTo: 'catalog-items',
-        pathMatch: 'full',
-      },
-      {
-        path: 'vendors/:vendorId',
-        redirectTo: 'catalog-items',
-      },
-
       {
         path: 'tax-regions',
         loadComponent: () =>

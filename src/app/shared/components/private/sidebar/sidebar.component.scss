@@ -1,0 +1,104 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.crm-sidebar {
+  background: var(--crm-surface, #ffffff);
+  color: var(--crm-text, #1f1f1f);
+}
+
+.crm-sidebar-section {
+  border-color: var(--crm-border, rgba(31, 31, 31, 0.08));
+}
+
+.crm-sidebar-card {
+  background: var(--crm-surface-muted, #f7f4f1);
+  border-color: var(--crm-border, rgba(31, 31, 31, 0.08));
+}
+
+.crm-sidebar-button,
+.crm-theme-toggle,
+.crm-sidebar-logout {
+  background: var(--crm-surface-elevated, #ffffff);
+  border-color: var(--crm-border-strong, rgba(31, 31, 31, 0.12));
+  color: var(--crm-text, #1f1f1f);
+}
+
+.crm-sidebar-link {
+  color: var(--crm-text-strong, #2d2d2d);
+}
+
+.crm-sidebar .active-link,
+.crm-sidebar .active-link span {
+  color: #ffffff !important;
+}
+
+.crm-sidebar .active-link .active-link-dot {
+  background: #ffffff !important;
+}
+
+.crm-sidebar .active-link:hover,
+.crm-sidebar .active-link:hover span {
+  color: #161311 !important;
+}
+
+.crm-sidebar .active-link:hover .active-link-dot {
+  background: #161311 !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar {
+  background: var(--crm-surface, #101a26);
+  color: var(--crm-text, #ecf3fb);
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-section {
+  border-color: var(--crm-border, #23364c);
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-card {
+  background: var(--crm-surface-subtle, #142031);
+  border-color: var(--crm-border-strong, #375471);
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-button,
+:host-context(.crm-theme-dark) .crm-theme-toggle,
+:host-context(.crm-theme-dark) .crm-sidebar-logout {
+  background: var(--crm-surface-elevated, #172334);
+  border-color: var(--crm-border-strong, #375471);
+  color: var(--crm-text, #ecf3fb);
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-button:hover,
+:host-context(.crm-theme-dark) .crm-sidebar-link:hover {
+  background: var(--crm-surface-highlight, #1f3046) !important;
+  color: var(--crm-accent, #f0a69d) !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-link span {
+  color: var(--crm-text-muted, #c0cfe0) !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link,
+:host-context(.crm-theme-dark) .crm-sidebar .active-link span {
+  color: #09111a !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link .active-link-dot {
+  background: #09111a !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link:hover,
+:host-context(.crm-theme-dark) .crm-sidebar .active-link:hover span {
+  color: #ffffff !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar .active-link:hover .active-link-dot {
+  background: #ffffff !important;
+}
+
+:host-context(.crm-theme-dark) .crm-sidebar-logout:hover {
+  border-color: var(--crm-accent, #f0a69d) !important;
+  background: var(--crm-accent, #f0a69d) !important;
+  color: #09111a !important;
+}

@@ -10,6 +10,7 @@
 export type CatalogUnitType =
   | 'stem'
   | 'bunch'
+  | 'box'
   | 'block'
   | 'piece'
   | 'hour'

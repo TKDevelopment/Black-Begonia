@@ -3,6 +3,7 @@ export const environment = {
     bypassAuth: 'default',
     supabaseUrl: 'default',
     supabaseAnonKey: 'default',
+    grapesjsStudioLicenseKey: 'default',
     googleClientId: 'default',
     googleApiKey: 'default'
 };

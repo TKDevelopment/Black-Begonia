@@ -48,6 +48,7 @@ export class JsonLdService {
     this.removeScript('schema-breadcrumbs');
     this.removeScript('schema-location-service');
     this.removeScript('schema-locations-hub');
+    this.removeScript('schema-portfolio-gallery');
   }
 
   setLocalBusiness() {
@@ -341,5 +342,42 @@ export class JsonLdService {
     };
 
     this.setScript('schema-locations-hub', data);
+  }
+
+  setPortfolioGallery(input: {
+    name: string;
+    url: string;
+    description: string;
+    image: string;
+    location: string;
+    images: string[];
+  }) {
+    this.setWebPage({
+      name: input.name,
+      url: input.url,
+      description: input.description,
+      image: input.image,
+      keywords: ['wedding flowers', 'portfolio gallery', input.location],
+    });
+
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'ImageGallery',
+      name: input.name,
+      url: input.url,
+      description: input.description,
+      about: {
+        '@type': 'Event',
+        name: input.name,
+        location: {
+          '@type': 'Place',
+          name: input.location,
+        },
+      },
+      primaryImageOfPage: input.image,
+      image: input.images.length ? input.images : [input.image],
+    };
+
+    this.setScript('schema-portfolio-gallery', data);
   }
 }

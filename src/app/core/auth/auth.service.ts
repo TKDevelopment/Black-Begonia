@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -22,14 +23,20 @@ export class AuthService {
   private readonly stateSubject = new BehaviorSubject<AuthState>(INITIAL_AUTH_STATE);
   private initPromise: Promise<void> | null = null;
   private authListenerRegistered = false;
+  private readonly isBrowser: boolean;
 
   readonly state$: Observable<AuthState> = this.stateSubject.asObservable();
 
   constructor(
     private readonly router: Router,
-    private readonly supabaseService: SupabaseService
+    private readonly supabaseService: SupabaseService,
+    @Inject(PLATFORM_ID) platformId: object
   ) {
-    this.registerAuthListener();
+    this.isBrowser = isPlatformBrowser(platformId);
+
+    if (this.isBrowser) {
+      this.registerAuthListener();
+    }
   }
 
   get snapshot(): AuthState {
@@ -58,6 +65,20 @@ export class AuthService {
 
   async init(): Promise<void> {
     if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    if (!this.isBrowser) {
+      this.patchState({
+        initialized: true,
+        loading: false,
+        session: null,
+        user: null,
+        profile: null,
+        roles: [],
+        isInternalUser: false,
+      });
+      this.initPromise = Promise.resolve();
       return this.initPromise;
     }
 

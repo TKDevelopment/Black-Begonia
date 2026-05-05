@@ -54,7 +54,7 @@
         </table>
       </div>
 
-      <div class="border-t border-black/10 bg-[#fcfaf8] px-3 py-3 sm:px-4 md:px-5">
+      <div class="crm-table-pagination border-t border-black/10 bg-[#fcfaf8] px-3 py-3 sm:px-4 md:px-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p class="text-[12px] text-stone-600" [class.opacity-60]="totalPages === 1">
             {{ pageSummaryText }}
@@ -65,7 +65,7 @@
               type="button"
               (click)="goToPreviousPage()"
               [disabled]="currentPage === 1"
-              class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              class="crm-table-toolbar-button inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Back
             </button>
@@ -74,7 +74,7 @@
               *ngFor="let page of visiblePageNumbers"
               type="button"
               (click)="goToPage(page)"
-              class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-3 text-[12px] font-medium transition"
+              class="crm-table-page-button inline-flex h-9 min-w-9 items-center justify-center rounded-xl border px-3 text-[12px] font-medium transition"
               [ngClass]="page === currentPage
                 ? 'border-[#ea938c] bg-[#ea938c] text-[#1f1f1f] shadow-[0_10px_24px_rgba(234,147,140,0.22)]'
                 : 'border-black/10 bg-white text-stone-700 hover:bg-stone-50'"
@@ -87,7 +87,7 @@
               type="button"
               (click)="goToNextPage()"
               [disabled]="currentPage === totalPages"
-              class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              class="crm-table-toolbar-button inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>

@@ -11,6 +11,7 @@ const envConfigFile = `
         bypassAuth: false,
         supabaseUrl: '${process.env['SUPABASE_URL']}',
         supabaseAnonKey: '${process.env['SUPABASE_ANON_KEY']}',
+        grapesjsStudioLicenseKey: '${process.env['GRAPEJS_LICENSE_KEY']}',
         googleClientId: '${process.env['GOOGLE_CLIENT_ID']}',
         googleApiKey: '${process.env['GOOGLE_API_KEY']}',
     };

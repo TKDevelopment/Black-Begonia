@@ -23,7 +23,7 @@ export interface CatalogItemUpsertPayload {
 })
 export class CatalogItemUpsertModalComponent {
   readonly itemTypes: CatalogItemType[] = ['flower', 'greenery', 'hardgood', 'packaging', 'labor', 'fee', 'other'];
-  readonly unitTypes: CatalogUnitType[] = ['stem', 'bunch', 'block', 'piece', 'hour', 'foot', 'bundle', 'other'];
+  readonly unitTypes: CatalogUnitType[] = ['stem', 'bunch', 'box', 'block', 'piece', 'hour', 'foot', 'bundle', 'other'];
 
   @Input() open = false;
   @Input() saving = false;
@@ -79,7 +79,14 @@ export class CatalogItemUpsertModalComponent {
   }
 
   requiresPackQuantity(unitType: CatalogUnitType): boolean {
-    return unitType === 'bunch' || unitType === 'bundle';
+    return (
+      unitType === 'bunch' ||
+      unitType === 'bundle' ||
+      unitType === 'box' ||
+      unitType === 'stem' ||
+      unitType === 'block' ||
+      unitType === 'piece'
+    );
   }
 
   onUnitTypeChange(value: CatalogUnitType): void {
@@ -123,7 +130,7 @@ export class CatalogItemUpsertModalComponent {
     }
 
     if (requiresPackQuantity && (packQuantity == null || Number.isNaN(packQuantity) || packQuantity <= 0)) {
-      this.validationError.set('Pack quantity must be a valid number greater than 0 for bunches and bundles.');
+      this.validationError.set('Pack quantity must be a valid number greater than 0 for bunch, bundle, box, stem, block, and piece unit types.');
       return null;
     }
 

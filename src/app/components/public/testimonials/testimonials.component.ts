@@ -44,7 +44,7 @@ export class TestimonialsComponent {
       event: 'Estate Wedding',
       quote:
         `Becca was extremely attentive and flexible with our wedding florals! She sent photos of every flower and greenery when we first discussed her doing our wedding. I changed my mind multiple times and she was so flexible and willing to do anything. Our centerpieces were amazing, as were the bouquets!!!`,
-      image: 'assets/images/473032518_1147611050271084_8704592988378089709_n (2).jpg'
+      image: 'assets/images/473032518_1147611050271084_8704592988378089709_n.jpg'
     },
     {
       title: 'Elegant, thoughtful, unforgettable',
@@ -62,7 +62,7 @@ export class TestimonialsComponent {
       event: 'Classic Wedding',
       quote:
         `From the first time I chatted with Becca about our wedding, I knew she understood our vision with the florals and that she was a florist I could trust with bringing this vision to life. Becca was extremely attentive and reliable – whenever I had a random, one-off question, she was there to chat. On the wedding day, Becca went above and beyond. The florals were absolutely beautiful, and my bridal bouquet was everything I wanted and more. She even popped upstairs to the bridal suite to say hello before heading out – which was so nice to finally meet the famous “Becca” in person. If you’re getting married and in need of a florist, don’t hesitate on reaching out to Becca. When you hire vendors for a wedding, you want people you can trust – and Becca is that and so much more.`,
-      image: 'assets/images/website/Screenshot 2026-03-22 214221.png'
+      image: 'assets/images/website/screenshot-2026-03-22-214221.png'
     },
     {
       title: '',
@@ -102,7 +102,7 @@ export class TestimonialsComponent {
         `From intimate celebrations to full wedding floral styling, we create romantic, artful designs tailored to your story, palette, and setting.`,
       buttonText: 'Inquire Now',
       buttonLink: '/contact',
-      image: 'assets/images/website/Screen Shot 2022-12-13 at 1.39.45 PM.webp'
+      image: 'assets/images/website/screen-shot-2022-12-13-at-1-39-45-pm.webp'
     },
     {
       eyebrow: 'VIEW MORE OF OUR WORK',
@@ -111,7 +111,7 @@ export class TestimonialsComponent {
         `Explore curated floral galleries, installation details, and design moments from past weddings and events throughout Rhode Island and beyond.`,
       buttonText: 'View Portfolio',
       buttonLink: '/portfolio',
-      image: 'assets/images/website/Screen Shot 2022-12-13 at 1.39.45 PM.webp'
+      image: 'assets/images/website/screen-shot-2022-12-13-at-1-39-45-pm.webp'
     }
   ];
 

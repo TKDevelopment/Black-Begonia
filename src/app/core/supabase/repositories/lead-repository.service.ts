@@ -25,9 +25,12 @@ export class LeadRepositoryService {
     ceremony_venue_name,
     ceremony_venue_city,
     ceremony_venue_state,
+    ceremony_start_time,
     reception_venue_name,
     reception_venue_city,
     reception_venue_state,
+    reception_start_time,
+    event_start_time,
     budget_range,
     guest_count,
     inquiry_message,
@@ -123,9 +126,12 @@ export class LeadRepositoryService {
       ceremony_venue_name: payload.ceremony_venue_name?.trim() || null,
       ceremony_venue_city: payload.ceremony_venue_city?.trim() || null,
       ceremony_venue_state: payload.ceremony_venue_state?.trim() || null,
+      ceremony_start_time: payload.ceremony_start_time || null,
       reception_venue_name: payload.reception_venue_name?.trim() || null,
       reception_venue_city: payload.reception_venue_city?.trim() || null,
       reception_venue_state: payload.reception_venue_state?.trim() || null,
+      reception_start_time: payload.reception_start_time || null,
+      event_start_time: payload.event_start_time || null,
       budget_range: payload.budget_range?.trim() || null,
       guest_count:
         payload.guest_count === null ||
@@ -178,5 +184,18 @@ export class LeadRepositoryService {
     }
 
     return data as Lead;
+  }
+
+  async deleteLead(leadId: string): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('leads')
+      .delete()
+      .eq('lead_id', leadId);
+
+    if (error) {
+      console.error('[LeadRepositoryService] deleteLead error:', error);
+      throw error;
+    }
   }
 }

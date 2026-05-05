@@ -12,7 +12,6 @@ import {
   FloralProposalRenderContract,
   FloralProposalLineItemType,
   FloralProposalShoppingListItem,
-  PricingSettings,
 } from '../../../core/models/floral-proposal';
 import { Lead } from '../../../core/models/lead';
 import { TaxRegion } from '../../../core/models/tax-region';
@@ -23,7 +22,6 @@ import { CatalogItemRepositoryService } from '../../../core/supabase/repositorie
 import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
 import { FloralProposalRepositoryService } from '../../../core/supabase/repositories/floral-proposal-repository.service';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
-import { PricingSettingsRepositoryService } from '../../../core/supabase/repositories/pricing-settings-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
 import {
   FloralProposalBuilderComponentRow,
@@ -51,6 +49,7 @@ import { StatusBadgeComponent } from '../../../shared/components/private/status-
     StatusBadgeComponent,
   ],
   templateUrl: './floral-proposal-builder.component.html',
+  styleUrl: './floral-proposal-builder.component.scss',
 })
 export class FloralProposalBuilderComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -62,7 +61,6 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly documentTemplateRepository = inject(DocumentTemplateRepositoryService);
-  private readonly pricingSettingsRepository = inject(PricingSettingsRepositoryService);
   private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
   private readonly floralProposalRenderer = inject(FloralProposalRendererService);
   private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
@@ -83,14 +81,15 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly taxRegions = signal<TaxRegion[]>([]);
   readonly templates = signal<DocumentTemplate[]>([]);
   readonly catalogItems = signal<CatalogItem[]>([]);
-  readonly pricingSettings = signal<PricingSettings | null>(null);
   readonly lineItems = signal<FloralProposalBuilderLine[]>([]);
   readonly shoppingList = signal<FloralProposalShoppingListItem[]>([]);
   readonly selectedTaxRegionId = signal<string>('');
   readonly selectedTemplateId = signal<string>('');
   readonly defaultMarkupPercent = signal(300);
+  readonly laborPercent = signal(0);
   readonly draggingLineId = signal<string | null>(null);
   readonly dragOverImageLineId = signal<string | null>(null);
+  readonly isDarkMode = computed(() => this.crmThemeService.mode() === 'dark');
 
   readonly selectedTaxRegion = computed(() => {
     const id = this.selectedTaxRegionId();
@@ -107,7 +106,11 @@ export class FloralProposalBuilderComponent implements OnInit {
   );
 
   readonly totals = computed(() =>
-    this.floralProposalBuilderService.calculateTotals(this.lineItems(), this.selectedTaxRegion())
+    this.floralProposalBuilderService.calculateTotals(
+      this.lineItems(),
+      this.selectedTaxRegion(),
+      this.laborPercent()
+    )
   );
 
   readonly renderPayload = computed(() => this.buildRenderPayload());
@@ -181,14 +184,13 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const [lead, taxRegions, templates, proposals, catalogItems, pricingSettings] =
+      const [lead, taxRegions, templates, proposals, catalogItems] =
         await Promise.all([
           this.leadRepository.getLeadById(leadId),
           this.taxRegionRepository.getTaxRegions(),
           this.documentTemplateRepository.getDocumentTemplates(),
           this.floralProposalRepository.getLeadFloralProposals(leadId),
           this.catalogItemRepository.getCatalogItems(),
-          this.pricingSettingsRepository.getActivePricingSettings(),
         ]);
 
       if (!lead) {
@@ -200,16 +202,14 @@ export class FloralProposalBuilderComponent implements OnInit {
       this.taxRegions.set(taxRegions.filter((region) => region.is_active));
       this.templates.set(templates.filter((template) => template.is_active));
       this.catalogItems.set(catalogItems);
-      this.pricingSettings.set(pricingSettings);
       this.proposals.set(proposals);
 
       const activeProposal = proposals.find((proposal) => proposal.is_active) ?? proposals[0] ?? null;
       this.activeProposal.set(activeProposal);
       this.selectedTaxRegionId.set(activeProposal?.tax_region_id ?? '');
       this.selectedTemplateId.set(activeProposal?.template_id ?? '');
-      this.defaultMarkupPercent.set(
-        this.getInitialDefaultMarkupPercent(activeProposal, pricingSettings)
-      );
+      this.defaultMarkupPercent.set(this.getInitialDefaultMarkupPercent(activeProposal));
+      this.laborPercent.set(this.getInitialLaborPercent(activeProposal));
 
       if (activeProposal) {
         const [lineItems, components] = await Promise.all([
@@ -318,6 +318,10 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.patchLine(lineId, { item_name: value });
   }
 
+  updateLineDescription(lineId: string, value: string): void {
+    this.patchLine(lineId, { description: value });
+  }
+
   updateLineQuantity(lineId: string, value: string): void {
     const quantity = Math.max(Number(value || 0), 0);
     this.patchAndRecalculateLine(lineId, { quantity });
@@ -374,7 +378,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     void this.refreshShoppingList();
   }
 
-  commitCatalogItemSelection(lineId: string, componentId: string, rawValue: string): void {
+  updateCatalogItemQuery(lineId: string, componentId: string, rawValue: string): void {
     if (!this.canEdit()) return;
 
     this.lineItems.update((lines) =>
@@ -384,7 +388,7 @@ export class FloralProposalBuilderComponent implements OnInit {
         const nextComponents = line.components.map((component) => {
           if (component.local_id !== componentId) return component;
 
-          const matchedItem = this.findCatalogItemByName(rawValue);
+          const matchedItem = this.findCatalogItemForQuery(rawValue);
           if (!matchedItem) {
             return {
               ...component,
@@ -401,13 +405,16 @@ export class FloralProposalBuilderComponent implements OnInit {
             };
           }
 
-          return this.floralProposalBuilderService.applyCatalogItemToComponent(
-            component,
-            matchedItem,
-            line.quantity,
-            this.defaultMarkupPercent(),
-            this.getDefaultReservePercent()
-          );
+          return {
+            ...this.floralProposalBuilderService.applyCatalogItemToComponent(
+              component,
+              matchedItem,
+              line.quantity,
+              this.defaultMarkupPercent(),
+              this.getDefaultReservePercent()
+            ),
+            catalog_item_name: this.formatCatalogItemOptionLabel(matchedItem),
+          };
         });
 
         return this.floralProposalBuilderService.recalculateLine({
@@ -418,6 +425,10 @@ export class FloralProposalBuilderComponent implements OnInit {
     );
 
     void this.refreshShoppingList();
+  }
+
+  commitCatalogItemSelection(lineId: string, componentId: string, rawValue: string): void {
+    this.updateCatalogItemQuery(lineId, componentId, rawValue);
   }
 
   updateComponentQuantity(lineId: string, componentId: string, rawValue: string): void {
@@ -460,6 +471,10 @@ export class FloralProposalBuilderComponent implements OnInit {
       )
     );
     void this.refreshShoppingList();
+  }
+
+  onLaborPercentChange(value: string): void {
+    this.laborPercent.set(Math.max(Number(value || 0), 0));
   }
 
   onTaxRegionChange(value: string): void {
@@ -793,19 +808,24 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   getCatalogItemOptions(component: FloralProposalBuilderComponentRow): CatalogItem[] {
-    const query = component.catalog_item_name.trim().toLowerCase();
+    const query = this.normalizeCatalogItemQuery(component.catalog_item_name);
     if (!query) {
       return this.activeCatalogItems().slice(0, 15);
     }
 
     return this.activeCatalogItems()
-      .filter((item) =>
-        [item.name, item.sku ?? '', item.color ?? '', item.variety ?? '']
-          .join(' ')
-          .toLowerCase()
-          .includes(query)
-      )
+      .filter((item) => this.matchesCatalogItemQuery(item, query))
       .slice(0, 15);
+  }
+
+  getCatalogItemDatalistId(componentId: string): string {
+    return `catalog-item-options-${componentId}`;
+  }
+
+  formatCatalogItemOptionLabel(item: CatalogItem): string {
+    return [item.color?.trim(), item.variety?.trim(), item.name.trim()]
+      .filter((part) => !!part)
+      .join(' ');
   }
 
   trackByLine = (_: number, line: FloralProposalBuilderLine) => line.local_id;
@@ -984,15 +1004,30 @@ export class FloralProposalBuilderComponent implements OnInit {
           return { ...line, image_signed_url: null };
         }
 
-        try {
-          const signedUrl = await this.proposalWorkflow.getSignedLineItemImageUrl(
-            line.image_storage_path
-          );
-          return {
-            ...line,
-            image_signed_url: signedUrl,
-          };
-        } catch (error) {
+          try {
+            const signedUrl = await this.proposalWorkflow.getSignedLineItemImageUrl(
+              line.image_storage_path
+            );
+
+            if (!signedUrl) {
+              if (this.isPersistedLineItemId(line.local_id)) {
+                await this.proposalWorkflow.clearMissingLineItemImage(line.local_id);
+              }
+
+              return {
+                ...line,
+                image_storage_path: null,
+                image_alt_text: null,
+                image_caption: null,
+                image_signed_url: null,
+              };
+            }
+
+            return {
+              ...line,
+              image_signed_url: signedUrl,
+            };
+          } catch (error) {
           console.error(
             '[FloralProposalBuilderComponent] populateLineItemSignedUrls error:',
             error
@@ -1002,18 +1037,68 @@ export class FloralProposalBuilderComponent implements OnInit {
             image_signed_url: null,
           };
         }
-      })
+        })
+      );
+    }
+
+  private isPersistedLineItemId(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
     );
   }
 
-  private findCatalogItemByName(value: string): CatalogItem | null {
-    const normalized = value.trim().toLowerCase();
+  private findCatalogItemForQuery(value: string): CatalogItem | null {
+    const normalized = this.normalizeCatalogItemQuery(value);
     if (!normalized) return null;
 
-    return (
-      this.activeCatalogItems().find((item) => item.name.trim().toLowerCase() === normalized) ??
-      null
+    const exactLabelMatch =
+      this.activeCatalogItems().find(
+        (item) => this.normalizeCatalogItemQuery(this.formatCatalogItemOptionLabel(item)) === normalized
+      ) ?? null;
+
+    if (exactLabelMatch) {
+      return exactLabelMatch;
+    }
+
+    const exactNameMatches = this.activeCatalogItems().filter(
+      (item) => this.normalizeCatalogItemQuery(item.name) === normalized
     );
+
+    if (exactNameMatches.length === 1) {
+      return exactNameMatches[0];
+    }
+
+    const filteredMatches = this.activeCatalogItems().filter((item) =>
+      this.matchesCatalogItemQuery(item, normalized)
+    );
+
+    return filteredMatches.length === 1 ? filteredMatches[0] : null;
+  }
+
+  private matchesCatalogItemQuery(item: CatalogItem, normalizedQuery: string): boolean {
+    const queryTokens = normalizedQuery.split(' ').filter((token) => token.length > 0);
+    if (!queryTokens.length) {
+      return true;
+    }
+
+    const haystack = this.normalizeCatalogItemQuery(
+      [
+        item.name,
+        item.color ?? '',
+        item.variety ?? '',
+        item.sku ?? '',
+        this.formatCatalogItemOptionLabel(item),
+      ].join(' ')
+    );
+
+    return queryTokens.every((token) => haystack.includes(token));
+  }
+
+  private normalizeCatalogItemQuery(value: string | null | undefined): string {
+    return (value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
   }
 
   private getNormalizedLines(): FloralProposalBuilderLine[] {
@@ -1036,6 +1121,7 @@ export class FloralProposalBuilderComponent implements OnInit {
       templateId: this.selectedTemplateId() || null,
       templateName: this.selectedTemplate()?.name ?? null,
       defaultMarkupPercent: this.defaultMarkupPercent(),
+      laborPercent: this.laborPercent(),
       shoppingList: this.shoppingList(),
     });
   }
@@ -1050,11 +1136,13 @@ export class FloralProposalBuilderComponent implements OnInit {
       tax_region_id: renderPayload.tax_region_id,
       tax_region_name: renderPayload.tax_region_name,
       default_markup_percent: renderPayload.default_markup_percent,
+      labor_percent: renderPayload.labor_percent,
       tax_rate: renderPayload.tax_rate,
       line_items: renderPayload.line_items.map((line) => ({
         display_order: line.display_order,
         line_item_type: line.line_item_type,
         item_name: line.item_name,
+        description: line.description ?? null,
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
@@ -1111,19 +1199,27 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private getInitialDefaultMarkupPercent(
-    proposal: FloralProposal | null,
-    pricingSettings: PricingSettings | null
+    proposal: FloralProposal | null
   ): number {
     const snapshotValue = proposal?.snapshot?.['default_markup_percent'];
     if (typeof snapshotValue === 'number' && Number.isFinite(snapshotValue)) {
       return snapshotValue;
     }
 
-    return pricingSettings?.default_markup_percent ?? 300;
+    return 300;
+  }
+
+  private getInitialLaborPercent(proposal: FloralProposal | null): number {
+    const snapshotValue = proposal?.snapshot?.['labor_percent'];
+    if (typeof snapshotValue === 'number' && Number.isFinite(snapshotValue)) {
+      return snapshotValue;
+    }
+
+    return 0;
   }
 
   private getDefaultReservePercent(): number {
-    return this.pricingSettings()?.default_reserve_percent ?? 0;
+    return 0;
   }
 
   private getComponentShoppingKey(component: FloralProposalBuilderComponentRow): string {
@@ -1156,10 +1252,22 @@ export class FloralProposalBuilderComponent implements OnInit {
         lead_id: lead.lead_id,
         first_name: lead.first_name,
         last_name: lead.last_name,
+        partner_first_name: lead.partner_first_name ?? null,
+        partner_last_name: lead.partner_last_name ?? null,
         email: lead.email,
+        phone: lead.phone ?? null,
         service_type: lead.service_type,
         event_type: lead.event_type ?? null,
         event_date: lead.event_date ?? null,
+        ceremony_venue_name: lead.ceremony_venue_name ?? null,
+        ceremony_venue_city: lead.ceremony_venue_city ?? null,
+        ceremony_venue_state: lead.ceremony_venue_state ?? null,
+        ceremony_start_time: lead.ceremony_start_time ?? null,
+        reception_venue_name: lead.reception_venue_name ?? null,
+        reception_venue_city: lead.reception_venue_city ?? null,
+        reception_venue_state: lead.reception_venue_state ?? null,
+        reception_start_time: lead.reception_start_time ?? null,
+        event_start_time: lead.event_start_time ?? null,
         status: lead.status,
       },
       template: {
@@ -1173,11 +1281,13 @@ export class FloralProposalBuilderComponent implements OnInit {
       },
       pricing: {
         default_markup_percent: renderPayload.default_markup_percent,
+        labor_percent: renderPayload.labor_percent,
       },
       line_items: renderPayload.line_items,
       shopping_list: renderPayload.shopping_list,
       totals: {
         products_total: renderPayload.breakdown.productsTotal,
+        labor_total: renderPayload.breakdown.laborTotal,
         fees_total: renderPayload.breakdown.feesTotal,
         discounts_total: renderPayload.breakdown.discountsTotal,
         subtotal: renderPayload.breakdown.subtotal,

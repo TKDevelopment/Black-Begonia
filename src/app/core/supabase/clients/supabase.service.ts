@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { createClient, Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../../../environments/environment';
 
@@ -8,9 +9,10 @@ import { environment } from '../../../../environments/environment';
 export class SupabaseService {
   private readonly client: SupabaseClient;
 
-  constructor() {
+  constructor(@Inject(PLATFORM_ID) platformId: object) {
     const supabaseUrl = environment.supabaseUrl;
     const supabaseAnonKey = environment.supabaseAnonKey;
+    const isBrowser = isPlatformBrowser(platformId);
 
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(
@@ -20,9 +22,9 @@ export class SupabaseService {
 
     this.client = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
+        persistSession: isBrowser,
+        autoRefreshToken: isBrowser,
+        detectSessionInUrl: isBrowser,
       }
     });
   }

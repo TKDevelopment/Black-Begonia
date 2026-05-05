@@ -1,6 +1,6 @@
 <div
   *ngIf="!authService.isReady || authService.snapshot.loading"
-  class="crm-shell flex min-h-screen bg-[#f7f4f1]"
+  class="crm-shell crm-shell-app flex min-h-screen bg-[#f7f4f1]"
   [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
   <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white dark:lg:border-white/15 xl:w-56 2xl:w-[17rem]">
@@ -19,10 +19,10 @@
 
 <div
   *ngIf="authService.isReady && authService.isAuthenticated && authService.isInternalUser"
-  class="crm-shell flex min-h-screen bg-[#f7f4f1]"
+  class="crm-shell crm-shell-app flex min-h-screen bg-[#f7f4f1]"
   [class.crm-theme-dark]="crmThemeService.isDarkMode"
 >
-  <div class="fixed inset-x-0 top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur dark:border-white/15 lg:hidden">
+  <div class="crm-mobile-header fixed inset-x-0 top-0 z-30 border-b border-black/10 bg-white/95 backdrop-blur dark:border-white/15 lg:hidden">
     <div class="flex items-center justify-between px-3.5 py-2.5 sm:px-4.5">
       <div>
         <p class="font-oswald text-[10px] uppercase tracking-[0.28em] text-[#ea938c]">Black Begonia</p>
@@ -32,7 +32,7 @@
       <button
         type="button"
         (click)="openMobileSidebar()"
-        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#f7f4f1] px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[#1f1f1f] transition hover:bg-white"
+        class="crm-mobile-menu-button inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#f7f4f1] px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[#1f1f1f] transition hover:bg-white"
       >
         Menu
       </button>
@@ -47,12 +47,12 @@
       aria-label="Close navigation"
     ></button>
 
-    <div class="absolute inset-y-0 left-0 w-[86vw] max-w-sm border-r border-black/10 bg-white shadow-2xl dark:border-white/15">
+    <div class="crm-mobile-sidebar-panel absolute inset-y-0 left-0 w-[86vw] max-w-sm border-r border-black/10 bg-white shadow-2xl dark:border-white/15">
       <app-sidebar class="block h-full" [isMobile]="true" (navigate)="closeMobileSidebar()"></app-sidebar>
     </div>
   </div>
 
-  <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white dark:lg:border-white/15 xl:w-56 2xl:w-[17rem]">
+  <div class="crm-sidebar-rail hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-48 lg:border-r lg:border-black/10 lg:bg-white dark:lg:border-white/15 xl:w-56 2xl:w-[17rem]">
     <app-sidebar class="block h-full"></app-sidebar>
   </div>
 

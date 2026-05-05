@@ -35,6 +35,7 @@ export interface FloralProposalBuilderLine {
   display_order: number;
   line_item_type: FloralProposalLineItemType;
   item_name: string;
+  description?: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -52,6 +53,7 @@ export interface FloralProposalRenderPayloadLine {
   line_item_type: FloralProposalLineItemType;
   line_type_label: string;
   item_name: string;
+  description?: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -69,6 +71,7 @@ export interface FloralProposalRenderPayload {
   tax_region_name?: string | null;
   tax_rate: number;
   default_markup_percent: number;
+  labor_percent: number;
   line_items: FloralProposalRenderPayloadLine[];
   shopping_list: FloralProposalShoppingListItem[];
   totals: {
@@ -78,6 +81,9 @@ export interface FloralProposalRenderPayload {
   };
   breakdown: {
     productsTotal: number;
+    laborTotal: number;
+    calculatedLaborAmount: number;
+    manualLaborTotal: number;
     feesTotal: number;
     discountsTotal: number;
     subtotal: number;
@@ -96,6 +102,7 @@ export class FloralProposalBuilderService {
       display_order: displayOrder,
       line_item_type: 'product',
       item_name: '',
+      description: null,
       quantity: 1,
       unit_price: 0,
       subtotal: 0,
@@ -120,6 +127,7 @@ export class FloralProposalBuilderService {
       display_order: displayOrder,
       line_item_type: 'fee',
       item_name: itemName,
+      description: null,
       quantity,
       unit_price: unitPrice,
       subtotal: 0,
@@ -144,6 +152,7 @@ export class FloralProposalBuilderService {
       display_order: displayOrder,
       line_item_type: 'discount',
       item_name: itemName,
+      description: null,
       quantity,
       unit_price: unitPrice,
       subtotal: 0,
@@ -193,7 +202,7 @@ export class FloralProposalBuilderService {
     const appliedMarkupPercent = component.applied_markup_percent ?? defaultMarkupPercent;
     const packQuantity = this.getPackQuantity(item);
     const purchaseUnitCost = this.roundCurrency(item.base_unit_cost);
-    const compositionBaseUnitCost = packQuantity
+    const compositionBaseUnitCost = packQuantity && this.isPackPricedUnit(item.unit_type)
       ? this.roundCurrency(purchaseUnitCost / packQuantity)
       : purchaseUnitCost;
 
@@ -299,14 +308,39 @@ export class FloralProposalBuilderService {
 
   calculateTotals(
     lines: FloralProposalBuilderLine[],
-    taxRegion: TaxRegion | null
+    taxRegion: TaxRegion | null,
+    laborPercent = 0
   ): {
     subtotal: number;
     taxAmount: number;
     totalAmount: number;
   } {
+    const productsTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'product')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const manualLaborTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'labor')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const calculatedLaborAmount = this.roundCurrency(
+      productsTotal * (Math.max(this.roundNumber(laborPercent, 2), 0) / 100)
+    );
+    const laborTotal = this.roundCurrency(calculatedLaborAmount + manualLaborTotal);
+    const feesTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'fee')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const discountsTotal = this.roundCurrency(
+      lines
+        .filter((line) => line.line_item_type === 'discount')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
     const subtotal = this.roundCurrency(
-      lines.reduce((sum, line) => sum + line.subtotal, 0)
+      productsTotal + laborTotal + feesTotal + discountsTotal
     );
     const taxAmount = this.roundCurrency(
       Math.max(subtotal, 0) * (taxRegion?.tax_rate ?? 0)
@@ -326,6 +360,7 @@ export class FloralProposalBuilderService {
     templateId?: string | null;
     templateName?: string | null;
     defaultMarkupPercent: number;
+    laborPercent: number;
     shoppingList: FloralProposalShoppingListItem[];
   }): FloralProposalRenderPayload {
     const normalizedLines = args.lines.map((line, index) =>
@@ -334,12 +369,21 @@ export class FloralProposalBuilderService {
         display_order: index,
       })
     );
-    const totals = this.calculateTotals(normalizedLines, args.taxRegion);
+    const totals = this.calculateTotals(normalizedLines, args.taxRegion, args.laborPercent);
     const productsTotal = this.roundCurrency(
       normalizedLines
         .filter((line) => line.line_item_type === 'product')
         .reduce((sum, line) => sum + line.subtotal, 0)
     );
+    const manualLaborTotal = this.roundCurrency(
+      normalizedLines
+        .filter((line) => line.line_item_type === 'labor')
+        .reduce((sum, line) => sum + line.subtotal, 0)
+    );
+    const calculatedLaborAmount = this.roundCurrency(
+      productsTotal * (Math.max(this.roundNumber(args.laborPercent, 2), 0) / 100)
+    );
+    const laborTotal = this.roundCurrency(calculatedLaborAmount + manualLaborTotal);
     const feesTotal = this.roundCurrency(
       normalizedLines
         .filter((line) => line.line_item_type === 'fee')
@@ -358,6 +402,7 @@ export class FloralProposalBuilderService {
       tax_region_name: args.taxRegion?.name ?? null,
       tax_rate: args.taxRegion?.tax_rate ?? 0,
       default_markup_percent: args.defaultMarkupPercent,
+      labor_percent: this.roundNumber(args.laborPercent, 2),
       line_items: normalizedLines
         .filter((line) => line.item_name.trim().length > 0)
         .map((line) => ({
@@ -365,6 +410,7 @@ export class FloralProposalBuilderService {
           line_item_type: line.line_item_type,
           line_type_label: this.formatLineTypeLabel(line.line_item_type),
           item_name: line.item_name.trim(),
+          description: line.description?.trim() || null,
           quantity: line.quantity,
           unit_price: this.roundCurrency(line.unit_price),
           subtotal: this.roundCurrency(line.subtotal),
@@ -383,9 +429,12 @@ export class FloralProposalBuilderService {
       totals,
       breakdown: {
         productsTotal,
+        laborTotal,
+        calculatedLaborAmount,
+        manualLaborTotal,
         feesTotal,
         discountsTotal,
-        subtotal: this.roundCurrency(productsTotal + feesTotal + discountsTotal),
+        subtotal: this.roundCurrency(productsTotal + laborTotal + feesTotal + discountsTotal),
         taxAmount: totals.taxAmount,
         totalAmount: totals.totalAmount,
       },
@@ -412,6 +461,7 @@ export class FloralProposalBuilderService {
       snapshot: {
         ...(line.snapshot ?? {}),
         expanded: line.expanded,
+        description: line.description?.trim() || null,
       },
     }));
   }
@@ -474,23 +524,41 @@ export class FloralProposalBuilderService {
           `${component.catalog_item_name}:${component.unit_type ?? 'other'}`;
         const requiredUnits = this.roundNumber(component.extended_quantity, 2);
         const reservePercent = this.roundNumber(component.reserve_percent, 2);
-        const reserveUnits = this.roundNumber(
-          requiredUnits * (reservePercent / 100),
-          2
+        const reserveTargetUnits = Math.ceil(
+          this.roundNumber(requiredUnits * (reservePercent / 100), 2)
         );
-        const totalUnitsToBuy = this.roundNumber(requiredUnits + reserveUnits, 2);
+        const totalPlusReserve = this.roundNumber(requiredUnits + reserveTargetUnits, 2);
         const packQuantity = this.normalizePackQuantity(
           component.pack_quantity,
           component.unit_type
         );
+        const requiredPackCount = packQuantity
+          ? Math.max(Math.ceil(totalPlusReserve / packQuantity), 1)
+          : null;
+        const totalUnitsToBuy = packQuantity
+          ? this.roundNumber((requiredPackCount ?? 0) * packQuantity, 2)
+          : totalPlusReserve;
+        const reserveUnits = this.roundNumber(totalUnitsToBuy - totalPlusReserve, 2);
         const purchaseUnitCost = this.roundCurrency(
           component.purchase_unit_cost || component.base_unit_cost
         );
+        const estimatedPackCost = this.getEstimatedPackCost(
+          purchaseUnitCost,
+          packQuantity,
+          component.unit_type
+        );
+        const totalEstimatedCost = packQuantity
+          ? this.roundCurrency((estimatedPackCost ?? 0) * (requiredPackCount ?? 0))
+          : this.roundCurrency(purchaseUnitCost * totalUnitsToBuy);
         const existing = itemMap.get(key);
 
         if (existing) {
           existing.required_units = this.roundNumber(
             existing.required_units + requiredUnits,
+            2
+          );
+          existing.total_plus_reserve = this.roundNumber(
+            (existing.total_plus_reserve ?? 0) + totalPlusReserve,
             2
           );
           existing.reserve_units = this.roundNumber(
@@ -501,13 +569,14 @@ export class FloralProposalBuilderService {
             existing.total_units_to_buy + totalUnitsToBuy,
             2
           );
-          existing.total_estimated_cost = packQuantity
-            ? existing.total_estimated_cost
-            : this.roundCurrency(
-                (existing.total_estimated_cost ?? 0) + component.base_unit_cost * totalUnitsToBuy
-              );
+          existing.required_pack_count = packQuantity
+            ? (existing.required_pack_count ?? 0) + (requiredPackCount ?? 0)
+            : null;
+          existing.total_estimated_cost = this.roundCurrency(
+            (existing.total_estimated_cost ?? 0) + totalEstimatedCost
+          );
           existing.estimated_pack_cost = packQuantity
-            ? purchaseUnitCost
+            ? estimatedPackCost
             : existing.estimated_pack_cost ?? null;
           existing.reserve_percent = Math.max(
             existing.reserve_percent,
@@ -518,21 +587,19 @@ export class FloralProposalBuilderService {
         }
 
         itemMap.set(key, {
-          vendor_id: null,
-          vendor_item_pack_id: null,
           catalog_item_id: component.catalog_item_id ?? null,
           item_name: component.catalog_item_name,
           item_type: component.item_type ?? 'other',
           unit_type: component.unit_type ?? 'other',
           required_units: requiredUnits,
           reserve_percent: reservePercent,
+          total_plus_reserve: totalPlusReserve,
           reserve_units: reserveUnits,
           total_units_to_buy: totalUnitsToBuy,
           units_per_pack: packQuantity,
-          estimated_pack_cost: packQuantity ? purchaseUnitCost : null,
-          total_estimated_cost: packQuantity
-            ? purchaseUnitCost
-            : this.roundCurrency(component.base_unit_cost * totalUnitsToBuy),
+          required_pack_count: requiredPackCount,
+          estimated_pack_cost: packQuantity ? estimatedPackCost : null,
+          total_estimated_cost: totalEstimatedCost,
           notes: null,
         });
       });
@@ -540,16 +607,11 @@ export class FloralProposalBuilderService {
     return Array.from(itemMap.values())
       .map((item) => {
         const unitsPerPack = item.units_per_pack ?? null;
-        const requiredPackCount = unitsPerPack
-          ? Math.max(Math.ceil(item.total_units_to_buy / unitsPerPack), 1)
-          : null;
+        const requiredPackCount = unitsPerPack ? item.required_pack_count ?? null : null;
         const estimatedPackCost = unitsPerPack
           ? this.roundCurrency(item.estimated_pack_cost ?? item.total_estimated_cost ?? 0)
           : null;
-        const totalEstimatedCost =
-          requiredPackCount && estimatedPackCost != null
-            ? this.roundCurrency(requiredPackCount * estimatedPackCost)
-            : this.roundCurrency(item.total_estimated_cost ?? 0);
+        const totalEstimatedCost = this.roundCurrency(item.total_estimated_cost ?? 0);
 
         return {
           ...item,
@@ -614,6 +676,7 @@ export class FloralProposalBuilderService {
         display_order: lineItem.display_order,
         line_item_type: lineItem.line_item_type,
         item_name: lineItem.item_name,
+        description: (lineItem.snapshot?.['description'] as string | null) ?? null,
         quantity: lineItem.quantity,
         unit_price: lineItem.unit_price,
         subtotal: lineItem.subtotal,
@@ -633,6 +696,8 @@ export class FloralProposalBuilderService {
     switch (lineType) {
       case 'product':
         return 'Product';
+      case 'labor':
+        return 'Labor';
       case 'fee':
         return 'Fee';
       case 'discount':
@@ -661,13 +726,48 @@ export class FloralProposalBuilderService {
     unitType: CatalogItem['unit_type'] | null | undefined
   ): number | null {
     const normalized = Number(packQuantity);
-    const isPackedUnit = unitType === 'bunch' || unitType === 'bundle';
+    const isPackTrackedUnit = this.isPackTrackedUnit(unitType);
 
-    if (!isPackedUnit || !Number.isFinite(normalized) || normalized <= 0) {
+    if (!isPackTrackedUnit || !Number.isFinite(normalized) || normalized <= 0) {
       return null;
     }
 
     return this.roundNumber(normalized, 2);
+  }
+
+  private isPackTrackedUnit(
+    unitType: CatalogItem['unit_type'] | null | undefined
+  ): boolean {
+    return (
+      unitType === 'bunch' ||
+      unitType === 'bundle' ||
+      unitType === 'box' ||
+      unitType === 'stem' ||
+      unitType === 'block' ||
+      unitType === 'piece'
+    );
+  }
+
+  private isPackPricedUnit(
+    unitType: CatalogItem['unit_type'] | null | undefined
+  ): boolean {
+    return unitType === 'bunch' || unitType === 'bundle' || unitType === 'box';
+  }
+
+  private getEstimatedPackCost(
+    purchaseUnitCost: number,
+    packQuantity: number | null,
+    unitType: CatalogItem['unit_type'] | null | undefined
+  ): number | null {
+    if (!packQuantity) {
+      return null;
+    }
+
+    if (this.isPackPricedUnit(unitType)) {
+      return this.roundCurrency(purchaseUnitCost);
+    }
+
+    return this.roundCurrency(purchaseUnitCost * packQuantity);
   }
 
   private createLocalId(prefix: string): string {

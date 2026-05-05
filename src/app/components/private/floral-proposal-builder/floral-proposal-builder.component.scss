@@ -1,0 +1,173 @@
+.floral-proposal-builder-page.crm-dark {
+  background: var(--crm-page-bg, #09111a);
+}
+
+.floral-proposal-builder-page.crm-dark .builder-panel {
+  background: var(--crm-surface, #101a26) !important;
+  border-color: var(--crm-border, #23364c) !important;
+  box-shadow: 0 20px 48px rgba(2, 8, 16, 0.34) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-configuration-panel {
+  background: var(--crm-surface-muted, #0d1621) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-secondary-button {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  color: var(--crm-text, #ecf3fb) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-secondary-button:hover {
+  background: var(--crm-surface-highlight, #1f3046) !important;
+}
+
+.image-action-button {
+  line-height: 1.1;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.image-action-button:hover {
+  transform: translateY(-1px);
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-drag-handle {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  color: var(--crm-text-muted, #c0cfe0) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-drag-handle:hover {
+  background: var(--crm-surface-highlight, #1f3046) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-control {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  color: var(--crm-text, #ecf3fb) !important;
+  box-shadow: none !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-control::placeholder {
+  color: var(--crm-text-soft, #8ea3ba) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-control:focus {
+  background: var(--crm-surface, #101a26) !important;
+  border-color: var(--crm-accent, #f0a69d) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-items-table-shell {
+  background: var(--crm-surface, #101a26) !important;
+  border-color: var(--crm-border, #23364c) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-items-table-header {
+  background: var(--crm-surface-subtle, #142031) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-items-table-shell tbody {
+  background: var(--crm-surface-muted, #0d1621) !important;
+  border-color: var(--crm-border, #23364c) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-items-table-shell tr.cursor-pointer {
+  background: var(--crm-surface, #101a26) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-items-table-shell tr.cursor-pointer:hover {
+  background: var(--crm-surface-highlight, #1f3046) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-type-badge {
+  background: var(--crm-surface-highlight, #1f3046) !important;
+  color: var(--crm-text-strong, #f8fbff) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-readonly-field {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  color: var(--crm-text, #ecf3fb) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-row-input {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  color: var(--crm-text, #ecf3fb) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-row-input:focus {
+  background: var(--crm-surface, #101a26) !important;
+  border-color: var(--crm-accent, #f0a69d) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-expanded-row {
+  background: var(--crm-page-bg, #09111a) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-settings-card {
+  background: var(--crm-surface-subtle, #142031) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-image-dropzone {
+  background: var(--crm-surface-muted, #0d1621) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-composition-card {
+  background: var(--crm-surface-muted, #0d1621) !important;
+  border-color: var(--crm-border, #23364c) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .shopping-list-input {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+  color: var(--crm-text, #ecf3fb) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .labor-breakdown-box {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .proposal-version-card {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-destructive-button {
+  background: rgba(127, 29, 29, 0.16) !important;
+  border-color: rgba(248, 113, 113, 0.28) !important;
+  color: #fecaca !important;
+}
+
+.floral-proposal-builder-page.crm-dark .builder-destructive-button:hover {
+  background: rgba(153, 27, 27, 0.28) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .image-action-button:hover {
+  background: var(--crm-surface-highlight, #1f3046) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .text-stone-900 {
+  color: var(--crm-text, #ecf3fb) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .text-stone-800 {
+  color: var(--crm-text-strong, #f8fbff) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .text-stone-700 {
+  color: var(--crm-text-muted, #c0cfe0) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .text-stone-600 {
+  color: var(--crm-text-muted, #c0cfe0) !important;
+}
+
+.floral-proposal-builder-page.crm-dark .text-stone-500 {
+  color: var(--crm-text-soft, #8ea3ba) !important;
+}

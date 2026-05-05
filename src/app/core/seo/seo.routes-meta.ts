@@ -124,6 +124,37 @@ export const ROUTE_META: RouteMeta[] = [
     ]
   },
   {
+    path: 'services/weddings',
+    title: 'Wedding Florist Services | Floral Design & Event Styling',
+    description:
+      'Full-service wedding florist offering consultations, design boards, custom bouquets, ceremony florals, centerpieces & luxury event styling in New England.',
+    keywords: [
+      'Wedding Florist Services',
+      'Wedding Floral Design',
+      'Rhode Island Wedding Florist',
+      'New England Wedding Florist',
+      'Luxury Wedding Flowers',
+      'Ceremony Flower Installations',
+      'Reception Centerpieces',
+      'Bridal Bouquet Designer'
+    ]
+  },
+  {
+    path: 'services/general',
+    title: 'Event Florals, Subscriptions & Custom Arrangements | Black Begonia Florals',
+    description:
+      'Explore custom floral subscriptions, event flowers, sympathy florals, and installations by Black Begonia Florals across Rhode Island and New England.',
+    keywords: [
+      'Event Florals Rhode Island',
+      'Floral Subscriptions',
+      'Custom Florist Rhode Island',
+      'Sympathy Flowers',
+      'Floral Installations',
+      'General Floral Services',
+      'Luxury Florist New England'
+    ]
+  },
+  {
     path: 'inquiries',
     title: 'Contact Black Begonia Florals | Book Your Wedding Consultation',
     description:
@@ -160,6 +191,80 @@ export const ROUTE_META: RouteMeta[] = [
       'Inquire About Wedding Flowers',
       'Plan Wedding Flowers Rhode Island'
     ]
+  },
+  {
+    path: 'inquiries/weddings',
+    title: 'Wedding Inquiry | Black Begonia Florals',
+    description:
+      'Submit your wedding floral inquiry with Black Begonia Florals to begin planning bouquets, ceremony flowers, reception florals, and custom design for your event.',
+    keywords: [
+      'Wedding Inquiry Form',
+      'Wedding Florist Inquiry',
+      'Book Wedding Florist',
+      'Wedding Flowers Rhode Island',
+      'New England Wedding Florist'
+    ]
+  },
+  {
+    path: 'inquiries/general',
+    title: 'General Floral Inquiry | Black Begonia Florals',
+    description:
+      'Inquire about event florals, subscriptions, sympathy flowers, and custom floral design with Black Begonia Florals.',
+    keywords: [
+      'General Floral Inquiry',
+      'Event Florist Inquiry',
+      'Sympathy Flowers Inquiry',
+      'Subscription Flowers Inquiry',
+      'Custom Florist Rhode Island'
+    ]
+  },
+  {
+    path: 'about',
+    title: 'About Black Begonia Florals | Becca Shappy',
+    description:
+      'Learn more about Black Begonia Florals and Becca Shappy, a Rhode Island wedding florist creating romantic, elevated floral design throughout New England.',
+    keywords: [
+      'About Black Begonia Florals',
+      'Becca Shappy Florist',
+      'Rhode Island Wedding Florist',
+      'New England Floral Designer'
+    ]
+  },
+  {
+    path: 'testimonials',
+    title: 'Client Testimonials | Black Begonia Florals',
+    description:
+      'Read reviews from couples and clients who worked with Black Begonia Florals for wedding flowers and floral design across Rhode Island and New England.',
+    keywords: [
+      'Florist Reviews',
+      'Wedding Florist Testimonials',
+      'Black Begonia Florals Reviews',
+      'Rhode Island Wedding Florist Reviews'
+    ]
+  },
+  {
+    path: 'workshops',
+    title: 'Floral Workshops | Black Begonia Florals',
+    description:
+      'Explore floral workshops and educational experiences from Black Begonia Florals.',
+    keywords: [
+      'Floral Workshops',
+      'Flower Arranging Workshop',
+      'Rhode Island Floral Workshop',
+      'Black Begonia Florals Workshop'
+    ]
+  },
+  {
+    path: 'privacy-policy',
+    title: 'Privacy Policy | Black Begonia Florals',
+    description:
+      'Read the privacy policy for Black Begonia Florals.'
+  },
+  {
+    path: 'terms-and-conditions',
+    title: 'Terms and Conditions | Black Begonia Florals',
+    description:
+      'Read the terms and conditions for Black Begonia Florals.'
   },
   {
     path: 'locations/newport-ri-wedding-florist',

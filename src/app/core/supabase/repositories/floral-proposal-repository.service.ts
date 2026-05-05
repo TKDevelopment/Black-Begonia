@@ -63,9 +63,9 @@ export class FloralProposalRepositoryService {
       template_key,
       template_kind,
       is_active,
-      header_content,
-      footer_content,
-      body_config,
+      logo_storage_path,
+      logo_url,
+      template_config,
       created_at,
       updated_at
     )
@@ -416,6 +416,29 @@ export class FloralProposalRepositoryService {
     }
   }
 
+  async clearLineItemImage(
+    floralProposalLineItemId: string
+  ): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('floral_proposal_line_items')
+      .update({
+        image_storage_path: null,
+        image_alt_text: null,
+        image_caption: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('floral_proposal_line_item_id', floralProposalLineItemId);
+
+    if (error) {
+      console.error(
+        '[FloralProposalRepositoryService] clearLineItemImage error:',
+        error
+      );
+      throw error;
+    }
+  }
+
   async upsertShoppingList(
     floralProposalId: string,
     items: FloralProposalShoppingListItem[]
@@ -506,8 +529,6 @@ export class FloralProposalRepositoryService {
         items.map((item) => ({
           floral_proposal_shopping_list_id:
             shoppingList.floral_proposal_shopping_list_id,
-          vendor_id: item.vendor_id ?? null,
-          vendor_item_pack_id: item.vendor_item_pack_id ?? null,
           catalog_item_id: item.catalog_item_id ?? null,
           item_name: item.item_name,
           item_type: item.item_type,

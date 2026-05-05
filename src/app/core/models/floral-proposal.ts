@@ -1,4 +1,5 @@
 import { CatalogItemType, CatalogUnitType } from './catalog-item';
+import { ProposalRendererKey } from '../proposal-templates/proposal-renderer-registry';
 
 export type FloralProposalStatus =
   | 'draft'
@@ -7,7 +8,7 @@ export type FloralProposalStatus =
   | 'accepted'
   | 'expired';
 
-export type FloralProposalLineItemType = 'product' | 'fee' | 'discount';
+export type FloralProposalLineItemType = 'product' | 'fee' | 'discount' | 'labor';
 export type FloralProposalShoppingListStatus = 'generated' | 'exported';
 export type DocumentTemplateKind = 'floral_proposal';
 export type DocumentTemplateHeaderLayout = 'editorial' | 'minimal' | 'classic';
@@ -25,10 +26,22 @@ export interface FloralProposalRenderLeadContext {
   lead_id: string;
   first_name: string;
   last_name: string;
+  partner_first_name?: string | null;
+  partner_last_name?: string | null;
   email: string;
+  phone?: string | null;
   service_type: string;
   event_type?: string | null;
   event_date?: string | null;
+  ceremony_venue_name?: string | null;
+  ceremony_venue_city?: string | null;
+  ceremony_venue_state?: string | null;
+  ceremony_start_time?: string | null;
+  reception_venue_name?: string | null;
+  reception_venue_city?: string | null;
+  reception_venue_state?: string | null;
+  reception_start_time?: string | null;
+  event_start_time?: string | null;
   status: string;
 }
 
@@ -36,6 +49,7 @@ export interface FloralProposalRenderTemplateContext {
   template_id?: string | null;
   name?: string | null;
   template_key?: string | null;
+  renderer_key?: ProposalRendererKey | null;
   header_layout?: DocumentTemplateHeaderLayout | null;
   line_item_layout?: DocumentTemplateLineItemLayout | null;
   footer_layout?: DocumentTemplateFooterLayout | null;
@@ -48,9 +62,6 @@ export interface FloralProposalRenderTemplateContext {
   show_intro_message?: boolean;
   intro_title?: string | null;
   intro_body?: string | null;
-  show_terms_section?: boolean;
-  show_privacy_section?: boolean;
-  show_signature_section?: boolean;
   agreement_clauses?: Record<string, unknown>[];
   header_content?: Record<string, unknown>;
   footer_content?: Record<string, unknown>;
@@ -77,6 +88,7 @@ export interface FloralProposalRenderLineItem {
   line_item_type: FloralProposalLineItemType;
   line_type_label: string;
   item_name: string;
+  description?: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
@@ -100,11 +112,13 @@ export interface FloralProposalRenderContract {
   };
   pricing: {
     default_markup_percent: number;
+    labor_percent: number;
   };
   line_items: FloralProposalRenderLineItem[];
   shopping_list: FloralProposalShoppingListItem[];
   totals: {
     products_total: number;
+    labor_total: number;
     fees_total: number;
     discounts_total: number;
     subtotal: number;
@@ -123,15 +137,6 @@ export interface FloralProposalRenderContract {
   };
 }
 
-export interface PricingSettings {
-  pricing_settings_id: string;
-  default_markup_percent: number;
-  default_reserve_percent: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface DocumentTemplate {
   template_id: string;
   name: string;
@@ -141,27 +146,23 @@ export interface DocumentTemplate {
   is_default: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  primary_color?: string | null;
-  accent_color?: string | null;
-  heading_font_family?: string | null;
-  body_font_family?: string | null;
-  header_layout: DocumentTemplateHeaderLayout;
-  line_item_layout: DocumentTemplateLineItemLayout;
-  footer_layout: DocumentTemplateFooterLayout;
-  show_cover_page: boolean;
-  show_intro_message: boolean;
-  intro_title?: string | null;
-  intro_body?: string | null;
-  show_terms_section: boolean;
-  show_privacy_section: boolean;
-  show_signature_section: boolean;
-  agreement_clauses: Record<string, unknown>[];
-  header_content: Record<string, unknown>;
-  footer_content: Record<string, unknown>;
-  body_config: Record<string, unknown>;
   template_config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+export interface GrapesJsStoredTemplateConfig {
+  schema_version: '1.0';
+  project_data?: Record<string, unknown>;
+  published_html?: string | null;
+  published_css?: string | null;
+  published_at?: string | null;
+  theme?: {
+    primary_color?: string | null;
+    accent_color?: string | null;
+    heading_font_family?: string | null;
+    body_font_family?: string | null;
+  };
 }
 
 export interface FloralProposal {
@@ -246,14 +247,13 @@ export interface FloralProposalShoppingList {
 export interface FloralProposalShoppingListItem {
   floral_proposal_shopping_list_item_id?: string;
   floral_proposal_shopping_list_id?: string;
-  vendor_id?: string | null;
-  vendor_item_pack_id?: string | null;
   catalog_item_id?: string | null;
   item_name: string;
   item_type: CatalogItemType;
   unit_type: CatalogUnitType;
   required_units: number;
   reserve_percent: number;
+  total_plus_reserve?: number;
   reserve_units: number;
   total_units_to_buy: number;
   units_per_pack?: number | null;
@@ -261,10 +261,6 @@ export interface FloralProposalShoppingListItem {
   estimated_pack_cost?: number | null;
   total_estimated_cost?: number | null;
   notes?: string | null;
-  vendor?: {
-    vendor_id: string;
-    name: string;
-  } | null;
 }
 
 export interface CreateFloralProposalInput {
@@ -296,24 +292,6 @@ export interface DocumentTemplateUpsertInput {
   is_default?: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  primary_color?: string | null;
-  accent_color?: string | null;
-  heading_font_family?: string | null;
-  body_font_family?: string | null;
-  header_layout?: DocumentTemplateHeaderLayout;
-  line_item_layout?: DocumentTemplateLineItemLayout;
-  footer_layout?: DocumentTemplateFooterLayout;
-  show_cover_page?: boolean;
-  show_intro_message?: boolean;
-  intro_title?: string | null;
-  intro_body?: string | null;
-  show_terms_section?: boolean;
-  show_privacy_section?: boolean;
-  show_signature_section?: boolean;
-  agreement_clauses?: Record<string, unknown>[];
-  header_content?: Record<string, unknown>;
-  footer_content?: Record<string, unknown>;
-  body_config?: Record<string, unknown>;
   template_config?: Record<string, unknown>;
 }
 

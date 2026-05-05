@@ -2,6 +2,9 @@ import { Injectable } from '@angular/core';
 
 import { Lead } from '../../models/lead';
 import {
+  normalizeFloralServiceEventType,
+} from '../../floral-services/floral-service-catalog';
+import {
   DocumentTemplate,
   FloralProposal,
   FloralProposalRenderContract,
@@ -9,9 +12,15 @@ import {
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
 import { TaxRegion } from '../../models/tax-region';
+import {
+  deriveProposalRendererKeyFromServiceType,
+  getTemplateRendererKey,
+} from '../../proposal-templates/proposal-renderer-registry';
+import { ProposalTemplateDocumentService } from '../../proposal-templates/proposal-template-document.service';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
+import { DocumentTemplateService } from './document-template.service';
 import { FloralProposalRendererService } from './floral-proposal-renderer.service';
 
 export interface SubmitFloralProposalPayload {
@@ -21,8 +30,9 @@ export interface SubmitFloralProposalPayload {
   tax_region_id?: string | null;
   line_items: {
     display_order: number;
-    line_item_type: 'product' | 'fee' | 'discount';
+    line_item_type: 'product' | 'fee' | 'discount' | 'labor';
     item_name: string;
+    description?: string | null;
     quantity: number;
     unit_price: number;
     subtotal: number;
@@ -90,7 +100,9 @@ export class FloralProposalWorkflowService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly floralProposalRepository: FloralProposalRepositoryService,
-    private readonly floralProposalRenderer: FloralProposalRendererService
+    private readonly floralProposalRenderer: FloralProposalRendererService,
+    private readonly proposalTemplateDocumentService: ProposalTemplateDocumentService,
+    private readonly documentTemplateService: DocumentTemplateService
   ) {}
 
   async getLeadProposals(leadId: string): Promise<FloralProposal[]> {
@@ -171,6 +183,10 @@ export class FloralProposalWorkflowService {
       storagePath
     );
 
+    if (!signedUrl) {
+      throw new Error('We could not generate a secure file preview right now.');
+    }
+
     return { storagePath, signedUrl };
   }
 
@@ -194,7 +210,13 @@ export class FloralProposalWorkflowService {
 
   async getSignedLineItemImageUrl(storagePath: string): Promise<string | null> {
     if (!storagePath) return null;
-    return this.createSignedStorageUrl(this.lineItemImageBucket, storagePath);
+    return this.createSignedStorageUrl(this.lineItemImageBucket, storagePath, {
+      allowMissing: true,
+    });
+  }
+
+  async clearMissingLineItemImage(lineItemId: string): Promise<void> {
+    await this.floralProposalRepository.clearLineItemImage(lineItemId);
   }
 
   async submitProposal(payload: SubmitFloralProposalPayload): Promise<{
@@ -305,7 +327,11 @@ export class FloralProposalWorkflowService {
   async createRenderContract(
     input: FloralProposalRenderContractInput
   ): Promise<FloralProposalRenderContract> {
-    const templateLogoUrl = await this.resolveTemplateLogoUrl(input.template);
+    const hydratedTemplate = await this.hydrateTemplateForRendering(input.template);
+    const templateLogoUrl = await this.resolveTemplateLogoUrl(hydratedTemplate);
+    const templateTheme = this.proposalTemplateDocumentService.getPublishedDocument(
+      hydratedTemplate
+    ).theme;
     const lineItems = await Promise.all(
       input.renderPayload.line_items.map((line) =>
         this.resolveRenderLineItemAssets(line)
@@ -320,36 +346,41 @@ export class FloralProposalWorkflowService {
         lead_id: input.lead.lead_id,
         first_name: input.lead.first_name,
         last_name: input.lead.last_name,
+        partner_first_name: input.lead.partner_first_name ?? null,
+        partner_last_name: input.lead.partner_last_name ?? null,
         email: input.lead.email,
+        phone: input.lead.phone ?? null,
         service_type: input.lead.service_type,
         event_type: input.lead.event_type ?? null,
         event_date: input.lead.event_date ?? null,
+        ceremony_venue_name: input.lead.ceremony_venue_name ?? null,
+        ceremony_venue_city: input.lead.ceremony_venue_city ?? null,
+        ceremony_venue_state: input.lead.ceremony_venue_state ?? null,
+        ceremony_start_time: input.lead.ceremony_start_time ?? null,
+        reception_venue_name: input.lead.reception_venue_name ?? null,
+        reception_venue_city: input.lead.reception_venue_city ?? null,
+        reception_venue_state: input.lead.reception_venue_state ?? null,
+        reception_start_time: input.lead.reception_start_time ?? null,
+        event_start_time: input.lead.event_start_time ?? null,
         status: input.lead.status,
       },
       template: {
-        template_id: input.template?.template_id ?? input.renderPayload.template_id ?? null,
-        name: input.template?.name ?? input.renderPayload.template_name ?? null,
-        template_key: input.template?.template_key ?? null,
-        header_layout: input.template?.header_layout ?? null,
-        line_item_layout: input.template?.line_item_layout ?? null,
-        footer_layout: input.template?.footer_layout ?? null,
+        template_id: hydratedTemplate?.template_id ?? input.renderPayload.template_id ?? null,
+        name: hydratedTemplate?.name ?? input.renderPayload.template_name ?? null,
+        template_key: hydratedTemplate?.template_key ?? null,
+        renderer_key:
+          getTemplateRendererKey(hydratedTemplate) ??
+          deriveProposalRendererKeyFromServiceType(
+            input.lead.service_type,
+            normalizeFloralServiceEventType(input.lead.event_type)
+          ),
+        primary_color: templateTheme.primaryColor,
+        accent_color: templateTheme.accentColor,
+        heading_font_family: templateTheme.headingFontFamily,
+        body_font_family: templateTheme.bodyFontFamily,
         logo_url: templateLogoUrl,
-        primary_color: input.template?.primary_color ?? null,
-        accent_color: input.template?.accent_color ?? null,
-        heading_font_family: input.template?.heading_font_family ?? null,
-        body_font_family: input.template?.body_font_family ?? null,
-        show_cover_page: input.template?.show_cover_page ?? false,
-        show_intro_message: input.template?.show_intro_message ?? false,
-        intro_title: input.template?.intro_title ?? null,
-        intro_body: input.template?.intro_body ?? null,
-        show_terms_section: input.template?.show_terms_section ?? true,
-        show_privacy_section: input.template?.show_privacy_section ?? true,
-        show_signature_section: input.template?.show_signature_section ?? true,
-        agreement_clauses: input.template?.agreement_clauses ?? [],
-        header_content: input.template?.header_content ?? {},
-        footer_content: input.template?.footer_content ?? {},
-        body_config: input.template?.body_config ?? {},
-        template_config: input.template?.template_config ?? {},
+        show_intro_message: false,
+        template_config: hydratedTemplate?.template_config ?? {},
       },
       tax_region: {
         tax_region_id: input.taxRegion?.tax_region_id ?? input.renderPayload.tax_region_id ?? null,
@@ -358,11 +389,13 @@ export class FloralProposalWorkflowService {
       },
       pricing: {
         default_markup_percent: input.renderPayload.default_markup_percent,
+        labor_percent: input.renderPayload.labor_percent,
       },
       line_items: lineItems,
       shopping_list: input.renderPayload.shopping_list,
       totals: {
         products_total: input.renderPayload.breakdown.productsTotal,
+        labor_total: input.renderPayload.breakdown.laborTotal,
         fees_total: input.renderPayload.breakdown.feesTotal,
         discounts_total: input.renderPayload.breakdown.discountsTotal,
         subtotal: input.renderPayload.breakdown.subtotal,
@@ -399,6 +432,7 @@ export class FloralProposalWorkflowService {
         display_order: line.display_order,
         line_item_type: line.line_item_type,
         item_name: line.item_name,
+        description: line.description ?? null,
         quantity: line.quantity,
         unit_price: line.unit_price,
         subtotal: line.subtotal,
@@ -407,6 +441,7 @@ export class FloralProposalWorkflowService {
         image_caption: line.image_caption ?? null,
         snapshot: {
           line_type_label: line.line_type_label,
+          description: line.description ?? null,
         },
         components:
           line.line_item_type === 'product'
@@ -442,15 +477,35 @@ export class FloralProposalWorkflowService {
 
   private async createSignedStorageUrl(
     bucket: string,
-    storagePath: string
-  ): Promise<string> {
+    storagePath: string,
+    options?: {
+      allowMissing?: boolean;
+    }
+  ): Promise<string | null> {
+    const normalizedStoragePath = this.normalizeStoragePath(bucket, storagePath);
+
+    if (!normalizedStoragePath) {
+      if (options?.allowMissing) {
+        return null;
+      }
+
+      throw new Error('We could not determine the file path for this storage asset.');
+    }
+
     const { data, error } = await this.supabaseService
       .getClient()
       .storage
       .from(bucket)
-      .createSignedUrl(storagePath, this.signedUrlExpirySeconds);
+      .createSignedUrl(normalizedStoragePath, this.signedUrlExpirySeconds);
 
     if (error || !data?.signedUrl) {
+      const message = (error as { message?: string } | null)?.message?.toLowerCase() ?? '';
+      const isMissingObject = message.includes('object not found');
+
+      if (options?.allowMissing && isMissingObject) {
+        return null;
+      }
+
       console.error(
         '[FloralProposalWorkflowService] createSignedStorageUrl error:',
         error
@@ -459,6 +514,32 @@ export class FloralProposalWorkflowService {
     }
 
     return data.signedUrl;
+  }
+
+  private normalizeStoragePath(bucket: string, storagePath: string): string | null {
+    const trimmedPath = storagePath.trim();
+
+    if (!trimmedPath) {
+      return null;
+    }
+
+    let normalizedPath = trimmedPath;
+
+    if (/^https?:\/\//i.test(normalizedPath)) {
+      try {
+        normalizedPath = new URL(normalizedPath).pathname;
+      } catch {
+        return null;
+      }
+    }
+
+    normalizedPath = normalizedPath
+      .replace(/^\/+/, '')
+      .replace(/^storage\/v1\/object\/(?:sign|public)\/[^/]+\//, '')
+      .replace(/^storage\/v1\/object\/(?:sign|public)\/?/, '')
+      .replace(new RegExp(`^${bucket}/`), '');
+
+    return normalizedPath || null;
   }
 
   private async resolveTemplateLogoUrl(
@@ -506,6 +587,44 @@ export class FloralProposalWorkflowService {
         ...line,
         image_signed_url: null,
       };
+    }
+  }
+
+  private async hydrateTemplateForRendering(
+    template?: DocumentTemplate | null
+  ): Promise<DocumentTemplate | null> {
+    if (!template) {
+      return null;
+    }
+
+    const stored = this.proposalTemplateDocumentService.getStoredConfig(template);
+    if (!stored?.assets?.length) {
+      return template;
+    }
+
+    try {
+      const refreshedAssets = await this.documentTemplateService.refreshTemplateAssets(
+        stored.assets
+      );
+      const refreshedConfig =
+        this.proposalTemplateDocumentService.applyResolvedAssetUrlsToConfig(
+          stored,
+          refreshedAssets
+        );
+
+      return {
+        ...template,
+        template_config: this.proposalTemplateDocumentService.buildTemplateConfig(
+          template,
+          refreshedConfig
+        ),
+      };
+    } catch (error) {
+      console.error(
+        '[FloralProposalWorkflowService] hydrateTemplateForRendering error:',
+        error
+      );
+      return template;
     }
   }
 }

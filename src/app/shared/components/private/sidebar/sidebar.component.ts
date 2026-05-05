@@ -20,6 +20,7 @@ interface SidebarNavGroup {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
+  styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
   @Input() isMobile = false;

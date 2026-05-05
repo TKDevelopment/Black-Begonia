@@ -1,761 +1,1768 @@
-<div class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
-    <app-loading-state-block
-      *ngIf="loading()"
-      title="Loading Template Studio"
-      description="Please wait while we load the template workspace."
-      minHeightClass="min-h-[640px]"
-    />
-    <app-error-state-block
-      *ngIf="!loading() && error()"
-      title="Unable to load Template Studio"
-      [description]="error()!"
-      (retry)="retry()"
-      minHeightClass="min-h-[640px]"
+<div class="bb-editor-shell">
+  <app-loading-state-block
+    *ngIf="loading()"
+    title="Loading template editor"
+    description="Please wait while we load the structured proposal scene document."
+    minHeightClass="min-h-[520px]"
+  />
+
+  <app-error-state-block
+    *ngIf="!loading() && error()"
+    title="Unable to load template editor"
+    [description]="error()!"
+    (retry)="reload()"
+    minHeightClass="min-h-[520px]"
+  />
+
+  <div *ngIf="!loading() && !error() && template() as template" class="bb-editor-app">
+    <input
+      #uploadInput
+      type="file"
+      class="bb-hidden-input"
+      accept="image/*"
+      multiple
+      (change)="onUploadFilesSelected($event)"
     />
 
-    <app-entity-detail-shell
-      *ngIf="!loading() && !error() && template()"
-      moduleLabel="Proposal Templates"
-      [title]="template()!.name"
-      subtitle="Template Studio"
-      [loading]="false"
-      [fullWidth]="true"
-      backLabel="Back to Template Overview"
-      (back)="goBack()"
-    >
-      <div detail-main class="text-[13px]">
-        <div class="rounded-2xl border border-black/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 class="text-xl font-semibold text-stone-900 dark:text-stone-100">Template Studio Workspace</h2>
-              <p class="mt-1.5 text-[13px] leading-5 text-stone-600 dark:text-stone-300">
-                Edit the real block-based draft, preview it against sample proposal data, and save versioned presentation logic without touching the proposal authoring workflow.
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                (click)="publishTemplateStudioVersion()"
-                [disabled]="saving() || !studioDraft()"
-                class="inline-flex items-center justify-center rounded-xl border border-[#6f2f29]/10 bg-[#6f2f29] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {{ saving() ? 'Working...' : 'Publish Version' }}
-              </button>
-              <button
-                type="button"
-                (click)="saveTemplateStudioDraft()"
-                [disabled]="saving() || !studioDraft()"
-                class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {{ saving() ? 'Saving...' : 'Save Draft' }}
-              </button>
-            </div>
-          </div>
+    <header class="bb-topbar">
+      <div class="bb-topbar-left">
+        <button type="button" class="bb-brand-button" (click)="openTemplateList()">BB</button>
+        <div class="bb-file-menu">
+          <button
+            type="button"
+            class="bb-topbar-link bb-file-menu-trigger"
+            [class.is-open]="fileMenuOpen()"
+            [disabled]="saving()"
+            (click)="toggleFileMenu($event)"
+          >
+            <span>File</span>
+            <lucide-icon [img]="iconChevronDown" [size]="14"></lucide-icon>
+          </button>
 
-          <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3.5 dark:border-white/10 dark:bg-[#171413]"><p class="text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Blocks</p><p class="mt-2.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ templateBlockSummaries().length }}</p></div>
-            <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3.5 dark:border-white/10 dark:bg-[#171413]"><p class="text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Enabled Blocks</p><p class="mt-2.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ enabledTemplateBlockCount() }}</p></div>
-            <div class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-3.5 dark:border-white/10 dark:bg-[#171413]"><p class="text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">Published Version</p><p class="mt-2.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ lastPublishedVersion() || 'None' }}</p></div>
+          <div *ngIf="fileMenuOpen()" class="bb-file-menu-panel">
+            <button
+              type="button"
+              class="bb-file-menu-item"
+              [disabled]="isFileActionBusy()"
+              (click)="createNewDesign()"
+            >
+              <lucide-icon [img]="iconFilePlus2" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>{{ isFileActionBusy('create') ? 'Creating design...' : 'Create new design' }}</strong>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="bb-file-menu-item"
+              [disabled]="isFileActionBusy() || uploadingAssets()"
+              (click)="openUploadFiles()"
+            >
+              <lucide-icon [img]="iconUpload" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>{{ uploadingAssets() ? 'Uploading...' : 'Upload files' }}</strong>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="bb-file-menu-item"
+              [disabled]="saving() || isFileActionBusy()"
+              (click)="saveFromFileMenu()"
+            >
+              <lucide-icon [img]="iconSave" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>{{ saving() ? 'Saving draft...' : 'Save' }}</strong>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="bb-file-menu-item"
+              [disabled]="isFileActionBusy()"
+              (click)="makeFileCopy()"
+            >
+              <lucide-icon [img]="iconCopy" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>{{ isFileActionBusy('copy') ? 'Copying design...' : 'Make a copy' }}</strong>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="bb-file-menu-item"
+              [disabled]="isFileActionBusy()"
+              (click)="downloadCurrentDesign()"
+            >
+              <lucide-icon [img]="iconDownload" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>Download</strong>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="bb-file-menu-item"
+              [disabled]="isFileActionBusy()"
+              (click)="openVersionHistory()"
+            >
+              <lucide-icon [img]="iconHistory" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>Version history</strong>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="bb-file-menu-item is-destructive"
+              [disabled]="isFileActionBusy()"
+              (click)="moveToTrash()"
+            >
+              <lucide-icon [img]="iconTrash2" [size]="16"></lucide-icon>
+              <span class="bb-file-menu-copy">
+                <strong>{{ isFileActionBusy('trash') ? 'Moving to trash...' : 'Move to trash' }}</strong>
+              </span>
+            </button>
           </div>
         </div>
+        <label class="bb-name-field">
+          <span class="bb-name-label">Document</span>
+          <input
+            type="text"
+            [ngModel]="templateName()"
+            (ngModelChange)="renameTemplate($event)"
+            placeholder="Untitled Template"
+          />
+        </label>
+        <span class="bb-dimension-pill">{{ pageSizeLabel() }}</span>
+      </div>
 
-        <div class="my-3 grid gap-6 xl:grid-cols-[260px_minmax(320px,0.8fr)_minmax(0,1.35fr)] 2xl:grid-cols-[280px_minmax(360px,0.78fr)_minmax(0,1.45fr)]">
-          <div class="rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-            <div class="flex items-center justify-between gap-3">
-              <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Structure</p>
-            </div>
-            <div class="mt-4 grid gap-2">
-              <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Add Block</label>
-              <select
-                #blockTypeSelect
-                class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
-              >
-                <option *ngFor="let entry of templateBlockSummaries(); trackBy: controlTrackBy" hidden></option>
-                <option *ngFor="let registryEntry of (blockRegistry | keyvalue); trackBy: controlTrackBy" [value]="registryEntry.key">
-                  {{ registryEntry.value.label }}
-                </option>
-              </select>
-              <button
-                type="button"
-                (click)="addBlock(blockTypeSelect.value)"
-                class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]"
-              >
-                Add Block
-              </button>
-            </div>
-            <div class="mt-4 space-y-2">
-              <button
-                *ngFor="let block of templateBlockSummaries()"
-                type="button"
-                (click)="selectStudioBlock(block.id)"
-                class="flex w-full items-center justify-between rounded-2xl border px-3 py-2.5 text-left transition"
-                [ngClass]="selectedStudioBlock()?.id === block.id ? 'border-[#ea938c] bg-[#fff5f2] dark:border-[#ea938c] dark:bg-[#2a201e]' : 'border-black/10 bg-[#fcfaf8] hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:hover:bg-[#221d1b]'"
-              >
-                <div>
-                  <p class="text-[13px] font-semibold text-stone-900 dark:text-stone-100">{{ block.label }}</p>
-                  <p class="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">{{ block.variantLabel }}</p>
-                </div>
-                <span
-                  class="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
-                  [ngClass]="block.enabled ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-stone-200 text-stone-600 dark:bg-white/10 dark:text-stone-300'"
-                >
-                  {{ block.enabled ? 'On' : 'Off' }}
-                </span>
-              </button>
-            </div>
-          </div>
+      <div class="bb-topbar-right">
+        <div class="bb-topbar-meta">
+          <span class="bb-status-pill" [class.is-dirty]="dirty()">{{ dirty() ? 'Draft changed' : 'Draft synced' }}</span>
+          <span class="bb-status-pill">{{ lastDraftSavedAt() ? ('Saved ' + (lastDraftSavedAt() | date:'short')) : 'No draft save yet' }}</span>
+          <span class="bb-status-pill">{{ publishedAt() ? ('Published ' + (publishedAt() | date:'short')) : 'Not published' }}</span>
+        </div>
 
-          <div class="space-y-6">
-            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <button
-                type="button"
-                (click)="toggleStudioPanel('selectedBlockControls')"
-                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-              >
-                <div>
-                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Selected Block Controls</h3>
-                  <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Edit the selected block’s variant, content, styles, and visibility.</p>
-                </div>
-                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                  <svg
-                    class="h-3.5 w-3.5 transition-transform"
-                    [ngClass]="isStudioPanelExpanded('selectedBlockControls') ? 'rotate-180' : ''"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 7.5 10 12.5 15 7.5" />
-                  </svg>
-                  {{ isStudioPanelExpanded('selectedBlockControls') ? 'Collapse' : 'Expand' }}
-                </span>
-              </button>
-              <div *ngIf="isStudioPanelExpanded('selectedBlockControls')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
-              <div *ngIf="selectedStudioBlock() as block; else noBlockSelected">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Selected Block</p>
-                    <h3 class="mt-1.5 text-lg font-semibold text-stone-900 dark:text-stone-100">{{ blockRegistry[block.type].label }}</h3>
-                  </div>
-                  <label class="inline-flex items-center gap-2 rounded-full border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[13px] text-stone-700 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200">
-                    <input
-                      type="checkbox"
-                      [ngModel]="block.enabled"
-                      (ngModelChange)="updateSelectedBlockEnabled($event)"
-                      class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]"
-                    />
-                    Enabled
-                  </label>
-                </div>
-
-                <div class="mt-4 flex flex-wrap gap-2">
-                  <button type="button" (click)="moveSelectedBlock('up')" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">Move Up</button>
-                  <button type="button" (click)="moveSelectedBlock('down')" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">Move Down</button>
-                  <button type="button" (click)="duplicateSelectedBlock()" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">Duplicate</button>
-                  <button type="button" (click)="resetSelectedBlockStyles()" class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-medium text-amber-800 transition hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">Reset Styles</button>
-                  <button type="button" (click)="removeSelectedBlock()" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">Remove</button>
-                </div>
-
-                <div class="mt-4">
-                  <label class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Variant</label>
-                  <select
-                    [ngModel]="block.layout_variant"
-                    (ngModelChange)="updateSelectedBlockVariant($event)"
-                    class="mt-2 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
-                  >
-                    <option *ngFor="let variant of blockRegistry[block.type].variants; trackBy: controlTrackBy" [ngValue]="variant.id">
-                      {{ variant.label }}
-                    </option>
-                  </select>
-                </div>
-
-                <div *ngFor="let group of selectedStudioBlockControlGroups(); trackBy: controlTrackBy" class="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-[#fcfaf8] dark:border-white/10 dark:bg-[#171413]">
-                  <button
-                    type="button"
-                    (click)="toggleSelectedBlockSection(group.id)"
-                    class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                  >
-                    <div>
-                      <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">{{ group.label }}</h4>
-                      <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">{{ group.controls.length }} controls</p>
-                    </div>
-                    <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                      <svg
-                        class="h-3.5 w-3.5 transition-transform"
-                        [ngClass]="isSelectedBlockSectionExpanded(group.id) ? 'rotate-180' : ''"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 7.5 10 12.5 15 7.5" />
-                      </svg>
-                      {{ isSelectedBlockSectionExpanded(group.id) ? 'Collapse' : 'Expand' }}
-                    </span>
-                  </button>
-                  <div *ngIf="isSelectedBlockSectionExpanded(group.id)" class="grid gap-3 border-t border-black/10 px-4 py-3 dark:border-white/10">
-                    <div *ngFor="let control of group.controls; trackBy: controlTrackBy" [ngSwitch]="control.type">
-                      <div *ngSwitchCase="'text'">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                        <input
-                          type="text"
-                          [ngModel]="getBlockControlValue(control.key)"
-                          (ngModelChange)="updateSelectedBlockContent(control.key.split('.')[1], $event)"
-                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        />
-                      </div>
-
-                      <div *ngSwitchCase="'textarea'">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                        <textarea
-                          rows="4"
-                          [ngModel]="getBlockControlValue(control.key)"
-                          (ngModelChange)="updateSelectedBlockContent(control.key.split('.')[1], $event)"
-                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        ></textarea>
-                      </div>
-
-                      <div *ngSwitchCase="'toggle'">
-                        <label class="flex items-center justify-between rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-700 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200">
-                          <span>{{ control.label }}</span>
-                          <input
-                            type="checkbox"
-                            [ngModel]="getBlockControlValue(control.key)"
-                            (ngModelChange)="updateSelectedBlockContent(control.key.split('.')[1], $event)"
-                            class="h-4 w-4 rounded border-black/10 text-[#ea938c] focus:ring-[#ea938c]"
-                          />
-                        </label>
-                      </div>
-
-                      <div *ngSwitchCase="'select'">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                        <select
-                          [ngModel]="getBlockControlValue(control.key)"
-                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], $event) : updateSelectedBlockContent(control.key.split('.')[1], $event)"
-                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        >
-                          <option *ngFor="let option of getSelectControlOptions(control); trackBy: controlTrackBy" [ngValue]="option.value">
-                            {{ option.label }}
-                          </option>
-                        </select>
-                      </div>
-
-                      <div *ngSwitchCase="'number'">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                        <input
-                          type="number"
-                          [ngModel]="getBlockControlValue(control.key)"
-                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], $event) : updateSelectedBlockContent(control.key.split('.')[1], $event)"
-                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        />
-                      </div>
-
-                      <div *ngSwitchCase="'range'">
-                        <div class="flex items-center justify-between gap-3">
-                          <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                          <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getBlockControlValue(control.key) || 0 }}</span>
-                        </div>
-                        <input
-                          type="range"
-                          [min]="getRangeControlMin(control)"
-                          [max]="getRangeControlMax(control)"
-                          [step]="getRangeControlStep(control)"
-                          [ngModel]="getBlockControlValue(control.key)"
-                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], +$event) : updateSelectedBlockContent(control.key.split('.')[1], +$event)"
-                          class="mt-3 w-full accent-[#ea938c]"
-                        />
-                      </div>
-
-                      <div *ngSwitchCase="'color'">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                        <div class="mt-1.5 flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-2 dark:border-white/10 dark:bg-[#211d1b]">
-                          <input
-                            type="color"
-                            [ngModel]="getBlockControlValue(control.key) || '#ffffff'"
-                            (ngModelChange)="updateSelectedBlockStyle(control.key.split('.')[1], $event)"
-                            class="h-11 w-12 rounded-xl border border-black/10 bg-transparent p-0"
-                          />
-                          <input
-                            type="text"
-                            [ngModel]="getBlockControlValue(control.key)"
-                            (ngModelChange)="updateSelectedBlockStyle(control.key.split('.')[1], $event)"
-                            class="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#292321] dark:text-stone-100"
-                          />
-                        </div>
-                      </div>
-
-                      <div *ngSwitchCase="'asset-picker'">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ control.label }}</label>
-                        <select
-                          [ngModel]="getBlockControlValue(control.key)"
-                          (ngModelChange)="control.key.startsWith('styles.') ? updateSelectedBlockStyle(control.key.split('.')[1], $event) : updateSelectedBlockContent(control.key.split('.')[1], $event)"
-                          class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        >
-                          <option [ngValue]="null">No asset selected</option>
-                          <option *ngFor="let option of getAssetControlOptions(control); trackBy: controlTrackBy" [ngValue]="option.value">
-                            {{ option.label }}
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-[#fcfaf8] dark:border-white/10 dark:bg-[#171413]">
-                  <button
-                    type="button"
-                    (click)="toggleSelectedBlockSection('visibility')"
-                    class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                  >
-                    <div>
-                      <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Visibility Rules</h4>
-                      <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Event filters and required proposal data</p>
-                    </div>
-                    <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                      <svg
-                        class="h-3.5 w-3.5 transition-transform"
-                        [ngClass]="isSelectedBlockSectionExpanded('visibility') ? 'rotate-180' : ''"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 7.5 10 12.5 15 7.5" />
-                      </svg>
-                      {{ isSelectedBlockSectionExpanded('visibility') ? 'Collapse' : 'Expand' }}
-                    </span>
-                  </button>
-                  <div *ngIf="isSelectedBlockSectionExpanded('visibility')" class="grid gap-3 border-t border-black/10 px-4 py-3 dark:border-white/10">
-                    <div>
-                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Event Types</label>
-                      <input
-                        type="text"
-                        [ngModel]="getSelectedBlockVisibilityValue('event_types')"
-                        (ngModelChange)="updateSelectedBlockVisibility('event_types', $event)"
-                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        placeholder="Wedding, Private Dinner, Corporate"
-                      />
-                      <p class="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
-                        Leave blank to show this block for every event type.
-                      </p>
-                    </div>
-                    <div>
-                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Required Data Paths</label>
-                      <input
-                        type="text"
-                        [ngModel]="getSelectedBlockVisibilityValue('requires_data_paths')"
-                        (ngModelChange)="updateSelectedBlockVisibility('requires_data_paths', $event)"
-                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        placeholder="gallery.mood_images, intro.welcome_message"
-                      />
-                      <p class="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
-                        These paths must exist in the proposal render model or the block stays hidden.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <ng-template #noBlockSelected>
-                <div class="rounded-2xl border border-dashed border-black/10 bg-[#fcfaf8] px-4 py-6 text-[13px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
-                  Select a block from the structure rail to edit its controls.
-                </div>
-              </ng-template>
-              </div>
-            </div>
-
-            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <button
-                type="button"
-                (click)="toggleStudioPanel('themeTokens')"
-                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-              >
-                <div>
-                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Theme Tokens</h3>
-                  <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Global color and typography defaults for the full template.</p>
-                </div>
-                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                  <svg
-                    class="h-3.5 w-3.5 transition-transform"
-                    [ngClass]="isStudioPanelExpanded('themeTokens') ? 'rotate-180' : ''"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 7.5 10 12.5 15 7.5" />
-                  </svg>
-                  {{ isStudioPanelExpanded('themeTokens') ? 'Collapse' : 'Expand' }}
-                </span>
-              </button>
-              <div *ngIf="isStudioPanelExpanded('themeTokens')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
-              <div class="grid gap-5">
-                <div>
-                  <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Color System</h4>
-                  <div class="mt-2.5 grid gap-3 sm:grid-cols-2">
-                    <div *ngFor="let colorKey of ['primary', 'accent', 'canvas', 'surface', 'text', 'muted_text', 'border']; trackBy: controlTrackBy">
-                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{{ formatLabel(colorKey) }}</label>
-                      <div class="mt-1.5 flex items-center gap-3 rounded-2xl border border-black/10 bg-[#fcfaf8] p-2 dark:border-white/10 dark:bg-[#171413]">
-                        <input
-                          type="color"
-                          [ngModel]="getThemeColorValue($any(colorKey))"
-                          (ngModelChange)="updateThemeColor($any(colorKey), $event)"
-                          class="h-11 w-12 rounded-xl border border-black/10 bg-transparent p-0"
-                        />
-                        <input
-                          type="text"
-                          [ngModel]="getThemeColorValue($any(colorKey))"
-                          (ngModelChange)="updateThemeColor($any(colorKey), $event)"
-                          class="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-100"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 class="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500 dark:text-stone-400">Typography System</h4>
-                  <div class="mt-2.5 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Heading Font</label>
-                      <select
-                        [ngModel]="studioDraft()?.tokens?.typography?.heading_font_family"
-                        (ngModelChange)="updateThemeFont('heading_font_family', $event)"
-                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
-                      >
-                        <option value="Cormorant Garamond, Georgia, serif">Cormorant Garamond</option>
-                        <option value="Playfair Display, Georgia, serif">Playfair Display</option>
-                        <option value="Bodoni Moda, Georgia, serif">Bodoni Moda</option>
-                        <option value="Libre Baskerville, Georgia, serif">Libre Baskerville</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Body Font</label>
-                      <select
-                        [ngModel]="studioDraft()?.tokens?.typography?.body_font_family"
-                        (ngModelChange)="updateThemeFont('body_font_family', $event)"
-                        class="mt-1.5 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
-                      >
-                        <option value="Source Sans 3, Arial, sans-serif">Source Sans 3</option>
-                        <option value="Lora, Georgia, serif">Lora</option>
-                        <option value="Libre Franklin, Arial, sans-serif">Libre Franklin</option>
-                        <option value="DM Sans, Arial, sans-serif">DM Sans</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">H1 Size</label>
-                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('sizes', 'h1') }}px</span>
-                      </div>
-                      <input type="range" min="36" max="80" step="2" [ngModel]="getThemeTypographyValue('sizes', 'h1')" (ngModelChange)="updateThemeTypographyScale('sizes', 'h1', +$event)" class="mt-3 w-full accent-[#ea938c]" />
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Body Size</label>
-                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('sizes', 'body') }}px</span>
-                      </div>
-                      <input type="range" min="12" max="22" step="1" [ngModel]="getThemeTypographyValue('sizes', 'body')" (ngModelChange)="updateThemeTypographyScale('sizes', 'body', +$event)" class="mt-3 w-full accent-[#ea938c]" />
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Heading Weight</label>
-                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('weights', 'heading') }}</span>
-                      </div>
-                      <input type="range" min="300" max="800" step="100" [ngModel]="getThemeTypographyValue('weights', 'heading')" (ngModelChange)="updateThemeTypographyScale('weights', 'heading', +$event)" class="mt-3 w-full accent-[#ea938c]" />
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Body Weight</label>
-                        <span class="text-[11px] font-medium text-stone-500 dark:text-stone-400">{{ getThemeTypographyValue('weights', 'body') }}</span>
-                      </div>
-                      <input type="range" min="300" max="700" step="100" [ngModel]="getThemeTypographyValue('weights', 'body')" (ngModelChange)="updateThemeTypographyScale('weights', 'body', +$event)" class="mt-3 w-full accent-[#ea938c]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              </div>
-            </div>
-
-            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <button
-                type="button"
-                (click)="toggleStudioPanel('advancedCss')"
-                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-              >
-                <div>
-                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Advanced CSS</h3>
-                  <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Optional scoped overrides for power-user styling.</p>
-                </div>
-                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                  <svg
-                    class="h-3.5 w-3.5 transition-transform"
-                    [ngClass]="isStudioPanelExpanded('advancedCss') ? 'rotate-180' : ''"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 7.5 10 12.5 15 7.5" />
-                  </svg>
-                  {{ isStudioPanelExpanded('advancedCss') ? 'Collapse' : 'Expand' }}
-                </span>
-              </button>
-              <div *ngIf="isStudioPanelExpanded('advancedCss')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
-                <textarea
-                  rows="8"
-                  [ngModel]="studioDraft()?.advanced?.custom_css"
-                  (ngModelChange)="updateAdvancedCss($event)"
-                  class="w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 font-mono text-[12px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
-                  placeholder="/* Optional scoped CSS overrides for Template Studio */"
-                ></textarea>
-              </div>
-            </div>
-
-            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <button
-                type="button"
-                (click)="toggleStudioPanel('publishWorkflow')"
-                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-              >
-                <div>
-                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Publish Workflow</h3>
-                  <p class="mt-1 text-[13px] leading-5 text-stone-600 dark:text-stone-300">
-                    Save the draft as often as you like. Publish creates an immutable released version and keeps you in a new editable draft.
-                  </p>
-                </div>
-                <div class="flex items-center gap-3">
-                  <span class="inline-flex rounded-full bg-[#fcfaf8] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-600 dark:bg-[#171413] dark:text-stone-300">
-                    Latest {{ lastPublishedVersion() || 'None' }}
-                  </span>
-                  <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                    <svg
-                      class="h-3.5 w-3.5 transition-transform"
-                      [ngClass]="isStudioPanelExpanded('publishWorkflow') ? 'rotate-180' : ''"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 7.5 10 12.5 15 7.5" />
-                    </svg>
-                    {{ isStudioPanelExpanded('publishWorkflow') ? 'Collapse' : 'Expand' }}
-                  </span>
-                </div>
-              </button>
-              <div *ngIf="isStudioPanelExpanded('publishWorkflow')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
-                <div class="mt-0">
-                <label class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Version Notes</label>
-                <textarea
-                  rows="3"
-                  [ngModel]="publishNotes()"
-                  (ngModelChange)="updatePublishNotes($event)"
-                  class="mt-1.5 w-full rounded-2xl border border-black/10 bg-[#fcfaf8] px-3 py-2.5 text-[13px] text-stone-900 outline-none transition focus:border-[#ea938c] dark:border-white/10 dark:bg-[#171413] dark:text-stone-100"
-                  placeholder="Summarize what changed in this release."
-                ></textarea>
-              </div>
-              <div class="mt-4 space-y-3">
-                <div *ngIf="!publishedVersions().length" class="rounded-2xl border border-dashed border-black/10 bg-[#fcfaf8] px-4 py-4 text-[13px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
-                  No published versions yet.
-                </div>
-                <div *ngFor="let version of publishedVersions(); trackBy: controlTrackBy" class="rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-4 dark:border-white/10 dark:bg-[#171413]">
-                  <div class="flex items-center justify-between gap-3">
-                    <div>
-                      <p class="text-[13px] font-semibold text-stone-900 dark:text-stone-100">Version {{ version.version }}</p>
-                      <p class="mt-1 text-[11px] text-stone-500 dark:text-stone-400">{{ version.published_at | date:'medium' }}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-600 dark:bg-[#211d1b] dark:text-stone-300">
-                        {{ version.definition.status }}
-                      </span>
-                      <button
-                        type="button"
-                        (click)="restorePublishedVersion(version)"
-                        [disabled]="saving()"
-                        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#211d1b] dark:text-stone-200 dark:hover:bg-[#292321]"
-                      >
-                        Restore as Draft
-                      </button>
-                    </div>
-                  </div>
-                  <p *ngIf="version.notes" class="mt-3 text-[13px] text-stone-600 dark:text-stone-300">{{ version.notes }}</p>
-                </div>
-              </div>
-              </div>
-            </div>
-
-            <div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <button
-                type="button"
-                (click)="toggleStudioPanel('assetLibrary')"
-                class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-              >
-                <div>
-                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Asset Library</h3>
-                  <p class="mt-1 text-[13px] leading-5 text-stone-600 dark:text-stone-300">
-                    Upload template-specific images and logos, then bind them through asset-aware controls like the cover hero asset.
-                  </p>
-                </div>
-                <span class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
-                  <svg
-                    class="h-3.5 w-3.5 transition-transform"
-                    [ngClass]="isStudioPanelExpanded('assetLibrary') ? 'rotate-180' : ''"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 7.5 10 12.5 15 7.5" />
-                  </svg>
-                  {{ isStudioPanelExpanded('assetLibrary') ? 'Collapse' : 'Expand' }}
-                </span>
-              </button>
-              <div *ngIf="isStudioPanelExpanded('assetLibrary')" class="border-t border-black/10 px-4 py-3 dark:border-white/10">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex flex-wrap gap-2">
-                  <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" (change)="uploadTemplateAsset($event, 'logo')" />
-                    Upload Logo
-                  </label>
-                  <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" (change)="uploadTemplateAsset($event, 'image')" />
-                    Upload Image
-                  </label>
-                  <label class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-black/10 bg-[#fcfaf8] px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]">
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden" (change)="uploadTemplateAsset($event, 'background')" />
-                    Upload Background
-                  </label>
-                </div>
-              </div>
-
-              <div class="mt-4 grid gap-3">
-                <div *ngIf="!draftAssets().length" class="rounded-2xl border border-dashed border-black/10 bg-[#fcfaf8] px-4 py-6 text-[13px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
-                  No template assets uploaded yet.
-                </div>
-
-                <div *ngFor="let asset of draftAssets(); trackBy: controlTrackBy" class="rounded-2xl border border-black/10 bg-[#fcfaf8] p-4 dark:border-white/10 dark:bg-[#171413]">
-                  <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div class="min-w-0">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-600 dark:bg-[#211d1b] dark:text-stone-300">{{ formatLabel(asset.type) }}</span>
-                        <p class="text-[13px] font-semibold text-stone-900 dark:text-stone-100">{{ asset.alt || asset.id }}</p>
-                      </div>
-                      <p class="mt-1 break-all text-xs text-stone-500 dark:text-stone-400">{{ asset.id }}</p>
-                    </div>
-                    <button type="button" (click)="removeTemplateAsset(asset.id)" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
-                      Remove
-                    </button>
-                  </div>
-                  <div *ngIf="asset.url" class="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-[#211d1b]">
-                    <img [src]="asset.url" [alt]="asset.alt || asset.id" class="h-44 w-full object-cover" />
-                  </div>
-                </div>
-              </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-6">
-            <div class="rounded-2xl border border-black/10 bg-white p-3.5 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Live Preview</h3>
-                  <p class="mt-0.5 text-[12px] leading-5 text-stone-600 dark:text-stone-300">
-                    Rendered from the current draft and sample proposal data through Gotenberg.
-                  </p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="inline-flex rounded-full bg-[#fcfaf8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-600 dark:bg-[#171413] dark:text-stone-300">
-                    {{ previewRenderStatus() }}
-                  </span>
-                  <button
-                    type="button"
-                    (click)="refreshPdfPreview()"
-                    [disabled]="previewPdfLoading()"
-                    class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#171413] dark:text-stone-200 dark:hover:bg-[#221d1b]"
-                  >
-                    {{ previewPdfLoading() ? 'Refreshing...' : 'Refresh PDF Preview' }}
-                  </button>
-                </div>
-              </div>
-
-              <div *ngIf="previewPdfLoading()" class="mt-3 rounded-2xl border border-black/10 bg-[#fcfaf8] px-4 py-2.5 text-[12px] text-stone-500 dark:border-white/10 dark:bg-[#171413] dark:text-stone-400">
-                  Coalescing edits into the latest preview request...
-              </div>
-
-              <div
-                *ngIf="previewPdfError()"
-                class="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-[12px] text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
-              >
-                {{ previewPdfError() }}
-              </div>
-
-              <div class="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white dark:border-white/10">
-                <div *ngIf="previewPdfLoading()" class="flex h-[1040px] items-center justify-center bg-[#fcfaf8] text-[13px] text-stone-500 dark:bg-[#171413] dark:text-stone-300">
-                  Rendering PDF preview through Gotenberg...
-                </div>
-                <iframe
-                  *ngIf="!previewPdfLoading() && previewPdfUrl()"
-                  title="Template Studio Preview"
-                  class="h-[1040px] w-full bg-white"
-                  [src]="previewPdfUrl()"
-                ></iframe>
-                <div *ngIf="!previewPdfLoading() && !previewPdfUrl()" class="flex h-[1040px] items-center justify-center bg-[#fcfaf8] px-6 text-center text-[13px] text-stone-500 dark:bg-[#171413] dark:text-stone-300">
-                  PDF preview is unavailable right now. Resolve any validation issues or retry once the preview service is reachable.
-                </div>
-              </div>
-
-              <div class="mt-2.5 text-[11px] text-stone-500 dark:text-stone-400">
-                <span class="font-medium text-stone-900 dark:text-stone-100">Last Gotenberg render:</span>
-                {{ previewLastRenderedLabel() }}
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1f1b19]">
-              <h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">Validation Feed</h3>
-              <div class="mt-3 space-y-3 text-[13px]">
-                <div *ngIf="!templateStudioErrors().length && !templateStudioWarnings().length" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-                  This draft currently validates cleanly against the Template Studio rules.
-                </div>
-
-                <div *ngFor="let issue of templateStudioErrors()" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
-                  <p class="font-semibold">{{ issue.code }}</p>
-                  <p class="mt-1">{{ issue.message }}</p>
-                </div>
-
-                <div *ngFor="let issue of templateStudioWarnings()" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                  <p class="font-semibold">{{ issue.code }}</p>
-                  <p class="mt-1">{{ issue.message }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="bb-topbar-actions">
+          <button type="button" class="bb-topbar-button is-muted" [disabled]="!canUndo()" (click)="undo()">Undo</button>
+          <button type="button" class="bb-topbar-button is-muted" [disabled]="!canRedo()" (click)="redo()">Redo</button>
+          <button
+            type="button"
+            class="bb-topbar-button is-muted"
+            [disabled]="canvaLoading() || canvaConnecting()"
+            (click)="showCanvaImportSetup()"
+          >
+            {{ canvaConnecting() ? 'Connecting...' : canvaActionLabel() }}
+          </button>
+          <button type="button" class="bb-topbar-button is-muted" [disabled]="saving()" (click)="saveDraft()">Save Draft</button>
+          <button type="button" class="bb-topbar-button is-primary" [disabled]="saving()" (click)="publishTemplate()">
+            {{ saving() ? 'Saving...' : 'Publish' }}
+          </button>
         </div>
       </div>
-    </app-entity-detail-shell>
+    </header>
+
+    <div
+      *ngIf="versionHistoryOpen()"
+      class="bb-version-modal-backdrop"
+      (click)="closeVersionHistory()"
+    >
+      <section class="bb-version-modal" (click)="$event.stopPropagation()">
+        <header class="bb-version-modal-header">
+          <div>
+            <p class="bb-version-modal-eyebrow">File</p>
+            <h2>Version history</h2>
+            <p>Restore a saved draft or published checkpoint back into the live editor.</p>
+          </div>
+
+          <button type="button" class="bb-version-close" (click)="closeVersionHistory()">
+            <lucide-icon [img]="iconX" [size]="16"></lucide-icon>
+          </button>
+        </header>
+
+        <div *ngIf="versionHistory().length; else emptyVersionHistory" class="bb-version-list">
+          <article *ngFor="let version of versionHistory()" class="bb-version-item">
+            <div class="bb-version-copy">
+              <div class="bb-version-row">
+                <strong>{{ version.label }}</strong>
+                <span class="bb-version-badge" [class.is-published]="version.kind === 'published'">
+                  {{ version.kind === 'published' ? 'Published' : 'Draft' }}
+                </span>
+              </div>
+
+              <div class="bb-version-meta">
+                <span>{{ version.saved_at | date:'medium' }}</span>
+                <span>Version {{ version.document.metadata.version }}</span>
+                <span>{{ version.document.pages.length }} {{ version.document.pages.length === 1 ? 'page' : 'pages' }}</span>
+              </div>
+            </div>
+
+            <div class="bb-version-actions">
+              <button type="button" class="bb-secondary-button" (click)="downloadVersion(version)">
+                Download
+              </button>
+              <button type="button" class="bb-topbar-button is-primary" (click)="restoreVersion(version)">
+                Restore
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <ng-template #emptyVersionHistory>
+          <div class="bb-version-empty">
+            <strong>No saved versions yet</strong>
+            <span>Draft saves and publishes will appear here once this design has been stored.</span>
+          </div>
+        </ng-template>
+      </section>
+    </div>
+
+    <div class="bb-studio-main" *ngIf="currentPage() as page">
+      <aside class="bb-tool-rail">
+        <button
+          *ngFor="let section of sidebarSections"
+          type="button"
+          class="bb-tool-button"
+          [class.is-active]="section.id === activeSidebarTab() && drawerOpen()"
+          (click)="selectSidebarTab(section.id)"
+        >
+          <span class="bb-tool-icon">{{ section.shortLabel }}</span>
+          <span class="bb-tool-label">{{ section.label }}</span>
+        </button>
+      </aside>
+
+      <aside *ngIf="drawerOpen()" class="bb-tool-drawer">
+        <header class="bb-drawer-header">
+          <div>
+            <p class="bb-drawer-title">{{ currentSidebarSection().label }}</p>
+            <p class="bb-drawer-copy">{{ currentSidebarSection().description }}</p>
+          </div>
+          <button
+            type="button"
+            class="bb-drawer-close"
+            (click)="colorDrawer() ? closeColorDrawer() : toggleSidebarDrawer()"
+          >
+            {{ colorDrawer() ? 'Close' : 'Close' }}
+          </button>
+        </header>
+
+        <div *ngIf="colorDrawer() as colorDrawer; else standardDrawerBody" class="bb-drawer-body">
+          <section class="bb-drawer-section bb-color-drawer">
+            <div class="bb-color-search-row">
+              <input
+                type="search"
+                class="bb-search"
+                [ngModel]="colorDrawerSearch()"
+                (ngModelChange)="colorDrawerSearch.set($event)"
+                (keyup.enter)="applyCustomColorDrawerColor()"
+                placeholder='Try "blue" or "#00c4cc"'
+              />
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Document colors</span>
+              </div>
+              <div class="bb-color-grid">
+                <button
+                  *ngIf="colorDrawerSearch().trim()"
+                  type="button"
+                  class="bb-color-swatch is-add"
+                  [class.is-active]="isColorSwatchActive(colorDrawerSearch().trim())"
+                  [style.background]="colorDrawerSearch().trim()"
+                  (click)="applyCustomColorDrawerColor()"
+                >
+                  <span>+</span>
+                </button>
+                <button
+                  *ngFor="let color of documentColorSwatches()"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Brand Kit</span>
+              </div>
+              <div class="bb-brand-kit-copy">Color palette</div>
+              <div class="bb-color-grid">
+                <button
+                  *ngFor="let color of brandKitColorSwatches()"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Default solid colors</span>
+                <small>See all</small>
+              </div>
+              <div class="bb-color-grid">
+                <button
+                  *ngFor="let color of defaultSolidColors"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+
+            <div *ngIf="colorDrawerAllowsGradients()" class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Default gradient colors</span>
+                <small>See all</small>
+              </div>
+              <div class="bb-color-grid">
+                <button
+                  *ngFor="let color of defaultGradientColors"
+                  type="button"
+                  class="bb-color-swatch"
+                  [class.is-active]="isColorSwatchActive(color)"
+                  [style.background]="color"
+                  (click)="applyColorDrawerColor(color)"
+                ></button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <ng-template #standardDrawerBody>
+        <div class="bb-drawer-body" [ngSwitch]="activeSidebarTab()">
+          <section *ngSwitchCase="'templates'" class="bb-drawer-section">
+            <div class="bb-canva-card">
+              <span class="bb-canva-badge">Canva</span>
+              <strong>{{ canvaStatus().connected ? 'Connected to Canva' : 'Connect Canva to import designs' }}</strong>
+              <span *ngIf="canvaStatus().connected; else canvaDisconnectedCopy">
+                {{ canvaStatus().display_name || 'Signed in to Canva' }}. Imports arrive as locked full-page artwork so you can keep building on top of each page in the studio.
+              </span>
+              <ng-template #canvaDisconnectedCopy>
+                <span>Connect with OAuth, browse your Canva designs, and import them into this template as editable studio pages.</span>
+              </ng-template>
+
+              <div class="bb-inline-actions">
+                <button
+                  type="button"
+                  class="bb-secondary-button"
+                  [disabled]="canvaConnecting() || canvaLoading()"
+                  (click)="canvaStatus().connected ? loadCanvaDesigns(true) : startCanvaConnection()"
+                >
+                  {{ canvaStatus().connected ? (canvaLoadingDesigns() ? 'Refreshing...' : 'Refresh Library') : (canvaConnecting() ? 'Connecting...' : 'Connect Canva') }}
+                </button>
+                <button
+                  *ngIf="canvaStatus().connected"
+                  type="button"
+                  class="bb-secondary-button"
+                  [disabled]="canvaLoading()"
+                  (click)="disconnectCanva()"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="canvaStatus().connected" class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Canva Library</span>
+                <button type="button" class="bb-mini-button" [disabled]="canvaLoadingDesigns()" (click)="loadCanvaDesigns(true)">
+                  {{ canvaLoadingDesigns() ? 'Loading...' : 'Refresh' }}
+                </button>
+              </div>
+
+              <div class="bb-canva-search-row">
+                <input
+                  type="search"
+                  class="bb-search"
+                  [ngModel]="canvaQuery()"
+                  (ngModelChange)="canvaQuery.set($event)"
+                  (keyup.enter)="loadCanvaDesigns(true)"
+                  placeholder="Search Canva designs"
+                />
+                <button type="button" class="bb-secondary-button" [disabled]="canvaLoadingDesigns()" (click)="loadCanvaDesigns(true)">
+                  Search
+                </button>
+              </div>
+
+              <div *ngIf="canvaDesigns().length; else emptyCanvaDesigns" class="bb-canva-design-list">
+                <article *ngFor="let design of canvaDesigns()" class="bb-canva-design-card">
+                  <span class="bb-canva-design-thumb" [style.background-image]="design.thumbnail_url ? ('url(' + design.thumbnail_url + ')') : 'none'"></span>
+                  <div class="bb-canva-design-body">
+                    <strong>{{ design.title }}</strong>
+                    <small>{{ design.page_count }} page{{ design.page_count === 1 ? '' : 's' }}</small>
+                    <small *ngIf="design.updated_at">Updated {{ design.updated_at | date:'short' }}</small>
+                  </div>
+                  <div class="bb-canva-design-actions">
+                    <a *ngIf="design.view_url" class="bb-secondary-link" [href]="design.view_url" target="_blank" rel="noreferrer">Open</a>
+                    <button
+                      type="button"
+                      class="bb-secondary-button"
+                      [disabled]="canvaImportingDesignId() === design.id"
+                      (click)="importCanvaDesign(design)"
+                    >
+                      {{ canvaImportingDesignId() === design.id ? 'Importing...' : 'Import' }}
+                    </button>
+                  </div>
+                </article>
+
+                <button
+                  *ngIf="canvaContinuation()"
+                  type="button"
+                  class="bb-secondary-button"
+                  [disabled]="canvaLoadingDesigns()"
+                  (click)="loadCanvaDesigns(false)"
+                >
+                  {{ canvaLoadingDesigns() ? 'Loading...' : 'Load More' }}
+                </button>
+              </div>
+
+              <ng-template #emptyCanvaDesigns>
+                <div class="bb-empty-card">
+                  <p>No Canva designs loaded yet.</p>
+                  <p>Run a search or refresh your Canva library after connecting.</p>
+                </div>
+              </ng-template>
+            </div>
+
+            <div *ngIf="canvaImports().length" class="bb-drawer-group">
+              <span class="bb-drawer-caption">Recent Imports</span>
+              <div class="bb-canva-import-list">
+                <div *ngFor="let importItem of canvaImports()" class="bb-canva-import-row">
+                  <strong>{{ importItem.title }}</strong>
+                  <small>{{ importItem.page_count }} page{{ importItem.page_count === 1 ? '' : 's' }}</small>
+                  <small>Imported {{ importItem.imported_at | date:'short' }}</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="bb-drawer-group">
+              <div class="bb-drawer-group-header">
+                <span>Pages</span>
+                <button type="button" class="bb-mini-button" (click)="addPage()">Add Page</button>
+              </div>
+
+              <button
+                *ngFor="let pageItem of pages()"
+                type="button"
+                class="bb-page-row"
+                [class.is-active]="pageItem.id === page.id"
+                (click)="selectPage(pageItem.id)"
+              >
+                <strong>{{ pageItem.name }}</strong>
+                <small>{{ pageItem.kind }}</small>
+              </button>
+            </div>
+
+            <div class="bb-inline-actions">
+              <button type="button" class="bb-secondary-button" (click)="addPage('continuation-template')">Continuation</button>
+              <button type="button" class="bb-secondary-button" (click)="addPage('dynamic-repeatable')">Dynamic Page</button>
+            </div>
+          </section>
+
+          <section *ngSwitchCase="'text'" class="bb-drawer-section">
+            <button
+              *ngFor="let preset of textPresets"
+              type="button"
+              class="bb-drawer-card bb-text-card"
+              draggable="true"
+              (click)="insertTextPreset(preset)"
+              (dragstart)="startInsertDrag('text:' + preset.id, $event)"
+              (dragend)="endInsertDrag()"
+            >
+              <strong>{{ preset.label }}</strong>
+              <span>{{ preset.description }}</span>
+            </button>
+          </section>
+
+          <section *ngSwitchCase="'images'" class="bb-drawer-section">
+            <button
+              *ngFor="let preset of imagePresets"
+              type="button"
+              class="bb-drawer-card bb-media-card"
+              draggable="true"
+              (click)="insertMediaPreset(preset)"
+              (dragstart)="startInsertDrag('image:' + preset.id, $event)"
+              (dragend)="endInsertDrag()"
+            >
+              <div class="bb-media-preview"></div>
+              <strong>{{ preset.label }}</strong>
+              <span>{{ preset.description }}</span>
+            </button>
+          </section>
+
+          <section *ngSwitchCase="'videos'" class="bb-drawer-section">
+            <p class="bb-drawer-note">Video blocks publish as poster-style frames in the PDF output.</p>
+
+            <button
+              *ngFor="let preset of videoPresets"
+              type="button"
+              class="bb-drawer-card bb-media-card"
+              draggable="true"
+              (click)="insertMediaPreset(preset)"
+              (dragstart)="startInsertDrag('video:' + preset.id, $event)"
+              (dragend)="endInsertDrag()"
+            >
+              <div class="bb-media-preview is-video"></div>
+              <strong>{{ preset.label }}</strong>
+              <span>{{ preset.description }}</span>
+            </button>
+          </section>
+
+          <section *ngSwitchCase="'shapes'" class="bb-drawer-section">
+            <div class="bb-shape-grid">
+              <button
+                *ngFor="let preset of shapePresets"
+                type="button"
+                class="bb-shape-card"
+                draggable="true"
+                (click)="insertShapePreset(preset)"
+                (dragstart)="startInsertDrag('shape:' + preset.id, $event)"
+                (dragend)="endInsertDrag()"
+              >
+                <span class="bb-shape-preview" [class]="preset.previewClass"></span>
+                <strong>{{ preset.label }}</strong>
+              </button>
+            </div>
+
+            <div class="bb-drawer-group bb-table-builder-card">
+              <div class="bb-drawer-group-header">
+                <span>Tables</span>
+                <small>{{ tableInsertRows() }} x {{ tableInsertColumns() }}</small>
+              </div>
+
+              <div class="bb-table-builder-preview-row">
+                <button
+                  type="button"
+                  class="bb-shape-card bb-shape-card-table"
+                  draggable="true"
+                  (click)="insertConfiguredTable()"
+                  (dragstart)="startInsertDrag(tableInsertToken(), $event)"
+                  (dragend)="endInsertDrag()"
+                >
+                  <span
+                    class="bb-shape-preview is-table-grid"
+                    [style.--bb-table-preview-columns]="tableInsertColumns()"
+                    [style.--bb-table-preview-rows]="tableInsertRows()"
+                  ></span>
+                  <strong>Table</strong>
+                </button>
+              </div>
+
+              <div class="bb-grid-two">
+                <label class="bb-table-stepper-field">
+                  <span>Rows</span>
+                  <div class="bb-context-stepper">
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertRows(tableInsertRows() - 1)">
+                      <lucide-icon [img]="iconMinus" [size]="14"></lucide-icon>
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="12"
+                      class="bb-context-number"
+                      [ngModel]="tableInsertRows()"
+                      (ngModelChange)="setTableInsertRows($event)"
+                    />
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertRows(tableInsertRows() + 1)">
+                      <lucide-icon [img]="iconPlus" [size]="14"></lucide-icon>
+                    </button>
+                  </div>
+                </label>
+
+                <label class="bb-table-stepper-field">
+                  <span>Columns</span>
+                  <div class="bb-context-stepper">
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertColumns(tableInsertColumns() - 1)">
+                      <lucide-icon [img]="iconMinus" [size]="14"></lucide-icon>
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      class="bb-context-number"
+                      [ngModel]="tableInsertColumns()"
+                      (ngModelChange)="setTableInsertColumns($event)"
+                    />
+                    <button type="button" class="bb-context-button is-icon is-square" (click)="setTableInsertColumns(tableInsertColumns() + 1)">
+                      <lucide-icon [img]="iconPlus" [size]="14"></lucide-icon>
+                    </button>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section *ngSwitchCase="'vectors'" class="bb-drawer-section">
+            <div class="bb-shape-grid">
+              <button
+                *ngFor="let preset of vectorPresets"
+                type="button"
+                class="bb-shape-card"
+                draggable="true"
+                (click)="insertShapePreset(preset)"
+                (dragstart)="startInsertDrag('vector:' + preset.id, $event)"
+                (dragend)="endInsertDrag()"
+              >
+                <span class="bb-shape-preview" [class]="preset.previewClass"></span>
+                <strong>{{ preset.label }}</strong>
+              </button>
+            </div>
+          </section>
+
+          <section *ngSwitchCase="'uploads'" class="bb-drawer-section">
+            <div class="bb-inline-actions">
+              <button type="button" class="bb-secondary-button" [disabled]="uploadingAssets()" (click)="triggerUploadPicker()">
+                {{ uploadingAssets() ? 'Uploading...' : 'Upload Files' }}
+              </button>
+            </div>
+
+            <div *ngIf="assets().length; else emptyUploads" class="bb-upload-grid">
+              <div *ngFor="let asset of assets()" class="bb-upload-card">
+                <button
+                  type="button"
+                  class="bb-upload-insert"
+                  draggable="true"
+                  (click)="insertUploadedAsset(asset)"
+                  (dragstart)="startInsertDrag('upload:' + asset.id, $event)"
+                  (dragend)="endInsertDrag()"
+                >
+                  <span class="bb-upload-thumb" [style.background-image]="'url(' + asset.url + ')'"></span>
+                  <strong>{{ asset.alt }}</strong>
+                  <small>{{ asset.type }}</small>
+                </button>
+                <button type="button" class="bb-upload-remove" (click)="removeUploadedAsset(asset, $event)">Remove</button>
+              </div>
+            </div>
+
+            <ng-template #emptyUploads>
+              <div class="bb-empty-card">
+                <p>No uploaded assets yet.</p>
+                <p>Upload brand marks, gallery images, or textures to reuse in this template.</p>
+              </div>
+            </ng-template>
+          </section>
+
+          <section *ngSwitchCase="'more'" class="bb-drawer-section">
+            <div class="bb-drawer-group">
+              <span class="bb-drawer-caption">Blocks</span>
+              <button
+                *ngFor="let preset of morePresets"
+                type="button"
+                class="bb-drawer-card"
+                draggable="true"
+                (click)="insertBlockPreset(preset)"
+                (dragstart)="startInsertDrag('block:' + preset.id, $event)"
+                (dragend)="endInsertDrag()"
+              >
+                <strong>{{ preset.label }}</strong>
+                <span>{{ preset.description }}</span>
+              </button>
+            </div>
+
+            <div class="bb-drawer-group">
+              <span class="bb-drawer-caption">Dynamic Fields</span>
+              <input
+                type="search"
+                class="bb-search"
+                [ngModel]="placeholderSearch()"
+                (ngModelChange)="placeholderSearch.set($event)"
+                placeholder="Search fields"
+              />
+
+              <div class="bb-field-groups">
+                <div *ngFor="let group of placeholderGroups()" class="bb-field-group">
+                  <p class="bb-field-group-title">{{ group.category }}</p>
+                  <button
+                    *ngFor="let item of group.items"
+                    type="button"
+                    class="bb-field-chip"
+                    (click)="insertPlaceholder(item.key)"
+                  >
+                    <span>{{ item.label }}</span>
+                    <small>{{ item.key }}</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        </ng-template>
+      </aside>
+
+      <button
+        type="button"
+        class="bb-drawer-handle"
+        [class.is-collapsed]="!drawerOpen()"
+        (click)="toggleSidebarDrawer()"
+      >
+        {{ drawerOpen() ? '<' : '>' }}
+      </button>
+
+      <section class="bb-workspace">
+        <div class="bb-workspace-toolbar">
+          <div class="bb-workspace-actions">
+            <button type="button" class="bb-secondary-button" [class.is-active]="previewMode() === 'design'" (click)="previewMode.set('design')">
+              Design
+            </button>
+            <button type="button" class="bb-secondary-button" [class.is-active]="previewMode() === 'sample'" (click)="previewMode.set('sample')">
+              Sample
+            </button>
+          </div>
+
+          <div class="bb-workspace-actions">
+            <span class="bb-workspace-page">{{ page.name }}</span>
+            <span class="bb-workspace-zoom">{{ canvasZoomPercent() }}%</span>
+            <button type="button" class="bb-secondary-button" (click)="toggleInspector()">
+              {{ inspectorOpen() ? 'Hide Details' : 'Show Details' }}
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="bb-workspace-surface"
+          [class.has-layers-panel]="layersPanelOpen()"
+          [ngStyle]="workspaceSurfaceStyle()"
+        >
+          <div
+            *ngIf="singleSelectedNode() as activeNode"
+            class="bb-context-toolbar"
+            (click)="$event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()"
+          >
+            <ng-container *ngIf="selectedTextToolbarTarget() as textTarget">
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-button is-icon"
+                  aria-label="Edit text"
+                  data-tooltip="Edit text"
+                  (click)="focusSelectedTextEditor()"
+                >
+                  <lucide-icon [img]="iconSquarePen" [size]="15"></lucide-icon>
+                </button>
+                <select
+                  class="bb-context-select bb-context-select-font"
+                  [ngModel]="textTarget.fontFamily"
+                  (ngModelChange)="setSelectedTextFontFamily($event)"
+                >
+                  <option *ngFor="let option of toolbarFontOptions()" [ngValue]="option.value">{{ option.label }}</option>
+                </select>
+              </div>
+
+              <div class="bb-context-group">
+                <div class="bb-context-stepper">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    aria-label="Decrease font size"
+                    data-tooltip="Decrease font size"
+                    (click)="adjustSelectedTextFontSize(-1)"
+                  >
+                    <lucide-icon [img]="iconMinus" [size]="14"></lucide-icon>
+                  </button>
+                  <input
+                    type="number"
+                    min="10"
+                    max="240"
+                    class="bb-context-number"
+                    [ngModel]="textTarget.fontSize"
+                    (ngModelChange)="setSelectedTextFontSize($event)"
+                  />
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    aria-label="Increase font size"
+                    data-tooltip="Increase font size"
+                    (click)="adjustSelectedTextFontSize(1)"
+                  >
+                    <lucide-icon [img]="iconPlus" [size]="14"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+
+              <div class="bb-context-group">
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('text-letter-spacing')"
+                    aria-label="Letter spacing"
+                    data-tooltip="Letter spacing"
+                    (click)="toggleToolbarPopover('text-letter-spacing', $event)"
+                  >
+                    <span class="bb-context-glyph is-letter-spacing" aria-hidden="true">A V</span>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('text-letter-spacing')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Letter spacing</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="-2"
+                        max="24"
+                        step="0.1"
+                        class="bb-context-range"
+                        [ngModel]="textTarget.letterSpacing"
+                        (ngModelChange)="setSelectedTextLetterSpacing($event)"
+                      />
+                      <input
+                        type="number"
+                        min="-2"
+                        max="24"
+                        step="0.1"
+                        class="bb-context-number is-short"
+                        [ngModel]="textTarget.letterSpacing"
+                        (ngModelChange)="setSelectedTextLetterSpacing($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Text color"
+                  data-tooltip="Text color"
+                  [style.--swatch-color]="textTarget.color"
+                  (click)="openSelectedTextColorDrawer($event)"
+                >
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="isSelectedTextBold()"
+                  aria-label="Bold"
+                  data-tooltip="Bold"
+                  (click)="toggleSelectedTextBold()"
+                >
+                  <lucide-icon [img]="iconBold" [size]="15"></lucide-icon>
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="textTarget.fontStyle === 'italic'"
+                  aria-label="Italic"
+                  data-tooltip="Italic"
+                  (click)="toggleSelectedTextItalic()"
+                >
+                  <lucide-icon [img]="iconItalic" [size]="15"></lucide-icon>
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="!!textTarget.underline"
+                  aria-label="Underline"
+                  data-tooltip="Underline"
+                  (click)="toggleSelectedTextUnderline()"
+                >
+                  <lucide-icon [img]="iconUnderline" [size]="15"></lucide-icon>
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="!!textTarget.strikethrough"
+                  aria-label="Strikethrough"
+                  data-tooltip="Strikethrough"
+                  (click)="toggleSelectedTextStrikethrough()"
+                >
+                  <lucide-icon [img]="iconStrikethrough" [size]="15"></lucide-icon>
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="textTarget.textTransform === 'uppercase'"
+                  aria-label="Uppercase"
+                  data-tooltip="Uppercase"
+                  (click)="toggleSelectedTextUppercase()"
+                >
+                  <lucide-icon [img]="iconCaseSensitive" [size]="15"></lucide-icon>
+                </button>
+              </div>
+
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [attr.aria-label]="getSelectedTextAlignTooltip()"
+                  [attr.data-tooltip]="getSelectedTextAlignTooltip()"
+                  (click)="cycleSelectedTextAlign()"
+                >
+                  <lucide-icon [img]="getSelectedTextAlignIcon()" [size]="15"></lucide-icon>
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="getSelectedTextListStyle() === 'unordered'"
+                  aria-label="Bulleted list"
+                  data-tooltip="Bulleted list"
+                  (click)="toggleSelectedTextListStyle('unordered')"
+                >
+                  <lucide-icon [img]="iconList" [size]="15"></lucide-icon>
+                  <span class="bb-context-glyph is-list" aria-hidden="true">• • •</span>
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-button is-icon is-square"
+                  [class.is-active]="getSelectedTextListStyle() === 'ordered'"
+                  aria-label="Numbered list"
+                  data-tooltip="Numbered list"
+                  (click)="toggleSelectedTextListStyle('ordered')"
+                >
+                  <lucide-icon [img]="iconListOrdered" [size]="15"></lucide-icon>
+                  <span class="bb-context-glyph is-numbered-list" aria-hidden="true">1. 2. 3.</span>
+                </button>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="selectedShapeNode() as shapeNode">
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Fill color"
+                  data-tooltip="Fill color"
+                  [style.--swatch-color]="shapeNode.fill"
+                  (click)="openColorDrawer('shape-fill', $event)"
+                >
+                </button>
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Border color"
+                  data-tooltip="Border color"
+                  [style.--swatch-color]="shapeNode.stroke"
+                  (click)="openColorDrawer('shape-stroke', $event)"
+                >
+                </button>
+
+                <div *ngIf="shapeNode.shapeKind !== 'ellipse'" class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('shape-radius')"
+                    aria-label="Corner rounding"
+                    data-tooltip="Corner rounding"
+                    (click)="toggleToolbarPopover('shape-radius', $event)"
+                  >
+                    <lucide-icon [img]="iconSquareRoundCorner" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('shape-radius')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Corner rounding</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="240"
+                        class="bb-context-range"
+                        [ngModel]="shapeNode.cornerRadius"
+                        (ngModelChange)="setSelectedShapeCornerRadius($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="240"
+                        class="bb-context-number is-short"
+                        [ngModel]="shapeNode.cornerRadius"
+                        (ngModelChange)="setSelectedShapeCornerRadius($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('shape-stroke')"
+                    aria-label="Stroke options"
+                    data-tooltip="Stroke options"
+                    (click)="toggleToolbarPopover('shape-stroke', $event)"
+                  >
+                    <lucide-icon [img]="iconSlidersHorizontal" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('shape-stroke')"
+                    class="bb-context-popover is-wide"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-style-grid">
+                      <button
+                        type="button"
+                        class="bb-context-style-button"
+                        [class.is-active]="getSelectedShapeStrokeStyle() === 'solid'"
+                        (click)="setSelectedShapeStrokeStyle('solid')"
+                      >
+                        <span class="bb-context-style-preview is-solid"></span>
+                      </button>
+                      <button
+                        type="button"
+                        class="bb-context-style-button"
+                        [class.is-active]="getSelectedShapeStrokeStyle() === 'dashed'"
+                        (click)="setSelectedShapeStrokeStyle('dashed')"
+                      >
+                        <span class="bb-context-style-preview is-dashed"></span>
+                      </button>
+                      <button
+                        type="button"
+                        class="bb-context-style-button"
+                        [class.is-active]="getSelectedShapeStrokeStyle() === 'dotted'"
+                        (click)="setSelectedShapeStrokeStyle('dotted')"
+                      >
+                        <span class="bb-context-style-preview is-dotted"></span>
+                      </button>
+                    </div>
+                    <div class="bb-context-popover-title">Stroke weight</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        class="bb-context-range"
+                        [ngModel]="shapeNode.strokeWidth"
+                        (ngModelChange)="setSelectedStrokeWidth($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        class="bb-context-number is-short"
+                        [ngModel]="shapeNode.strokeWidth"
+                        (ngModelChange)="setSelectedStrokeWidth($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('shape-opacity')"
+                    aria-label="Transparency"
+                    data-tooltip="Transparency"
+                    (click)="toggleToolbarPopover('shape-opacity', $event)"
+                  >
+                    <lucide-icon [img]="iconBlend" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('shape-opacity')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Transparency</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        class="bb-context-range"
+                        [ngModel]="getNodeOpacityPercent(activeNode)"
+                        (ngModelChange)="setSelectedNodeOpacity($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        class="bb-context-number is-short"
+                        [ngModel]="getNodeOpacityPercent(activeNode)"
+                        (ngModelChange)="setSelectedNodeOpacity($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="selectedDividerNode() as dividerNode">
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Stroke color"
+                  data-tooltip="Stroke color"
+                  [style.--swatch-color]="dividerNode.stroke"
+                  (click)="openColorDrawer('divider-stroke', $event)"
+                >
+                </button>
+
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('divider-stroke')"
+                    aria-label="Stroke options"
+                    data-tooltip="Stroke options"
+                    (click)="toggleToolbarPopover('divider-stroke', $event)"
+                  >
+                    <lucide-icon [img]="iconSlidersHorizontal" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('divider-stroke')"
+                    class="bb-context-popover is-wide"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-style-grid">
+                      <button
+                        type="button"
+                        class="bb-context-style-button"
+                        [class.is-active]="getSelectedDividerStrokeStyle() === 'solid'"
+                        (click)="setSelectedDividerStrokeStyle('solid')"
+                      >
+                        <span class="bb-context-style-preview is-solid"></span>
+                      </button>
+                      <button
+                        type="button"
+                        class="bb-context-style-button"
+                        [class.is-active]="getSelectedDividerStrokeStyle() === 'dashed'"
+                        (click)="setSelectedDividerStrokeStyle('dashed')"
+                      >
+                        <span class="bb-context-style-preview is-dashed"></span>
+                      </button>
+                    </div>
+                    <div class="bb-context-popover-title">Stroke weight</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        class="bb-context-range"
+                        [ngModel]="dividerNode.strokeWidth"
+                        (ngModelChange)="setSelectedStrokeWidth($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        class="bb-context-number is-short"
+                        [ngModel]="dividerNode.strokeWidth"
+                        (ngModelChange)="setSelectedStrokeWidth($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('divider-opacity')"
+                    aria-label="Transparency"
+                    data-tooltip="Transparency"
+                    (click)="toggleToolbarPopover('divider-opacity', $event)"
+                  >
+                    <lucide-icon [img]="iconBlend" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('divider-opacity')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Transparency</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        class="bb-context-range"
+                        [ngModel]="getNodeOpacityPercent(activeNode)"
+                        (ngModelChange)="setSelectedNodeOpacity($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        class="bb-context-number is-short"
+                        [ngModel]="getNodeOpacityPercent(activeNode)"
+                        (ngModelChange)="setSelectedNodeOpacity($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="selectedTableCellData() as tableCell">
+              <div class="bb-context-group">
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Cell background"
+                  data-tooltip="Cell background"
+                  [style.--swatch-color]="tableCell.background"
+                  (click)="openColorDrawer('table-cell-background', $event)"
+                ></button>
+                <button
+                  type="button"
+                  class="bb-context-color-chip is-circle"
+                  aria-label="Cell border"
+                  data-tooltip="Cell border"
+                  [style.--swatch-color]="tableCell.stroke"
+                  (click)="openColorDrawer('table-cell-stroke', $event)"
+                ></button>
+
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('table-cell-stroke')"
+                    aria-label="Cell border weight"
+                    data-tooltip="Cell border weight"
+                    (click)="toggleToolbarPopover('table-cell-stroke', $event)"
+                  >
+                    <lucide-icon [img]="iconSlidersHorizontal" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('table-cell-stroke')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Cell border weight</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        class="bb-context-range"
+                        [ngModel]="tableCell.strokeWidth"
+                        (ngModelChange)="setSelectedTableCellStrokeWidth($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        class="bb-context-number is-short"
+                        [ngModel]="tableCell.strokeWidth"
+                        (ngModelChange)="setSelectedTableCellStrokeWidth($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="!selectedTextToolbarTarget() && !selectedShapeNode() && !selectedDividerNode() && !selectedTableNode()">
+              <div class="bb-context-group">
+                <div class="bb-context-popover-anchor">
+                  <button
+                    type="button"
+                    class="bb-context-button is-icon is-square"
+                    [class.is-active]="isToolbarPopoverOpen('node-opacity')"
+                    aria-label="Transparency"
+                    data-tooltip="Transparency"
+                    (click)="toggleToolbarPopover('node-opacity', $event)"
+                  >
+                    <lucide-icon [img]="iconBlend" [size]="16"></lucide-icon>
+                  </button>
+
+                  <div
+                    *ngIf="isToolbarPopoverOpen('node-opacity')"
+                    class="bb-context-popover"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                  >
+                    <div class="bb-context-popover-title">Transparency</div>
+                    <div class="bb-context-popover-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        class="bb-context-range"
+                        [ngModel]="getNodeOpacityPercent(activeNode)"
+                        (ngModelChange)="setSelectedNodeOpacity($event)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        class="bb-context-number is-short"
+                        [ngModel]="getNodeOpacityPercent(activeNode)"
+                        (ngModelChange)="setSelectedNodeOpacity($event)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <div class="bb-context-spacer"></div>
+
+            <div class="bb-context-group is-actions">
+              <button
+                type="button"
+                class="bb-context-button is-icon is-square"
+                aria-label="Details"
+                data-tooltip="Details"
+                (click)="toggleInspector()"
+              >
+                <lucide-icon [img]="iconMove3d" [size]="16"></lucide-icon>
+              </button>
+              <button
+                type="button"
+                class="bb-context-button is-icon is-square"
+                aria-label="Bring forward"
+                data-tooltip="Bring forward"
+                (click)="bringForward()"
+              >
+                <lucide-icon [img]="iconBringToFront" [size]="16"></lucide-icon>
+              </button>
+              <button
+                type="button"
+                class="bb-context-button is-icon is-square"
+                aria-label="Send backward"
+                data-tooltip="Send backward"
+                (click)="sendBackward()"
+              >
+                <lucide-icon [img]="iconSendToBack" [size]="16"></lucide-icon>
+              </button>
+              <button
+                type="button"
+                class="bb-context-button is-icon is-square"
+                aria-label="Duplicate"
+                data-tooltip="Duplicate"
+                (click)="duplicateSelectedNode()"
+              >
+                <lucide-icon [img]="iconCopy" [size]="16"></lucide-icon>
+              </button>
+              <button
+                type="button"
+                class="bb-context-button is-icon is-square is-danger"
+                aria-label="Delete"
+                data-tooltip="Delete"
+                (click)="deleteSelectedNode()"
+              >
+                <lucide-icon [img]="iconTrash2" [size]="16"></lucide-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="bb-canvas-scroller" (wheel)="onCanvasWheel($event)">
+            <div class="bb-canvas-grid">
+              <div class="bb-canvas-page-stage" [ngStyle]="canvasPageStageStyle()">
+                <div
+                  class="bb-canvas-page"
+                  [class.is-insert-target]="!!dragInsertType()"
+                  [ngStyle]="canvasPageStyle()"
+                  #canvasPage
+                  (mousedown)="startCanvasMarquee($event, page, canvasPage)"
+                  (dragover)="allowInsertDrop($event)"
+                  (drop)="dropInsertOnPage($event, page)"
+                >
+                <ng-container *ngFor="let node of orderedNodes()">
+                  <div
+                    *ngIf="node.type === 'rich-text'"
+                    class="bb-node bb-node-text"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [class.is-editing]="textEditor()?.nodeId === node.id"
+                    [ngStyle]="getTextNodeStyle(node)"
+                    role="button"
+                    tabindex="0"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                    (dblclick)="openTextEditor(node, $event)"
+                  >
+                    <ng-container *ngIf="getTextNodeRenderModel(node) as textModel">
+                      <span
+                        *ngIf="textModel.kind === 'plain'"
+                        class="bb-node-text-content"
+                        [textContent]="textModel.text"
+                      ></span>
+                      <span
+                        *ngIf="textModel.kind === 'list'"
+                        class="bb-text-list"
+                        [style.--bb-list-marker-width]="textModel.markerWidth"
+                      >
+                        <span *ngFor="let item of textModel.items" class="bb-text-list-item">
+                          <span class="bb-text-list-marker" [textContent]="item.marker"></span>
+                          <span class="bb-text-list-content" [textContent]="item.content"></span>
+                        </span>
+                      </span>
+                    </ng-container>
+                  </div>
+
+                  <button
+                    *ngIf="node.type === 'shape'"
+                    type="button"
+                    class="bb-node"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getShapeStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  ></button>
+
+                  <button
+                    *ngIf="node.type === 'divider'"
+                    type="button"
+                    class="bb-node"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getDividerStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  ></button>
+
+                  <button
+                    *ngIf="node.type === 'image'"
+                    type="button"
+                    class="bb-node bb-node-image"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getImageNodeStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  >
+                    <span class="bb-node-image-copy">{{ getImageNodeLabel(node) }}</span>
+                  </button>
+
+                  <div
+                    *ngIf="node.type === 'table'"
+                    class="bb-node bb-node-table"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getTableStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  >
+                    <button
+                      *ngFor="let cell of node.cells"
+                      type="button"
+                      class="bb-table-cell"
+                      [class.is-selected]="isSelectedTableCell(cell.id)"
+                      [class.is-editing]="textEditor()?.cellId === cell.id"
+                      [ngStyle]="getTableCellStyle(cell)"
+                      (click)="selectTableCell(page.id, node.id, cell.id, $event)"
+                      (dblclick)="openTableCellEditor(node, cell, $event)"
+                    >
+                      <span class="bb-table-cell-text" [ngStyle]="getTableCellTextStyle(cell)">
+                        <ng-container *ngIf="getTableCellTextRenderModel(cell) as textModel">
+                          <span
+                            *ngIf="textModel.kind === 'plain'"
+                            class="bb-node-text-content"
+                            [textContent]="textModel.text"
+                          ></span>
+                          <span
+                            *ngIf="textModel.kind === 'list'"
+                            class="bb-text-list"
+                            [style.--bb-list-marker-width]="textModel.markerWidth"
+                          >
+                            <span *ngFor="let item of textModel.items" class="bb-text-list-item">
+                              <span class="bb-text-list-marker" [textContent]="item.marker"></span>
+                              <span class="bb-text-list-content" [textContent]="item.content"></span>
+                            </span>
+                          </span>
+                        </ng-container>
+                      </span>
+                    </button>
+                  </div>
+
+                  <div
+                    *ngIf="node.type === 'repeater'"
+                    class="bb-node bb-node-repeater"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getRepeaterStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  >
+                    <div
+                      *ngIf="node.showHeader"
+                      class="bb-repeater-header"
+                      [ngStyle]="{
+                        height: node.headerHeight + 'px',
+                        background: node.headerBackground,
+                        color: node.headerTextColor
+                      }"
+                    >
+                      <span *ngFor="let column of node.headerColumns" [style.width.px]="column.width" [style.text-align]="column.align">
+                        {{ column.label }}
+                      </span>
+                    </div>
+
+                    <div
+                      *ngFor="let item of getRepeaterPreviewItems(node); let index = index"
+                      class="bb-repeater-row"
+                      [style.top.px]="getRepeaterRowTop(node, index)"
+                      [style.height.px]="node.rowTemplate.minHeight"
+                      [style.background]="node.rowBackground"
+                    >
+                      <ng-container *ngFor="let child of node.rowTemplate.nodes">
+                        <div
+                          *ngIf="child.type === 'rich-text'"
+                          class="bb-repeater-text"
+                          [style.left.px]="child.x"
+                          [style.top.px]="child.y"
+                          [style.width.px]="child.width"
+                          [style.height.px]="child.height"
+                          [style.color]="child.color"
+                          [style.font-family]="child.fontFamily"
+                          [style.font-size.px]="child.fontSize"
+                          [style.font-weight]="child.fontWeight"
+                          [style.font-style]="child.fontStyle || 'normal'"
+                          [style.line-height]="child.lineHeight"
+                          [style.letter-spacing.px]="child.letterSpacing"
+                          [style.text-decoration]="getTextDecoration(child)"
+                          [style.text-align]="child.align"
+                          [style.text-transform]="child.textTransform || 'none'"
+                        >
+                          {{ getRepeaterChildText(child, item) }}
+                        </div>
+                      </ng-container>
+                    </div>
+
+                  </div>
+
+                  <div
+                    *ngIf="node.type === 'totals'"
+                    class="bb-node bb-node-totals"
+                    [class.is-selected]="isNodeSelected(node.id)"
+                    [ngStyle]="getTotalsStyle(node)"
+                    (click)="selectNode(page.id, node.id, $event)"
+                    (mousedown)="startNodeDrag($event, node)"
+                  >
+                    <p class="bb-node-totals-title" [style.color]="node.accentColor">{{ node.title }}</p>
+                    <div *ngFor="let field of node.fields" class="bb-node-totals-row" [class.is-emphasis]="field.emphasis">
+                      <span>{{ field.label }}</span>
+                      <strong>{{ getTotalsValue(field.key) }}</strong>
+                    </div>
+
+                  </div>
+                </ng-container>
+
+                <div
+                  *ngIf="singleSelectedNode() as activeNode"
+                  class="bb-transform-box"
+                  [class.is-hidden]="!transformBoxStyle()"
+                  [ngStyle]="transformBoxStyle() || {}"
+                >
+                  <button
+                    *ngFor="let handle of transformHandles"
+                    type="button"
+                    class="bb-transform-handle"
+                    [ngClass]="'is-' + handle.id"
+                    [style.cursor]="handle.cursor"
+                    (mousedown)="startNodeResize($event, activeNode, handle.id)"
+                  ></button>
+                  <button
+                    type="button"
+                    class="bb-rotate-handle"
+                    (mousedown)="startNodeRotate($event, activeNode)"
+                  ></button>
+                </div>
+
+                <span
+                  *ngFor="let guide of snapGuides().vertical"
+                  class="bb-snap-guide is-vertical"
+                  [style.left.px]="guide"
+                ></span>
+                <span
+                  *ngFor="let guide of snapGuides().horizontal"
+                  class="bb-snap-guide is-horizontal"
+                  [style.top.px]="guide"
+                ></span>
+
+                <div
+                  *ngIf="marqueeSelectionStyle()"
+                  class="bb-marquee-selection"
+                  [ngStyle]="marqueeSelectionStyle() || {}"
+                ></div>
+
+                <div
+                  *ngIf="textEditor()"
+                  #richTextEditor
+                  class="bb-text-editor"
+                  contenteditable="true"
+                  spellcheck="true"
+                  [ngStyle]="getTextEditorStyle()"
+                  [attr.data-placeholder]="'Type directly on the page...'"
+                  (input)="onTextEditorInput()"
+                  (keydown)="onTextEditorKeyDown($event)"
+                  (click)="$event.stopPropagation()"
+                  (mousedown)="$event.stopPropagation()"
+                  (blur)="commitTextEditor()"
+                ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="bb-floating-sidebar" [class.is-collapsed]="!layersPanelOpen()">
+            <button
+              *ngIf="!layersPanelOpen()"
+              type="button"
+              class="bb-floating-sidebar-toggle bb-context-button is-icon is-square"
+              aria-label="Show layers"
+              data-tooltip="Show layers"
+              (click)="toggleLayersPanel()"
+            >
+              <lucide-icon [img]="iconPanelLeftOpen" [size]="16"></lucide-icon>
+            </button>
+
+            <section *ngIf="layersPanelOpen()" class="bb-floating-panel">
+              <div class="bb-floating-panel-header">
+                <span>Layers</span>
+                <div class="bb-floating-panel-header-actions">
+                  <button type="button" class="bb-mini-button" (click)="toggleInspector()">
+                    {{ inspectorOpen() ? 'Hide Details' : 'Details' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="bb-floating-sidebar-toggle bb-context-button is-icon is-square"
+                    aria-label="Hide layers"
+                    data-tooltip="Hide layers"
+                    (click)="toggleLayersPanel()"
+                  >
+                    <lucide-icon [img]="iconPanelRightOpen" [size]="16"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+
+              <div class="bb-layer-stack">
+                <div
+                  *ngFor="let node of layerNodes()"
+                  class="bb-layer-row"
+                  [class.is-selected]="isNodeSelected(node.id)"
+                >
+                  <button
+                    type="button"
+                    class="bb-layer-main"
+                    (click)="selectNode(node.pageId, node.id, $event)"
+                  >
+                    <span class="bb-layer-kind">{{ node.type === 'rich-text' ? 'T' : node.type === 'image' ? 'Img' : node.type === 'shape' ? 'Shp' : node.type === 'divider' ? 'Line' : node.type === 'table' ? 'Tbl' : node.type === 'repeater' ? 'Rpt' : 'Tot' }}</span>
+                    <span class="bb-layer-name">{{ node.name }}</span>
+                  </button>
+                  <span class="bb-layer-actions">
+                    <button type="button" class="bb-layer-action" (click)="toggleNodeVisibility(node, $event)">
+                      {{ node.visible ? 'Hide' : 'Show' }}
+                    </button>
+                    <button type="button" class="bb-layer-action" (click)="toggleNodeLocked(node, $event)">
+                      {{ node.locked ? 'Unlock' : 'Lock' }}
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section *ngIf="inspectorOpen()" class="bb-floating-panel">
+              <div class="bb-floating-panel-header">
+                <span>Details</span>
+                <button type="button" class="bb-mini-button" (click)="toggleInspector()">Close</button>
+              </div>
+
+              <div *ngIf="singleSelectedNode() as node; else inspectorFallback" class="bb-inspector-form">
+                <label>
+                  <span>Name</span>
+                  <input type="text" [ngModel]="node.name" (ngModelChange)="patchSelectedNode({ name: $event })" />
+                </label>
+
+                <div class="bb-grid-two">
+                  <label>
+                    <span>X</span>
+                    <input type="number" [ngModel]="node.x" (ngModelChange)="patchSelectedNode({ x: +$event })" />
+                  </label>
+                  <label>
+                    <span>Y</span>
+                    <input type="number" [ngModel]="node.y" (ngModelChange)="patchSelectedNode({ y: +$event })" />
+                  </label>
+                </div>
+
+                <div class="bb-grid-two">
+                  <label>
+                    <span>Width</span>
+                    <input type="number" [ngModel]="node.width" (ngModelChange)="patchSelectedNode({ width: +$event })" />
+                  </label>
+                  <label>
+                    <span>Height</span>
+                    <input type="number" [ngModel]="node.height" (ngModelChange)="patchSelectedNode({ height: +$event })" />
+                  </label>
+                </div>
+
+                <label>
+                  <span>Rotation</span>
+                  <input type="number" [ngModel]="node.rotation" (ngModelChange)="patchSelectedNode({ rotation: +$event })" />
+                </label>
+
+                <div class="bb-grid-two" *ngIf="selectedTextNode() as textNode">
+                  <label>
+                    <span>Font Size</span>
+                    <input type="number" [ngModel]="textNode.fontSize" (ngModelChange)="patchSelectedNode({ fontSize: +$event })" />
+                  </label>
+                  <label>
+                    <span>Color</span>
+                    <input type="color" [ngModel]="textNode.color" (ngModelChange)="patchSelectedNode({ color: $event })" />
+                  </label>
+                </div>
+
+                <p *ngIf="selectedTextNode()" class="bb-drawer-note">
+                  Text content is edited directly on the page. Double click the block or press Enter to edit.
+                </p>
+
+                <div class="bb-grid-two" *ngIf="selectedRepeaterNode() as repeaterNode">
+                  <label>
+                    <span>Row Gap</span>
+                    <input type="number" [ngModel]="repeaterNode.rowGap" (ngModelChange)="patchSelectedNode({ rowGap: +$event })" />
+                  </label>
+                  <label>
+                    <span>Row Height</span>
+                    <input
+                      type="number"
+                      [ngModel]="repeaterNode.rowTemplate.minHeight"
+                      (ngModelChange)="updateRepeaterRowHeight(+$event)"
+                    />
+                  </label>
+                </div>
+
+                <label *ngIf="selectedTotalsNode() as totalsNode">
+                  <span>Totals Title</span>
+                  <input type="text" [ngModel]="totalsNode.title" (ngModelChange)="patchSelectedNode({ title: $event })" />
+                </label>
+              </div>
+
+              <ng-template #inspectorFallback>
+                <div *ngIf="selectedNodeIds().length > 1; else pageInspector" class="bb-empty-card">
+                  <strong>{{ selectedNodeIds().length }} elements selected</strong>
+                  <p>Use the keyboard or toolbar actions to duplicate, cut, copy, paste, or delete this selection.</p>
+                </div>
+              </ng-template>
+
+              <ng-template #pageInspector>
+                <div class="bb-empty-card">
+                  <p>No node selected.</p>
+                  <p>Select any object on the page to inspect its position, sizing, and deeper settings.</p>
+                </div>
+              </ng-template>
+            </section>
+          </aside>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
