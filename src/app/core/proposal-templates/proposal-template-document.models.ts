@@ -8,6 +8,7 @@ export type ProposalTemplateNodeType =
   | 'image'
   | 'shape'
   | 'divider'
+  | 'table'
   | 'group'
   | 'repeater'
   | 'totals';
@@ -32,6 +33,7 @@ export type ProposalTemplateBindingKind =
 export type ProposalTemplatePagePreset = 'letter';
 export type ProposalTemplateNodeAlignment = 'left' | 'center' | 'right';
 export type ProposalTemplateNodeWeight = '400' | '500' | '600' | '700';
+export type ProposalTemplateTextListStyle = 'none' | 'unordered' | 'ordered';
 export type ProposalTemplateShapeKind = 'rectangle' | 'ellipse';
 export type ProposalTemplateShapeStrokeStyle = 'solid' | 'dashed' | 'dotted';
 export type ProposalTemplateImageFit = 'cover' | 'contain' | 'stretch';
@@ -130,6 +132,7 @@ export interface ProposalTemplateRichTextNode extends ProposalTemplateNodeBase {
   textTransform?: 'none' | 'uppercase';
   lineHeight: number;
   letterSpacing: number;
+  listStyle?: ProposalTemplateTextListStyle;
 }
 
 export interface ProposalTemplateImageNode extends ProposalTemplateNodeBase {
@@ -159,6 +162,54 @@ export interface ProposalTemplateDividerNode extends ProposalTemplateNodeBase {
   stroke: string;
   strokeWidth: number;
   dashed: boolean;
+}
+
+export interface ProposalTemplateTableCellTextContent {
+  kind: 'text';
+  content: ProposalTemplateRichTextSegment[];
+  align: ProposalTemplateNodeAlignment;
+  color: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: ProposalTemplateNodeWeight;
+  fontStyle?: 'normal' | 'italic';
+  underline?: boolean;
+  strikethrough?: boolean;
+  textTransform?: 'none' | 'uppercase';
+  lineHeight: number;
+  letterSpacing: number;
+  listStyle?: ProposalTemplateTextListStyle;
+}
+
+export interface ProposalTemplateTableCellImageContent {
+  kind: 'image';
+  url?: string | null;
+  asset_id?: string | null;
+  storage_path?: string | null;
+  fit: ProposalTemplateImageFit;
+  alt: string;
+}
+
+export type ProposalTemplateTableCellContent =
+  | ProposalTemplateTableCellTextContent
+  | ProposalTemplateTableCellImageContent;
+
+export interface ProposalTemplateTableCell {
+  id: string;
+  row: number;
+  column: number;
+  background: string;
+  stroke: string;
+  strokeWidth: number;
+  padding: number;
+  content: ProposalTemplateTableCellContent;
+}
+
+export interface ProposalTemplateTableNode extends ProposalTemplateNodeBase {
+  type: 'table';
+  rows: number;
+  columns: number;
+  cells: ProposalTemplateTableCell[];
 }
 
 export interface ProposalTemplateGroupNode extends ProposalTemplateNodeBase {
@@ -281,6 +332,7 @@ export type ProposalTemplateNode =
   | ProposalTemplateImageNode
   | ProposalTemplateShapeNode
   | ProposalTemplateDividerNode
+  | ProposalTemplateTableNode
   | ProposalTemplateGroupNode
   | ProposalTemplateRepeaterNode
   | ProposalTemplateTotalsNode;

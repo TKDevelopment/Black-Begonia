@@ -27,6 +27,8 @@ import {
   History,
   Italic,
   Layers2,
+  List,
+  ListOrdered,
   LucideAngularModule,
   Minus,
   Move3d,
@@ -58,8 +60,12 @@ import {
   ProposalTemplateRepeaterNode,
   ProposalTemplateRepeaterRichTextNode,
   ProposalTemplateRichTextNode,
+  ProposalTemplateTableCell,
+  ProposalTemplateTableCellTextContent,
+  ProposalTemplateTableNode,
   ProposalTemplateShapeNode,
   ProposalTemplateShapeStrokeStyle,
+  ProposalTemplateTextListStyle,
   ProposalTemplateTotalsNode,
 } from '../../../../core/proposal-templates/proposal-template-document.models';
 import {
@@ -91,6 +97,7 @@ type ToolbarPopover =
   | 'shape-opacity'
   | 'shape-stroke'
   | 'shape-radius'
+  | 'table-cell-stroke'
   | 'divider-opacity'
   | 'divider-stroke'
   | 'node-opacity';
@@ -113,9 +120,23 @@ interface DragState {
 }
 
 interface TextEditorState {
+  mode: 'node' | 'table-cell';
   pageId: string;
   nodeId: string;
+  cellId?: string;
   value: string;
+}
+
+interface RenderedTextListItem {
+  marker: string;
+  content: string;
+}
+
+interface RenderedTextModel {
+  kind: 'plain' | 'list';
+  text: string;
+  items: RenderedTextListItem[];
+  markerWidth: string;
 }
 
 interface SnapGuideState {
@@ -216,6 +237,22 @@ interface ToolbarFontOption {
   value: string;
 }
 
+type TextToolbarTarget = Pick<
+  ProposalTemplateRichTextNode,
+  | 'align'
+  | 'color'
+  | 'fontFamily'
+  | 'fontSize'
+  | 'fontWeight'
+  | 'fontStyle'
+  | 'underline'
+  | 'strikethrough'
+  | 'textTransform'
+  | 'lineHeight'
+  | 'letterSpacing'
+  | 'listStyle'
+>;
+
 interface MarqueeSelectionState {
   pageId: string;
   pageLeft: number;
@@ -229,6 +266,27 @@ interface MarqueeSelectionState {
   currentY: number;
   additive: boolean;
   baseSelectionIds: string[];
+}
+
+interface TableCellSelection {
+  nodeId: string;
+  cellId: string;
+}
+
+type ColorDrawerTarget =
+  | 'text-color'
+  | 'shape-fill'
+  | 'shape-stroke'
+  | 'divider-stroke'
+  | 'table-cell-background'
+  | 'table-cell-stroke'
+  | 'table-cell-text';
+
+interface ColorDrawerState {
+  target: ColorDrawerTarget;
+  title: string;
+  previousTab: StudioSidebarTab;
+  allowGradients: boolean;
 }
 
 interface MarqueeSelectionState {
@@ -293,6 +351,8 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   readonly iconBold = Bold;
   readonly iconItalic = Italic;
   readonly iconLayers2 = Layers2;
+  readonly iconList = List;
+  readonly iconListOrdered = ListOrdered;
   readonly iconUnderline = Underline;
   readonly iconStrikethrough = Strikethrough;
   readonly iconCaseSensitive = CaseSensitive;
@@ -508,6 +568,56 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     { id: 'divider', label: 'Divider', description: 'Quick decorative divider line.', type: 'divider' },
     { id: 'image', label: 'Image Placeholder', description: 'Generic image frame for imported media.', type: 'image' },
   ];
+  readonly defaultSolidColors: string[] = [
+    '#000000',
+    '#6b6b6b',
+    '#8f8f8f',
+    '#b2b2b2',
+    '#c6c6c6',
+    '#d9d9d9',
+    '#ffffff',
+    '#ff4c4c',
+    '#ff6464',
+    '#f05bb3',
+    '#d69ae8',
+    '#b86adf',
+    '#8b5cf6',
+    '#5b21d8',
+    '#1ba6c8',
+    '#28b8da',
+    '#59d4e1',
+    '#44b0f1',
+    '#4f75f4',
+    '#175fc9',
+    '#2614bb',
+    '#17bf6b',
+    '#7ed957',
+    '#bbf95b',
+    '#f8d75b',
+    '#ffc15b',
+    '#ff9b52',
+    '#ff7a1f',
+  ];
+  readonly defaultGradientColors: string[] = [
+    'linear-gradient(135deg, #111111, #5d5d5d)',
+    'linear-gradient(135deg, #5e5e5e, #f1f1f1)',
+    'linear-gradient(135deg, #f7f7f7, #c9c9c9)',
+    'linear-gradient(135deg, #baf368, #6ccf4c)',
+    'linear-gradient(135deg, #2d1a00, #c7a300)',
+    'linear-gradient(135deg, #7741a8, #ffcf59)',
+    'linear-gradient(135deg, #191933, #3a1ccf)',
+    'linear-gradient(135deg, #d8fff5, #a1c5ff)',
+    'linear-gradient(135deg, #ff8d52, #ff443d)',
+    'linear-gradient(135deg, #ff5abf, #7b62ff)',
+    'linear-gradient(135deg, #4b40ff, #d26eff)',
+    'linear-gradient(135deg, #4c50ff, #4ac4ff)',
+    'linear-gradient(135deg, #7950f2, #18c79c)',
+    'linear-gradient(135deg, #34d399, #bdf75e)',
+    'linear-gradient(135deg, #17c4f5, #f7d04f)',
+    'linear-gradient(135deg, #ffaf52, #ff80bf)',
+    'linear-gradient(135deg, #ffe7c7, #ff9ed6)',
+    'linear-gradient(135deg, #7d4bff, #ff9e5c)',
+  ];
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -534,7 +644,10 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   readonly lastDraftSavedAt = signal<string | null>(null);
   readonly publishedAt = signal<string | null>(null);
   readonly textEditor = signal<TextEditorState | null>(null);
+  readonly selectedTableCell = signal<TableCellSelection | null>(null);
   readonly toolbarPopover = signal<ToolbarPopover | null>(null);
+  readonly colorDrawer = signal<ColorDrawerState | null>(null);
+  readonly colorDrawerSearch = signal('');
   readonly snapGuides = signal<SnapGuideState>({ vertical: [], horizontal: [] });
   readonly marqueeSelection = signal<MarqueeSelectionState | null>(null);
   readonly canvasZoom = signal(1);
@@ -543,6 +656,8 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   readonly layersPanelOpen = signal(true);
   readonly activeSidebarTab = signal<StudioSidebarTab>('templates');
   readonly drawerOpen = signal(true);
+  readonly tableInsertRows = signal(3);
+  readonly tableInsertColumns = signal(3);
   readonly fileMenuOpen = signal(false);
   readonly versionHistoryOpen = signal(false);
   readonly fileActionBusy = signal<FileActionKey | null>(null);
@@ -578,9 +693,19 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     this.selectedNodeIds().length === 1 ? this.selectedNode() : null
   );
   readonly layerNodes = computed(() => [...this.orderedNodes()].reverse());
-  readonly currentSidebarSection = computed(
-    () => this.sidebarSections.find((item) => item.id === this.activeSidebarTab()) ?? this.sidebarSections[0]
-  );
+  readonly currentSidebarSection = computed(() => {
+    const colorDrawer = this.colorDrawer();
+    if (colorDrawer) {
+      return {
+        id: colorDrawer.previousTab,
+        label: colorDrawer.title,
+        shortLabel: 'Clr',
+        description: 'Pick from document, brand, solid, or gradient swatches.',
+      } satisfies StudioSidebarSection;
+    }
+
+    return this.sidebarSections.find((item) => item.id === this.activeSidebarTab()) ?? this.sidebarSections[0];
+  });
   readonly canvaActionLabel = computed(() =>
     this.canvaStatus().connected ? 'Canva Library' : 'Connect Canva'
   );
@@ -619,6 +744,9 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   readonly workspaceSurfaceStyle = computed<Record<string, string>>(() => ({
     '--bb-right-reserve': this.layersPanelOpen() ? '344px' : '0px',
   }));
+  readonly tableInsertToken = computed(
+    () => `table:${this.tableInsertRows()}x${this.tableInsertColumns()}`
+  );
   readonly canvasPageStageStyle = computed<Record<string, string>>(() => {
     const page = this.currentPage();
     const zoom = this.canvasZoom();
@@ -650,6 +778,29 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
       ? (this.singleSelectedNode() as ProposalTemplateRichTextNode)
       : null
   );
+  readonly selectedTableNode = computed(() =>
+    this.singleSelectedNode()?.type === 'table'
+      ? (this.singleSelectedNode() as ProposalTemplateTableNode)
+      : null
+  );
+  readonly selectedTableCellData = computed(() => {
+    const tableNode = this.selectedTableNode();
+    const selection = this.selectedTableCell();
+    if (!tableNode || !selection || selection.nodeId !== tableNode.id) {
+      return null;
+    }
+
+    return tableNode.cells.find((cell) => cell.id === selection.cellId) ?? null;
+  });
+  readonly selectedTableCellTextContent = computed(() => {
+    const cell = this.selectedTableCellData();
+    return cell?.content.kind === 'text'
+      ? (cell.content as ProposalTemplateTableCellTextContent)
+      : null;
+  });
+  readonly selectedTextToolbarTarget = computed<TextToolbarTarget | null>(() =>
+    this.selectedTextNode() ?? this.selectedTableCellTextContent()
+  );
   readonly selectedShapeNode = computed(() =>
     this.singleSelectedNode()?.type === 'shape'
       ? (this.singleSelectedNode() as ProposalTemplateShapeNode)
@@ -670,6 +821,32 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
       ? (this.singleSelectedNode() as ProposalTemplateTotalsNode)
       : null
   );
+  readonly documentColorSwatches = computed(() => {
+    const document = this.document();
+    const colorDrawer = this.colorDrawer();
+    if (!document || !colorDrawer) {
+      return [] as string[];
+    }
+
+    return this.collectDocumentColorSwatches(document, colorDrawer.allowGradients);
+  });
+  readonly brandKitColorSwatches = computed(() => {
+    const document = this.document();
+    if (!document) {
+      return [] as string[];
+    }
+
+    return [
+      document.theme.primaryColor,
+      document.theme.accentColor,
+      document.theme.borderColor,
+      document.theme.pageColor,
+      document.theme.canvasColor,
+      document.theme.mutedColor,
+    ].filter((value, index, collection) => collection.indexOf(value) === index);
+  });
+  readonly colorDrawerAllowsGradients = computed(() => this.colorDrawer()?.allowGradients ?? false);
+  readonly activeColorDrawerValue = computed(() => this.getActiveColorDrawerValue());
   readonly previewData = computed(() => {
     const document = this.document();
     return document
@@ -1077,6 +1254,9 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   }
 
   selectSidebarTab(tab: StudioSidebarTab): void {
+    this.colorDrawer.set(null);
+    this.colorDrawerSearch.set('');
+
     if (this.activeSidebarTab() === tab && this.drawerOpen()) {
       this.drawerOpen.set(false);
       return;
@@ -1092,6 +1272,90 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
 
   toggleSidebarDrawer(): void {
     this.drawerOpen.update((open) => !open);
+  }
+
+  openColorDrawer(target: ColorDrawerTarget, event?: MouseEvent): void {
+    event?.stopPropagation();
+
+    const titleMap: Record<ColorDrawerTarget, string> = {
+      'text-color': 'Text color',
+      'shape-fill': 'Fill color',
+      'shape-stroke': 'Border color',
+      'divider-stroke': 'Stroke color',
+      'table-cell-background': 'Cell background',
+      'table-cell-stroke': 'Cell border',
+      'table-cell-text': 'Cell text color',
+    };
+    const allowGradients =
+      target === 'shape-fill' || target === 'table-cell-background';
+
+    this.toolbarPopover.set(null);
+    this.colorDrawerSearch.set('');
+    this.colorDrawer.set({
+      target,
+      title: titleMap[target],
+      previousTab: this.activeSidebarTab(),
+      allowGradients,
+    });
+    this.drawerOpen.set(true);
+  }
+
+  closeColorDrawer(): void {
+    this.colorDrawer.set(null);
+    this.colorDrawerSearch.set('');
+  }
+
+  applyColorDrawerColor(color: string): void {
+    const drawer = this.colorDrawer();
+    if (!drawer || !color) {
+      return;
+    }
+
+    switch (drawer.target) {
+      case 'text-color':
+        this.setSelectedTextColor(color);
+        break;
+      case 'shape-fill':
+        this.setSelectedShapeFill(color);
+        break;
+      case 'shape-stroke':
+      case 'divider-stroke':
+        this.setSelectedStrokeColor(color);
+        break;
+      case 'table-cell-background':
+        this.setSelectedTableCellBackground(color);
+        break;
+      case 'table-cell-stroke':
+        this.setSelectedTableCellStrokeColor(color);
+        break;
+      case 'table-cell-text':
+        this.setSelectedTableCellTextColor(color);
+        break;
+      default:
+        break;
+    }
+  }
+
+  applyCustomColorDrawerColor(): void {
+    const drawer = this.colorDrawer();
+    const value = this.colorDrawerSearch().trim();
+    if (!drawer || !value) {
+      return;
+    }
+
+    const isValid = drawer.allowGradients
+      ? this.isValidCssBackground(value)
+      : this.isValidCssColor(value);
+    if (!isValid) {
+      this.toast.showToast('That does not look like a valid color value.', 'error');
+      return;
+    }
+
+    this.applyColorDrawerColor(value);
+  }
+
+  isColorSwatchActive(color: string): boolean {
+    return this.normalizeColorValue(color) === this.normalizeColorValue(this.activeColorDrawerValue());
   }
 
   selectPage(pageId: string): void {
@@ -1133,6 +1397,20 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
 
   isNodeSelected(nodeId: string): boolean {
     return this.selectedNodeIds().includes(nodeId);
+  }
+
+  selectTableCell(pageId: string, nodeId: string, cellId: string, event?: MouseEvent): void {
+    event?.stopPropagation();
+    if (
+      this.textEditor() &&
+      (this.textEditor()?.nodeId !== nodeId || this.textEditor()?.cellId !== cellId)
+    ) {
+      this.commitTextEditor();
+    }
+
+    this.toolbarPopover.set(null);
+    this.setSelection(pageId, [nodeId], nodeId);
+    this.selectedTableCell.set({ nodeId, cellId });
   }
 
   startCanvasMarquee(
@@ -1257,6 +1535,15 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
           dashed: false,
         };
         break;
+      case 'table':
+        node = {
+          ...baseNode,
+          type: 'table',
+          rows: 3,
+          columns: 3,
+          cells: this.buildTableCells(3, 3, document),
+        };
+        break;
       case 'image':
         node = {
           ...baseNode,
@@ -1372,6 +1659,7 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
           textTransform: 'none',
           lineHeight: 1.45,
           letterSpacing: 0,
+          listStyle: 'none',
         };
         break;
     }
@@ -1424,6 +1712,7 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
         underline: false,
         strikethrough: false,
         textTransform: 'none',
+        listStyle: 'none',
       },
     });
   }
@@ -1479,6 +1768,31 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     });
   }
 
+  insertConfiguredTable(placement?: NodePlacementOptions): void {
+    const document = this.document();
+    if (!document) {
+      return;
+    }
+
+    const rows = this.clamp(Math.round(this.tableInsertRows()), 1, 12);
+    const columns = this.clamp(Math.round(this.tableInsertColumns()), 1, 8);
+    const defaultFrame = this.getDefaultNodeFrame('table');
+    const width = Math.max(defaultFrame.width, columns * 140);
+    const height = Math.max(defaultFrame.height, rows * 64);
+
+    this.addNode('table', {
+      ...placement,
+      overrides: {
+        name: `${rows} x ${columns} Table`,
+        width,
+        height,
+        rows,
+        columns,
+        cells: this.buildTableCells(rows, columns, document),
+      } as Partial<ProposalTemplateTableNode>,
+    });
+  }
+
   insertBlockPreset(preset: BlockPreset, placement?: NodePlacementOptions): void {
     this.addNode(preset.type, {
       ...placement,
@@ -1504,6 +1818,14 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
         alt: asset.alt || 'Uploaded asset',
       },
     });
+  }
+
+  setTableInsertRows(value: number | string): void {
+    this.tableInsertRows.set(this.clamp(Math.round(this.coerceNumber(value, this.tableInsertRows())), 1, 12));
+  }
+
+  setTableInsertColumns(value: number | string): void {
+    this.tableInsertColumns.set(this.clamp(Math.round(this.coerceNumber(value, this.tableInsertColumns())), 1, 8));
   }
 
   deleteSelectedNode(): void {
@@ -1907,6 +2229,10 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
         this.toolbarPopover.set(null);
         return;
       }
+      if (this.colorDrawer()) {
+        this.closeColorDrawer();
+        return;
+      }
       this.dragInsertType.set(null);
       this.marqueeSelection.set(null);
       this.clearSelection();
@@ -1929,6 +2255,12 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     if (event.key === 'Enter' && this.selectedTextNode()) {
       event.preventDefault();
       this.openTextEditor(this.selectedTextNode()!);
+      return;
+    }
+
+    if (event.key === 'Enter' && this.selectedTableNode() && this.selectedTableCellTextContent()) {
+      event.preventDefault();
+      this.focusSelectedTableCellEditor();
       return;
     }
 
@@ -1961,6 +2293,7 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
 
     this.setSelection(node.pageId, [node.id], node.id);
     this.textEditor.set({
+      mode: 'node',
       pageId: node.pageId,
       nodeId: node.id,
       value: this.proposalTemplateDocumentService.serializeSegments(node.content),
@@ -1968,16 +2301,62 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     this.focusTextEditor();
   }
 
+  openTableCellEditor(
+    tableNode: ProposalTemplateTableNode,
+    cell: ProposalTemplateTableCell,
+    event?: MouseEvent
+  ): void {
+    event?.stopPropagation();
+    if (cell.content.kind !== 'text') {
+      return;
+    }
+
+    this.setSelection(tableNode.pageId, [tableNode.id], tableNode.id);
+    this.selectedTableCell.set({ nodeId: tableNode.id, cellId: cell.id });
+    this.textEditor.set({
+      mode: 'table-cell',
+      pageId: tableNode.pageId,
+      nodeId: tableNode.id,
+      cellId: cell.id,
+      value: this.proposalTemplateDocumentService.serializeSegments(cell.content.content),
+    });
+    this.focusTextEditor();
+  }
+
   commitTextEditor(): void {
     const editor = this.textEditor();
     const node = this.findNode(editor?.pageId, editor?.nodeId);
-    if (!editor || !node || node.type !== 'rich-text') {
+    if (!editor || !node) {
       this.textEditor.set(null);
       return;
     }
 
     const value = this.readTextEditorValue();
-    const height = this.measureTextEditorHeight(value, node);
+    if (editor.mode === 'table-cell' && node.type === 'table') {
+      const cell = node.cells.find((candidate) => candidate.id === editor.cellId);
+      if (cell?.content.kind === 'text') {
+        this.patchTableCell(
+          node.pageId,
+          node.id,
+          cell.id,
+          {
+            content: {
+              ...cell.content,
+              content: this.proposalTemplateDocumentService.parseSegments(value),
+            },
+          }
+        );
+      }
+      this.textEditor.set(null);
+      return;
+    }
+
+    if (node.type !== 'rich-text') {
+      this.textEditor.set(null);
+      return;
+    }
+
+    const height = Math.max(node.height, this.measureTextEditorHeight(value, node));
     this.patchNode(editor.pageId, editor.nodeId, {
       content: this.proposalTemplateDocumentService.parseSegments(value),
       height,
@@ -1993,11 +2372,19 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     const editor = this.textEditor();
     if (!editor) {
       const textNode = this.selectedTextNode();
-      if (!textNode) {
+      if (textNode) {
+        this.openTextEditor(textNode);
+        queueMicrotask(() => this.insertPlaceholder(key));
         return;
       }
 
-      this.openTextEditor(textNode);
+      const tableNode = this.selectedTableNode();
+      const cell = this.selectedTableCellData();
+      if (!tableNode || !cell || cell.content.kind !== 'text') {
+        return;
+      }
+
+      this.openTableCellEditor(tableNode, cell);
       queueMicrotask(() => this.insertPlaceholder(key));
       return;
     }
@@ -2106,100 +2493,171 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
 
   focusSelectedTextEditor(): void {
     const textNode = this.selectedTextNode();
-    if (!textNode) return;
+    if (textNode) {
+      this.openTextEditor(textNode);
+      return;
+    }
 
-    this.openTextEditor(textNode);
+    const tableNode = this.selectedTableNode();
+    const cell = this.selectedTableCellData();
+    if (!tableNode || !cell || cell.content.kind !== 'text') {
+      return;
+    }
+
+    this.openTableCellEditor(tableNode, cell);
   }
 
   adjustSelectedTextFontSize(delta: number): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    this.patchSelectedNode({
-      fontSize: Math.max(10, node.fontSize + delta),
+    this.patchSelectedTextTarget({
+      fontSize: Math.max(10, target.fontSize + delta),
     });
   }
 
   setSelectedTextAlign(align: ProposalTemplateRichTextNode['align']): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    if (!this.selectedTextToolbarTarget()) return;
 
-    this.patchSelectedNode({ align });
+    this.patchSelectedTextTarget({ align });
+  }
+
+  cycleSelectedTextAlign(): void {
+    const target = this.selectedTextToolbarTarget();
+    if (!target) {
+      return;
+    }
+
+    const order: ProposalTemplateRichTextNode['align'][] = ['left', 'center', 'right'];
+    const currentIndex = order.indexOf(target.align ?? 'left');
+    const nextAlign = order[(currentIndex + 1) % order.length];
+    this.patchSelectedTextTarget({ align: nextAlign });
+  }
+
+  getSelectedTextAlignIcon() {
+    const align = this.selectedTextToolbarTarget()?.align ?? 'left';
+    switch (align) {
+      case 'center':
+        return this.iconAlignCenter;
+      case 'right':
+        return this.iconAlignRight;
+      case 'left':
+      default:
+        return this.iconAlignLeft;
+    }
+  }
+
+  getSelectedTextAlignTooltip(): string {
+    const align = this.selectedTextToolbarTarget()?.align ?? 'left';
+    switch (align) {
+      case 'center':
+        return 'Alignment: center';
+      case 'right':
+        return 'Alignment: right';
+      case 'left':
+      default:
+        return 'Alignment: left';
+    }
   }
 
   setSelectedTextFontFamily(fontFamily: string): void {
-    const node = this.selectedTextNode();
-    if (!node || !fontFamily) return;
+    if (!this.selectedTextToolbarTarget() || !fontFamily) return;
 
-    this.patchSelectedNode({ fontFamily });
+    this.patchSelectedTextTarget({ fontFamily });
   }
 
   setSelectedTextFontSize(value: number | string): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    const fontSize = this.coerceNumber(value, node.fontSize);
-    this.patchSelectedNode({
+    const fontSize = this.coerceNumber(value, target.fontSize);
+    this.patchSelectedTextTarget({
       fontSize: this.clamp(Math.round(fontSize), 10, 240),
     });
   }
 
   toggleSelectedTextBold(): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    this.patchSelectedNode({
-      fontWeight: Number(node.fontWeight) >= 600 ? '400' : '700',
+    this.patchSelectedTextTarget({
+      fontWeight: Number(target.fontWeight) >= 600 ? '400' : '700',
     });
   }
 
   toggleSelectedTextItalic(): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    this.patchSelectedNode({
-      fontStyle: (node.fontStyle ?? 'normal') === 'italic' ? 'normal' : 'italic',
+    this.patchSelectedTextTarget({
+      fontStyle: (target.fontStyle ?? 'normal') === 'italic' ? 'normal' : 'italic',
     });
   }
 
   toggleSelectedTextUnderline(): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    this.patchSelectedNode({ underline: !node.underline });
+    this.patchSelectedTextTarget({ underline: !target.underline });
   }
 
   toggleSelectedTextStrikethrough(): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    this.patchSelectedNode({ strikethrough: !node.strikethrough });
+    this.patchSelectedTextTarget({ strikethrough: !target.strikethrough });
   }
 
   toggleSelectedTextUppercase(): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    this.patchSelectedNode({
-      textTransform: (node.textTransform ?? 'none') === 'uppercase' ? 'none' : 'uppercase',
+    this.patchSelectedTextTarget({
+      textTransform: (target.textTransform ?? 'none') === 'uppercase' ? 'none' : 'uppercase',
     });
   }
 
   setSelectedTextColor(color: string): void {
-    const node = this.selectedTextNode();
-    if (!node || !color) return;
+    if (!this.selectedTextToolbarTarget() || !color) return;
 
-    this.patchSelectedNode({ color });
+    this.patchSelectedTextTarget({ color });
   }
 
   setSelectedTextLetterSpacing(value: number | string): void {
-    const node = this.selectedTextNode();
-    if (!node) return;
+    const target = this.selectedTextToolbarTarget();
+    if (!target) return;
 
-    const letterSpacing = this.coerceNumber(value, node.letterSpacing);
-    this.patchSelectedNode({
+    const letterSpacing = this.coerceNumber(value, target.letterSpacing);
+    this.patchSelectedTextTarget({
       letterSpacing: this.clamp(Math.round(letterSpacing * 10) / 10, -2, 24),
     });
+  }
+
+  toggleSelectedTextListStyle(
+    listStyle: Exclude<ProposalTemplateTextListStyle, 'none'>
+  ): void {
+    if (!this.selectedTextToolbarTarget()) {
+      return;
+    }
+
+    this.patchSelectedTextTarget({
+      listStyle: this.getSelectedTextListStyle() === listStyle ? 'none' : listStyle,
+    });
+  }
+
+  getSelectedTextListStyle(): ProposalTemplateTextListStyle {
+    return this.selectedTextToolbarTarget()?.listStyle ?? 'none';
+  }
+
+  openSelectedTextColorDrawer(event?: MouseEvent): void {
+    if (this.selectedTextNode()) {
+      this.openColorDrawer('text-color', event);
+      return;
+    }
+
+    if (this.selectedTableCellTextContent()) {
+      this.openColorDrawer('table-cell-text', event);
+    }
   }
 
   toggleToolbarPopover(popover: ToolbarPopover, event?: MouseEvent): void {
@@ -2281,13 +2739,55 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     return this.selectedDividerNode()?.dashed ? 'dashed' : 'solid';
   }
 
+  focusSelectedTableCellEditor(): void {
+    const tableNode = this.selectedTableNode();
+    const cell = this.selectedTableCellData();
+    if (!tableNode || !cell || cell.content.kind !== 'text') {
+      return;
+    }
+
+    this.openTableCellEditor(tableNode, cell);
+  }
+
+  setSelectedTableCellBackground(color: string): void {
+    const cell = this.selectedTableCellData();
+    if (!cell || !color) return;
+
+    this.patchSelectedTableCell({ background: color });
+  }
+
+  setSelectedTableCellStrokeColor(color: string): void {
+    const cell = this.selectedTableCellData();
+    if (!cell || !color) return;
+
+    this.patchSelectedTableCell({ stroke: color });
+  }
+
+  setSelectedTableCellStrokeWidth(value: number | string): void {
+    const cell = this.selectedTableCellData();
+    if (!cell) return;
+
+    const strokeWidth = this.coerceNumber(value, cell.strokeWidth);
+    this.patchSelectedTableCell({
+      strokeWidth: this.clamp(Math.round(strokeWidth), 0, 24),
+    });
+  }
+
+  setSelectedTableCellTextColor(color: string): void {
+    if (!this.selectedTableCellTextContent() || !color) {
+      return;
+    }
+
+    this.patchSelectedTextTarget({ color });
+  }
+
   getNodeOpacityPercent(node: ProposalTemplateNode | null): number {
     return Math.round((node?.opacity ?? 1) * 100);
   }
 
   isSelectedTextBold(): boolean {
-    const node = this.selectedTextNode();
-    return Number(node?.fontWeight ?? 0) >= 600;
+    const target = this.selectedTextToolbarTarget();
+    return Number(target?.fontWeight ?? 0) >= 600;
   }
 
   triggerUploadPicker(): void {
@@ -2498,6 +2998,17 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   }
 
   resolveInsertToken(token: string, placement?: NodePlacementOptions): void {
+    if (token.startsWith('table:')) {
+      const [, dimensions] = token.split(':');
+      const [rowsToken, columnsToken] = dimensions?.split('x') ?? [];
+      if (rowsToken && columnsToken) {
+        this.setTableInsertRows(+rowsToken);
+        this.setTableInsertColumns(+columnsToken);
+      }
+      this.insertConfiguredTable(placement);
+      return;
+    }
+
     if (token.startsWith('text:')) {
       const preset = this.textPresets.find((candidate) => candidate.id === token.slice(5));
       if (preset) {
@@ -2726,6 +3237,53 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     };
   }
 
+  getTableStyle(node: ProposalTemplateNode): Record<string, string | number> {
+    if (node.type !== 'table') {
+      return this.getNodeStyle(node);
+    }
+
+    return {
+      ...this.getNodeStyle(node),
+      display: 'grid',
+      gridTemplateColumns: `repeat(${node.columns}, minmax(0, 1fr))`,
+      gridTemplateRows: `repeat(${node.rows}, minmax(0, 1fr))`,
+      overflow: 'hidden',
+    };
+  }
+
+  getTableCellStyle(cell: ProposalTemplateTableCell): Record<string, string | number> {
+    return {
+      gridColumn: String(cell.column + 1),
+      gridRow: String(cell.row + 1),
+      padding: `${cell.padding}px`,
+      background: cell.background,
+      border: `${cell.strokeWidth}px solid ${cell.stroke}`,
+    };
+  }
+
+  getTableCellTextStyle(cell: ProposalTemplateTableCell): Record<string, string | number> {
+    if (cell.content.kind !== 'text') {
+      return {};
+    }
+
+    return {
+      color: cell.content.color,
+      fontFamily: cell.content.fontFamily,
+      fontSize: `${cell.content.fontSize}px`,
+      fontWeight: cell.content.fontWeight,
+      fontStyle: cell.content.fontStyle ?? 'normal',
+      lineHeight: cell.content.lineHeight,
+      letterSpacing: `${cell.content.letterSpacing}px`,
+      textAlign: cell.content.align,
+      textTransform: cell.content.textTransform ?? 'none',
+      textDecoration: this.getTextDecoration(cell.content),
+    };
+  }
+
+  isSelectedTableCell(cellId: string): boolean {
+    return this.selectedTableCellData()?.id === cellId;
+  }
+
   getRepeaterStyle(node: ProposalTemplateNode): Record<string, string | number> {
     if (node.type !== 'repeater') {
       return this.getNodeStyle(node);
@@ -2752,15 +3310,73 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     };
   }
 
+  getTextNodeRenderModel(node: ProposalTemplateNode): RenderedTextModel {
+    if (node.type !== 'rich-text' || !this.previewData()) {
+      return {
+        kind: 'plain',
+        text: '',
+        items: [],
+        markerWidth: '1.2em',
+      };
+    }
+
+    return this.buildRenderedTextModel(
+      this.proposalTemplateDocumentService.renderSegments(
+        node.content,
+        this.previewData()!,
+        this.previewMode()
+      ),
+      node.listStyle ?? 'none'
+    );
+  }
+
+  getTableCellTextRenderModel(cell: ProposalTemplateTableCell): RenderedTextModel {
+    if (cell.content.kind !== 'text' || !this.previewData()) {
+      return {
+        kind: 'plain',
+        text: '',
+        items: [],
+        markerWidth: '1.2em',
+      };
+    }
+
+    return this.buildRenderedTextModel(
+      this.proposalTemplateDocumentService.renderSegments(
+        cell.content.content,
+        this.previewData()!,
+        this.previewMode()
+      ),
+      cell.content.listStyle ?? 'none'
+    );
+  }
+
   getTextNodeContent(node: ProposalTemplateNode): string {
     if (node.type !== 'rich-text' || !this.previewData()) {
       return '';
     }
 
-    return this.proposalTemplateDocumentService.renderSegments(
-      node.content,
-      this.previewData()!,
-      this.previewMode()
+    return this.proposalTemplateDocumentService.formatTextForDisplay(
+      this.proposalTemplateDocumentService.renderSegments(
+        node.content,
+        this.previewData()!,
+        this.previewMode()
+      ),
+      node.listStyle ?? 'none'
+    );
+  }
+
+  getTableCellTextContent(cell: ProposalTemplateTableCell): string {
+    if (cell.content.kind !== 'text' || !this.previewData()) {
+      return '';
+    }
+
+    return this.proposalTemplateDocumentService.formatTextForDisplay(
+      this.proposalTemplateDocumentService.renderSegments(
+        cell.content.content,
+        this.previewData()!,
+        this.previewMode()
+      ),
+      cell.content.listStyle ?? 'none'
     );
   }
 
@@ -2839,7 +3455,41 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
   getTextEditorStyle(): Record<string, string | number> {
     const editor = this.textEditor();
     const node = this.findNode(editor?.pageId, editor?.nodeId);
-    if (!editor || !node || node.type !== 'rich-text') {
+    if (!editor || !node) {
+      return {};
+    }
+
+    if (editor.mode === 'table-cell' && node.type === 'table') {
+      const cell = node.cells.find((candidate) => candidate.id === editor.cellId);
+      if (!cell || cell.content.kind !== 'text') {
+        return {};
+      }
+
+      const cellWidth = node.width / Math.max(1, node.columns);
+      const cellHeight = node.height / Math.max(1, node.rows);
+
+      return {
+        left: `${node.x + cell.column * cellWidth}px`,
+        top: `${node.y + cell.row * cellHeight}px`,
+        width: `${Math.max(40, cellWidth)}px`,
+        height: `${Math.max(40, cellHeight)}px`,
+        fontFamily: cell.content.fontFamily,
+        fontSize: `${cell.content.fontSize}px`,
+        fontWeight: cell.content.fontWeight,
+        fontStyle: cell.content.fontStyle ?? 'normal',
+        lineHeight: String(cell.content.lineHeight),
+        letterSpacing: `${cell.content.letterSpacing}px`,
+        color: cell.content.color,
+        textAlign: cell.content.align,
+        textTransform: cell.content.textTransform ?? 'none',
+        textDecoration: this.getTextDecoration(cell.content),
+        padding: `${cell.padding}px`,
+        border: `${cell.strokeWidth}px solid transparent`,
+        minHeight: 'unset',
+      };
+    }
+
+    if (node.type !== 'rich-text') {
       return {};
     }
 
@@ -2849,7 +3499,7 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
       left: `${node.x}px`,
       top: `${node.y}px`,
       width: `${node.width}px`,
-      height: `${Math.max(node.height, liveHeight, 80)}px`,
+      height: `${Math.max(node.height, liveHeight)}px`,
       fontFamily: node.fontFamily,
       fontSize: `${node.fontSize}px`,
       fontWeight: node.fontWeight,
@@ -2860,6 +3510,8 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
       textAlign: node.align,
       textTransform: node.textTransform ?? 'none',
       textDecoration: this.getTextDecoration(node),
+      padding: '0.3rem',
+      border: '1px solid transparent',
     };
   }
 
@@ -2987,6 +3639,8 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
         return 'Shape';
       case 'divider':
         return 'Divider';
+      case 'table':
+        return 'Table';
       case 'image':
         return 'Image';
       case 'repeater':
@@ -3019,6 +3673,136 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
       },
       options
     );
+  }
+
+  private patchSelectedTableCell(
+    patch: Partial<ProposalTemplateTableCell>,
+    options: DocumentMutationOptions = {}
+  ): void {
+    const tableNode = this.selectedTableNode();
+    const cell = this.selectedTableCellData();
+    if (!tableNode || !cell) {
+      return;
+    }
+
+    this.patchTableCell(tableNode.pageId, tableNode.id, cell.id, patch, options);
+  }
+
+  private patchSelectedTextTarget(
+    patch: Partial<TextToolbarTarget>,
+    options: DocumentMutationOptions = {}
+  ): void {
+    const textNode = this.selectedTextNode();
+    if (textNode) {
+      this.patchSelectedNode(patch as Partial<ProposalTemplateRichTextNode>, options);
+      return;
+    }
+
+    const cellContent = this.selectedTableCellTextContent();
+    if (!cellContent) {
+      return;
+    }
+
+    this.patchSelectedTableCell(
+      {
+        content: {
+          ...cellContent,
+          ...patch,
+        },
+      },
+      options
+    );
+  }
+
+  private patchTableCell(
+    pageId: string,
+    nodeId: string,
+    cellId: string,
+    patch: Partial<ProposalTemplateTableCell>,
+    options: DocumentMutationOptions = {}
+  ): void {
+    const page = this.document()?.pages.find((candidate) => candidate.id === pageId);
+    const tableNode = page?.nodes.find(
+      (candidate): candidate is ProposalTemplateTableNode =>
+        candidate.id === nodeId && candidate.type === 'table'
+    );
+    if (!page || !tableNode) {
+      return;
+    }
+
+    this.patchPage(
+      {
+        ...page,
+        nodes: page.nodes.map((candidate) =>
+          candidate.id === tableNode.id
+            ? ({
+                ...tableNode,
+                cells: tableNode.cells.map((cell) =>
+                  cell.id === cellId ? ({ ...cell, ...patch } as ProposalTemplateTableCell) : cell
+                ),
+              } as ProposalTemplateNode)
+            : candidate
+        ),
+      },
+      options
+    );
+  }
+
+  private buildTableCells(
+    rows: number,
+    columns: number,
+    document: ProposalTemplateDocument
+  ): ProposalTemplateTableCell[] {
+    const cells: ProposalTemplateTableCell[] = [];
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        cells.push({
+          id: this.createId('cell'),
+          row,
+          column,
+          background: '#ffffff',
+          stroke: `${document.theme.borderColor}`,
+          strokeWidth: 1,
+          padding: 12,
+          content: this.buildDefaultTableCellTextContent(
+            document,
+            row === 0 ? `Header ${column + 1}` : `Cell ${row + 1}-${column + 1}`
+          ),
+        });
+      }
+    }
+
+    return cells;
+  }
+
+  private buildDefaultTableCellTextContent(
+    document: ProposalTemplateDocument,
+    text = 'Cell'
+  ): ProposalTemplateTableCellTextContent {
+    return {
+      kind: 'text',
+      content: this.proposalTemplateDocumentService.parseSegments(text),
+      align: 'left',
+      color: document.theme.primaryColor,
+      fontFamily: document.theme.bodyFontFamily,
+      fontSize: 14,
+      fontWeight: '500',
+      fontStyle: 'normal',
+      underline: false,
+      strikethrough: false,
+      textTransform: 'none',
+      lineHeight: 1.35,
+      letterSpacing: 0,
+      listStyle: 'none',
+    };
+  }
+
+  private getDefaultSelectedTableCell(
+    node: ProposalTemplateTableNode | null
+  ): TableCellSelection | null {
+    const firstCell = node?.cells[0];
+    return firstCell ? { nodeId: node!.id, cellId: firstCell.id } : null;
   }
 
   private findNode(pageId?: string | null, nodeId?: string | null): ProposalTemplateNode | null {
@@ -3059,6 +3843,8 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     switch (type) {
       case 'image':
         return { width: 160, height: 100 };
+      case 'table':
+        return { width: 420, height: 240 };
       case 'repeater':
         return { width: 620, height: 360 };
       case 'totals':
@@ -3172,7 +3958,7 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     measurement.style.left = '-9999px';
     measurement.style.top = '0';
     measurement.style.width = `${node.width}px`;
-    measurement.style.padding = '6px 8px';
+    measurement.style.padding = '0.3rem';
     measurement.style.whiteSpace = 'pre-wrap';
     measurement.style.fontFamily = node.fontFamily;
     measurement.style.fontSize = `${node.fontSize}px`;
@@ -3188,6 +3974,280 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     const height = Math.max(48, Math.ceil(measurement.getBoundingClientRect().height + 12));
     document.body.removeChild(measurement);
     return height;
+  }
+
+  private buildRenderedTextModel(
+    value: string,
+    listStyle: ProposalTemplateTextListStyle = 'none'
+  ): RenderedTextModel {
+    const normalizedValue = value.replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ');
+
+    if (listStyle !== 'none') {
+      const items = normalizedValue
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((content, index) => ({
+          marker: listStyle === 'ordered' ? `${index + 1}.` : '\u2022',
+          content,
+        }));
+
+      return items.length
+        ? {
+            kind: 'list',
+            text: '',
+            items,
+            markerWidth:
+              listStyle === 'ordered'
+                ? `${Math.max(2.2, `${items.length}.`.length + 0.6)}ch`
+                : '1.2em',
+          }
+        : {
+            kind: 'plain',
+            text: '',
+            items: [],
+            markerWidth: '1.2em',
+          };
+    }
+
+    const manualListMatch = this.parseManualListModel(normalizedValue);
+    if (manualListMatch) {
+      return manualListMatch;
+    }
+
+    return {
+      kind: 'plain',
+      text: normalizedValue,
+      items: [],
+      markerWidth: '1.2em',
+    };
+  }
+
+  private parseManualListModel(value: string): RenderedTextModel | null {
+    const lines = value.split('\n');
+    const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
+    if (!nonEmptyLines.length) {
+      return null;
+    }
+
+    const parsedLines = nonEmptyLines.map((line) => this.parseManualListLine(line));
+    if (parsedLines.some((line) => line == null)) {
+      return null;
+    }
+
+    const firstKind = parsedLines[0]!.kind;
+    if (!parsedLines.every((line) => line?.kind === firstKind)) {
+      return null;
+    }
+
+    const items = parsedLines.map((line) => ({
+      marker: line!.marker,
+      content: line!.content,
+    }));
+
+    return {
+      kind: 'list',
+      text: '',
+      items,
+      markerWidth:
+        firstKind === 'ordered'
+          ? `${Math.max(...items.map((item) => item.marker.length), 2) + 0.6}ch`
+          : '1.2em',
+    };
+  }
+
+  private parseManualListLine(
+    line: string
+  ): { kind: 'ordered' | 'unordered'; marker: string; content: string } | null {
+    const orderedMatch = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (orderedMatch) {
+      const content = orderedMatch[2].trim();
+      if (!content) {
+        return null;
+      }
+
+      return {
+        kind: 'ordered',
+        marker: `${orderedMatch[1]}.`,
+        content,
+      };
+    }
+
+    const bulletMatch = line.match(/^\s*([•◦▪‣∙\-*])\s+(.*)$/u);
+    if (!bulletMatch) {
+      return null;
+    }
+
+    const content = bulletMatch[2].trim();
+    if (!content) {
+      return null;
+    }
+
+    return {
+      kind: 'unordered',
+      marker: bulletMatch[1] === '-' || bulletMatch[1] === '*' ? '\u2022' : bulletMatch[1],
+      content,
+    };
+  }
+
+  private getActiveColorDrawerValue(): string {
+    switch (this.colorDrawer()?.target) {
+      case 'text-color':
+        return this.selectedTextNode()?.color ?? '';
+      case 'shape-fill':
+        return this.selectedShapeNode()?.fill ?? '';
+      case 'shape-stroke':
+        return this.selectedShapeNode()?.stroke ?? '';
+      case 'divider-stroke':
+        return this.selectedDividerNode()?.stroke ?? '';
+      case 'table-cell-background':
+        return this.selectedTableCellData()?.background ?? '';
+      case 'table-cell-stroke':
+        return this.selectedTableCellData()?.stroke ?? '';
+      case 'table-cell-text': {
+        const content = this.selectedTableCellTextContent();
+        return content?.color ?? '';
+      }
+      default:
+        return '';
+    }
+  }
+
+  private isColorDrawerTargetAvailable(target: ColorDrawerTarget | null): boolean {
+    switch (target) {
+      case 'text-color':
+        return Boolean(this.selectedTextNode());
+      case 'shape-fill':
+      case 'shape-stroke':
+        return Boolean(this.selectedShapeNode());
+      case 'divider-stroke':
+        return Boolean(this.selectedDividerNode());
+      case 'table-cell-background':
+      case 'table-cell-stroke':
+        return Boolean(this.selectedTableCellData());
+      case 'table-cell-text':
+        return Boolean(this.selectedTableCellTextContent());
+      default:
+        return false;
+    }
+  }
+
+  private collectDocumentColorSwatches(
+    document: ProposalTemplateDocument,
+    allowGradients: boolean
+  ): string[] {
+    const swatches: string[] = [];
+    const push = (value?: string | null) =>
+      this.appendDocumentSwatch(swatches, value, allowGradients);
+
+    push(document.theme.primaryColor);
+    push(document.theme.accentColor);
+    push(document.theme.borderColor);
+    push(document.theme.pageColor);
+    push(document.theme.canvasColor);
+    push(document.theme.mutedColor);
+
+    document.pages.forEach((page) => {
+      push(page.background?.fill);
+      page.nodes.forEach((node) => {
+        switch (node.type) {
+          case 'rich-text':
+            push(node.color);
+            break;
+          case 'shape':
+            push(node.fill);
+            push(node.stroke);
+            break;
+          case 'divider':
+            push(node.stroke);
+            break;
+          case 'table':
+            node.cells.forEach((cell) => {
+              push(cell.background);
+              push(cell.stroke);
+              if (cell.content.kind === 'text') {
+                push(cell.content.color);
+              }
+            });
+            break;
+          case 'repeater':
+            push(node.background);
+            push(node.borderColor);
+            push(node.headerBackground);
+            push(node.rowBackground);
+            push(node.headerTextColor);
+            node.rowTemplate.nodes.forEach((child) => {
+              if (child.type === 'rich-text') {
+                push(child.color);
+              } else {
+                push(child.stroke);
+                if (child.type === 'shape') {
+                  push(child.fill);
+                }
+              }
+            });
+            break;
+          case 'totals':
+            push(node.background);
+            push(node.borderColor);
+            push(node.textColor);
+            push(node.accentColor);
+            break;
+          default:
+            break;
+        }
+      });
+    });
+
+    return swatches.slice(0, 16);
+  }
+
+  private appendDocumentSwatch(
+    swatches: string[],
+    value: string | null | undefined,
+    allowGradients: boolean
+  ): void {
+    const normalized = this.normalizeColorValue(value);
+    if (!normalized) {
+      return;
+    }
+
+    const isGradient = normalized.includes('gradient(');
+    if (isGradient && !allowGradients) {
+      return;
+    }
+
+    if (!allowGradients && !this.isValidCssColor(normalized)) {
+      return;
+    }
+
+    if (allowGradients && !this.isValidCssBackground(normalized)) {
+      return;
+    }
+
+    if (!swatches.some((candidate) => this.normalizeColorValue(candidate) === normalized)) {
+      swatches.push(value!.trim());
+    }
+  }
+
+  private normalizeColorValue(value: string | null | undefined): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private isValidCssColor(value: string): boolean {
+    const option = new Option();
+    option.style.color = '';
+    option.style.color = value;
+    return option.style.color !== '';
+  }
+
+  private isValidCssBackground(value: string): boolean {
+    const element = document.createElement('div');
+    element.style.background = '';
+    element.style.background = value;
+    return element.style.background !== '';
   }
 
   private buildBaseTemplateConfig(template: DocumentTemplate): Record<string, unknown> {
@@ -3595,8 +4655,29 @@ export class ProposalTemplateStudioComponent implements OnInit, OnDestroy {
     this.selectedNodeIds.set(normalizedNodeIds);
     this.selectedNodeId.set(resolvedActiveNodeId);
 
+    const selectedTableNode =
+      normalizedNodeIds.length === 1
+        ? (page?.nodes.find(
+            (candidate): candidate is ProposalTemplateTableNode =>
+              candidate.id === resolvedActiveNodeId && candidate.type === 'table'
+          ) ?? null)
+        : null;
+    const currentTableSelection = this.selectedTableCell();
+    this.selectedTableCell.set(
+      selectedTableNode
+        ? currentTableSelection?.nodeId === selectedTableNode.id &&
+          selectedTableNode.cells.some((cell) => cell.id === currentTableSelection.cellId)
+          ? currentTableSelection
+          : this.getDefaultSelectedTableCell(selectedTableNode)
+        : null
+    );
+
     if (normalizedNodeIds.length !== 1) {
       this.toolbarPopover.set(null);
+    }
+
+    if (!this.isColorDrawerTargetAvailable(this.colorDrawer()?.target ?? null)) {
+      this.closeColorDrawer();
     }
   }
 

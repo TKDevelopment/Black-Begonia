@@ -18,6 +18,9 @@ import {
   ProposalTemplatePreviewData,
   ProposalTemplatePreviewTotals,
   ProposalTemplateRichTextSegment,
+  ProposalTemplateTableCell,
+  ProposalTemplateTableCellTextContent,
+  ProposalTemplateTextListStyle,
   ProposalTemplateTheme,
 } from './proposal-template-document.models';
 
@@ -143,18 +146,20 @@ export class ProposalTemplateDocumentService {
 
   getDraftDocument(template: DocumentTemplate | null | undefined): ProposalTemplateDocument {
     const stored = this.getStoredConfig(template);
-    return stored?.draft_document
+    const document = stored?.draft_document
       ? this.clone(stored.draft_document)
       : this.buildDefaultDocument(template);
+    return this.normalizeDocument(document);
   }
 
   getPublishedDocument(
     template: DocumentTemplate | null | undefined
   ): ProposalTemplateDocument {
     const stored = this.getStoredConfig(template);
-    return stored?.published_document
+    const document = stored?.published_document
       ? this.clone(stored.published_document)
       : this.getDraftDocument(template);
+    return this.normalizeDocument(document);
   }
 
   getVersionHistory(
@@ -238,35 +243,40 @@ export class ProposalTemplateDocumentService {
     document: ProposalTemplateDocument,
     assets: ProposalTemplateEditorAsset[]
   ): ProposalTemplateDocument {
+    const normalizedDocument = this.normalizeDocument(document);
     const assetById = new Map(assets.map((asset) => [asset.id, asset]));
     const assetByStoragePath = new Map(
       assets.map((asset) => [asset.storage_path, asset])
     );
 
     return {
-      ...this.clone(document),
-      pages: document.pages.map((page) => ({
+      ...this.clone(normalizedDocument),
+      pages: normalizedDocument.pages.map((page) => ({
         ...page,
         nodes: page.nodes.map((node) => {
-          if (node.type !== 'image' || node.source !== 'url') {
+          if (node.type === 'image' && node.source === 'url') {
+            const asset =
+              (node.asset_id ? assetById.get(node.asset_id) : null) ??
+              (node.storage_path ? assetByStoragePath.get(node.storage_path) : null);
+
+            if (!asset) {
+              return this.clone(node);
+            }
+
+            return {
+              ...this.clone(node),
+              asset_id: asset.id,
+              storage_path: asset.storage_path,
+              url: asset.url,
+              alt: node.alt || asset.alt,
+            };
+          }
+
+          if (node.type === 'table') {
             return this.clone(node);
           }
 
-          const asset =
-            (node.asset_id ? assetById.get(node.asset_id) : null) ??
-            (node.storage_path ? assetByStoragePath.get(node.storage_path) : null);
-
-          if (!asset) {
-            return this.clone(node);
-          }
-
-          return {
-            ...this.clone(node),
-            asset_id: asset.id,
-            storage_path: asset.storage_path,
-            url: asset.url,
-            alt: node.alt || asset.alt,
-          };
+          return this.clone(node);
         }),
       })),
     };
@@ -301,10 +311,68 @@ export class ProposalTemplateDocumentService {
         if (node.width <= 0 || node.height <= 0) {
           issues.push(`Node "${node.name}" on "${page.name}" must have positive dimensions.`);
         }
+
+        if (node.type === 'table') {
+          if (node.rows <= 0 || node.columns <= 0) {
+            issues.push(`Table "${node.name}" on "${page.name}" must have at least one row and one column.`);
+          }
+
+          if (node.cells.length !== node.rows * node.columns) {
+            issues.push(`Table "${node.name}" on "${page.name}" has an invalid cell layout.`);
+          }
+        }
       });
     });
 
     return issues;
+  }
+
+  private normalizeDocument(document: ProposalTemplateDocument): ProposalTemplateDocument {
+    const next = this.clone(document);
+
+    return {
+      ...next,
+      pages: next.pages.map((page) => ({
+        ...page,
+        nodes: page.nodes.map((node) =>
+          node.type === 'table'
+            ? {
+                ...node,
+                cells: node.cells.map((cell) => ({
+                  ...cell,
+                  content: this.normalizeTableCellContent(next, cell),
+                })),
+              }
+            : node
+        ),
+      })),
+    };
+  }
+
+  private normalizeTableCellContent(
+    document: ProposalTemplateDocument,
+    cell: ProposalTemplateTableCell
+  ): ProposalTemplateTableCellTextContent {
+    if (cell.content.kind === 'text') {
+      return this.clone(cell.content);
+    }
+
+    return {
+      kind: 'text',
+      content: this.parseSegments(cell.content.alt?.trim() || ''),
+      align: 'left',
+      color: document.theme.primaryColor,
+      fontFamily: document.theme.bodyFontFamily,
+      fontSize: 14,
+      fontWeight: '500',
+      fontStyle: 'normal',
+      underline: false,
+      strikethrough: false,
+      textTransform: 'none',
+      lineHeight: 1.35,
+      letterSpacing: 0,
+      listStyle: 'none',
+    };
   }
 
   getPlaceholderDefinition(key: string): ProposalTemplatePlaceholderDefinition | null {
@@ -333,6 +401,34 @@ export class ProposalTemplateDocumentService {
         return previewData.values[segment.key] ?? segment.fallback ?? segment.label;
       })
       .join('');
+  }
+
+  formatTextForDisplay(
+    value: string,
+    listStyle: ProposalTemplateTextListStyle = 'none'
+  ): string {
+    const normalizedValue = value.replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ');
+
+    if (listStyle === 'none') {
+      return normalizedValue;
+    }
+
+    let formattedListIndex = 0;
+
+    return normalizedValue
+      .split('\n')
+      .map((line) => {
+        const normalizedLine = line.trim();
+        if (!normalizedLine) {
+          return '';
+        }
+
+        formattedListIndex += 1;
+        return listStyle === 'ordered'
+          ? `${formattedListIndex}. ${normalizedLine}`
+          : `\u2022 ${normalizedLine}`;
+      })
+      .join('\n');
   }
 
   serializeSegments(segments: ProposalTemplateRichTextSegment[]): string {
@@ -1335,3 +1431,4 @@ export class ProposalTemplateDocumentService {
     return JSON.parse(JSON.stringify(value)) as T;
   }
 }
+
