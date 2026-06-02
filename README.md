@@ -2,6 +2,20 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.5.
 
+## Project Context
+
+Black Begonia is a brownfield Angular 19 application for Black Begonia Florals.
+The current codebase hosts the public website, client proposal access surface,
+and CRM admin portal in one Angular project, backed by Supabase schemas, storage,
+and edge functions.
+
+Development is governed by the project constitution in
+`.specify/memory/constitution.md`. Public website changes require product owner
+approval before implementation. Supabase work must account for RLS, storage
+policies, edge-function boundaries, and secret handling. Karma/Jasmine is the
+default unit-test stack, with focused integration checks required for proposal,
+lead, inquiry, authorization, and sensitive data flows when touched.
+
 ## Development server
 
 To start a local development server, run:
