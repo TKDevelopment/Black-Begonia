@@ -1,6 +1,6 @@
 [build]
   publish = "dist/black-begonia/browser"
-  command = "node set-env.cts && ng build --configuration prod"
+  command = "node set-env.cts && node scripts/generate-sitemap.cjs && ng build --configuration prod"
 
 [[headers]]
   for = "/*"

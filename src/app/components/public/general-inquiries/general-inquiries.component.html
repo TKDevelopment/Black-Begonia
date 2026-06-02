@@ -152,20 +152,9 @@
                 "
               >
                 <option value="" disabled>Service Type *</option>
-                
-                <option value="baby shower">Baby Shower</option>
-                <option value="bridal shower">Bridal Shower</option>
-                <option value="birthday">Quinceanera / Birthday</option>
-                <option value="funeral">Celebration of Life / Memorial</option>
-                <option value="rehearsal">Rehearsal Dinner</option>
-                <option value="anniversary">Anniversary Dinner</option>
-                <option value="proposal">Proposal Florals</option>
-                <option value="corporate">Corporate Event</option>
-                <option value="workshop">Workshop Opportunity</option>
-                <option value="subscription">Floral Subscription</option>
-                <option value="private event">Private Event</option>
-                <option value="private lessons">Private Lessons</option>
-                <option value="other">Other</option>
+                <option *ngFor="let service of generalServiceOptions" [value]="service.label">
+                  {{ service.label }}
+                </option>
               </select>
 
               <!-- Arrow Icon -->
@@ -320,7 +309,19 @@
               </div>
             </div>
 
-            <button type="submit" class="bg-[#ea938c] text-white py-2 px-4  hover:bg-gray-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">Submit</button>
+            <button
+              type="submit"
+              [disabled]="submitting"
+              [attr.aria-busy]="submitting"
+              class="inline-flex items-center justify-center gap-2 bg-[#ea938c] px-4 py-2 text-white transition-colors duration-300 hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+            >
+              <span
+                *ngIf="submitting"
+                class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/80 border-r-transparent"
+                aria-hidden="true"
+              ></span>
+              {{ submitting ? 'Submitting...' : 'Submit' }}
+            </button>
           </div>
         </form>
       </div>

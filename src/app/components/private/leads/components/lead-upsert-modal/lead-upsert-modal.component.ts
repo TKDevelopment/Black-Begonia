@@ -9,10 +9,16 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import {
+  FloralServiceDefinition,
+  FloralServiceEventType,
+  getFloralServicesForEventType,
+  resolveFloralServiceLabel,
+} from '../../../../../core/floral-services/floral-service-catalog';
 import { Lead } from '../../../../../core/models/lead';
 import { LeadUpsertPayload } from './lead-upsert.types';
 
-type LeadEventType = 'general' | 'wedding';
+type LeadEventType = FloralServiceEventType;
 
 @Component({
   selector: 'app-lead-upsert-modal',
@@ -22,29 +28,8 @@ type LeadEventType = 'general' | 'wedding';
   styleUrl: './lead-upsert-modal.component.scss',
 })
 export class LeadUpsertModalComponent {
-  private readonly weddingServiceOptions: string[] = [
-    'full-service wedding',
-    'ceremony-only wedding',
-    'reception-only wedding',
-    'elopement',
-    'engagement',
-  ];
-
-  private readonly generalServiceOptions: string[] = [
-    'birthday',
-    'funeral',
-    'corporate',
-    'bridal shower',
-    'baby shower',
-    'anniversary',
-    'rehearsal',
-    'proposal',
-    'subscription',
-    'private lessons',
-    'other',
-    'workshop',
-    'private event',
-  ];
+  private readonly weddingServiceOptions = getFloralServicesForEventType('wedding');
+  private readonly generalServiceOptions = getFloralServicesForEventType('general');
 
   @Input() open = false;
   @Input() saving = false;
@@ -70,9 +55,11 @@ export class LeadUpsertModalComponent {
   readonly ceremonyVenueName = signal('');
   readonly ceremonyVenueCity = signal('');
   readonly ceremonyVenueState = signal('');
+  readonly ceremonyStartTime = signal('');
   readonly receptionVenueName = signal('');
   readonly receptionVenueCity = signal('');
   readonly receptionVenueState = signal('');
+  readonly receptionStartTime = signal('');
   readonly budgetRange = signal('');
   readonly guestCount = signal<string>('');
   readonly inquiryMessage = signal('');
@@ -105,14 +92,41 @@ export class LeadUpsertModalComponent {
     return this.eventType() === 'wedding';
   }
 
-  get serviceTypeOptions(): string[] {
+  get serviceTypeOptions(): FloralServiceDefinition[] {
     return this.isWedding ? this.weddingServiceOptions : this.generalServiceOptions;
+  }
+
+  get selectedService(): FloralServiceDefinition | null {
+    return (
+      this.serviceTypeOptions.find((option) => option.label === this.serviceType()) ?? null
+    );
+  }
+
+  get serviceTypeLifecycleHint(): string {
+    const selectedService = this.selectedService;
+
+    if (!selectedService) {
+      return this.isWedding
+        ? 'Wedding leads stay in the project lifecycle and use wedding-specific proposal renderers.'
+        : 'Choose the general service that best matches the lead so the CRM can route it into the right lifecycle.';
+    }
+
+    const workflowLabel =
+      selectedService.workflowMode === 'subscription'
+        ? 'subscription lifecycle'
+        : 'project lifecycle';
+    const documentLabel =
+      selectedService.documentMode === 'agreement'
+        ? 'a basic agreement'
+        : 'a full floral proposal';
+
+    return `${selectedService.description} This service stays in the ${workflowLabel} and defaults to ${documentLabel}.`;
   }
 
   onEventTypeChange(value: LeadEventType): void {
     this.eventType.set(value);
 
-    if (!this.serviceTypeOptions.includes(this.serviceType())) {
+    if (!this.serviceTypeOptions.some((option) => option.label === this.serviceType())) {
       this.serviceType.set('');
     }
   }
@@ -154,9 +168,11 @@ export class LeadUpsertModalComponent {
     this.ceremonyVenueName.set(lead?.ceremony_venue_name ?? '');
     this.ceremonyVenueCity.set(lead?.ceremony_venue_city ?? '');
     this.ceremonyVenueState.set(lead?.ceremony_venue_state ?? '');
+    this.ceremonyStartTime.set(lead?.ceremony_start_time ?? '');
     this.receptionVenueName.set(lead?.reception_venue_name ?? '');
     this.receptionVenueCity.set(lead?.reception_venue_city ?? '');
     this.receptionVenueState.set(lead?.reception_venue_state ?? '');
+    this.receptionStartTime.set(lead?.reception_start_time ?? '');
     this.budgetRange.set(lead?.budget_range ?? '');
     this.guestCount.set(lead?.guest_count != null ? String(lead.guest_count) : '');
     this.inquiryMessage.set(lead?.inquiry_message ?? '');
@@ -165,8 +181,7 @@ export class LeadUpsertModalComponent {
   }
 
   private getValidServiceType(serviceType: string, eventType: LeadEventType): string {
-    const options = eventType === 'wedding' ? this.weddingServiceOptions : this.generalServiceOptions;
-    return options.includes(serviceType) ? serviceType : '';
+    return resolveFloralServiceLabel(serviceType, eventType) ?? '';
   }
 
   private buildPayload(): LeadUpsertPayload | null {
@@ -180,7 +195,7 @@ export class LeadUpsertModalComponent {
       return null;
     }
 
-    if (!this.serviceTypeOptions.includes(serviceType)) {
+    if (!this.serviceTypeOptions.some((option) => option.label === serviceType)) {
       this.validationError.set('Please choose a valid service type for the selected event type.');
       return null;
     }
@@ -212,9 +227,11 @@ export class LeadUpsertModalComponent {
       ceremony_venue_name: this.ceremonyVenueName().trim() || null,
       ceremony_venue_city: this.ceremonyVenueCity().trim() || null,
       ceremony_venue_state: this.ceremonyVenueState().trim() || null,
+      ceremony_start_time: this.ceremonyStartTime().trim() || null,
       reception_venue_name: this.receptionVenueName().trim() || null,
       reception_venue_city: this.receptionVenueCity().trim() || null,
       reception_venue_state: this.receptionVenueState().trim() || null,
+      reception_start_time: this.receptionStartTime().trim() || null,
       budget_range: this.budgetRange().trim() || null,
       guest_count: guestCount,
       inquiry_message: this.inquiryMessage().trim() || null,

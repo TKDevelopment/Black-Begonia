@@ -1,4 +1,5 @@
 import { CatalogItemType, CatalogUnitType } from './catalog-item';
+import { ProposalRendererKey } from '../proposal-templates/proposal-renderer-registry';
 
 export type FloralProposalStatus =
   | 'draft'
@@ -48,6 +49,7 @@ export interface FloralProposalRenderTemplateContext {
   template_id?: string | null;
   name?: string | null;
   template_key?: string | null;
+  renderer_key?: ProposalRendererKey | null;
   header_layout?: DocumentTemplateHeaderLayout | null;
   line_item_layout?: DocumentTemplateLineItemLayout | null;
   footer_layout?: DocumentTemplateFooterLayout | null;
@@ -60,9 +62,6 @@ export interface FloralProposalRenderTemplateContext {
   show_intro_message?: boolean;
   intro_title?: string | null;
   intro_body?: string | null;
-  show_terms_section?: boolean;
-  show_privacy_section?: boolean;
-  show_signature_section?: boolean;
   agreement_clauses?: Record<string, unknown>[];
   header_content?: Record<string, unknown>;
   footer_content?: Record<string, unknown>;
@@ -138,15 +137,6 @@ export interface FloralProposalRenderContract {
   };
 }
 
-export interface PricingSettings {
-  pricing_settings_id: string;
-  default_markup_percent: number;
-  default_reserve_percent: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface DocumentTemplate {
   template_id: string;
   name: string;
@@ -156,9 +146,6 @@ export interface DocumentTemplate {
   is_default: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  show_terms_section: boolean;
-  show_privacy_section: boolean;
-  show_signature_section: boolean;
   template_config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -175,11 +162,6 @@ export interface GrapesJsStoredTemplateConfig {
     accent_color?: string | null;
     heading_font_family?: string | null;
     body_font_family?: string | null;
-  };
-  settings?: {
-    show_terms_section?: boolean;
-    show_privacy_section?: boolean;
-    show_signature_section?: boolean;
   };
 }
 
@@ -265,8 +247,6 @@ export interface FloralProposalShoppingList {
 export interface FloralProposalShoppingListItem {
   floral_proposal_shopping_list_item_id?: string;
   floral_proposal_shopping_list_id?: string;
-  vendor_id?: string | null;
-  vendor_item_pack_id?: string | null;
   catalog_item_id?: string | null;
   item_name: string;
   item_type: CatalogItemType;
@@ -281,10 +261,6 @@ export interface FloralProposalShoppingListItem {
   estimated_pack_cost?: number | null;
   total_estimated_cost?: number | null;
   notes?: string | null;
-  vendor?: {
-    vendor_id: string;
-    name: string;
-  } | null;
 }
 
 export interface CreateFloralProposalInput {
@@ -316,9 +292,6 @@ export interface DocumentTemplateUpsertInput {
   is_default?: boolean;
   logo_storage_path?: string | null;
   logo_url?: string | null;
-  show_terms_section?: boolean;
-  show_privacy_section?: boolean;
-  show_signature_section?: boolean;
   template_config?: Record<string, unknown>;
 }
 

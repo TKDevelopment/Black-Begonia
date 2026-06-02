@@ -21,9 +21,6 @@ export class DocumentTemplateRepositoryService {
     is_default,
     logo_storage_path,
     logo_url,
-    show_terms_section,
-    show_privacy_section,
-    show_signature_section,
     template_config,
     created_at,
     updated_at
@@ -81,9 +78,6 @@ export class DocumentTemplateRepositoryService {
         is_default: payload.is_default ?? false,
         logo_storage_path: payload.logo_storage_path ?? null,
         logo_url: payload.logo_url ?? null,
-        show_terms_section: payload.show_terms_section ?? true,
-        show_privacy_section: payload.show_privacy_section ?? true,
-        show_signature_section: payload.show_signature_section ?? true,
         template_config: payload.template_config ?? {},
       })
       .select(this.selectClause)
@@ -124,5 +118,21 @@ export class DocumentTemplateRepositoryService {
     }
 
     return data as DocumentTemplate;
+  }
+
+  async deleteDocumentTemplate(templateId: string): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('document_templates')
+      .delete()
+      .eq('template_id', templateId);
+
+    if (error) {
+      console.error(
+        '[DocumentTemplateRepositoryService] deleteDocumentTemplate error:',
+        error
+      );
+      throw error;
+    }
   }
 }

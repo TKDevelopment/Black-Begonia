@@ -1,5 +1,7 @@
+import { FloralServiceEventType } from '../../../../../core/floral-services/floral-service-catalog';
+
 export interface LeadUpsertPayload {
-  event_type: 'general' | 'wedding';
+  event_type: FloralServiceEventType;
   service_type: string;
   first_name: string;
   last_name: string;
@@ -15,9 +17,11 @@ export interface LeadUpsertPayload {
   ceremony_venue_name?: string | null;
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
+  ceremony_start_time?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
+  reception_start_time?: string | null;
   budget_range?: string | null;
   guest_count?: number | null;
   inquiry_message?: string | null;

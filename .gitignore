@@ -41,5 +41,5 @@ testem.log
 .DS_Store
 Thumbs.db
 
-/supabase
 /src/environments/environment.dev.ts
+/codex_ready_proposal_template_editor_implementation_plan.md

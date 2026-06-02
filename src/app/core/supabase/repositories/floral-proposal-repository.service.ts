@@ -65,9 +65,6 @@ export class FloralProposalRepositoryService {
       is_active,
       logo_storage_path,
       logo_url,
-      show_terms_section,
-      show_privacy_section,
-      show_signature_section,
       template_config,
       created_at,
       updated_at
@@ -532,8 +529,6 @@ export class FloralProposalRepositoryService {
         items.map((item) => ({
           floral_proposal_shopping_list_id:
             shoppingList.floral_proposal_shopping_list_id,
-          vendor_id: item.vendor_id ?? null,
-          vendor_item_pack_id: item.vendor_item_pack_id ?? null,
           catalog_item_id: item.catalog_item_id ?? null,
           item_name: item.item_name,
           item_type: item.item_type,

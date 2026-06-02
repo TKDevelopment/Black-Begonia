@@ -5,6 +5,9 @@ import {
   DocumentTemplateLogoUploadResult,
   DocumentTemplateUpsertInput,
 } from '../../models/floral-proposal';
+import {
+  ProposalTemplateEditorAsset,
+} from '../../proposal-templates/proposal-template-document.models';
 import { DocumentTemplateRepositoryService } from '../repositories/document-template-repository.service';
 import { SupabaseService } from '../clients/supabase.service';
 
@@ -39,6 +42,23 @@ export class DocumentTemplateService {
 
   async activateTemplate(template: DocumentTemplate): Promise<DocumentTemplate> {
     return this.updateDocumentTemplate(template.template_id, { is_active: true });
+  }
+
+  async deleteTemplate(template: DocumentTemplate): Promise<void> {
+    await this.documentTemplateRepository.deleteDocumentTemplate(template.template_id);
+
+    if (!template.logo_storage_path) {
+      return;
+    }
+
+    try {
+      await this.removeTemplateLogo(template.logo_storage_path);
+    } catch (error) {
+      console.warn(
+        '[DocumentTemplateService] deleteTemplate logo cleanup warning:',
+        error
+      );
+    }
   }
 
   async uploadTemplateLogo(
@@ -130,6 +150,27 @@ export class DocumentTemplateService {
 
   async removeTemplateAsset(storagePath: string): Promise<void> {
     return this.removeTemplateLogo(storagePath);
+  }
+
+  async refreshTemplateAssets(
+    assets: ProposalTemplateEditorAsset[]
+  ): Promise<ProposalTemplateEditorAsset[]> {
+    return Promise.all(
+      assets.map(async (asset) => {
+        try {
+          return {
+            ...asset,
+            url: await this.getSignedTemplateLogoUrl(asset.storage_path),
+          };
+        } catch (error) {
+          console.warn(
+            '[DocumentTemplateService] refreshTemplateAssets warning:',
+            error
+          );
+          return asset;
+        }
+      })
+    );
   }
 
   async getSignedTemplateLogoUrl(storagePath: string): Promise<string> {

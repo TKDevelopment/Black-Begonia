@@ -587,8 +587,6 @@ export class FloralProposalBuilderService {
         }
 
         itemMap.set(key, {
-          vendor_id: null,
-          vendor_item_pack_id: null,
           catalog_item_id: component.catalog_item_id ?? null,
           item_name: component.catalog_item_name,
           item_type: component.item_type ?? 'other',

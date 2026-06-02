@@ -7,6 +7,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import {
+  FloralServiceDefinition,
+  getFloralServicesForEventType,
+} from '../../../core/floral-services/floral-service-catalog';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SeoService } from '../../../core/seo/seo.service';
@@ -24,6 +28,8 @@ import { Router } from '@angular/router';
 export class GeneralInquiriesComponent implements OnInit {
   private readonly inquiryEmailMaxAttempts = 3;
   private readonly inquiryEmailRetryDelayMs = 1200;
+  readonly generalServiceOptions: FloralServiceDefinition[] =
+    getFloralServicesForEventType('general');
   generalInquiryForm!: FormGroup;
   submitting = false;
   submitted = false;
@@ -155,6 +161,10 @@ export class GeneralInquiriesComponent implements OnInit {
   }
 
   async onSubmit(): Promise<void> {
+    if (this.submitting) {
+      return;
+    }
+
     if (this.generalInquiryForm.invalid) {
       this.generalInquiryForm.markAllAsTouched();
       this.showInvalidTooltips();
