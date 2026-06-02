@@ -8,7 +8,6 @@ import { JsonLdService } from '../../../core/seo/jsonld.service';
 interface PortfolioImage {
   image_id: string;
   gallery_id: string;
-  image_url: string;
   alt_text: string | null;
   view_order: number;
   is_visible: boolean;
@@ -29,7 +28,6 @@ interface PortfolioGalleryRecord {
 
 interface PortfolioGalleryImageViewModel {
   imageId: string;
-  imageUrl: string;
   thumbUrl: string;
   fullUrl: string;
   altText: string;
@@ -199,7 +197,6 @@ export class PortfolioDetailComponent implements OnInit {
         .select(`
           image_id,
           gallery_id,
-          image_url,
           alt_text,
           view_order,
           is_visible,
@@ -241,7 +238,6 @@ export class PortfolioDetailComponent implements OnInit {
       description: gallery.description || '',
       images: images.map(img => ({
         imageId: img.image_id,
-        imageUrl: img.image_url,
         thumbUrl: img.thumb_url,
         fullUrl: img.full_url,
         altText: img.alt_text || gallery.couple_names,
@@ -286,7 +282,7 @@ export class PortfolioDetailComponent implements OnInit {
       description,
       image,
       location: gallery.venue,
-      images: gallery.images.map((item) => item.fullUrl || item.imageUrl).filter((item) => !!item),
+      images: gallery.images.map((item) => item.fullUrl).filter((item) => !!item),
     });
   }
 }
