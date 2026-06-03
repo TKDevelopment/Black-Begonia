@@ -1,5 +1,5 @@
 import { CatalogItemType, CatalogUnitType } from './catalog-item';
-import { ProposalRendererKey } from '../proposal-templates/proposal-renderer-registry';
+import { ProposalRendererKey } from '../proposal-templates/proposal-renderer.types';
 
 export type FloralProposalStatus =
   | 'draft'
@@ -46,6 +46,7 @@ export interface FloralProposalRenderLeadContext {
 }
 
 export interface FloralProposalRenderTemplateContext {
+  // Export-rendering metadata only. The florist no longer selects a proposal template in the CRM.
   template_id?: string | null;
   name?: string | null;
   template_key?: string | null;
@@ -138,6 +139,7 @@ export interface FloralProposalRenderContract {
 }
 
 export interface DocumentTemplate {
+  // Retained for internal export rendering and historical records, not active proposal authoring.
   template_id: string;
   name: string;
   template_key: string;
@@ -168,6 +170,7 @@ export interface GrapesJsStoredTemplateConfig {
 export interface FloralProposal {
   floral_proposal_id: string;
   lead_id: string;
+  // Legacy linkage retained for historical proposal records only.
   template_id?: string | null;
   tax_region_id?: string | null;
   version: number;
@@ -185,6 +188,9 @@ export interface FloralProposal {
   privacy_policy_version: string;
   accepted_terms: boolean;
   accepted_privacy_policy: boolean;
+  finalized_at?: string | null;
+  edit_reopened_at?: string | null;
+  submitted_at?: string | null;
   accepted_at?: string | null;
   declined_at?: string | null;
   signed_at?: string | null;
@@ -265,7 +271,6 @@ export interface FloralProposalShoppingListItem {
 
 export interface CreateFloralProposalInput {
   lead_id: string;
-  template_id?: string | null;
   tax_region_id?: string | null;
   version: number;
   is_active?: boolean;
@@ -280,6 +285,9 @@ export interface CreateFloralProposalInput {
   total_amount: number;
   terms_version?: string;
   privacy_policy_version?: string;
+  finalized_at?: string | null;
+  edit_reopened_at?: string | null;
+  submitted_at?: string | null;
   snapshot?: Record<string, unknown>;
   created_by?: string | null;
 }

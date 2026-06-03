@@ -1,6 +1,8 @@
 create table public.floral_proposals (
   floral_proposal_id uuid not null default gen_random_uuid (),
   lead_id uuid not null,
+  -- Legacy template linkage retained only for historical records during workflow reset.
+  -- New proposal-builder saves and florist-supplied PDF submissions should not rely on this field.
   template_id uuid null,
   tax_region_id uuid null,
   version smallint not null,

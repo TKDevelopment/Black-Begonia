@@ -10,6 +10,7 @@ export interface FloralServiceDefinition {
   eventType: FloralServiceEventType;
   workflowMode: FloralServiceWorkflowMode;
   documentMode: FloralServiceDocumentMode;
+  // Export-rendering hint only. Proposal creation no longer depends on template selection.
   rendererKey: ProposalRendererKey;
   description: string;
   aliases?: string[];

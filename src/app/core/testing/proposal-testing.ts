@@ -25,6 +25,14 @@ export interface ProposalStorageTestDouble {
   getPublicUrl: jasmine.Spy;
 }
 
+export interface ProposalSnapshotTestOptions {
+  finalizedAt?: string;
+  editReopenedAt?: string | null;
+  submittedAt?: string | null;
+  submittedPdfFileName?: string | null;
+  proposalStatus?: 'draft' | 'finalized' | 'submitted';
+}
+
 export function createBrowserPopupTestDouble(): BrowserPopupTestDouble {
   return {
     document: {
@@ -84,4 +92,28 @@ export function createImageFile(
 
 export function createPdfFile(name = 'proposal.pdf'): File {
   return new File(['%PDF-1.4 synthetic'], name, { type: 'application/pdf' });
+}
+
+export function createFinalizedProposalSnapshot(
+  overrides: ProposalSnapshotTestOptions = {}
+): Record<string, unknown> {
+  return {
+    proposal_status: overrides.proposalStatus ?? 'finalized',
+    finalized_at: overrides.finalizedAt ?? '2026-06-02T12:00:00.000Z',
+    edit_reopened_at: overrides.editReopenedAt ?? null,
+    submitted_at: overrides.submittedAt ?? null,
+    submitted_pdf_file_name: overrides.submittedPdfFileName ?? null,
+  };
+}
+
+export function createSubmittedProposalSnapshot(
+  pdfFileName = 'proposal.pdf',
+  overrides: ProposalSnapshotTestOptions = {}
+): Record<string, unknown> {
+  return createFinalizedProposalSnapshot({
+    ...overrides,
+    proposalStatus: overrides.proposalStatus ?? 'submitted',
+    submittedAt: overrides.submittedAt ?? '2026-06-02T13:00:00.000Z',
+    submittedPdfFileName: overrides.submittedPdfFileName ?? pdfFileName,
+  });
 }

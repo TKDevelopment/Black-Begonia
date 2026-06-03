@@ -364,7 +364,7 @@ export const testActivityLogEntry: ActivityLogEntry = {
 export const testFloralProposal: FloralProposal = {
   floral_proposal_id: 'proposal-test-001',
   lead_id: testLead.lead_id,
-  template_id: testDocumentTemplate.template_id,
+  template_id: null,
   tax_region_id: testTaxRegion.tax_region_id,
   version: 1,
   is_active: true,
@@ -392,7 +392,7 @@ export const testFloralProposal: FloralProposal = {
   created_by: 'user-test-001',
   created_at: now,
   updated_at: now,
-  template: testDocumentTemplate,
+  template: null,
 };
 
 export const testProposalLineItem: FloralProposalLineItem = {

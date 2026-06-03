@@ -190,14 +190,11 @@ describe('FloralProposalBuilderService', () => {
     const payload = service.buildRenderPayload({
       lines: [blankLine, product, fee],
       taxRegion,
-      templateId: 'template-test-001',
-      templateName: 'Editorial Test',
       defaultMarkupPercent: 30,
       laborPercent: 10,
       shoppingList: [],
     });
 
-    expect(payload.template_id).toBe('template-test-001');
     expect(payload.tax_region_name).toBe('Austin Test Tax');
     expect(payload.line_items.length).toBe(2);
     expect(payload.line_items[0]).toEqual(
@@ -214,6 +211,18 @@ describe('FloralProposalBuilderService', () => {
     );
     expect(payload.line_items[0].components.length).toBe(1);
     expect(payload.line_items[1].line_type_label).toBe('Fee');
+    expect(payload.line_items[0] as Record<string, unknown>).not.toEqual(
+      jasmine.objectContaining({
+        template_id: jasmine.anything(),
+        template_name: jasmine.anything(),
+      })
+    );
+    expect(payload as Record<string, unknown>).not.toEqual(
+      jasmine.objectContaining({
+        template_id: jasmine.anything(),
+        template_name: jasmine.anything(),
+      })
+    );
     expect(payload.totals).toEqual({
       subtotal: 98.92,
       taxAmount: 7.91,

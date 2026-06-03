@@ -65,8 +65,6 @@ export interface FloralProposalRenderPayloadLine {
 }
 
 export interface FloralProposalRenderPayload {
-  template_id?: string | null;
-  template_name?: string | null;
   tax_region_id?: string | null;
   tax_region_name?: string | null;
   tax_rate: number;
@@ -357,8 +355,6 @@ export class FloralProposalBuilderService {
   buildRenderPayload(args: {
     lines: FloralProposalBuilderLine[];
     taxRegion: TaxRegion | null;
-    templateId?: string | null;
-    templateName?: string | null;
     defaultMarkupPercent: number;
     laborPercent: number;
     shoppingList: FloralProposalShoppingListItem[];
@@ -396,8 +392,6 @@ export class FloralProposalBuilderService {
     );
 
     return {
-      template_id: args.templateId ?? null,
-      template_name: args.templateName ?? null,
       tax_region_id: args.taxRegion?.tax_region_id ?? null,
       tax_region_name: args.taxRegion?.name ?? null,
       tax_rate: args.taxRegion?.tax_rate ?? 0,

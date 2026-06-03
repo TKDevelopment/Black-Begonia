@@ -59,6 +59,7 @@ describe('ProposalReviewComponent', () => {
     expect(text()).toContain('Avery Bloom');
     expect(text()).toContain('v3');
     expect(text()).toContain('June 20, 2026');
+    expect(text()).toContain('canva-proposal.pdf');
     expect(anchor('a')?.href).toBe('https://example.test/proposal.pdf');
     expect(iframe()?.getAttribute('title')).toBe('Floral Proposal PDF viewer');
   });
@@ -230,6 +231,7 @@ describe('ProposalReviewComponent', () => {
       event_type: 'wedding',
       service_type: 'full service',
       version: 3,
+      file_name: 'canva-proposal.pdf',
       pdf_url: 'https://example.test/proposal.pdf',
       response_action: null,
       response_feedback: null,
