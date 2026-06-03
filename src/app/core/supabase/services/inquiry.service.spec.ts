@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { InquiryService } from './inquiry.service';
 
-describe('InquiryServiceService', () => {
+describe('InquiryService', () => {
   let service: InquiryService;
 
   beforeEach(() => {
@@ -10,7 +10,14 @@ describe('InquiryServiceService', () => {
     service = TestBed.inject(InquiryService);
   });
 
-  it('should be created', () => {
+  it('is injectable for future inquiry workflow behavior', () => {
     expect(service).toBeTruthy();
+  });
+
+  it('does not currently own executable inquiry success or failure workflow logic', () => {
+    const prototypeMethods = Object.getOwnPropertyNames(InquiryService.prototype)
+      .filter(methodName => methodName !== 'constructor');
+
+    expect(prototypeMethods).toEqual([]);
   });
 });

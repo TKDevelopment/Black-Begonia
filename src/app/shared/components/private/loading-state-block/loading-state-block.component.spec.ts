@@ -20,4 +20,14 @@ describe('LoadingStateBlockComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should render custom loading copy', () => {
+    component.title = 'Loading leads';
+    component.description = 'Gathering current lead records.';
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Loading leads');
+    expect(compiled.textContent).toContain('Gathering current lead records.');
+  });
 });

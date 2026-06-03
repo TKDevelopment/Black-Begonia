@@ -58,6 +58,19 @@ To execute unit tests with the [Karma](https://karma-runner.github.io) test runn
 ng test
 ```
 
+For headless coverage verification, run:
+
+```bash
+npm run test:coverage
+```
+
+All new frontend behavior under `src/app` must include colocated Karma/Jasmine
+unit tests in the same change. If a file has no executable behavior, document the
+approved exclusion in `specs/001-unit-test-coverage/coverage-manifest.md` with the
+path, reason, and notes. Critical inquiry, lead, proposal, authorization, and
+environment-specific workflows need both success-path and failure-path assertions
+when touched.
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:

@@ -2,12 +2,14 @@
 
 # Compiled output
 /dist
+/build
 /tmp
 /out-tsc
 /bazel-out
 
 # Node
 /node_modules
+*.log
 npm-debug.log
 yarn-error.log
 
@@ -29,6 +31,7 @@ yarn-error.log
 .history/*
 
 # Miscellaneous
+.env*
 /.angular/cache
 .sass-cache/
 /connect.lock
