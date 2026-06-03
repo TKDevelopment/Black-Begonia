@@ -13,6 +13,7 @@
     "postbuild": "",
     "watch": "ng build --watch --configuration dev",
     "test": "ng test",
+    "test:coverage": "ng test --watch=false --browsers=ChromeHeadless --code-coverage",
     "serve:ssr:Black-Begonia": "node dist/black-begonia/server/server.mjs"
   },
   "private": true,

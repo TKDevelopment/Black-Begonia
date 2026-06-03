@@ -1,0 +1,468 @@
+import { TestBed } from '@angular/core/testing';
+
+import { CatalogItem } from '../../models/catalog-item';
+import {
+  FloralProposalComponent,
+  FloralProposalLineItem,
+} from '../../models/floral-proposal';
+import { TaxRegion } from '../../models/tax-region';
+import {
+  FloralProposalBuilderComponentRow,
+  FloralProposalBuilderLine,
+  FloralProposalBuilderService,
+} from './floral-proposal-builder.service';
+
+describe('FloralProposalBuilderService', () => {
+  let service: FloralProposalBuilderService;
+
+  const taxRegion: TaxRegion = {
+    tax_region_id: 'tax-region-test-001',
+    name: 'Austin Test Tax',
+    authority_name: 'Test Authority',
+    tax_rate: 0.08,
+    applies_to_products: true,
+    applies_to_services: true,
+    applies_to_delivery: true,
+    is_active: true,
+    created_at: '2026-06-02T12:00:00.000Z',
+    updated_at: '2026-06-02T12:00:00.000Z',
+  };
+
+  const catalogItem: CatalogItem = {
+    item_id: 'catalog-rose-001',
+    name: 'Garden Rose',
+    item_type: 'flower',
+    unit_type: 'bunch',
+    pack_quantity: 10,
+    color: 'Blush',
+    variety: 'Juliet',
+    sku: 'ROSE-JULIET',
+    base_unit_cost: 30,
+    default_waste_percent: 10,
+    is_active: true,
+    created_at: '2026-06-02T12:00:00.000Z',
+    updated_at: '2026-06-02T12:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(FloralProposalBuilderService);
+  });
+
+  it('creates empty product lines and component rows with deterministic defaults', () => {
+    const line = service.createEmptyLine(2);
+    const component = service.createEmptyComponentRow(3, 35);
+
+    expect(line.local_id).toContain('line-');
+    expect(line.display_order).toBe(2);
+    expect(line.line_item_type).toBe('product');
+    expect(line.quantity).toBe(1);
+    expect(line.unit_price).toBe(0);
+    expect(line.components).toEqual([]);
+    expect(line.expanded).toBeFalse();
+
+    expect(component.local_id).toContain('component-');
+    expect(component.display_order).toBe(3);
+    expect(component.catalog_item_id).toBeNull();
+    expect(component.applied_markup_percent).toBe(35);
+    expect(component.quantity_per_unit).toBe(0);
+    expect(component.purchase_unit_cost).toBe(0);
+  });
+
+  it('applies catalog item data to component rows and prices pack-based items per unit', () => {
+    const component = {
+      ...service.createEmptyComponentRow(0, 25),
+      quantity_per_unit: 2,
+    };
+
+    const result = service.applyCatalogItemToComponent(
+      component,
+      catalogItem,
+      3,
+      25,
+      12
+    );
+
+    expect(result.catalog_item_id).toBe(catalogItem.item_id);
+    expect(result.catalog_item_name).toBe('Garden Rose');
+    expect(result.base_unit_cost).toBe(3);
+    expect(result.purchase_unit_cost).toBe(30);
+    expect(result.pack_quantity).toBe(10);
+    expect(result.applied_markup_percent).toBe(25);
+    expect(result.sell_unit_price).toBe(3.75);
+    expect(result.quantity_per_unit).toBe(2);
+    expect(result.extended_quantity).toBe(6);
+    expect(result.subtotal).toBe(7.5);
+    expect(result.reserve_percent).toBe(12);
+    expect(result.snapshot).toEqual({
+      color: 'Blush',
+      variety: 'Juliet',
+      sku: 'ROSE-JULIET',
+    });
+  });
+
+  it('recalculates product, fee, and discount line subtotals', () => {
+    const product = service.recalculateLine({
+      ...service.createEmptyLine(0),
+      quantity: 3,
+      unit_price: 999,
+      components: [
+        {
+          ...service.createEmptyComponentRow(0, 20),
+          catalog_item_name: 'Rose',
+          quantity_per_unit: 2,
+          base_unit_cost: 4,
+          purchase_unit_cost: 4,
+          applied_markup_percent: 50,
+        },
+        {
+          ...service.createEmptyComponentRow(1, 20),
+          catalog_item_name: 'Ribbon',
+          quantity_per_unit: 1.5,
+          base_unit_cost: 2,
+          purchase_unit_cost: 2,
+          applied_markup_percent: 25,
+        },
+      ],
+    });
+    const fee = service.createFeeLine(1, 'Delivery', 2, 35);
+    const discount = service.createDiscountLine(2, 'Courtesy Credit', 1, 15);
+
+    expect(product.quantity).toBe(3);
+    expect(product.components[0].display_order).toBe(0);
+    expect(product.components[0].extended_quantity).toBe(6);
+    expect(product.unit_price).toBe(15.75);
+    expect(product.subtotal).toBe(47.25);
+
+    expect(fee.line_item_type).toBe('fee');
+    expect(fee.subtotal).toBe(70);
+
+    expect(discount.line_item_type).toBe('discount');
+    expect(discount.subtotal).toBe(-15);
+  });
+
+  it('calculates totals with product labor, manual labor, fees, discounts, and tax', () => {
+    const lines: FloralProposalBuilderLine[] = [
+      { ...service.createEmptyLine(0), line_item_type: 'product', subtotal: 100 },
+      { ...service.createFeeLine(1, 'Setup Labor', 1, 20), line_item_type: 'labor' },
+      service.createFeeLine(2, 'Delivery', 1, 10),
+      service.createDiscountLine(3, 'Courtesy Credit', 1, 5),
+    ];
+
+    const totals = service.calculateTotals(lines, taxRegion, 15);
+
+    expect(totals.subtotal).toBe(140);
+    expect(totals.taxAmount).toBe(11.2);
+    expect(totals.totalAmount).toBe(151.2);
+  });
+
+  it('builds render payloads with normalized lines, filtered blanks, totals, and breakdowns', () => {
+    const blankLine = service.createEmptyLine(0);
+    const product = service.recalculateLine({
+      ...service.createEmptyLine(1),
+      item_name: '  Ceremony Meadow  ',
+      description: '  Lush aisle florals  ',
+      quantity: 2,
+      components: [
+        {
+          ...service.createEmptyComponentRow(0, 20),
+          catalog_item_name: ' Garden Rose ',
+          quantity_per_unit: 5,
+          base_unit_cost: 4,
+          purchase_unit_cost: 4,
+          applied_markup_percent: 50,
+        },
+        {
+          ...service.createEmptyComponentRow(1, 20),
+          catalog_item_name: '   ',
+          quantity_per_unit: 3,
+          base_unit_cost: 1,
+          purchase_unit_cost: 1,
+        },
+      ],
+      image_storage_path: 'proposal-images/meadow.jpg',
+      image_signed_url: 'https://example.test/meadow.jpg',
+      image_alt_text: 'Meadow arrangement',
+      image_caption: 'Ceremony meadow',
+    });
+    const fee = service.createFeeLine(2, 'Delivery', 1, 25);
+
+    const payload = service.buildRenderPayload({
+      lines: [blankLine, product, fee],
+      taxRegion,
+      templateId: 'template-test-001',
+      templateName: 'Editorial Test',
+      defaultMarkupPercent: 30,
+      laborPercent: 10,
+      shoppingList: [],
+    });
+
+    expect(payload.template_id).toBe('template-test-001');
+    expect(payload.tax_region_name).toBe('Austin Test Tax');
+    expect(payload.line_items.length).toBe(2);
+    expect(payload.line_items[0]).toEqual(
+      jasmine.objectContaining({
+        display_order: 1,
+        line_item_type: 'product',
+        line_type_label: 'Product',
+        item_name: 'Ceremony Meadow',
+        description: 'Lush aisle florals',
+        quantity: 2,
+        unit_price: 33.6,
+        subtotal: 67.2,
+      })
+    );
+    expect(payload.line_items[0].components.length).toBe(1);
+    expect(payload.line_items[1].line_type_label).toBe('Fee');
+    expect(payload.totals).toEqual({
+      subtotal: 98.92,
+      taxAmount: 7.91,
+      totalAmount: 106.83,
+    });
+    expect(payload.breakdown).toEqual(
+      jasmine.objectContaining({
+        productsTotal: 67.2,
+        calculatedLaborAmount: 6.72,
+        laborTotal: 6.72,
+        feesTotal: 25,
+        discountsTotal: 0,
+      })
+    );
+  });
+
+  it('builds line item payloads and component payload maps for persistence', () => {
+    const line = service.recalculateLine({
+      ...service.createEmptyLine(4),
+      item_name: '  Personal Flowers  ',
+      description: '  Bridal bouquet and boutonniere  ',
+      quantity: 1,
+      expanded: true,
+      snapshot: { source: 'builder' },
+      components: [
+        {
+          ...service.createEmptyComponentRow(0, 20),
+          catalog_item_id: 'catalog-rose-001',
+          catalog_item_name: ' Garden Rose ',
+          quantity_per_unit: 12,
+          base_unit_cost: 4,
+          purchase_unit_cost: 4,
+          applied_markup_percent: 50,
+          reserve_percent: 10,
+          item_type: 'flower',
+          unit_type: 'stem',
+          color: 'Blush',
+          variety: 'Juliet',
+        },
+        {
+          ...service.createEmptyComponentRow(1, 20),
+          catalog_item_name: ' ',
+        },
+      ],
+    });
+    const savedLine: FloralProposalLineItem = {
+      floral_proposal_line_item_id: 'saved-line-001',
+      floral_proposal_id: 'proposal-test-001',
+      display_order: 0,
+      line_item_type: 'product',
+      item_name: 'Personal Flowers',
+      quantity: 1,
+      unit_price: line.unit_price,
+      subtotal: line.subtotal,
+      image_storage_path: null,
+      image_alt_text: null,
+      image_caption: null,
+      snapshot: {},
+      created_at: '2026-06-02T12:00:00.000Z',
+      updated_at: '2026-06-02T12:00:00.000Z',
+    };
+
+    const linePayloads = service.buildLineItemPayloads([line]);
+    const componentMap = service.buildComponentPayloadMap([savedLine], [
+      { ...line, display_order: 0 },
+    ]);
+
+    expect(linePayloads[0]).toEqual(
+      jasmine.objectContaining({
+        display_order: 0,
+        item_name: 'Personal Flowers',
+        quantity: 1,
+        unit_price: 72,
+        subtotal: 72,
+      })
+    );
+    expect(linePayloads[0].snapshot).toEqual({
+      source: 'builder',
+      expanded: true,
+      description: 'Bridal bouquet and boutonniere',
+    });
+    expect(componentMap['saved-line-001'].length).toBe(1);
+    expect(componentMap['saved-line-001'][0]).toEqual(
+      jasmine.objectContaining({
+        floral_proposal_line_item_id: 'saved-line-001',
+        display_order: 0,
+        catalog_item_name: 'Garden Rose',
+        quantity_per_unit: 12,
+        extended_quantity: 12,
+        sell_unit_price: 6,
+        subtotal: 72,
+      })
+    );
+    expect(componentMap['saved-line-001'][0].snapshot).toEqual(
+      jasmine.objectContaining({
+        purchase_unit_cost: 4,
+        item_type: 'flower',
+        unit_type: 'stem',
+        color: 'Blush',
+        variety: 'Juliet',
+      })
+    );
+  });
+
+  it('builds and aggregates shopping list items with reserve and pack math', () => {
+    const firstLine = service.recalculateLine({
+      ...service.createEmptyLine(0),
+      quantity: 2,
+      components: [
+        {
+          ...service.createEmptyComponentRow(0, 20),
+          catalog_item_id: 'catalog-rose-001',
+          catalog_item_name: 'Garden Rose',
+          quantity_per_unit: 6,
+          extended_quantity: 12,
+          base_unit_cost: 3,
+          purchase_unit_cost: 30,
+          applied_markup_percent: 20,
+          reserve_percent: 10,
+          pack_quantity: 10,
+          item_type: 'flower',
+          unit_type: 'bunch',
+        },
+      ],
+    });
+    const secondLine = service.recalculateLine({
+      ...service.createEmptyLine(1),
+      quantity: 1,
+      components: [
+        {
+          ...service.createEmptyComponentRow(0, 20),
+          catalog_item_id: 'catalog-rose-001',
+          catalog_item_name: 'Garden Rose',
+          quantity_per_unit: 5,
+          extended_quantity: 5,
+          base_unit_cost: 3,
+          purchase_unit_cost: 30,
+          applied_markup_percent: 20,
+          reserve_percent: 10,
+          pack_quantity: 10,
+          item_type: 'flower',
+          unit_type: 'bunch',
+        },
+      ],
+    });
+
+    const shoppingList = service.buildShoppingList([firstLine, secondLine]);
+
+    expect(shoppingList.length).toBe(1);
+    expect(shoppingList[0]).toEqual(
+      jasmine.objectContaining({
+        catalog_item_id: 'catalog-rose-001',
+        item_name: 'Garden Rose',
+        required_units: 17,
+        reserve_percent: 10,
+        total_plus_reserve: 20,
+        reserve_units: 10,
+        total_units_to_buy: 30,
+        units_per_pack: 10,
+        required_pack_count: 3,
+        estimated_pack_cost: 30,
+        total_estimated_cost: 90,
+        notes: 'Buy in packs of 10.',
+      })
+    );
+  });
+
+  it('hydrates persisted line items and components back into builder lines', () => {
+    const lineItem: FloralProposalLineItem = {
+      floral_proposal_line_item_id: 'line-persisted-001',
+      floral_proposal_id: 'proposal-test-001',
+      display_order: 2,
+      line_item_type: 'product',
+      item_name: 'Reception Install',
+      quantity: 2,
+      unit_price: 100,
+      subtotal: 200,
+      image_storage_path: 'proposal-images/install.jpg',
+      image_alt_text: 'Reception install',
+      image_caption: 'A hanging installation',
+      snapshot: {
+        description: 'Suspended greenery',
+        expanded: true,
+      },
+      created_at: '2026-06-02T12:00:00.000Z',
+      updated_at: '2026-06-02T12:00:00.000Z',
+    };
+    const component: FloralProposalComponent = {
+      floral_proposal_component_id: 'component-persisted-001',
+      floral_proposal_line_item_id: lineItem.floral_proposal_line_item_id,
+      display_order: 0,
+      catalog_item_id: 'catalog-smilax-001',
+      catalog_item_name: 'Smilax',
+      quantity_per_unit: 3,
+      extended_quantity: 6,
+      base_unit_cost: 8,
+      applied_markup_percent: 50,
+      sell_unit_price: 12,
+      subtotal: 36,
+      reserve_percent: 15,
+      snapshot: {
+        pack_quantity: 5,
+        purchase_unit_cost: 40,
+        item_type: 'greenery',
+        unit_type: 'bundle',
+        color: 'Green',
+        variety: 'Smilax',
+      },
+      created_at: '2026-06-02T12:00:00.000Z',
+      updated_at: '2026-06-02T12:00:00.000Z',
+    };
+
+    const hydrated = service.hydrateBuilderLines([lineItem], [component]);
+
+    expect(hydrated.length).toBe(1);
+    expect(hydrated[0]).toEqual(
+      jasmine.objectContaining({
+        local_id: 'line-persisted-001',
+        display_order: 2,
+        item_name: 'Reception Install',
+        description: 'Suspended greenery',
+        quantity: 2,
+        unit_price: 36,
+        subtotal: 72,
+        image_storage_path: 'proposal-images/install.jpg',
+        image_signed_url: null,
+        expanded: false,
+      })
+    );
+    expect(hydrated[0].components[0]).toEqual(
+      jasmine.objectContaining({
+        catalog_item_name: 'Smilax',
+        quantity_per_unit: 3,
+        extended_quantity: 6,
+        base_unit_cost: 8,
+        purchase_unit_cost: 40,
+        pack_quantity: 5,
+        item_type: 'greenery',
+        unit_type: 'bundle',
+        color: 'Green',
+        variety: 'Smilax',
+      })
+    );
+  });
+
+  it('formats supported line type labels', () => {
+    expect(service.formatLineTypeLabel('product')).toBe('Product');
+    expect(service.formatLineTypeLabel('labor')).toBe('Labor');
+    expect(service.formatLineTypeLabel('fee')).toBe('Fee');
+    expect(service.formatLineTypeLabel('discount')).toBe('Discount');
+  });
+});

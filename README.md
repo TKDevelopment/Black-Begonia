@@ -2,6 +2,20 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.5.
 
+## Project Context
+
+Black Begonia is a brownfield Angular 19 application for Black Begonia Florals.
+The current codebase hosts the public website, client proposal access surface,
+and CRM admin portal in one Angular project, backed by Supabase schemas, storage,
+and edge functions.
+
+Development is governed by the project constitution in
+`.specify/memory/constitution.md`. Public website changes require product owner
+approval before implementation. Supabase work must account for RLS, storage
+policies, edge-function boundaries, and secret handling. Karma/Jasmine is the
+default unit-test stack, with focused integration checks required for proposal,
+lead, inquiry, authorization, and sensitive data flows when touched.
+
 ## Development server
 
 To start a local development server, run:
@@ -43,6 +57,19 @@ To execute unit tests with the [Karma](https://karma-runner.github.io) test runn
 ```bash
 ng test
 ```
+
+For headless coverage verification, run:
+
+```bash
+npm run test:coverage
+```
+
+All new frontend behavior under `src/app` must include colocated Karma/Jasmine
+unit tests in the same change. If a file has no executable behavior, document the
+approved exclusion in `specs/001-unit-test-coverage/coverage-manifest.md` with the
+path, reason, and notes. Critical inquiry, lead, proposal, authorization, and
+environment-specific workflows need both success-path and failure-path assertions
+when touched.
 
 ## Running end-to-end tests
 

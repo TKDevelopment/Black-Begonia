@@ -4,7 +4,8 @@
 
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit-plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit-plan` command. See
+`.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
@@ -12,35 +13,59 @@
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Angular 19 / TypeScript 5.8 for frontend work; Supabase
+Edge Functions TypeScript where backend edge code is involved, or NEEDS
+CLARIFICATION if the feature introduces a different runtime.
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
+**Primary Dependencies**: Angular Material/CDK, Supabase client, Supabase Edge
+Functions, Netlify, Angular SSR/Express, Karma/Jasmine, and any feature-specific
+libraries such as FullCalendar, Canva, GrapesJS, or Mailgun.
 
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+**Storage**: Supabase Postgres, Supabase Storage, and edge-function-managed
+records where applicable; document table, RLS, and storage policy impact.
 
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+**Testing**: Karma/Jasmine unit tests by default; focused integration checks for
+proposal, lead, inquiry, Supabase, and edge-function flows when touched.
 
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
+**Target Platform**: Netlify-hosted Angular web application with SSR/server
+build pieces as needed, plus Supabase backend services.
 
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: Brownfield web application and CRM with public website,
+client portal, and CRM admin portal surfaces.
 
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
+**Performance Goals**: [Domain-specific performance goal or NEEDS CLARIFICATION]
 
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
+**Constraints**: Preserve brownfield behavior unless explicitly approved; no
+frontend service-role secrets; Supabase RLS and storage policies required for
+data changes; public site changes require product owner approval.
 
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
-
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Scale/Scope**: [Feature scope, affected routes, affected tables, users, and
+operational workflows or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Surface classification**: Identify whether the feature touches the public
+  website, client portal, CRM admin portal, Supabase backend, or cross-cutting
+  code. Public website changes require product owner approval before edits.
+- **Brownfield preservation**: List existing routes, components, services,
+  edge functions, tables, and behaviors that MUST remain unchanged.
+- **Supabase security**: For any database/storage/edge-function change,
+  document RLS intent, role access, storage policies, secret handling, and
+  frontend/backend data boundaries.
+- **Testing plan**: Define Karma/Jasmine unit tests and any focused integration
+  checks required for proposal, lead, inquiry, or authorization flows. Explain
+  how the work contributes toward the 80% coverage target.
+- **Frontend boundary plan**: State whether the work affects the future public
+  website, client portal, or CRM admin separation. For migration work, include
+  staged routing, auth, deployment, shared code, and rollback considerations.
+- **Proposal workflow rule**: If proposal functionality is touched, preserve the
+  invoice/planning data flow and manual Canva PDF upload direction unless the
+  approved spec explicitly says otherwise.
+- **Security and privacy**: Confirm no service-role keys or privileged secrets
+  enter frontend code, and describe handling for emails, proposal passcodes,
+  signatures, customer data, PDFs, and payment-related records.
 
 ## Project Structure
 
@@ -48,56 +73,33 @@
 
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/speckit-plan command output)
-├── research.md          # Phase 0 output (/speckit-plan command)
-├── data-model.md        # Phase 1 output (/speckit-plan command)
-├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── contracts/           # Phase 1 output (/speckit-plan command)
-└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
+  plan.md
+  research.md
+  data-model.md
+  quickstart.md
+  contracts/
+  tasks.md
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+  app/
+    components/public/          # Public website routes and content
+    components/proposal-access/ # Client proposal access surface
+    components/private/         # CRM admin portal
+    core/                       # Auth, guards, models, SEO, Supabase services
+    shared/                     # Shared public/private UI primitives
+  environments/                 # Environment config
 
-tests/
-├── contract/
-├── integration/
-└── unit/
+supabase/
+  schemas/public/tables/        # Supabase table definitions
+  edge_functions/               # Supabase Edge Functions
+  s3_storage/                   # Storage bucket organization
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+scripts/                        # Build and sitemap helpers
+.specify/                       # Spec Kit memory, templates, workflows
 ```
 
 **Structure Decision**: [Document the selected structure and reference the real
@@ -109,5 +111,5 @@ directories captured above]
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| [e.g., public site edit before approval] | [current need] | [why deferring or isolating change is insufficient] |
+| [e.g., frontend split migration] | [specific problem] | [why route-level isolation in current app is insufficient] |
