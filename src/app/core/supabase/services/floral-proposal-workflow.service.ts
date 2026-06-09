@@ -2,31 +2,16 @@ import { Injectable } from '@angular/core';
 
 import { Lead } from '../../models/lead';
 import {
-  normalizeFloralServiceEventType,
-} from '../../floral-services/floral-service-catalog';
-import {
-  DocumentTemplate,
   FloralProposal,
-  FloralProposalRenderContract,
-  FloralProposalRenderLineItem,
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
-import { TaxRegion } from '../../models/tax-region';
-import {
-  deriveProposalRendererKeyFromServiceType,
-  getTemplateRendererKey,
-} from '../../proposal-templates/proposal-renderer-registry';
-import { ProposalTemplateDocumentService } from '../../proposal-templates/proposal-template-document.service';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
-import { DocumentTemplateService } from './document-template.service';
-import { FloralProposalRendererService } from './floral-proposal-renderer.service';
 
 export interface SubmitFloralProposalPayload {
   floral_proposal_id?: string | null;
   lead_id: string;
-  template_id?: string | null;
   tax_region_id?: string | null;
   line_items: {
     display_order: number;
@@ -62,29 +47,13 @@ export interface SubmitFloralProposalPayload {
   terms_version?: string;
   privacy_policy_version?: string;
   snapshot?: Record<string, unknown>;
-  render_contract?: FloralProposalRenderContract;
-  render_html?: string | null;
   pdf_base64?: string | null;
   pdf_file_name?: string | null;
 }
 
-export interface PreviewFloralProposalPdfResponse {
-  success: boolean;
-  pdf_base64?: string;
-  error?: string;
-}
-
-export interface PreviewFloralProposalPdfResult {
-  objectUrl: string;
-  pdfBase64: string;
-}
-
-export interface FloralProposalRenderContractInput {
-  lead: Lead;
-  proposal?: FloralProposal | null;
-  template?: DocumentTemplate | null;
-  taxRegion?: TaxRegion | null;
-  renderPayload: FloralProposalRenderPayload;
+export interface ProposalSnapshotLifecycle {
+  finalizedAt?: string | null;
+  editReopenedAt?: string | null;
 }
 
 @Injectable({
@@ -93,16 +62,12 @@ export interface FloralProposalRenderContractInput {
 export class FloralProposalWorkflowService {
   private readonly floralProposalBucket = 'floral-proposals';
   private readonly lineItemImageBucket = 'floral-proposal-line-items';
-  private readonly templateAssetBucket = 'proposal-template-assets';
   private readonly signedUrlExpirySeconds = 60 * 60;
   private readonly proposalAccessPath = '/proposal/auth';
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly floralProposalRepository: FloralProposalRepositoryService,
-    private readonly floralProposalRenderer: FloralProposalRendererService,
-    private readonly proposalTemplateDocumentService: ProposalTemplateDocumentService,
-    private readonly documentTemplateService: DocumentTemplateService
+    private readonly floralProposalRepository: FloralProposalRepositoryService
   ) {}
 
   async getLeadProposals(leadId: string): Promise<FloralProposal[]> {
@@ -254,43 +219,6 @@ export class FloralProposalWorkflowService {
     };
   }
 
-  async previewProposalPdf(
-    payload: SubmitFloralProposalPayload
-  ): Promise<PreviewFloralProposalPdfResult> {
-    const { data, error } = await this.supabaseService
-      .getClient()
-      .functions.invoke('preview-floral-proposal-pdf', {
-        body: payload,
-      });
-
-    if (error) {
-      console.error(
-        '[FloralProposalWorkflowService] previewProposalPdf invoke error:',
-        error
-      );
-      throw new Error(
-        'We could not generate the Floral Proposal PDF preview right now.'
-      );
-    }
-
-    const response = (data ?? null) as PreviewFloralProposalPdfResponse | null;
-    if (!response?.success || !response.pdf_base64) {
-      throw new Error(
-        response?.error ||
-          'We could not generate the Floral Proposal PDF preview right now.'
-      );
-    }
-
-    const bytes = Uint8Array.from(atob(response.pdf_base64), (char) =>
-      char.charCodeAt(0)
-    );
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    return {
-      objectUrl: URL.createObjectURL(blob),
-      pdfBase64: response.pdf_base64,
-    };
-  }
-
   async resendProposalAccessEmail(floralProposalId: string): Promise<void> {
     if (!floralProposalId) {
       throw new Error('A Floral Proposal is required to resend access.');
@@ -324,111 +252,98 @@ export class FloralProposalWorkflowService {
     }
   }
 
-  async createRenderContract(
-    input: FloralProposalRenderContractInput
-  ): Promise<FloralProposalRenderContract> {
-    const hydratedTemplate = await this.hydrateTemplateForRendering(input.template);
-    const templateLogoUrl = await this.resolveTemplateLogoUrl(hydratedTemplate);
-    const templateTheme = this.proposalTemplateDocumentService.getPublishedDocument(
-      hydratedTemplate
-    ).theme;
-    const lineItems = await Promise.all(
-      input.renderPayload.line_items.map((line) =>
-        this.resolveRenderLineItemAssets(line)
-      )
-    );
+  resolveStoredProposalStatus(
+    proposalStatus: 'draft' | 'finalized'
+  ): FloralProposal['status'] {
+    return proposalStatus === 'finalized' ? 'draft' : proposalStatus;
+  }
+
+  buildProposalSnapshot(args: {
+    renderPayload: FloralProposalRenderPayload;
+    proposalStatus?: FloralProposal['status'] | 'finalized';
+    existingSnapshot?: Record<string, unknown>;
+    lifecycle?: ProposalSnapshotLifecycle;
+  }): Record<string, unknown> {
+    const {
+      renderPayload,
+      proposalStatus = 'draft',
+      existingSnapshot = {},
+      lifecycle,
+    } = args;
 
     return {
-      proposal_id: input.proposal?.floral_proposal_id ?? null,
-      proposal_version: input.proposal?.version ?? null,
-      generated_at: new Date().toISOString(),
-      lead: {
-        lead_id: input.lead.lead_id,
-        first_name: input.lead.first_name,
-        last_name: input.lead.last_name,
-        partner_first_name: input.lead.partner_first_name ?? null,
-        partner_last_name: input.lead.partner_last_name ?? null,
-        email: input.lead.email,
-        phone: input.lead.phone ?? null,
-        service_type: input.lead.service_type,
-        event_type: input.lead.event_type ?? null,
-        event_date: input.lead.event_date ?? null,
-        ceremony_venue_name: input.lead.ceremony_venue_name ?? null,
-        ceremony_venue_city: input.lead.ceremony_venue_city ?? null,
-        ceremony_venue_state: input.lead.ceremony_venue_state ?? null,
-        ceremony_start_time: input.lead.ceremony_start_time ?? null,
-        reception_venue_name: input.lead.reception_venue_name ?? null,
-        reception_venue_city: input.lead.reception_venue_city ?? null,
-        reception_venue_state: input.lead.reception_venue_state ?? null,
-        reception_start_time: input.lead.reception_start_time ?? null,
-        event_start_time: input.lead.event_start_time ?? null,
-        status: input.lead.status,
-      },
-      template: {
-        template_id: hydratedTemplate?.template_id ?? input.renderPayload.template_id ?? null,
-        name: hydratedTemplate?.name ?? input.renderPayload.template_name ?? null,
-        template_key: hydratedTemplate?.template_key ?? null,
-        renderer_key:
-          getTemplateRendererKey(hydratedTemplate) ??
-          deriveProposalRendererKeyFromServiceType(
-            input.lead.service_type,
-            normalizeFloralServiceEventType(input.lead.event_type)
-          ),
-        primary_color: templateTheme.primaryColor,
-        accent_color: templateTheme.accentColor,
-        heading_font_family: templateTheme.headingFontFamily,
-        body_font_family: templateTheme.bodyFontFamily,
-        logo_url: templateLogoUrl,
-        show_intro_message: false,
-        template_config: hydratedTemplate?.template_config ?? {},
-      },
-      tax_region: {
-        tax_region_id: input.taxRegion?.tax_region_id ?? input.renderPayload.tax_region_id ?? null,
-        name: input.taxRegion?.name ?? input.renderPayload.tax_region_name ?? null,
-        tax_rate: input.renderPayload.tax_rate,
-      },
-      pricing: {
-        default_markup_percent: input.renderPayload.default_markup_percent,
-        labor_percent: input.renderPayload.labor_percent,
-      },
-      line_items: lineItems,
-      shopping_list: input.renderPayload.shopping_list,
-      totals: {
-        products_total: input.renderPayload.breakdown.productsTotal,
-        labor_total: input.renderPayload.breakdown.laborTotal,
-        fees_total: input.renderPayload.breakdown.feesTotal,
-        discounts_total: input.renderPayload.breakdown.discountsTotal,
-        subtotal: input.renderPayload.breakdown.subtotal,
-        tax_amount: input.renderPayload.totals.taxAmount,
-        total_amount: input.renderPayload.totals.totalAmount,
-      },
-      renderer_assets: {
-        line_item_images: lineItems
-          .filter((line) => line.image_storage_path || line.image_signed_url)
-          .map((line) => ({
-            display_order: line.display_order,
-            item_name: line.item_name,
-            storage_path: line.image_storage_path ?? null,
-            signed_url: line.image_signed_url ?? null,
-            alt_text: line.image_alt_text ?? null,
-            caption: line.image_caption ?? null,
-          })),
-      },
+      ...existingSnapshot,
+      proposal_status: proposalStatus,
+      finalized_at:
+        lifecycle?.finalizedAt ??
+        (proposalStatus === 'finalized'
+          ? (existingSnapshot['finalized_at'] as string | null | undefined) ??
+            new Date().toISOString()
+          : (existingSnapshot['finalized_at'] as string | null | undefined) ?? null),
+      edit_reopened_at:
+        lifecycle?.editReopenedAt ??
+        (existingSnapshot['edit_reopened_at'] as string | null | undefined) ??
+        null,
+      tax_region_id: renderPayload.tax_region_id,
+      tax_region_name: renderPayload.tax_region_name,
+      default_markup_percent: renderPayload.default_markup_percent,
+      labor_percent: renderPayload.labor_percent,
+      tax_rate: renderPayload.tax_rate,
+      line_items: renderPayload.line_items.map((line) => ({
+        display_order: line.display_order,
+        line_item_type: line.line_item_type,
+        item_name: line.item_name,
+        description: line.description ?? null,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        subtotal: line.subtotal,
+        image_storage_path: line.image_storage_path ?? null,
+        image_alt_text: line.image_alt_text ?? null,
+        image_caption: line.image_caption ?? null,
+        components: line.components.map((component) => ({
+          catalog_item_id: component.catalog_item_id ?? null,
+          catalog_item_name: component.catalog_item_name,
+          quantity_per_unit: component.quantity_per_unit,
+          extended_quantity: component.extended_quantity,
+          base_unit_cost: component.base_unit_cost,
+          applied_markup_percent: component.applied_markup_percent,
+          sell_unit_price: component.sell_unit_price,
+          subtotal: component.subtotal,
+        })),
+      })),
+      shopping_list: renderPayload.shopping_list,
+      totals: renderPayload.totals,
+      breakdown: renderPayload.breakdown,
     };
   }
 
-  buildSubmissionPayload(args: {
+  buildEditableProposalSnapshot(
+    existingSnapshot: Record<string, unknown>,
+    editReopenedAt = new Date().toISOString()
+  ): Record<string, unknown> {
+    return {
+      ...existingSnapshot,
+      proposal_status: 'draft',
+      edit_reopened_at: editReopenedAt,
+    };
+  }
+
+  buildManualSubmissionPayload(args: {
     lead: Lead;
-    renderContract: FloralProposalRenderContract;
+    proposal: FloralProposal;
+    renderPayload: FloralProposalRenderPayload;
+    pdfBase64: string;
+    pdfFileName: string;
     termsVersion?: string;
     privacyPolicyVersion?: string;
   }): SubmitFloralProposalPayload {
+    const submissionTimestamp = new Date().toISOString();
+
     return {
-      floral_proposal_id: args.renderContract.proposal_id ?? null,
+      floral_proposal_id: args.proposal.floral_proposal_id,
       lead_id: args.lead.lead_id,
-      template_id: args.renderContract.template.template_id ?? null,
-      tax_region_id: args.renderContract.tax_region.tax_region_id ?? null,
-      line_items: args.renderContract.line_items.map((line) => ({
+      tax_region_id: args.renderPayload.tax_region_id ?? null,
+      line_items: args.renderPayload.line_items.map((line) => ({
         display_order: line.display_order,
         line_item_type: line.line_item_type,
         item_name: line.item_name,
@@ -460,17 +375,30 @@ export class FloralProposalWorkflowService {
               }))
             : [],
       })),
-      shopping_list_items: args.renderContract.shopping_list,
-      subtotal: args.renderContract.totals.subtotal,
-      tax_rate: args.renderContract.tax_region.tax_rate,
-      tax_amount: args.renderContract.totals.tax_amount,
-      total_amount: args.renderContract.totals.total_amount,
+      shopping_list_items: args.renderPayload.shopping_list,
+      subtotal: args.renderPayload.totals.subtotal,
+      tax_rate: args.renderPayload.tax_rate,
+      tax_amount: args.renderPayload.totals.taxAmount,
+      total_amount: args.renderPayload.totals.totalAmount,
       terms_version: args.termsVersion ?? 'v1',
       privacy_policy_version: args.privacyPolicyVersion ?? 'v1',
-      render_contract: args.renderContract,
-      render_html: this.floralProposalRenderer.renderHtml(args.renderContract),
+      pdf_base64: args.pdfBase64,
+      pdf_file_name: args.pdfFileName,
       snapshot: {
-        render_contract: args.renderContract,
+        ...this.buildProposalSnapshot({
+          renderPayload: args.renderPayload,
+          proposalStatus: 'finalized',
+          existingSnapshot: (args.proposal.snapshot ?? {}) as Record<string, unknown>,
+          lifecycle: {
+            finalizedAt:
+              (args.proposal.snapshot?.['finalized_at'] as string | null | undefined) ?? null,
+            editReopenedAt:
+              (args.proposal.snapshot?.['edit_reopened_at'] as string | null | undefined) ?? null,
+          },
+        }),
+        proposal_version: args.proposal.version,
+        submitted_at: submissionTimestamp,
+        submitted_pdf_file_name: args.pdfFileName,
       },
     };
   }
@@ -540,92 +468,6 @@ export class FloralProposalWorkflowService {
       .replace(new RegExp(`^${bucket}/`), '');
 
     return normalizedPath || null;
-  }
-
-  private async resolveTemplateLogoUrl(
-    template?: DocumentTemplate | null
-  ): Promise<string | null> {
-    if (!template) return null;
-    if (template.logo_url) return template.logo_url;
-    if (!template.logo_storage_path) return null;
-
-    try {
-      return await this.createSignedStorageUrl(
-        this.templateAssetBucket,
-        template.logo_storage_path
-      );
-    } catch (error) {
-      console.error(
-        '[FloralProposalWorkflowService] resolveTemplateLogoUrl error:',
-        error
-      );
-      return null;
-    }
-  }
-
-  private async resolveRenderLineItemAssets(
-    line: FloralProposalRenderPayload['line_items'][number]
-  ): Promise<FloralProposalRenderLineItem> {
-    if (line.image_signed_url || !line.image_storage_path) {
-      return {
-        ...line,
-      };
-    }
-
-    try {
-      const signedUrl = await this.getSignedLineItemImageUrl(line.image_storage_path);
-      return {
-        ...line,
-        image_signed_url: signedUrl,
-      };
-    } catch (error) {
-      console.error(
-        '[FloralProposalWorkflowService] resolveRenderLineItemAssets error:',
-        error
-      );
-      return {
-        ...line,
-        image_signed_url: null,
-      };
-    }
-  }
-
-  private async hydrateTemplateForRendering(
-    template?: DocumentTemplate | null
-  ): Promise<DocumentTemplate | null> {
-    if (!template) {
-      return null;
-    }
-
-    const stored = this.proposalTemplateDocumentService.getStoredConfig(template);
-    if (!stored?.assets?.length) {
-      return template;
-    }
-
-    try {
-      const refreshedAssets = await this.documentTemplateService.refreshTemplateAssets(
-        stored.assets
-      );
-      const refreshedConfig =
-        this.proposalTemplateDocumentService.applyResolvedAssetUrlsToConfig(
-          stored,
-          refreshedAssets
-        );
-
-      return {
-        ...template,
-        template_config: this.proposalTemplateDocumentService.buildTemplateConfig(
-          template,
-          refreshedConfig
-        ),
-      };
-    } catch (error) {
-      console.error(
-        '[FloralProposalWorkflowService] hydrateTemplateForRendering error:',
-        error
-      );
-      return template;
-    }
   }
 }
 

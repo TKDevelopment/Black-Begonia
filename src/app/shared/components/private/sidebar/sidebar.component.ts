@@ -29,7 +29,6 @@ export class SidebarComponent {
   private readonly router = inject(Router);
   readonly crmThemeService = inject(CrmThemeService);
   readonly proposalSettingsOpen = signal(
-    this.router.url.startsWith('/admin/proposal-templates') ||
     this.router.url.startsWith('/admin/catalog-items') ||
       this.router.url.startsWith('/admin/tax-regions')
   );
@@ -47,7 +46,6 @@ export class SidebarComponent {
     {
       label: 'Proposal Settings',
       children: [
-        { label: 'Templates', route: '/admin/proposal-templates' },
         { label: 'Catalog', route: '/admin/catalog-items' },
         { label: 'Tax Regions', route: '/admin/tax-regions' },
       ],

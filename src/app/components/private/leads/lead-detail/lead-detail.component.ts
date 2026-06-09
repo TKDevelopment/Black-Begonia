@@ -106,8 +106,6 @@ export class LeadDetailComponent implements OnInit {
   inspirationUrls = signal<LeadInspirationUrl[]>([]);
 
   declineModalOpen = signal(false);
-  proposalModalOpen = signal(false);
-  proposalSubmitting = signal(false);
   proposalResending = signal(false);
   selectedProposalId = signal<string | null>(null);
 
@@ -199,7 +197,6 @@ export class LeadDetailComponent implements OnInit {
 
     if (!lead) return true;
     if (this.actionLoading()) return true;
-    if (this.proposalSubmitting()) return true;
     if (this.isLeadReadOnly()) return true;
 
     return this.leadWorkflow.isConsultationButtonDisabled(lead.status);
@@ -570,18 +567,10 @@ export class LeadDetailComponent implements OnInit {
     }
   }
 
-  openProposalModal(): void {
+  openProposalBuilder(): void {
     const lead = this.lead();
     if (!lead || this.isLeadReadOnly()) return;
     void this.router.navigate(['/admin/leads', lead.lead_id, 'floral-proposal-builder']);
-  }
-
-  closeProposalModal(): void {
-    this.proposalModalOpen.set(false);
-  }
-
-  async submitProposal(_file: File): Promise<void> {
-    this.openProposalModal();
   }
 
   async resendProposalAccess(proposalId: string): Promise<void> {
@@ -714,7 +703,6 @@ export class LeadDetailComponent implements OnInit {
     if (
       !lead ||
       this.actionLoading() ||
-      this.proposalSubmitting() ||
       this.editSaving() ||
       this.noteSaving() ||
       this.taskSaving() ||

@@ -11,6 +11,7 @@ export interface ProposalAccessSession {
   file_name?: string | null;
   pdf_url: string | null;
   access_token: string;
+  authenticated_at?: string | null;
   expires_at: string;
   response_action: 'accept' | 'decline' | null;
   response_feedback: string | null;

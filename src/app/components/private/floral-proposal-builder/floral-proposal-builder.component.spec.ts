@@ -3,27 +3,18 @@ import { signal } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { CatalogItem } from '../../../core/models/catalog-item';
-import {
-  DocumentTemplate,
-  FloralProposal,
-  FloralProposalRenderContract,
-} from '../../../core/models/floral-proposal';
+import { FloralProposal } from '../../../core/models/floral-proposal';
 import { TaxRegion } from '../../../core/models/tax-region';
 import { ToastService } from '../../../core/services/toast.service';
 import { CrmThemeService } from '../../../core/services/crm-theme.service';
 import { ActivityRepositoryService } from '../../../core/supabase/repositories/activity-repository.service';
 import { CatalogItemRepositoryService } from '../../../core/supabase/repositories/catalog-item-repository.service';
-import { DocumentTemplateRepositoryService } from '../../../core/supabase/repositories/document-template-repository.service';
 import { FloralProposalRepositoryService } from '../../../core/supabase/repositories/floral-proposal-repository.service';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
 import { FloralProposalRendererService } from '../../../core/supabase/services/floral-proposal-renderer.service';
-import {
-  testFloralProposal,
-  testLead,
-  testRenderContract,
-} from '../../../core/testing/workflow-fixtures';
+import { testFloralProposal, testLead } from '../../../core/testing/workflow-fixtures';
 import { FloralProposalBuilderComponent } from './floral-proposal-builder.component';
 
 describe('FloralProposalBuilderComponent', () => {
@@ -32,7 +23,6 @@ describe('FloralProposalBuilderComponent', () => {
   let routeParamMap = convertToParamMap({ leadId: testLead.lead_id });
   let leadRepository: jasmine.SpyObj<LeadRepositoryService>;
   let taxRegionRepository: jasmine.SpyObj<TaxRegionRepositoryService>;
-  let templateRepository: jasmine.SpyObj<DocumentTemplateRepositoryService>;
   let proposalRepository: jasmine.SpyObj<FloralProposalRepositoryService>;
   let catalogRepository: jasmine.SpyObj<CatalogItemRepositoryService>;
   let activityRepository: jasmine.SpyObj<ActivityRepositoryService>;
@@ -55,21 +45,6 @@ describe('FloralProposalBuilderComponent', () => {
     updated_at: '2026-06-02T12:00:00.000Z',
   };
 
-  const template: DocumentTemplate = {
-    template_id: 'template-test-001',
-    template_key: 'test-template',
-    name: 'Test Template',
-    description: 'Synthetic proposal template.',
-    renderer_key: 'wedding-full-service',
-    template_kind: 'floral_proposal',
-    is_default: false,
-    template_config: {},
-    content: {},
-    is_active: true,
-    created_at: '2026-06-02T12:00:00.000Z',
-    updated_at: '2026-06-02T12:00:00.000Z',
-  } as DocumentTemplate;
-
   const catalogItem: CatalogItem = {
     item_id: 'catalog-rose-001',
     name: 'Garden Rose',
@@ -90,7 +65,6 @@ describe('FloralProposalBuilderComponent', () => {
     ...testFloralProposal,
     floral_proposal_id: 'proposal-draft-001',
     lead_id: testLead.lead_id,
-    template_id: template.template_id,
     tax_region_id: taxRegion.tax_region_id,
     version: 2,
     status: 'draft',
@@ -106,10 +80,6 @@ describe('FloralProposalBuilderComponent', () => {
     taxRegionRepository = jasmine.createSpyObj<TaxRegionRepositoryService>(
       'TaxRegionRepositoryService',
       ['getTaxRegions']
-    );
-    templateRepository = jasmine.createSpyObj<DocumentTemplateRepositoryService>(
-      'DocumentTemplateRepositoryService',
-      ['getDocumentTemplates']
     );
     proposalRepository = jasmine.createSpyObj<FloralProposalRepositoryService>(
       'FloralProposalRepositoryService',
@@ -136,9 +106,7 @@ describe('FloralProposalBuilderComponent', () => {
     proposalWorkflow = jasmine.createSpyObj<FloralProposalWorkflowService>(
       'FloralProposalWorkflowService',
       [
-        'createRenderContract',
-        'buildSubmissionPayload',
-        'previewProposalPdf',
+        'buildManualSubmissionPayload',
         'submitProposal',
         'uploadLineItemImage',
         'removeLineItemImage',
@@ -162,10 +130,6 @@ describe('FloralProposalBuilderComponent', () => {
       taxRegion,
       { ...taxRegion, tax_region_id: 'inactive-tax', is_active: false },
     ]);
-    templateRepository.getDocumentTemplates.and.resolveTo([
-      template,
-      { ...template, template_id: 'inactive-template', is_active: false },
-    ]);
     proposalRepository.getLeadFloralProposals.and.resolveTo([]);
     proposalRepository.getFloralProposalLineItems.and.resolveTo([]);
     proposalRepository.getFloralProposalComponents.and.resolveTo([]);
@@ -185,12 +149,9 @@ describe('FloralProposalBuilderComponent', () => {
       catalogItem,
       { ...catalogItem, item_id: 'inactive-catalog', is_active: false },
     ]);
-    proposalWorkflow.createRenderContract.and.resolveTo(testRenderContract);
-    proposalWorkflow.buildSubmissionPayload.and.returnValue({ payload: 'submission' } as any);
-    proposalWorkflow.previewProposalPdf.and.resolveTo({
-      pdfBase64: 'JVBERi0=',
-      objectUrl: 'blob:proposal-preview',
-    });
+    proposalWorkflow.buildManualSubmissionPayload.and.returnValue({
+      payload: 'submission',
+    } as any);
     proposalWorkflow.submitProposal.and.resolveTo({
       version: 3,
     } as any);
@@ -218,7 +179,6 @@ describe('FloralProposalBuilderComponent', () => {
         { provide: Router, useValue: router },
         { provide: LeadRepositoryService, useValue: leadRepository },
         { provide: TaxRegionRepositoryService, useValue: taxRegionRepository },
-        { provide: DocumentTemplateRepositoryService, useValue: templateRepository },
         { provide: FloralProposalRepositoryService, useValue: proposalRepository },
         { provide: CatalogItemRepositoryService, useValue: catalogRepository },
         { provide: ActivityRepositoryService, useValue: activityRepository },
@@ -257,9 +217,6 @@ describe('FloralProposalBuilderComponent', () => {
     expect(component.lead()?.lead_id).toBe(testLead.lead_id);
     expect(component.taxRegions().map((region) => region.tax_region_id)).toEqual([
       taxRegion.tax_region_id,
-    ]);
-    expect(component.templates().map((item) => item.template_id)).toEqual([
-      template.template_id,
     ]);
     expect(component.activeCatalogItems().map((item) => item.item_id)).toEqual([
       catalogItem.item_id,
@@ -359,11 +316,12 @@ describe('FloralProposalBuilderComponent', () => {
     expect(proposalRepository.createFloralProposal).toHaveBeenCalledWith(
       jasmine.objectContaining({
         lead_id: testLead.lead_id,
-        template_id: template.template_id,
         tax_region_id: taxRegion.tax_region_id,
         status: 'draft',
       })
     );
+    const createArgs = proposalRepository.createFloralProposal.calls.mostRecent().args[0] as any;
+    expect(createArgs.template_id).toBeUndefined();
     expect(proposalRepository.replaceFloralProposalLineItems).toHaveBeenCalled();
     expect(proposalRepository.replaceFloralProposalComponents).toHaveBeenCalled();
     expect(proposalRepository.upsertShoppingList).toHaveBeenCalled();
@@ -397,60 +355,129 @@ describe('FloralProposalBuilderComponent', () => {
     expect(component.saving()).toBeFalse();
   });
 
-  it('previews and submits proposals with persisted PDF payload state', async () => {
+  it('finalizes proposal data and exposes the locked-state submission actions', async () => {
     createSubmittableComponent();
 
-    await component.openPreview();
+    await component.finalizeProposal();
 
-    expect(component.previewOpen()).toBeTrue();
-    expect(component.previewLoading()).toBeFalse();
-    expect(component.previewContract()).toEqual(testRenderContract);
-    expect(component.previewPdfBase64()).toBe('JVBERi0=');
-    expect(component.previewPdfObjectUrl()).toBe('blob:proposal-preview');
-    expect(proposalWorkflow.previewProposalPdf).toHaveBeenCalledWith({
-      payload: 'submission',
-    } as any);
-
-    createSubmittableState();
-    await component.submitFloralProposal();
-
-    expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith(
+    expect(proposalRepository.createFloralProposal).toHaveBeenCalledWith(
       jasmine.objectContaining({
-        payload: 'submission',
-        pdf_base64: 'JVBERi0=',
+        lead_id: testLead.lead_id,
+        status: 'draft',
+        snapshot: jasmine.objectContaining({
+          proposal_status: 'finalized',
+        }),
       })
     );
+    expect(activityRepository.createLeadActivity).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        activity_label: 'Floral Proposal v2 finalized saved',
+      })
+    );
+    expect(toast.showToast).toHaveBeenCalledWith(
+      'Floral Proposal v2 finalized successfully.',
+      'success'
+    );
+
+    createFinalizedComponent();
+    expect(component.canSubmitDocument()).toBeTrue();
+
+    component.openDocumentSubmission();
+    expect(component.submissionModalOpen()).toBeTrue();
+
+    component.enableProposalEditing();
+    expect(component.editModeEnabled()).toBeTrue();
+    expect(component.submissionModalOpen()).toBeFalse();
+    expect(component.canSubmitDocument()).toBeFalse();
+    expect(component.canFinalize()).toBeTrue();
+  });
+
+  it('submits florist-supplied PDF documents after finalization', async () => {
+    createFinalizedComponent();
+    const pdfFile = new File(['%PDF-test'], 'proposal.pdf', {
+      type: 'application/pdf',
+    });
+
+    component.openDocumentSubmission();
+    component.onSubmissionFileSelected(pdfFile);
+    await component.submitProposalDocument();
+
+    expect(proposalWorkflow.buildManualSubmissionPayload).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        lead: jasmine.objectContaining({ lead_id: testLead.lead_id }),
+        proposal: jasmine.objectContaining({
+          floral_proposal_id: 'proposal-finalized-001',
+        }),
+        pdfFileName: 'proposal.pdf',
+        pdfBase64: jasmine.any(String),
+      })
+    );
+    expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith({
+      payload: 'submission',
+    } as any);
     expect(toast.showToast).toHaveBeenCalledWith(
       'Floral Proposal v3 submitted successfully.',
       'success'
     );
-    expect(component.previewOpen()).toBeFalse();
+    expect(component.submissionModalOpen()).toBeFalse();
+    expect(component.submissionFile()).toBeNull();
     expect(component.saving()).toBeFalse();
   });
 
-  it('validates submit prerequisites and resets preview state on preview failure', async () => {
+  it('validates finalize and submission prerequisites and surfaces submit failures', async () => {
     createLoadedComponent();
 
-    await component.submitFloralProposal();
+    await component.finalizeProposal();
     expect(toast.showToast).toHaveBeenCalledWith(
-      'Choose a Floral Proposal template before submitting.',
+      'Choose a tax region before finalizing the Floral Proposal.',
       'error'
     );
 
-    createSubmittableState();
-    proposalWorkflow.previewProposalPdf.and.rejectWith(new Error('render failed'));
-    await component.openPreview();
+    component.selectedTaxRegionId.set(taxRegion.tax_region_id);
+    await component.finalizeProposal();
+    expect(toast.showToast).toHaveBeenCalledWith(
+      'Add at least one line item before finalizing the Floral Proposal.',
+      'error'
+    );
+
+    createFinalizedComponent();
+    component.openDocumentSubmission();
+    await component.submitProposalDocument();
+
+    expect(component.submissionError()).toBe(
+      'Upload a valid PDF proposal document before submitting.'
+    );
+
+    proposalWorkflow.submitProposal.and.rejectWith(new Error('submit failed'));
+    component.onSubmissionFileSelected(
+      new File(['%PDF-test'], 'replacement.pdf', {
+        type: 'application/pdf',
+      })
+    );
+    await component.submitProposalDocument();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[FloralProposalBuilderComponent] openPreview error:',
+      '[FloralProposalBuilderComponent] submitProposalDocument error:',
       jasmine.any(Error)
     );
-    expect(component.previewOpen()).toBeFalse();
-    expect(component.previewPdfBase64()).toBeNull();
-    expect(toast.showToast).toHaveBeenCalledWith(
-      'We were unable to prepare the Floral Proposal preview right now.',
-      'error'
+    expect(component.submissionError()).toBe(
+      'We were unable to submit the proposal document right now.'
     );
+  });
+
+  it('requires edit plus re-finalization before replacement submission after a decline', () => {
+    createFinalizedComponent({
+      status: 'declined',
+      snapshot: {
+        proposal_status: 'finalized',
+      },
+    });
+
+    expect(component.canEdit()).toBeTrue();
+    expect(component.canSubmitDocument()).toBeFalse();
+
+    component.openDocumentSubmission();
+    expect(component.submissionModalOpen()).toBeFalse();
   });
 
   it('uploads, removes, and rejects invalid line-item image interactions', async () => {
@@ -554,42 +581,17 @@ describe('FloralProposalBuilderComponent', () => {
       image_signed_url: 'https://example.test/image.jpg',
     } as any)).toBeTrue();
 
-    createLoadedComponent();
+    createFinalizedComponent();
     component.lead.set({ ...testLead, status: 'proposal_accepted' });
 
     await component.saveDraft();
-    await component.openPreview();
-    await component.submitFloralProposal();
+    await component.finalizeProposal();
+    component.openDocumentSubmission();
+    await component.submitProposalDocument();
 
     expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
-    expect(proposalWorkflow.previewProposalPdf).not.toHaveBeenCalled();
+    expect(proposalWorkflow.buildManualSubmissionPayload).not.toHaveBeenCalled();
     expect(proposalWorkflow.submitProposal).not.toHaveBeenCalled();
-  });
-
-  it('covers missing submit prerequisites and proposal submission failure', async () => {
-    createLoadedComponent();
-    component.selectedTemplateId.set(template.template_id);
-    component.addLineItem();
-    component.updateLineName(component.lineItems()[0].local_id, 'Bouquet');
-
-    await component.submitFloralProposal();
-    expect(toast.showToast).toHaveBeenCalledWith(
-      'Choose a tax region before submitting.',
-      'error'
-    );
-
-    createSubmittableState();
-    proposalWorkflow.submitProposal.and.rejectWith(new Error('submit failed'));
-    await component.submitFloralProposal();
-
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[FloralProposalBuilderComponent] submitFloralProposal error:',
-      jasmine.any(Error)
-    );
-    expect(toast.showToast).toHaveBeenCalledWith(
-      'We were unable to submit the Floral Proposal right now.',
-      'error'
-    );
   });
 
   it('covers export popup failure and line-item image failure paths', async () => {
@@ -648,12 +650,16 @@ describe('FloralProposalBuilderComponent', () => {
     component.error.set(null);
     component.lead.set({ ...testLead, status: 'nurturing' });
     component.taxRegions.set([taxRegion]);
-    component.templates.set([template]);
     component.catalogItems.set([catalogItem]);
     component.proposals.set([]);
     component.activeProposal.set(null);
     component.lineItems.set([]);
     component.shoppingList.set([]);
+    component.selectedTaxRegionId.set('');
+    component.editModeEnabled.set(false);
+    component.submissionModalOpen.set(false);
+    component.submissionError.set(null);
+    component.submissionFile.set(null);
   }
 
   function createSubmittableComponent(): void {
@@ -663,7 +669,6 @@ describe('FloralProposalBuilderComponent', () => {
 
   function createSubmittableState(): void {
     component.lineItems.set([]);
-    component.selectedTemplateId.set(template.template_id);
     component.selectedTaxRegionId.set(taxRegion.tax_region_id);
     component.addLineItem();
     const lineId = component.lineItems()[0].local_id;
@@ -672,6 +677,29 @@ describe('FloralProposalBuilderComponent', () => {
     const componentId = component.lineItems()[0].components[0].local_id;
     component.updateCatalogItemQuery(lineId, componentId, 'Blush Juliet Garden Rose');
     component.updateComponentQuantity(lineId, componentId, '5');
+  }
+
+  function createFinalizedComponent(
+    overrides: Partial<FloralProposal> = {}
+  ): void {
+    createSubmittableComponent();
+    const finalizedProposal: FloralProposal = {
+      ...draftProposal,
+      floral_proposal_id: 'proposal-finalized-001',
+      status: 'draft',
+      snapshot: {
+        proposal_status: 'finalized',
+        default_markup_percent: 300,
+        labor_percent: 0,
+      },
+      ...overrides,
+    };
+    component.proposals.set([finalizedProposal]);
+    component.activeProposal.set(finalizedProposal);
+    component.editModeEnabled.set(false);
+    component.submissionModalOpen.set(false);
+    component.submissionError.set(null);
+    component.submissionFile.set(null);
   }
 
   function createBareComponent(): void {

@@ -17,6 +17,7 @@ type FloralProposalRow = {
   version: number;
   is_active: boolean;
   status: string;
+  snapshot?: Record<string, unknown> | null;
 };
 
 type MailgunSuccessResponse = {
@@ -61,7 +62,6 @@ type RequestLineItem = {
 type RequestBody = {
   floral_proposal_id?: string | null;
   lead_id: string;
-  template_id?: string | null;
   tax_region_id?: string | null;
   portal_url?: string | null;
   line_items: RequestLineItem[];
@@ -73,9 +73,8 @@ type RequestBody = {
   terms_version?: string;
   privacy_policy_version?: string;
   snapshot?: Record<string, unknown>;
-  render_contract?: Record<string, unknown>;
-  render_html?: string | null;
   pdf_base64?: string | null;
+  pdf_file_name?: string | null;
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -88,9 +87,6 @@ const MG_FROM_EMAIL = Deno.env.get("MG_FROM_EMAIL")!;
 const MG_TO_REPLY = Deno.env.get("MG_TO_REPLY")!;
 const CLIENT_PORTAL_PROPOSAL_URL = Deno.env.get("CLIENT_PORTAL_PROPOSAL_URL") ?? "";
 const FLORAL_PROPOSAL_BUCKET = Deno.env.get("FLORAL_PROPOSAL_BUCKET") ?? "floral-proposals";
-const GOTENBERG_URL = Deno.env.get("GOTENBERG_URL") ?? "";
-const GOTENBERG_USERNAME = Deno.env.get("GOTENBERG_USERNAME") ?? "";
-const GOTENBERG_PASSWORD = Deno.env.get("GOTENBERG_PASSWORD") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -155,66 +151,6 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value ?? 0));
 }
 
-function sanitizePdfText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7E]/g, "");
-}
-
-function buildFallbackPdf(body: RequestBody, lead: LeadRow, version: number): Uint8Array {
-  const lines: string[] = [
-    "Black Begonia Floral Co.",
-    `Floral Proposal v${version}`,
-    "",
-    `Client: ${lead.first_name} ${lead.last_name}`.trim(),
-    `Email: ${lead.email}`,
-    `Service Type: ${formatDisplayValue(lead.service_type)}`,
-    `Event Type: ${formatDisplayValue(lead.event_type)}`,
-    `Event Date: ${formatDate(lead.event_date)}`,
-    "",
-    "Line Items",
-    ...body.line_items.flatMap((line) => {
-      const section = [`${line.item_name} | Qty ${line.quantity} | ${formatCurrency(line.subtotal)}`];
-      if (line.description?.trim()) section.push(line.description.trim());
-      return section.concat([""]);
-    }),
-    `Subtotal: ${formatCurrency(body.subtotal)}`,
-    `Tax Rate: ${body.tax_rate}%`,
-    `Tax Amount: ${formatCurrency(body.tax_amount)}`,
-    `Total: ${formatCurrency(body.total_amount)}`,
-    "",
-    "Terms, privacy acknowledgements, and signature acceptance are completed securely through the client portal.",
-  ];
-
-  const pageLines = lines.map((line, index) => {
-    const y = 760 - index * 18;
-    return `BT /F1 11 Tf 50 ${y} Td (${sanitizePdfText(line)}) Tj ET`;
-  }).join("\n");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj",
-    `4 0 obj << /Length ${pageLines.length} >> stream\n${pageLines}\nendstream endobj`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
-  ];
-
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  for (const object of objects) {
-    offsets.push(pdf.length);
-    pdf += `${object}\n`;
-  }
-
-  const xrefOffset = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += "0000000000 65535 f \n";
-  for (let i = 1; i <= objects.length; i++) {
-    pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
-  }
-  pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-
-  return new TextEncoder().encode(pdf);
-}
-
 function buildStoragePath(leadId: string, version: number): string {
   return `${leadId}/floral-proposal-v${version}-${Date.now()}.pdf`;
 }
@@ -224,56 +160,26 @@ function normalizeProviderMessageId(messageId: string | null | undefined): strin
   return normalized || null;
 }
 
-function normalizeGotenbergUrl(value: string): string {
-  return value.trim().replace(/\/+$/, "");
+
+export function decodePdfBase64(pdfBase64: string): Uint8Array {
+  return Uint8Array.from(atob(pdfBase64), (char) => char.charCodeAt(0));
 }
 
-async function buildStyledPdf(
-  renderHtml: string | null | undefined,
-  fallbackBody: RequestBody,
-  lead: LeadRow,
-  version: number,
-): Promise<Uint8Array> {
-  if (!renderHtml?.trim() || !GOTENBERG_URL.trim()) {
-    return buildFallbackPdf(fallbackBody, lead, version);
-  }
-
-  const form = new FormData();
-  form.append(
-    "files",
-    new File([renderHtml], "index.html", { type: "text/html; charset=utf-8" }),
-  );
-  form.append("printBackground", "true");
-  form.append("preferCssPageSize", "true");
-
-  const headers: HeadersInit = {};
-  if (GOTENBERG_USERNAME && GOTENBERG_PASSWORD) {
-    headers["Authorization"] = `Basic ${btoa(`${GOTENBERG_USERNAME}:${GOTENBERG_PASSWORD}`)}`;
-  }
-
-  const response = await fetch(`${normalizeGotenbergUrl(GOTENBERG_URL)}/forms/chromium/convert/html`, {
-    method: "POST",
-    headers,
-    body: form,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logError("Gotenberg render failed, falling back to basic PDF", {
-      status: response.status,
-      response_preview: errorText.slice(0, 500),
-    });
-    return buildFallbackPdf(fallbackBody, lead, version);
-  }
-
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (!bytes.byteLength) {
-    logError("Gotenberg returned an empty PDF, falling back to basic PDF");
-    return buildFallbackPdf(fallbackBody, lead, version);
-  }
-
-  logInfo("Gotenberg render succeeded", { bytes: bytes.byteLength });
-  return bytes;
+export function buildProposalSubmissionSnapshot(args: {
+  existingSnapshot?: Record<string, unknown> | null;
+  incomingSnapshot?: Record<string, unknown> | null;
+  submittedAt: string;
+  pdfFileName?: string | null;
+}): Record<string, unknown> {
+  return {
+    ...(args.existingSnapshot ?? {}),
+    ...(args.incomingSnapshot ?? {}),
+    proposal_status: "submitted",
+    submitted_at: args.submittedAt,
+    submitted_pdf_file_name: args.pdfFileName ?? null,
+    generated_by: "submit-floral-proposal",
+    generated_at: args.submittedAt,
+  };
 }
 
 function buildClientSubject(lead: LeadRow, version: number): string {
@@ -358,7 +264,7 @@ async function isInternalCrmUser(supabase: ReturnType<typeof createClient>, user
   return Boolean(data?.is_active);
 }
 
-serve(async (req) => {
+async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse(405, { success: false, error: "Method not allowed." });
 
@@ -376,10 +282,6 @@ serve(async (req) => {
     requireEnv("MG_DOMAIN", MG_DOMAIN);
     requireEnv("MG_FROM_EMAIL", MG_FROM_EMAIL);
     requireEnv("MG_TO_REPLY", MG_TO_REPLY);
-    if (GOTENBERG_URL.trim()) {
-      requireEnv("GOTENBERG_USERNAME", GOTENBERG_USERNAME);
-      requireEnv("GOTENBERG_PASSWORD", GOTENBERG_PASSWORD);
-    }
 
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
@@ -404,6 +306,9 @@ serve(async (req) => {
     if (!Array.isArray(body.line_items) || !body.line_items.length) {
       return jsonResponse(400, { success: false, error: "At least one Floral Proposal line item is required." });
     }
+    if (!body.pdf_base64?.trim()) {
+      return jsonResponse(400, { success: false, error: "A finalized Floral Proposal PDF is required before submission." });
+    }
 
     const { data: lead, error: leadError } = await supabase
       .from("leads")
@@ -418,7 +323,7 @@ serve(async (req) => {
 
     const { data: existingProposals, error: proposalsError } = await supabase
       .from("floral_proposals")
-      .select("floral_proposal_id, version, is_active, status")
+      .select("floral_proposal_id, version, is_active, status, snapshot")
       .eq("lead_id", leadId)
       .returns<FloralProposalRow[]>();
 
@@ -436,9 +341,7 @@ serve(async (req) => {
       ? reusableDraft.version
       : (existingProposals ?? []).reduce((max, proposal) => Math.max(max, proposal.version), 0) + 1;
 
-    const pdfBytes = body.pdf_base64
-      ? Uint8Array.from(atob(body.pdf_base64), (char) => char.charCodeAt(0))
-      : await buildStyledPdf(body.render_html, body, lead, proposalVersion);
+    const pdfBytes = decodePdfBase64(body.pdf_base64);
 
     uploadedPdfPath = buildStoragePath(leadId, proposalVersion);
     const { error: uploadError } = await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).upload(uploadedPdfPath, pdfBytes, {
@@ -464,13 +367,15 @@ serve(async (req) => {
 
     const passcode = generatePasscode();
     const passcodeHash = await hashPasscode(passcode);
-    const snapshot = {
-      ...(body.snapshot ?? {}),
-      render_contract: body.render_contract ?? null,
-      render_html: body.render_html ?? null,
-      generated_by: "submit-floral-proposal",
-      generated_at: new Date().toISOString(),
-    };
+    const existingReusableSnapshot =
+      (reusableDraft?.snapshot as Record<string, unknown> | null | undefined) ?? {};
+    const submissionTimestamp = new Date().toISOString();
+    const snapshot = buildProposalSubmissionSnapshot({
+      existingSnapshot: reusableDraft ? existingReusableSnapshot : {},
+      incomingSnapshot: body.snapshot ?? {},
+      submittedAt: submissionTimestamp,
+      pdfFileName: body.pdf_file_name ?? null,
+    });
 
     let proposal: { floral_proposal_id: string; version: number };
 
@@ -479,13 +384,15 @@ serve(async (req) => {
       const { data: updatedProposal, error: proposalUpdateError } = await supabase
         .from("floral_proposals")
         .update({
-          template_id: body.template_id ?? null,
           tax_region_id: body.tax_region_id ?? null,
           is_active: true,
           status: "submitted",
           customer_email: lead.email,
           passcode_hash: passcodeHash,
           pdf_storage_path: uploadedPdfPath,
+          finalized_at: snapshot["finalized_at"] ?? null,
+          edit_reopened_at: snapshot["edit_reopened_at"] ?? null,
+          submitted_at: submissionTimestamp,
           subtotal: body.subtotal,
           tax_rate: body.tax_rate,
           tax_amount: body.tax_amount,
@@ -509,7 +416,6 @@ serve(async (req) => {
         .from("floral_proposals")
         .insert({
           lead_id: leadId,
-          template_id: body.template_id ?? null,
           tax_region_id: body.tax_region_id ?? null,
           version: proposalVersion,
           is_active: true,
@@ -517,6 +423,9 @@ serve(async (req) => {
           customer_email: lead.email,
           passcode_hash: passcodeHash,
           pdf_storage_path: uploadedPdfPath,
+          finalized_at: snapshot["finalized_at"] ?? null,
+          edit_reopened_at: snapshot["edit_reopened_at"] ?? null,
+          submitted_at: submissionTimestamp,
           subtotal: body.subtotal,
           tax_rate: body.tax_rate,
           tax_amount: body.tax_amount,
@@ -710,8 +619,8 @@ serve(async (req) => {
         next_status: "proposal_submitted",
         customer_email: lead.email,
         pdf_storage_path: uploadedPdfPath,
-        render_html_supplied: Boolean(body.render_html),
         pdf_supplied: Boolean(body.pdf_base64),
+        submitted_pdf_file_name: body.pdf_file_name ?? null,
       },
     });
     if (activityError) throw activityError;
@@ -758,4 +667,8 @@ serve(async (req) => {
 
     return jsonResponse(500, { success: false, error: error instanceof Error ? error.message : "Floral Proposal submission failed." });
   }
-});
+}
+
+if (import.meta.main) {
+  serve(handleRequest);
+}

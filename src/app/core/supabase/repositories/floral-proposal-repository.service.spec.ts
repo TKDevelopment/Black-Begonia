@@ -20,12 +20,6 @@ describe('FloralProposalRepositoryService', () => {
 
   const proposalRow = {
     ...testFloralProposal,
-    template: [
-      {
-        template_id: 'template-test-001',
-        name: 'Editorial Test',
-      },
-    ],
   };
 
   const component: FloralProposalComponent = {
@@ -66,7 +60,7 @@ describe('FloralProposalRepositoryService', () => {
     consoleErrorSpy = spyOn(console, 'error');
   });
 
-  it('loads all proposals newest first and normalizes joined template arrays', async () => {
+  it('loads all proposals newest first without requiring template joins', async () => {
     const query = createSelectOrderQuery({
       data: [proposalRow],
       error: null,
@@ -78,9 +72,7 @@ describe('FloralProposalRepositoryService', () => {
     expect(client.from).toHaveBeenCalledWith('floral_proposals');
     expect(query.select).toHaveBeenCalledWith(jasmine.stringMatching('floral_proposal_id'));
     expect(query.order).toHaveBeenCalledWith('created_at', { ascending: false });
-    expect(proposals[0].template).toEqual(
-      jasmine.objectContaining({ template_id: 'template-test-001' })
-    );
+    expect(proposals[0]).toEqual(testFloralProposal);
   });
 
   it('returns empty proposal lists when list queries fail', async () => {
@@ -189,7 +181,7 @@ describe('FloralProposalRepositoryService', () => {
     expect(components[0]).toEqual(component);
   });
 
-  it('creates and updates floral proposals with normalized payloads', async () => {
+  it('creates and updates floral proposals with builder-centered payloads', async () => {
     const createQuery = createInsertSelectSingleQuery({
       data: testFloralProposal,
       error: null,
@@ -217,7 +209,6 @@ describe('FloralProposalRepositoryService', () => {
     expect(createQuery.insert).toHaveBeenCalledWith(
       jasmine.objectContaining({
         lead_id: 'lead-test-001',
-        template_id: null,
         tax_region_id: null,
         version: 1,
         is_active: true,
@@ -226,6 +217,9 @@ describe('FloralProposalRepositoryService', () => {
         passcode_hash: 'hashed-passcode',
         terms_version: 'v1',
         privacy_policy_version: 'v1',
+        finalized_at: null,
+        edit_reopened_at: null,
+        submitted_at: null,
         snapshot: {},
         created_by: null,
       })
@@ -242,6 +236,48 @@ describe('FloralProposalRepositoryService', () => {
     );
     expect(created).toEqual(testFloralProposal);
     expect(updated).toEqual(testFloralProposal);
+  });
+
+  it('persists finalized snapshot state through generic proposal updates', async () => {
+    const updateQuery = createUpdateEqSelectSingleQuery({
+      data: {
+        ...testFloralProposal,
+        snapshot: {
+          proposal_status: 'finalized',
+          finalized_at: '2026-06-02T13:00:00.000Z',
+        },
+      },
+      error: null,
+    });
+    client.from.and.returnValue(updateQuery);
+
+    const updated = await service.updateFloralProposal('proposal-test-001', {
+      status: 'draft',
+      finalized_at: '2026-06-02T13:00:00.000Z',
+      edit_reopened_at: null,
+      snapshot: {
+        proposal_status: 'finalized',
+        finalized_at: '2026-06-02T13:00:00.000Z',
+        edit_reopened_at: null,
+      },
+    } as any);
+
+    expect(updateQuery.update).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        status: 'draft',
+        finalized_at: '2026-06-02T13:00:00.000Z',
+        snapshot: jasmine.objectContaining({
+          proposal_status: 'finalized',
+          finalized_at: '2026-06-02T13:00:00.000Z',
+        }),
+        updated_at: jasmine.any(String),
+      })
+    );
+    expect(updated.snapshot).toEqual(
+      jasmine.objectContaining({
+        proposal_status: 'finalized',
+      })
+    );
   });
 
   it('throws create and update errors after logging repository context', async () => {

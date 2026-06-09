@@ -77,7 +77,10 @@ describe('ProposalAccessService', () => {
   });
 
   it('verifies proposal access with normalized credentials and persists the returned session', async () => {
-    const session = buildSession();
+    const session = buildSession({
+      file_name: 'canva-proposal.pdf',
+      authenticated_at: '2026-06-02T12:00:00.000Z',
+    });
     invokeSpy.and.resolveTo({
       data: { success: true, session },
       error: null,
@@ -96,6 +99,7 @@ describe('ProposalAccessService', () => {
     expect(JSON.parse(window.sessionStorage.getItem(storageKey) ?? '{}')).toEqual(
       session
     );
+    expect(service.getSession()?.file_name).toBe('canva-proposal.pdf');
   });
 
   it('throws friendly verification errors for edge-function failures and invalid credentials', async () => {

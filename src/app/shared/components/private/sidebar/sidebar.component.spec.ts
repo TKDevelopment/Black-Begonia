@@ -41,4 +41,17 @@ describe('SidebarComponent', () => {
   it('should expose the user display name from the auth snapshot', () => {
     expect(component.userDisplayName).toBe('Test Admin');
   });
+
+  it('keeps proposal settings focused on catalog and tax regions only', () => {
+    expect(component.groupedNav).toEqual([
+      jasmine.objectContaining({
+        label: 'Proposal Settings',
+        children: [
+          jasmine.objectContaining({ label: 'Catalog', route: '/admin/catalog-items' }),
+          jasmine.objectContaining({ label: 'Tax Regions', route: '/admin/tax-regions' }),
+        ],
+      }),
+    ]);
+    expect(component.groupedNav[0].children.some((item) => item.route.includes('proposal-templates'))).toBeFalse();
+  });
 });

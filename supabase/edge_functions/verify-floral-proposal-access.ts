@@ -11,6 +11,7 @@ type FloralProposalRow = {
   pdf_url: string | null;
   is_active: boolean;
   status: string;
+  snapshot: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -111,7 +112,7 @@ serve(async (req) => {
 
     const { data: proposals, error: proposalsError } = await supabase
       .from("floral_proposals")
-      .select("floral_proposal_id, lead_id, version, customer_email, passcode_hash, pdf_storage_path, pdf_url, is_active, status, created_at")
+      .select("floral_proposal_id, lead_id, version, customer_email, passcode_hash, pdf_storage_path, pdf_url, is_active, status, snapshot, created_at")
       .eq("customer_email", email)
       .eq("is_active", true)
       .order("created_at", { ascending: false })
@@ -167,7 +168,11 @@ serve(async (req) => {
         event_date: lead.event_date,
         proposal_version: proposal.version,
         version: proposal.version,
-        file_name: `floral-proposal-v${proposal.version}.pdf`,
+        file_name:
+          typeof proposal.snapshot?.["submitted_pdf_file_name"] === "string" &&
+          proposal.snapshot["submitted_pdf_file_name"].trim().length
+            ? proposal.snapshot["submitted_pdf_file_name"].trim()
+            : `floral-proposal-v${proposal.version}.pdf`,
         pdf_url: pdfUrl,
         access_token: accessToken,
         authenticated_at: authenticatedAt.toISOString(),

@@ -1,6 +1,8 @@
 create table public.floral_proposals (
   floral_proposal_id uuid not null default gen_random_uuid (),
   lead_id uuid not null,
+  -- Legacy template linkage retained only for historical records during workflow reset.
+  -- New proposal-builder saves and florist-supplied PDF submissions should not rely on this field.
   template_id uuid null,
   tax_region_id uuid null,
   version smallint not null,
@@ -25,6 +27,11 @@ create table public.floral_proposals (
   signature_ip text null,
   signature_user_agent text null,
   decline_feedback text null,
+  finalized_at timestamp with time zone null,
+  edit_reopened_at timestamp with time zone null,
+  submitted_at timestamp with time zone null,
+  submitted_by uuid null,
+  finalized_snapshot jsonb null,
   snapshot jsonb not null default '{}'::jsonb,
   created_by uuid null,
   created_at timestamp with time zone not null default now(),

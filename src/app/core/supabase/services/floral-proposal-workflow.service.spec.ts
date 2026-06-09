@@ -1,16 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 
-import {
-  DocumentTemplate,
-  FloralProposalRenderContract,
-} from '../../models/floral-proposal';
 import { testFloralProposal, testLead } from '../../testing/workflow-fixtures';
-import { ProposalTemplateDocumentService } from '../../proposal-templates/proposal-template-document.service';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
-import { DocumentTemplateService } from './document-template.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
-import { FloralProposalRendererService } from './floral-proposal-renderer.service';
 import {
   FloralProposalWorkflowService,
   SubmitFloralProposalPayload,
@@ -19,9 +12,6 @@ import {
 describe('FloralProposalWorkflowService', () => {
   let service: FloralProposalWorkflowService;
   let repository: jasmine.SpyObj<FloralProposalRepositoryService>;
-  let renderer: jasmine.SpyObj<FloralProposalRendererService>;
-  let templateDocumentService: jasmine.SpyObj<ProposalTemplateDocumentService>;
-  let documentTemplateService: jasmine.SpyObj<DocumentTemplateService>;
   let storageFromSpy: jasmine.Spy;
   let functionsInvokeSpy: jasmine.Spy;
 
@@ -41,8 +31,6 @@ describe('FloralProposalWorkflowService', () => {
   };
 
   const renderPayload: FloralProposalRenderPayload = {
-    template_id: 'template-test-001',
-    template_name: 'Editorial Test',
     tax_region_id: 'tax-region-test-001',
     tax_region_name: 'Austin Test Tax',
     tax_rate: 0.08,
@@ -131,41 +119,10 @@ describe('FloralProposalWorkflowService', () => {
     },
   };
 
-  const template: DocumentTemplate = {
-    template_id: 'template-test-001',
-    name: 'Editorial Test',
-    template_key: 'wedding-full-service',
-    template_kind: 'floral_proposal',
-    is_active: true,
-    is_default: true,
-    logo_storage_path: 'logos/test-logo.png',
-    logo_url: null,
-    template_config: {},
-    created_at: '2026-06-02T12:00:00.000Z',
-    updated_at: '2026-06-02T12:00:00.000Z',
-  };
-
   beforeEach(() => {
     repository = jasmine.createSpyObj<FloralProposalRepositoryService>(
       'FloralProposalRepositoryService',
       ['getLeadFloralProposals', 'clearLineItemImage']
-    );
-    renderer = jasmine.createSpyObj<FloralProposalRendererService>(
-      'FloralProposalRendererService',
-      ['renderHtml']
-    );
-    templateDocumentService = jasmine.createSpyObj<ProposalTemplateDocumentService>(
-      'ProposalTemplateDocumentService',
-      [
-        'getPublishedDocument',
-        'getStoredConfig',
-        'applyResolvedAssetUrlsToConfig',
-        'buildTemplateConfig',
-      ]
-    );
-    documentTemplateService = jasmine.createSpyObj<DocumentTemplateService>(
-      'DocumentTemplateService',
-      ['refreshTemplateAssets']
     );
 
     storageApi.createSignedUrl.calls.reset();
@@ -177,32 +134,6 @@ describe('FloralProposalWorkflowService', () => {
     storageFromSpy = client.storage.from;
     functionsInvokeSpy = client.functions.invoke;
 
-    renderer.renderHtml.and.returnValue('<html>proposal</html>');
-    templateDocumentService.getPublishedDocument.and.returnValue({
-      id: 'document-test-001',
-      name: 'Editorial Test',
-      serviceType: 'wedding',
-      status: 'published',
-      pagePreset: 'letter',
-      pages: [],
-      theme: {
-        primaryColor: '#111111',
-        accentColor: '#cc8899',
-        canvasColor: '#f8f8f8',
-        pageColor: '#ffffff',
-        borderColor: '#dddddd',
-        mutedColor: '#777777',
-        headingFontFamily: 'Playfair Display',
-        bodyFontFamily: 'Inter',
-      },
-      metadata: {
-        createdWith: 'proposal-scene-editor',
-        version: 1,
-        updatedAt: '2026-06-02T12:00:00.000Z',
-      },
-    });
-    templateDocumentService.getStoredConfig.and.returnValue(null);
-
     TestBed.configureTestingModule({
       providers: [
         FloralProposalWorkflowService,
@@ -213,9 +144,6 @@ describe('FloralProposalWorkflowService', () => {
           },
         },
         { provide: FloralProposalRepositoryService, useValue: repository },
-        { provide: FloralProposalRendererService, useValue: renderer },
-        { provide: ProposalTemplateDocumentService, useValue: templateDocumentService },
-        { provide: DocumentTemplateService, useValue: documentTemplateService },
       ],
     });
 
@@ -389,33 +317,6 @@ describe('FloralProposalWorkflowService', () => {
     expect(console.error).toHaveBeenCalled();
   });
 
-  it('previews proposal PDFs from base64 responses and rejects invalid responses', async () => {
-    spyOn(URL, 'createObjectURL').and.returnValue('blob:proposal-preview');
-    functionsInvokeSpy.and.resolveTo({
-      data: {
-        success: true,
-        pdf_base64: btoa('%PDF-test'),
-      },
-      error: null,
-    });
-
-    const preview = await service.previewProposalPdf(minimalSubmissionPayload());
-
-    expect(functionsInvokeSpy).toHaveBeenCalledWith('preview-floral-proposal-pdf', {
-      body: minimalSubmissionPayload(),
-    });
-    expect(preview.objectUrl).toBe('blob:proposal-preview');
-    expect(preview.pdfBase64).toBe(btoa('%PDF-test'));
-
-    functionsInvokeSpy.and.resolveTo({
-      data: { success: false, error: 'Preview failed.' },
-      error: null,
-    });
-    await expectAsync(
-      service.previewProposalPdf(minimalSubmissionPayload())
-    ).toBeRejectedWithError('Preview failed.');
-  });
-
   it('resends proposal access emails and rejects missing proposal ids', async () => {
     functionsInvokeSpy.and.resolveTo({
       data: { success: true },
@@ -435,154 +336,17 @@ describe('FloralProposalWorkflowService', () => {
     ).toBeRejectedWithError('A Floral Proposal is required to resend access.');
   });
 
-  it('creates render contracts with hydrated template, signed assets, totals, and renderer asset metadata', async () => {
-    storageApi.createSignedUrl.and.resolveTo({
-      data: { signedUrl: 'https://signed.example.test/asset.jpg' },
-      error: null,
-    });
-
-    const contract = await service.createRenderContract({
+  it('builds manual submission payloads with finalized snapshot metadata and product components', () => {
+    const payload = service.buildManualSubmissionPayload({
       lead: testLead,
-      proposal: testFloralProposal,
-      template,
-      taxRegion: {
-        tax_region_id: 'tax-region-test-001',
-        name: 'Austin Test Tax',
-        tax_rate: 0.08,
-        applies_to_products: true,
-        applies_to_services: true,
-        applies_to_delivery: true,
-        is_active: true,
-        created_at: '2026-06-02T12:00:00.000Z',
-        updated_at: '2026-06-02T12:00:00.000Z',
+      proposal: {
+        ...testFloralProposal,
+        floral_proposal_id: 'proposal-test-001',
+        version: 2,
       },
       renderPayload,
-    });
-
-    expect(contract.proposal_id).toBe(testFloralProposal.floral_proposal_id);
-    expect(contract.lead).toEqual(
-      jasmine.objectContaining({
-        lead_id: testLead.lead_id,
-        first_name: testLead.first_name,
-        email: testLead.email,
-        ceremony_venue_name: testLead.ceremony_venue_name,
-      })
-    );
-    expect(contract.template).toEqual(
-      jasmine.objectContaining({
-        template_id: template.template_id,
-        name: template.name,
-        renderer_key: 'wedding-full-service',
-        logo_url: 'https://signed.example.test/asset.jpg',
-        primary_color: '#111111',
-        accent_color: '#cc8899',
-      })
-    );
-    expect(contract.line_items[0].image_signed_url).toBe(
-      'https://signed.example.test/asset.jpg'
-    );
-    expect(contract.totals).toEqual({
-      products_total: 600,
-      labor_total: 120,
-      fees_total: 50,
-      discounts_total: 0,
-      subtotal: 770,
-      tax_amount: 61.6,
-      total_amount: 831.6,
-    });
-    expect(contract.renderer_assets.line_item_images[0]).toEqual(
-      jasmine.objectContaining({
-        display_order: 0,
-        item_name: 'Ceremony Meadow',
-        signed_url: 'https://signed.example.test/asset.jpg',
-      })
-    );
-  });
-
-  it('builds submission payloads with rendered HTML, terms, privacy versions, and product components', () => {
-    const contract: FloralProposalRenderContract = {
-      proposal_id: 'proposal-test-001',
-      proposal_version: 2,
-      generated_at: '2026-06-02T12:00:00.000Z',
-      lead: {
-        lead_id: testLead.lead_id,
-        first_name: testLead.first_name,
-        last_name: testLead.last_name,
-        email: testLead.email,
-        service_type: testLead.service_type,
-        status: testLead.status,
-      },
-      template: {
-        template_id: 'template-test-001',
-        name: 'Editorial Test',
-      },
-      tax_region: {
-        tax_region_id: 'tax-region-test-001',
-        name: 'Austin Test Tax',
-        tax_rate: 0.08,
-      },
-      pricing: {
-        default_markup_percent: 30,
-        labor_percent: 20,
-      },
-      line_items: [
-        {
-          display_order: 0,
-          line_item_type: 'product',
-          line_type_label: 'Product',
-          item_name: 'Ceremony Meadow',
-          description: 'Lush aisle florals',
-          quantity: 2,
-          unit_price: 300,
-          subtotal: 600,
-          image_storage_path: 'proposal-images/meadow.jpg',
-          image_alt_text: 'Ceremony meadow',
-          image_caption: 'A meadow arrangement',
-          components: [
-            {
-              display_order: 0,
-              catalog_item_id: 'catalog-rose-001',
-              catalog_item_name: 'Garden Rose',
-              quantity_per_unit: 10,
-              extended_quantity: 20,
-              base_unit_cost: 3,
-              applied_markup_percent: 50,
-              sell_unit_price: 4.5,
-              subtotal: 45,
-              reserve_percent: 10,
-              snapshot: { sku: 'ROSE-JULIET' },
-            },
-          ],
-        },
-        {
-          display_order: 1,
-          line_item_type: 'fee',
-          line_type_label: 'Fee',
-          item_name: 'Delivery',
-          quantity: 1,
-          unit_price: 50,
-          subtotal: 50,
-          components: [],
-        },
-      ],
-      shopping_list: renderPayload.shopping_list,
-      totals: {
-        products_total: 600,
-        labor_total: 120,
-        fees_total: 50,
-        discounts_total: 0,
-        subtotal: 770,
-        tax_amount: 61.6,
-        total_amount: 831.6,
-      },
-      renderer_assets: {
-        line_item_images: [],
-      },
-    };
-
-    const payload = service.buildSubmissionPayload({
-      lead: testLead,
-      renderContract: contract,
+      pdfBase64: 'JVBERi0=',
+      pdfFileName: 'proposal.pdf',
       termsVersion: 'terms-2026-06',
       privacyPolicyVersion: 'privacy-2026-06',
     });
@@ -591,7 +355,6 @@ describe('FloralProposalWorkflowService', () => {
       jasmine.objectContaining({
         floral_proposal_id: 'proposal-test-001',
         lead_id: testLead.lead_id,
-        template_id: 'template-test-001',
         tax_region_id: 'tax-region-test-001',
         subtotal: 770,
         tax_rate: 0.08,
@@ -599,13 +362,55 @@ describe('FloralProposalWorkflowService', () => {
         total_amount: 831.6,
         terms_version: 'terms-2026-06',
         privacy_policy_version: 'privacy-2026-06',
-        render_html: '<html>proposal</html>',
+        pdf_base64: 'JVBERi0=',
+        pdf_file_name: 'proposal.pdf',
       })
     );
     expect(payload.line_items[0].components?.length).toBe(1);
     expect(payload.line_items[1].components).toEqual([]);
-    expect(payload.snapshot).toEqual({ render_contract: contract });
-    expect(renderer.renderHtml).toHaveBeenCalledWith(contract);
+    expect(payload.snapshot).toEqual(
+      jasmine.objectContaining({
+        proposal_status: 'finalized',
+        proposal_version: 2,
+        tax_region_name: 'Austin Test Tax',
+      })
+    );
+    expect(payload).not.toEqual(jasmine.objectContaining({
+      render_contract: jasmine.anything(),
+    } as any));
+  });
+
+  it('builds finalized and reopened proposal snapshots for the builder workflow', () => {
+    const finalizedSnapshot = service.buildProposalSnapshot({
+      renderPayload,
+      proposalStatus: 'finalized',
+      existingSnapshot: {
+        finalized_at: '2026-06-02T12:00:00.000Z',
+      },
+      lifecycle: {
+        finalizedAt: '2026-06-02T12:00:00.000Z',
+      },
+    });
+    const reopenedSnapshot = service.buildEditableProposalSnapshot(
+      finalizedSnapshot,
+      '2026-06-02T13:00:00.000Z'
+    );
+
+    expect(service.resolveStoredProposalStatus('finalized')).toBe('draft');
+    expect(finalizedSnapshot).toEqual(
+      jasmine.objectContaining({
+        proposal_status: 'finalized',
+        finalized_at: '2026-06-02T12:00:00.000Z',
+        tax_region_id: 'tax-region-test-001',
+      })
+    );
+    expect(reopenedSnapshot).toEqual(
+      jasmine.objectContaining({
+        proposal_status: 'draft',
+        finalized_at: '2026-06-02T12:00:00.000Z',
+        edit_reopened_at: '2026-06-02T13:00:00.000Z',
+      })
+    );
   });
 
   function minimalSubmissionPayload(): SubmitFloralProposalPayload {

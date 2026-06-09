@@ -234,6 +234,23 @@ describe('LeadDetailComponent', () => {
     ]);
   });
 
+  it('exposes builder-entry actions directly from lead detail when proposal submission is allowed', async () => {
+    createComponent();
+    await fixture.whenStable();
+
+    proposalWorkflow.canSubmitProposal.and.returnValue(true);
+    component.lead.set({ ...testLead, status: 'nurturing' });
+
+    expect(component.canSubmitProposal()).toBeTrue();
+
+    component.openProposalBuilder();
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/admin/leads',
+      testLead.lead_id,
+      'floral-proposal-builder',
+    ]);
+  });
+
   it('opens conversion for accepted proposals and confirms conversion', async () => {
     createComponent();
     await fixture.whenStable();

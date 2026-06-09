@@ -1,4 +1,4 @@
-<section class="px-6 py-10 md:px-10 md:py-12">
+ï»¿<section class="px-6 py-10 md:px-10 md:py-12">
   <div class="mx-auto max-w-7xl">
     <ng-container *ngIf="session() as session; else missingSession">
       <div class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -47,6 +47,13 @@
                   Email
                 </p>
                 <p class="mt-1 break-all text-stone-900">{{ session.customer_email }}</p>
+              </div>
+
+              <div *ngIf="session.file_name">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Proposal File
+                </p>
+                <p class="mt-1 break-all text-stone-900">{{ session.file_name }}</p>
               </div>
             </div>
           </div>
@@ -213,7 +220,7 @@
                   [disabled]="submitting()"
                   class="rounded-full px-3 py-1 text-stone-500 transition hover:bg-stone-100 disabled:opacity-50"
                 >
-                  ×
+                  Ã—
                 </button>
               </div>
 
@@ -327,7 +334,7 @@
                   [disabled]="submitting()"
                   class="rounded-full px-3 py-1 text-stone-500 transition hover:bg-stone-100 disabled:opacity-50"
                 >
-                  ×
+                  Ã—
                 </button>
               </div>
 
@@ -384,3 +391,4 @@
     </ng-template>
   </div>
 </section>
+
