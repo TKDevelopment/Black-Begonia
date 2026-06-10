@@ -36,8 +36,51 @@ export class ProposalAccessService {
     return !!session?.response_action;
   }
 
+  getReviewDocumentUrl(): string | null {
+    const session = this.getSession();
+    return session?.combined_pdf_url ?? session?.pdf_url ?? null;
+  }
+
+  getReviewFileName(): string | null {
+    const session = this.getSession();
+    return session?.combined_file_name ?? session?.file_name ?? null;
+  }
+
+  hasEmbeddedSigning(): boolean {
+    return !!this.getEmbeddedSigningUrl();
+  }
+
+  getEmbeddedSigningUrl(): string | null {
+    const session = this.getSession();
+    return session?.embedded_signing_url ?? null;
+  }
+
   getSession(): ProposalAccessSession | null {
     return this.hasValidSession() ? this.session() : null;
+  }
+
+  async refreshSession(): Promise<ProposalAccessSession> {
+    const session = this.getSession();
+
+    if (!session) {
+      throw new Error('Your Floral Proposal access session has expired.');
+    }
+
+    return this.invokeAndPersistProposalAccess(
+      {
+        floral_proposal_id: session.floral_proposal_id,
+        access_token: session.access_token,
+      },
+      {
+        errorContext: '[ProposalAccessService] refreshSession invoke error:',
+        fallbackError:
+          'We could not refresh your Floral Proposal review session right now.',
+      }
+    );
+  }
+
+  async refreshSigningSession(): Promise<ProposalAccessSession> {
+    return this.refreshSession();
   }
 
   async verifyAccess(
@@ -47,36 +90,17 @@ export class ProposalAccessService {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPasscode = passcode.trim();
 
-    const { data, error } = await this.supabaseService.getClient().functions.invoke(
-      'verify-floral-proposal-access',
+    return this.invokeAndPersistProposalAccess(
       {
-        body: {
-          email: normalizedEmail,
-          passcode: normalizedPasscode,
-        },
+        email: normalizedEmail,
+        passcode: normalizedPasscode,
+      },
+      {
+        errorContext: '[ProposalAccessService] verifyAccess invoke error:',
+        fallbackError:
+          'The email or passcode you entered is not valid.',
       }
     );
-
-    if (error) {
-      console.error(
-        '[ProposalAccessService] verifyAccess invoke error:',
-        error
-      );
-      throw new Error('We could not verify your Floral Proposal access right now.');
-    }
-
-    const response = (data ?? null) as
-      | (VerifyProposalAccessResponse & { error?: string })
-      | null;
-
-    if (!response?.success || !response.session) {
-      throw new Error(
-        response?.error || 'The email or passcode you entered is not valid.'
-      );
-    }
-
-    this.persistSession(response.session);
-    return response.session;
   }
 
   async submitResponse(args: {
@@ -133,6 +157,7 @@ export class ProposalAccessService {
 
     const nextSession: ProposalAccessSession = {
       ...session,
+      signing_status: args.action === 'accept' ? 'signed' : 'declined',
       response_action: args.action,
       response_feedback:
         args.action === 'decline' ? args.feedback?.trim() || null : null,
@@ -176,5 +201,33 @@ export class ProposalAccessService {
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem(this.storageKey, JSON.stringify(session));
     }
+  }
+
+  private async invokeAndPersistProposalAccess(
+    body: Record<string, unknown>,
+    options: {
+      errorContext: string;
+      fallbackError: string;
+    }
+  ): Promise<ProposalAccessSession> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .functions.invoke('verify-floral-proposal-access', { body });
+
+    if (error) {
+      console.error(options.errorContext, error);
+      throw new Error(options.fallbackError);
+    }
+
+    const response = (data ?? null) as
+      | (VerifyProposalAccessResponse & { error?: string })
+      | null;
+
+    if (!response?.success || !response.session) {
+      throw new Error(response?.error || options.fallbackError);
+    }
+
+    this.persistSession(response.session);
+    return response.session;
   }
 }

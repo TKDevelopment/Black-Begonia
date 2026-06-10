@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
 
 type LeadRow = {
   lead_id: string;
@@ -18,6 +19,15 @@ type FloralProposalRow = {
   is_active: boolean;
   status: string;
   snapshot?: Record<string, unknown> | null;
+};
+
+type ActiveContractTemplateRow = {
+  proposal_contract_template_id: string;
+  provider: string;
+  provider_template_id: string;
+  provider_template_name: string;
+  provider_template_revision: string | null;
+  required_field_map: Record<string, unknown> | null;
 };
 
 type MailgunSuccessResponse = {
@@ -77,6 +87,13 @@ type RequestBody = {
   pdf_file_name?: string | null;
 };
 
+type ContractProviderConfig = {
+  contract_pdf_url?: string;
+  contract_pdf_url_template?: string;
+  auth_header?: string;
+  auth_token?: string;
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PROPOSAL_ACCESS_SIGNING_KEY = Deno.env.get("PROPOSAL_ACCESS_SIGNING_KEY")!;
@@ -87,6 +104,29 @@ const MG_FROM_EMAIL = Deno.env.get("MG_FROM_EMAIL")!;
 const MG_TO_REPLY = Deno.env.get("MG_TO_REPLY")!;
 const CLIENT_PORTAL_PROPOSAL_URL = Deno.env.get("CLIENT_PORTAL_PROPOSAL_URL") ?? "";
 const FLORAL_PROPOSAL_BUCKET = Deno.env.get("FLORAL_PROPOSAL_BUCKET") ?? "floral-proposals";
+const SIGNWELL_API_KEY = Deno.env.get("SIGNWELL_API_KEY") ?? "";
+const SIGNWELL_AUTH_HEADER = Deno.env.get("SIGNWELL_AUTH_HEADER") ?? "X-Api-Key";
+const SIGNWELL_CONTRACT_PDF_URL_TEMPLATE =
+  Deno.env.get("SIGNWELL_CONTRACT_PDF_URL_TEMPLATE") ?? "";
+
+const REQUIRED_ENV_VARS = [
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "PROPOSAL_ACCESS_SIGNING_KEY",
+  "MG_API_KEY",
+  "MG_BASE_URL",
+  "MG_DOMAIN",
+  "MG_FROM_EMAIL",
+  "MG_TO_REPLY",
+] as const;
+
+const OPTIONAL_ENV_VARS = [
+  "CLIENT_PORTAL_PROPOSAL_URL",
+  "FLORAL_PROPOSAL_BUCKET",
+  "SIGNWELL_API_KEY",
+  "SIGNWELL_AUTH_HEADER",
+  "SIGNWELL_CONTRACT_PDF_URL_TEMPLATE",
+] as const;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -155,9 +195,299 @@ function buildStoragePath(leadId: string, version: number): string {
   return `${leadId}/floral-proposal-v${version}-${Date.now()}.pdf`;
 }
 
+function isLocalPortalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ['localhost', '127.0.0.1', '0.0.0.0'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function resolvePortalUrl(requestedPortalUrl: string | null | undefined): string {
+  const requested = String(requestedPortalUrl ?? '').trim();
+  const configured = CLIENT_PORTAL_PROPOSAL_URL.trim();
+
+  if (configured && (!requested || isLocalPortalUrl(requested))) {
+    return configured;
+  }
+
+  return requested || configured;
+}
+
 function normalizeProviderMessageId(messageId: string | null | undefined): string | null {
   const normalized = String(messageId ?? "").trim().replace(/^<|>$/g, "");
   return normalized || null;
+}
+
+export function buildProposalMergeData(args: {
+  lead: LeadRow;
+  proposalVersion: number;
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  lineItemsCount: number;
+}) {
+  return {
+    lead: {
+      lead_id: args.lead.lead_id,
+      first_name: args.lead.first_name,
+      last_name: args.lead.last_name,
+      full_name: `${args.lead.first_name} ${args.lead.last_name}`.trim(),
+      email: args.lead.email,
+      service_type: args.lead.service_type,
+      event_type: args.lead.event_type,
+      event_date: args.lead.event_date,
+    },
+    proposal: {
+      version: args.proposalVersion,
+      subtotal: args.subtotal,
+      tax_rate: args.taxRate,
+      tax_amount: args.taxAmount,
+      total_amount: args.totalAmount,
+      line_items_count: args.lineItemsCount,
+    },
+  };
+}
+
+export function validateRequiredFieldMap(
+  requiredFieldMap: Record<string, unknown> | null | undefined,
+  mergeData: Record<string, unknown>
+): string[] {
+  return Object.entries(requiredFieldMap ?? {}).flatMap(([fieldId, mapping]) => {
+    if (fieldId.startsWith("__")) {
+      return [];
+    }
+
+    const source = resolveMappingSource(mapping);
+    if (!source) {
+      return [fieldId];
+    }
+
+    const value = readMergeValue(mergeData, source);
+    return isMissingMergeValue(value) ? [fieldId] : [];
+  });
+}
+
+function resolveMappingSource(mapping: unknown): string | null {
+  if (typeof mapping === "string" && mapping.trim().length) {
+    return mapping.trim();
+  }
+
+  if (
+    mapping &&
+    typeof mapping === "object" &&
+    "source" in mapping &&
+    typeof mapping.source === "string" &&
+    mapping.source.trim().length
+  ) {
+    return mapping.source.trim();
+  }
+
+  return null;
+}
+
+function readMergeValue(
+  mergeData: Record<string, unknown>,
+  sourcePath: string
+): unknown {
+  return sourcePath.split(".").reduce<unknown>((value, segment) => {
+    if (!value || typeof value !== "object") {
+      return undefined;
+    }
+
+    return segment in (value as Record<string, unknown>)
+      ? (value as Record<string, unknown>)[segment]
+      : undefined;
+  }, mergeData);
+}
+
+function isMissingMergeValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === "string") return value.trim().length === 0;
+  return false;
+}
+
+export function buildCanonicalPackageMetadata(args: {
+  leadId: string;
+  uploadedPdfFileName: string | null;
+  proposalVersion: number;
+}) {
+  const timestamp = Date.now();
+
+  return {
+    combinedPdfStoragePath: `${args.leadId}/floral-proposal-package-v${args.proposalVersion}-${timestamp}.pdf`,
+    combinedPdfFileName:
+      args.uploadedPdfFileName?.trim() ||
+      `floral-proposal-package-v${args.proposalVersion}.pdf`,
+  };
+}
+
+function resolveContractTemplateRevision(
+  template: Pick<
+    ActiveContractTemplateRow,
+    "provider_template_revision" | "provider_template_name"
+  >
+): string {
+  return template.provider_template_revision ?? template.provider_template_name;
+}
+
+function buildSigningSessionSnapshot(args: {
+  floralProposalId: string;
+  proposalVersion: number;
+  activeContractTemplate: ActiveContractTemplateRow;
+  contractMergeFields: Record<string, unknown>;
+  contractPdfSourceUrl: string;
+}): Record<string, unknown> {
+  return {
+    floral_proposal_id: args.floralProposalId,
+    contract_template_id: args.activeContractTemplate.proposal_contract_template_id,
+    contract_template_source: args.activeContractTemplate.provider_template_id,
+    contract_template_revision: resolveContractTemplateRevision(
+      args.activeContractTemplate
+    ),
+    proposal_version: args.proposalVersion,
+    contract_merge_fields: args.contractMergeFields,
+    contract_pdf_source_url: args.contractPdfSourceUrl,
+  };
+}
+
+function extractContractProviderConfig(
+  requiredFieldMap: Record<string, unknown> | null | undefined
+): ContractProviderConfig {
+  const config =
+    (requiredFieldMap?.["__signwell"] as Record<string, unknown> | undefined) ??
+    (requiredFieldMap?.["__provider"] as Record<string, unknown> | undefined) ??
+    {};
+
+  return {
+    contract_pdf_url:
+      typeof config["contract_pdf_url"] === "string"
+        ? config["contract_pdf_url"].trim()
+        : undefined,
+    contract_pdf_url_template:
+      typeof config["contract_pdf_url_template"] === "string"
+        ? config["contract_pdf_url_template"].trim()
+        : undefined,
+    auth_header:
+      typeof config["auth_header"] === "string"
+        ? config["auth_header"].trim()
+        : undefined,
+    auth_token:
+      typeof config["auth_token"] === "string"
+        ? config["auth_token"].trim()
+        : undefined,
+  };
+}
+
+export function buildContractMergeFields(
+  requiredFieldMap: Record<string, unknown> | null | undefined,
+  mergeData: Record<string, unknown>
+): Record<string, unknown> {
+  return Object.entries(requiredFieldMap ?? {}).reduce<Record<string, unknown>>(
+    (acc, [fieldId, mapping]) => {
+      if (fieldId.startsWith("__")) {
+        return acc;
+      }
+
+      const source = resolveMappingSource(mapping);
+      if (!source) {
+        return acc;
+      }
+
+      const providerFieldId =
+        mapping &&
+        typeof mapping === "object" &&
+        "provider_field_id" in mapping &&
+        typeof mapping.provider_field_id === "string" &&
+        mapping.provider_field_id.trim().length
+          ? mapping.provider_field_id.trim()
+          : fieldId;
+
+      acc[providerFieldId] = readMergeValue(mergeData, source) ?? null;
+      return acc;
+    },
+    {}
+  );
+}
+
+export function resolveContractPdfUrl(args: {
+  providerTemplateId: string;
+  providerTemplateRevision: string;
+  providerConfig: ContractProviderConfig;
+}): string | null {
+  const directUrl = args.providerConfig.contract_pdf_url?.trim();
+  if (directUrl) return directUrl;
+
+  const template =
+    args.providerConfig.contract_pdf_url_template?.trim() ||
+    SIGNWELL_CONTRACT_PDF_URL_TEMPLATE.trim();
+  if (!template) return null;
+
+  return template
+    .replaceAll("{{template_id}}", encodeURIComponent(args.providerTemplateId))
+    .replaceAll(
+      "{{template_revision}}",
+      encodeURIComponent(args.providerTemplateRevision)
+    );
+}
+
+async function fetchContractPdf(args: {
+  contractPdfUrl: string;
+  providerConfig: ContractProviderConfig;
+}): Promise<Uint8Array> {
+  const headers = new Headers({
+    Accept: "application/pdf",
+  });
+
+  const authToken = args.providerConfig.auth_token?.trim() || SIGNWELL_API_KEY.trim();
+  if (authToken) {
+    headers.set(
+      args.providerConfig.auth_header?.trim() || SIGNWELL_AUTH_HEADER,
+      authToken
+    );
+  }
+
+  const response = await fetch(args.contractPdfUrl, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to retrieve the configured contract PDF (${response.status}).`
+    );
+  }
+
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function composeCombinedProposalPdf(args: {
+  proposalPdfBytes: Uint8Array;
+  contractPdfBytes: Uint8Array;
+}): Promise<Uint8Array> {
+  const combinedPdf = await PDFDocument.create();
+  const proposalPdf = await PDFDocument.load(args.proposalPdfBytes);
+  const contractPdf = await PDFDocument.load(args.contractPdfBytes);
+
+  const proposalPages = await combinedPdf.copyPages(
+    proposalPdf,
+    proposalPdf.getPageIndices()
+  );
+  for (const page of proposalPages) {
+    combinedPdf.addPage(page);
+  }
+
+  const contractPages = await combinedPdf.copyPages(
+    contractPdf,
+    contractPdf.getPageIndices()
+  );
+  for (const page of contractPages) {
+    combinedPdf.addPage(page);
+  }
+
+  return await combinedPdf.save();
 }
 
 
@@ -269,6 +599,7 @@ async function handleRequest(req: Request): Promise<Response> {
   if (req.method !== "POST") return jsonResponse(405, { success: false, error: "Method not allowed." });
 
   let uploadedPdfPath: string | null = null;
+  let combinedPdfPath: string | null = null;
   let createdProposalId: string | null = null;
   let reusedDraftProposalId: string | null = null;
   let deactivatedProposalIds: string[] = [];
@@ -282,6 +613,13 @@ async function handleRequest(req: Request): Promise<Response> {
     requireEnv("MG_DOMAIN", MG_DOMAIN);
     requireEnv("MG_FROM_EMAIL", MG_FROM_EMAIL);
     requireEnv("MG_TO_REPLY", MG_TO_REPLY);
+
+    logInfo("Environment contract resolved", {
+      required_env_vars: REQUIRED_ENV_VARS,
+      optional_env_vars: OPTIONAL_ENV_VARS,
+      client_portal_origin_configured: Boolean(CLIENT_PORTAL_PROPOSAL_URL.trim()),
+      floral_proposal_bucket: FLORAL_PROPOSAL_BUCKET,
+    });
 
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
@@ -299,7 +637,7 @@ async function handleRequest(req: Request): Promise<Response> {
     const body = await req.json() as RequestBody;
     const requestedProposalId = String(body.floral_proposal_id ?? "").trim() || null;
     const leadId = String(body.lead_id ?? "").trim();
-    const portalUrl = String(body.portal_url ?? "").trim() || CLIENT_PORTAL_PROPOSAL_URL;
+    const portalUrl = resolvePortalUrl(body.portal_url);
 
     if (!leadId) return jsonResponse(400, { success: false, error: "Missing lead_id." });
     if (!portalUrl) return jsonResponse(500, { success: false, error: "Floral Proposal portal URL is not configured." });
@@ -329,6 +667,20 @@ async function handleRequest(req: Request): Promise<Response> {
 
     if (proposalsError) throw proposalsError;
 
+    const { data: activeContractTemplate, error: activeContractTemplateError } = await supabase
+      .from("proposal_contract_templates")
+      .select("proposal_contract_template_id, provider, provider_template_id, provider_template_name, provider_template_revision, required_field_map")
+      .eq("is_active", true)
+      .maybeSingle<ActiveContractTemplateRow>();
+
+    if (activeContractTemplateError) throw activeContractTemplateError;
+    if (!activeContractTemplate) {
+      return jsonResponse(409, {
+        success: false,
+        error: "An active SignWell contract template is required before submitting a Floral Proposal.",
+      });
+    }
+
     const reusableDraft = requestedProposalId
       ? (existingProposals ?? []).find((proposal) =>
           proposal.floral_proposal_id === requestedProposalId &&
@@ -342,6 +694,59 @@ async function handleRequest(req: Request): Promise<Response> {
       : (existingProposals ?? []).reduce((max, proposal) => Math.max(max, proposal.version), 0) + 1;
 
     const pdfBytes = decodePdfBase64(body.pdf_base64);
+    const mergeData = buildProposalMergeData({
+      lead,
+      proposalVersion,
+      subtotal: body.subtotal,
+      taxRate: body.tax_rate,
+      taxAmount: body.tax_amount,
+      totalAmount: body.total_amount,
+      lineItemsCount: body.line_items.length,
+    });
+    const missingContractFields = validateRequiredFieldMap(
+      activeContractTemplate.required_field_map,
+      mergeData
+    );
+    const providerConfig = extractContractProviderConfig(
+      activeContractTemplate.required_field_map
+    );
+    const contractMergeFields = buildContractMergeFields(
+      activeContractTemplate.required_field_map,
+      mergeData
+    );
+
+    if (missingContractFields.length) {
+      return jsonResponse(409, {
+        success: false,
+        error: `Required contract merge fields are missing: ${missingContractFields.join(", ")}.`,
+      });
+    }
+
+    const contractTemplateRevision = resolveContractTemplateRevision(
+      activeContractTemplate
+    );
+    const contractPdfUrl = resolveContractPdfUrl({
+      providerTemplateId: activeContractTemplate.provider_template_id,
+      providerTemplateRevision: contractTemplateRevision,
+      providerConfig,
+    });
+
+    if (!contractPdfUrl) {
+      return jsonResponse(409, {
+        success: false,
+        error:
+          "The active contract template is missing a retrievable contract PDF source. Add a __signwell.contract_pdf_url or __signwell.contract_pdf_url_template entry before submitting.",
+      });
+    }
+
+    const contractPdfBytes = await fetchContractPdf({
+      contractPdfUrl,
+      providerConfig,
+    });
+    const combinedPdfBytes = await composeCombinedProposalPdf({
+      proposalPdfBytes: pdfBytes,
+      contractPdfBytes,
+    });
 
     uploadedPdfPath = buildStoragePath(leadId, proposalVersion);
     const { error: uploadError } = await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).upload(uploadedPdfPath, pdfBytes, {
@@ -350,6 +755,21 @@ async function handleRequest(req: Request): Promise<Response> {
       cacheControl: "3600",
     });
     if (uploadError) throw uploadError;
+
+    const canonicalPackage = buildCanonicalPackageMetadata({
+      leadId,
+      uploadedPdfFileName: body.pdf_file_name ?? null,
+      proposalVersion,
+    });
+    combinedPdfPath = canonicalPackage.combinedPdfStoragePath;
+    const { error: combinedUploadError } = await supabase.storage
+      .from(FLORAL_PROPOSAL_BUCKET)
+      .upload(canonicalPackage.combinedPdfStoragePath, combinedPdfBytes, {
+        contentType: "application/pdf",
+        upsert: false,
+        cacheControl: "3600",
+      });
+    if (combinedUploadError) throw combinedUploadError;
 
     if (!reusableDraft) {
       deactivatedProposalIds = (existingProposals ?? [])
@@ -376,6 +796,11 @@ async function handleRequest(req: Request): Promise<Response> {
       submittedAt: submissionTimestamp,
       pdfFileName: body.pdf_file_name ?? null,
     });
+    const enrichedSnapshot = {
+      ...snapshot,
+      contract_merge_fields: contractMergeFields,
+      contract_pdf_source_url: contractPdfUrl,
+    };
 
     let proposal: { floral_proposal_id: string; version: number };
 
@@ -390,6 +815,12 @@ async function handleRequest(req: Request): Promise<Response> {
           customer_email: lead.email,
           passcode_hash: passcodeHash,
           pdf_storage_path: uploadedPdfPath,
+          combined_pdf_storage_path: canonicalPackage.combinedPdfStoragePath,
+          combined_pdf_file_name: canonicalPackage.combinedPdfFileName,
+          contract_template_source: activeContractTemplate.provider_template_id,
+          contract_template_revision: contractTemplateRevision,
+          signing_provider: activeContractTemplate.provider,
+          signing_status: "ready",
           finalized_at: snapshot["finalized_at"] ?? null,
           edit_reopened_at: snapshot["edit_reopened_at"] ?? null,
           submitted_at: submissionTimestamp,
@@ -399,7 +830,7 @@ async function handleRequest(req: Request): Promise<Response> {
           total_amount: body.total_amount,
           terms_version: body.terms_version ?? "v1",
           privacy_policy_version: body.privacy_policy_version ?? "v1",
-          snapshot,
+          snapshot: enrichedSnapshot,
           updated_at: new Date().toISOString(),
         })
         .eq("floral_proposal_id", reusableDraft.floral_proposal_id)
@@ -423,6 +854,12 @@ async function handleRequest(req: Request): Promise<Response> {
           customer_email: lead.email,
           passcode_hash: passcodeHash,
           pdf_storage_path: uploadedPdfPath,
+          combined_pdf_storage_path: canonicalPackage.combinedPdfStoragePath,
+          combined_pdf_file_name: canonicalPackage.combinedPdfFileName,
+          contract_template_source: activeContractTemplate.provider_template_id,
+          contract_template_revision: contractTemplateRevision,
+          signing_provider: activeContractTemplate.provider,
+          signing_status: "ready",
           finalized_at: snapshot["finalized_at"] ?? null,
           edit_reopened_at: snapshot["edit_reopened_at"] ?? null,
           submitted_at: submissionTimestamp,
@@ -432,7 +869,7 @@ async function handleRequest(req: Request): Promise<Response> {
           total_amount: body.total_amount,
           terms_version: body.terms_version ?? "v1",
           privacy_policy_version: body.privacy_policy_version ?? "v1",
-          snapshot,
+          snapshot: enrichedSnapshot,
           created_by: user.id,
         })
         .select("floral_proposal_id, version")
@@ -530,6 +967,39 @@ async function handleRequest(req: Request): Promise<Response> {
       }
     }
 
+    const signingSessionReference = `${activeContractTemplate.provider}:${proposal.floral_proposal_id}:v${proposal.version}`;
+    const { error: signingSessionError } = await supabase
+      .from("proposal_signing_sessions")
+      .upsert({
+        floral_proposal_id: proposal.floral_proposal_id,
+        provider: activeContractTemplate.provider,
+        provider_signer_reference: lead.email,
+        status: "ready",
+        last_synced_at: submissionTimestamp,
+        webhook_payload_snapshot: buildSigningSessionSnapshot({
+          floralProposalId: proposal.floral_proposal_id,
+          proposalVersion: proposal.version,
+          activeContractTemplate,
+          contractMergeFields,
+          contractPdfSourceUrl: contractPdfUrl,
+        }),
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: "floral_proposal_id",
+      });
+
+    if (signingSessionError) throw signingSessionError;
+
+    const { error: signingReferenceUpdateError } = await supabase
+      .from("floral_proposals")
+      .update({
+        signing_session_reference: signingSessionReference,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("floral_proposal_id", proposal.floral_proposal_id);
+
+    if (signingReferenceUpdateError) throw signingReferenceUpdateError;
+
     const emailSubject = buildClientSubject(lead, proposal.version);
     const emailText = buildClientText(lead, proposal.version, passcode, portalUrl, body.total_amount);
     const emailHtml = buildClientHtml(lead, proposal.version, passcode, portalUrl, body.total_amount);
@@ -619,8 +1089,14 @@ async function handleRequest(req: Request): Promise<Response> {
         next_status: "proposal_submitted",
         customer_email: lead.email,
         pdf_storage_path: uploadedPdfPath,
+        combined_pdf_storage_path: canonicalPackage.combinedPdfStoragePath,
+        combined_pdf_file_name: canonicalPackage.combinedPdfFileName,
         pdf_supplied: Boolean(body.pdf_base64),
         submitted_pdf_file_name: body.pdf_file_name ?? null,
+        contract_template_id: activeContractTemplate.proposal_contract_template_id,
+        contract_template_source: activeContractTemplate.provider_template_id,
+        contract_template_revision: contractTemplateRevision,
+        signing_session_reference: signingSessionReference,
       },
     });
     if (activityError) throw activityError;
@@ -660,7 +1136,13 @@ async function handleRequest(req: Request): Promise<Response> {
           .update({ is_active: true, updated_at: new Date().toISOString() })
           .in("floral_proposal_id", deactivatedProposalIds);
       }
-      if (uploadedPdfPath) await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).remove([uploadedPdfPath]);
+      const storageCleanupPaths = [
+        uploadedPdfPath,
+        combinedPdfPath,
+      ].filter((value): value is string => Boolean(value));
+      if (storageCleanupPaths.length) {
+        await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).remove(storageCleanupPaths);
+      }
     } catch (rollbackError) {
       logError("Rollback failed", { error: sanitizeError(rollbackError) });
     }

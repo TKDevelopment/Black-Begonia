@@ -13,6 +13,8 @@ export class ProposalDocumentSubmissionModalComponent {
   @Input() fileName = '';
   @Input() errorMessage: string | null = null;
   @Input() canvaImportAvailable = false;
+  @Input() contractTemplateName: string | null = null;
+  @Input() submissionBlockedReason: string | null = null;
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() fileSelected = new EventEmitter<File | null>();

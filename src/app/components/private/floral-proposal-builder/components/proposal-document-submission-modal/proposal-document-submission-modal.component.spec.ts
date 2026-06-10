@@ -69,17 +69,41 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     component.open = true;
     component.fileName = 'proposal.pdf';
     component.canvaImportAvailable = true;
+    component.contractTemplateName = 'Black Begonia Standard Contract';
     component.errorMessage = 'Upload a valid PDF proposal document.';
+    component.submissionBlockedReason =
+      'An active contract template is required before you can submit the proposal document.';
 
     fixture.detectChanges();
 
     const text = textContent();
+    expect(text).toContain('Active contract template: Black Begonia Standard Contract');
     expect(text).toContain('proposal.pdf');
     expect(text).toContain('Canva PDF import is available as an optional shortcut for completed designs.');
     expect(text).toContain('Upload a valid PDF proposal document.');
+    expect(text).toContain(
+      'An active contract template is required before you can submit the proposal document.'
+    );
+    expect(submitButton()?.disabled).toBeTrue();
+  });
+
+  it('keeps submit enabled only when the workflow is not blocked', () => {
+    component.open = true;
+    fixture.detectChanges();
+
+    expect(submitButton()?.disabled).toBeFalse();
+
+    component.submissionBlockedReason = 'Missing required mapped contract data.';
+    fixture.detectChanges();
+
+    expect(submitButton()?.disabled).toBeTrue();
   });
 
   function textContent(): string {
     return fixture.nativeElement.textContent.replace(/\s+/g, ' ').trim();
+  }
+
+  function submitButton(): HTMLButtonElement | null {
+    return fixture.nativeElement.querySelector('button:last-of-type');
   }
 });

@@ -5,6 +5,7 @@ import {
   FloralProposal,
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
+import { environment } from '../../../../environments/environment';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
@@ -63,7 +64,8 @@ export class FloralProposalWorkflowService {
   private readonly floralProposalBucket = 'floral-proposals';
   private readonly lineItemImageBucket = 'floral-proposal-line-items';
   private readonly signedUrlExpirySeconds = 60 * 60;
-  private readonly proposalAccessPath = '/proposal/auth';
+  private readonly proposalPortalUrl =
+    environment.proposalPortalUrl?.trim() || '/proposal/auth';
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -74,39 +76,32 @@ export class FloralProposalWorkflowService {
     const proposals = await this.floralProposalRepository.getLeadFloralProposals(
       leadId
     );
-    const client = this.supabaseService.getClient();
 
     return Promise.all(
       proposals.map(async (proposal) => {
-        if (!proposal.pdf_storage_path) {
-          return {
-            ...proposal,
-            signed_url: proposal.pdf_url ?? null,
-          };
+        if (!proposal.pdf_storage_path && !proposal.combined_pdf_storage_path) {
+          return this.withResolvedProposalSignedUrls(proposal);
         }
 
-        const { data, error } = await client.storage
+        const storagePath =
+          proposal.combined_pdf_storage_path ?? proposal.pdf_storage_path;
+        if (!storagePath) {
+          return this.withResolvedProposalSignedUrls(proposal);
+        }
+
+        const { data, error } = await this.supabaseService.getClient().storage
           .from(this.floralProposalBucket)
-          .createSignedUrl(
-            proposal.pdf_storage_path,
-            this.signedUrlExpirySeconds
-          );
+          .createSignedUrl(storagePath, this.signedUrlExpirySeconds);
 
         if (error) {
           console.error(
             '[FloralProposalWorkflowService] createSignedUrl error:',
             error
           );
-          return {
-            ...proposal,
-            signed_url: proposal.pdf_url ?? null,
-          };
+          return this.withResolvedProposalSignedUrls(proposal);
         }
 
-        return {
-          ...proposal,
-          signed_url: data.signedUrl,
-        };
+        return this.withResolvedProposalSignedUrls(proposal, data.signedUrl);
       })
     );
   }
@@ -188,13 +183,12 @@ export class FloralProposalWorkflowService {
     floral_proposal_id: string;
     version: number;
   }> {
-    const portalUrl = `${window.location.origin}${this.proposalAccessPath}`;
     const { data, error } = await this.supabaseService
       .getClient()
       .functions.invoke('submit-floral-proposal', {
         body: {
           ...payload,
-          portal_url: portalUrl,
+          portal_url: this.proposalPortalUrl,
         },
       });
 
@@ -224,13 +218,12 @@ export class FloralProposalWorkflowService {
       throw new Error('A Floral Proposal is required to resend access.');
     }
 
-    const portalUrl = `${window.location.origin}${this.proposalAccessPath}`;
     const { data, error } = await this.supabaseService
       .getClient()
       .functions.invoke('resend-floral-proposal-email', {
         body: {
           floral_proposal_id: floralProposalId,
-          portal_url: portalUrl,
+          portal_url: this.proposalPortalUrl,
         },
       });
 
@@ -468,6 +461,19 @@ export class FloralProposalWorkflowService {
       .replace(new RegExp(`^${bucket}/`), '');
 
     return normalizedPath || null;
+  }
+
+  private withResolvedProposalSignedUrls(
+    proposal: FloralProposal,
+    signedUrl?: string | null
+  ): FloralProposal {
+    const resolvedSignedUrl = signedUrl ?? proposal.pdf_url ?? null;
+
+    return {
+      ...proposal,
+      signed_url: resolvedSignedUrl,
+      combined_pdf_signed_url: resolvedSignedUrl,
+    };
   }
 }
 

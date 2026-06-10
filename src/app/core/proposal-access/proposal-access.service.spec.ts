@@ -102,6 +102,46 @@ describe('ProposalAccessService', () => {
     expect(service.getSession()?.file_name).toBe('canva-proposal.pdf');
   });
 
+  it('prefers combined review assets and refreshes embedded signing sessions', async () => {
+    const session = buildSession({
+      file_name: 'canva-proposal.pdf',
+      combined_file_name: 'proposal-package.pdf',
+      pdf_url: 'https://example.test/proposal.pdf',
+      combined_pdf_url: 'https://example.test/proposal-package.pdf',
+      embedded_signing_url: null,
+    });
+    service.session.set(session);
+    invokeSpy.and.resolveTo({
+      data: {
+        success: true,
+        session: {
+          ...session,
+          embedded_signing_url: 'https://signwell.example.test/session/abc123',
+        },
+      },
+      error: null,
+    });
+
+    const refreshed = await service.refreshSigningSession();
+
+    expect(service.getReviewDocumentUrl()).toBe('https://example.test/proposal-package.pdf');
+    expect(service.getReviewFileName()).toBe('proposal-package.pdf');
+    expect(service.hasEmbeddedSigning()).toBeFalse();
+    expect(invokeSpy).toHaveBeenCalledWith('verify-floral-proposal-access', {
+      body: {
+        floral_proposal_id: session.floral_proposal_id,
+        access_token: session.access_token,
+      },
+    });
+    expect(refreshed.embedded_signing_url).toBe(
+      'https://signwell.example.test/session/abc123'
+    );
+    expect(service.hasEmbeddedSigning()).toBeTrue();
+    expect(service.getEmbeddedSigningUrl()).toBe(
+      'https://signwell.example.test/session/abc123'
+    );
+  });
+
   it('throws friendly verification errors for edge-function failures and invalid credentials', async () => {
     invokeSpy.and.resolveTo({
       data: null,
@@ -165,6 +205,7 @@ describe('ProposalAccessService', () => {
     });
     expect(service.session()?.response_action).toBe('accept');
     expect(service.session()?.response_feedback).toBeNull();
+    expect(service.session()?.signing_status).toBe('signed');
     expect(service.session()?.responded_at).toEqual(jasmine.any(String));
   });
 
@@ -185,6 +226,7 @@ describe('ProposalAccessService', () => {
     });
 
     expect(service.session()?.response_action).toBe('decline');
+    expect(service.session()?.signing_status).toBe('declined');
     expect(service.session()?.response_feedback).toBe(
       'We need to reduce the scope.'
     );
@@ -202,6 +244,12 @@ describe('ProposalAccessService', () => {
       'This Floral Proposal has already received a response and can no longer be updated.'
     );
     expect(invokeSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects refresh attempts without a valid session', async () => {
+    await expectAsync(service.refreshSession()).toBeRejectedWithError(
+      'Your Floral Proposal access session has expired.'
+    );
   });
 
   it('throws friendly response errors for edge-function failures and failed responses', async () => {

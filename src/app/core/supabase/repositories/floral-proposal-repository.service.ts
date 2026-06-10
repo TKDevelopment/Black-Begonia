@@ -27,6 +27,16 @@ export class FloralProposalRepositoryService {
     customer_email,
     pdf_storage_path,
     pdf_url,
+    combined_pdf_storage_path,
+    combined_pdf_file_name,
+    contract_template_source,
+    contract_template_revision,
+    signing_provider,
+    signing_status,
+    signing_session_reference,
+    signed_package_storage_path,
+    signing_completed_at,
+    signing_declined_at,
     subtotal,
     tax_rate,
     tax_amount,
@@ -109,7 +119,8 @@ export class FloralProposalRepositoryService {
       .from('floral_proposals')
       .select(this.proposalSelect)
       .eq('lead_id', leadId)
-      .order('version', { ascending: false });
+      .order('submitted_at', { ascending: false })
+      .order('updated_at', { ascending: false });
 
     if (error) {
       console.error(
@@ -119,7 +130,7 @@ export class FloralProposalRepositoryService {
       return [];
     }
 
-    return (data ?? []) as FloralProposal[];
+    return this.sortLeadProposals((data ?? []) as FloralProposal[]);
   }
 
   async getFloralProposalById(
@@ -141,6 +152,30 @@ export class FloralProposalRepositoryService {
     }
 
     return (data as FloralProposal | null) ?? null;
+  }
+
+  private sortLeadProposals(proposals: FloralProposal[]): FloralProposal[] {
+    return [...proposals].sort((left, right) => {
+      const rightSubmittedAt = this.toSortableTimestamp(right.submitted_at);
+      const leftSubmittedAt = this.toSortableTimestamp(left.submitted_at);
+      if (rightSubmittedAt !== leftSubmittedAt) {
+        return rightSubmittedAt - leftSubmittedAt;
+      }
+
+      const rightUpdatedAt = this.toSortableTimestamp(right.updated_at);
+      const leftUpdatedAt = this.toSortableTimestamp(left.updated_at);
+      if (rightUpdatedAt !== leftUpdatedAt) {
+        return rightUpdatedAt - leftUpdatedAt;
+      }
+
+      return right.version - left.version;
+    });
+  }
+
+  private toSortableTimestamp(value: string | null | undefined): number {
+    if (!value) return 0;
+    const timestamp = new Date(value).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
   }
 
   async getActiveLeadFloralProposal(leadId: string): Promise<FloralProposal | null> {

@@ -27,18 +27,30 @@ export class LeadProposalHistoryCardComponent {
   @Output() resendProposal = new EventEmitter<string>();
   @Output() submitProposal = new EventEmitter<void>();
 
+  readonly sortedProposals = computed(() =>
+    [...this.proposals].sort((left, right) => {
+      const rightSubmittedAt = this.toTimestamp(right.submitted_at ?? right.created_at);
+      const leftSubmittedAt = this.toTimestamp(left.submitted_at ?? left.created_at);
+      if (rightSubmittedAt !== leftSubmittedAt) {
+        return rightSubmittedAt - leftSubmittedAt;
+      }
+
+      return right.version - left.version;
+    })
+  );
+
   selectedProposal = computed(() => {
-    if (!this.proposals.length) return null;
+    if (!this.sortedProposals().length) return null;
 
     if (this.selectedProposalId) {
       return (
-        this.proposals.find(
+        this.sortedProposals().find(
           (proposal) => proposal.floral_proposal_id === this.selectedProposalId
-        ) ?? this.proposals[0]
+        ) ?? this.sortedProposals()[0]
       );
     }
 
-    return this.proposals[0];
+    return this.sortedProposals()[0];
   });
 
   getPreviewUrl(url: string | null | undefined): SafeResourceUrl | null {
@@ -76,6 +88,12 @@ export class LeadProposalHistoryCardComponent {
 
   onSubmitProposal(): void {
     this.submitProposal.emit();
+  }
+
+  private toTimestamp(value: string | null | undefined): number {
+    if (!value) return 0;
+    const timestamp = new Date(value).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
   }
 }
 

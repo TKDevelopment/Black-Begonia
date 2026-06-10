@@ -50,6 +50,26 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
+function isLocalPortalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ['localhost', '127.0.0.1', '0.0.0.0'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function resolvePortalUrl(requestedPortalUrl: string | null | undefined): string {
+  const requested = String(requestedPortalUrl ?? '').trim();
+  const configured = CLIENT_PORTAL_PROPOSAL_URL.trim();
+
+  if (configured && (!requested || isLocalPortalUrl(requested))) {
+    return configured;
+  }
+
+  return requested || configured;
+}
+
 function jsonResponse(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders });
 }
@@ -200,7 +220,7 @@ serve(async (req) => {
 
     const body = await req.json() as RequestBody;
     const floralProposalId = String(body.floral_proposal_id ?? "").trim();
-    const portalUrl = String(body.portal_url ?? "").trim() || CLIENT_PORTAL_PROPOSAL_URL;
+    const portalUrl = resolvePortalUrl(body.portal_url);
 
     if (!floralProposalId) return jsonResponse(400, { success: false, error: "Missing floral_proposal_id." });
     if (!portalUrl) return jsonResponse(500, { success: false, error: "Floral Proposal portal URL is not configured." });

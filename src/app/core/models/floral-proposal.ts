@@ -7,6 +7,13 @@ export type FloralProposalStatus =
   | 'declined'
   | 'accepted'
   | 'expired';
+export type FloralProposalSigningStatus =
+  | 'not_started'
+  | 'ready'
+  | 'viewed'
+  | 'signed'
+  | 'declined'
+  | 'failed';
 
 export type FloralProposalLineItemType = 'product' | 'fee' | 'discount' | 'labor';
 export type FloralProposalShoppingListStatus = 'generated' | 'exported';
@@ -180,6 +187,17 @@ export interface FloralProposal {
   pdf_storage_path?: string | null;
   pdf_url?: string | null;
   signed_url?: string | null;
+  combined_pdf_storage_path?: string | null;
+  combined_pdf_file_name?: string | null;
+  combined_pdf_signed_url?: string | null;
+  contract_template_source?: string | null;
+  contract_template_revision?: string | null;
+  signing_provider?: string | null;
+  signing_status?: FloralProposalSigningStatus | null;
+  signing_session_reference?: string | null;
+  signed_package_storage_path?: string | null;
+  signing_completed_at?: string | null;
+  signing_declined_at?: string | null;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;

@@ -15,18 +15,35 @@ import { ProposalAccessService } from '../../../core/proposal-access/proposal-ac
 export class ProposalReviewComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
-  private readonly proposalAccessService = inject(ProposalAccessService);
+  readonly proposalAccessService = inject(ProposalAccessService);
 
   readonly session = computed(() => this.proposalAccessService.getSession());
+  readonly reviewDocumentUrl = computed(() =>
+    this.proposalAccessService.getReviewDocumentUrl()
+  );
   readonly previewUrl = computed<SafeResourceUrl | null>(() => {
-    const session = this.session();
-    if (!session?.pdf_url) return null;
+    const documentUrl = this.reviewDocumentUrl();
+    if (!documentUrl) return null;
 
-    return this.sanitizer.bypassSecurityTrustResourceUrl(session.pdf_url);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(documentUrl);
+  });
+  readonly embeddedSigningUrl = computed<SafeResourceUrl | null>(() => {
+    const signingUrl = this.proposalAccessService.getEmbeddedSigningUrl();
+    if (!signingUrl) return null;
+
+    return this.sanitizer.bypassSecurityTrustResourceUrl(signingUrl);
   });
   readonly hasResponded = computed(() => !!this.session()?.response_action);
+  readonly isSignWellProposal = computed(
+    () => this.session()?.signing_provider === 'signwell'
+  );
+  readonly hasEmbeddedSigning = computed(() => !!this.embeddedSigningUrl());
+  readonly usesEmbeddedSigningFlow = computed(
+    () => this.isSignWellProposal() && this.hasEmbeddedSigning()
+  );
 
   readonly submitting = signal(false);
+  readonly refreshingSigning = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly completedAction = signal<'accept' | 'decline' | null>(null);
@@ -78,8 +95,21 @@ export class ProposalReviewComponent implements OnInit {
     }).format(new Date(value));
   }
 
+  formatSigningStatus(value: string | null | undefined): string {
+    if (!value) return 'Not started';
+
+    return value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
   openAcceptModal(): void {
     if (this.submitting() || this.completedAction()) return;
+    if (this.usesEmbeddedSigningFlow()) {
+      this.focusEmbeddedSigning();
+      return;
+    }
+
     this.acceptModalOpen.set(true);
     this.acceptModalState.set('confirm');
     this.errorMessage.set(null);
@@ -107,6 +137,13 @@ export class ProposalReviewComponent implements OnInit {
 
   async confirmAccept(): Promise<void> {
     if (this.submitting() || this.completedAction()) return;
+    if (this.usesEmbeddedSigningFlow()) {
+      this.errorMessage.set(
+        'Please complete the embedded signing steps below to accept this Floral Proposal.'
+      );
+      this.focusEmbeddedSigning();
+      return;
+    }
 
     const signatureName = this.signatureName().trim();
     if (!this.acceptedTerms() || !this.acceptedPrivacyPolicy() || !signatureName) {
@@ -184,6 +221,41 @@ export class ProposalReviewComponent implements OnInit {
   async signOut(): Promise<void> {
     this.proposalAccessService.clearSession();
     await this.router.navigate(['/proposal/auth']);
+  }
+
+  async refreshSigningSession(): Promise<void> {
+    if (this.refreshingSigning() || this.submitting()) return;
+
+    try {
+      this.refreshingSigning.set(true);
+      this.errorMessage.set(null);
+      await this.proposalAccessService.refreshSigningSession();
+
+      if (this.usesEmbeddedSigningFlow()) {
+        this.focusEmbeddedSigning();
+      } else {
+        this.successMessage.set(
+          'Your Floral Proposal session was refreshed. If signing is still unavailable, please try again in a moment.'
+        );
+      }
+    } catch (error) {
+      console.error('[ProposalReviewComponent] refreshSigningSession error:', error);
+      this.errorMessage.set(
+        error instanceof Error
+          ? error.message
+          : 'We could not refresh your signing session right now.'
+      );
+    } finally {
+      this.refreshingSigning.set(false);
+    }
+  }
+
+  private focusEmbeddedSigning(): void {
+    if (typeof document === 'undefined') return;
+
+    document
+      .getElementById('embedded-signing-panel')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 

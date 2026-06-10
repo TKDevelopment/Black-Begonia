@@ -251,6 +251,9 @@ serve(async (req) => {
       accepted_at: action === "accept" ? now : null,
       declined_at: action === "decline" ? now : null,
       signed_at: action === "accept" ? now : null,
+      signing_status: action === "accept" ? "signed" : "declined",
+      signing_completed_at: action === "accept" ? now : null,
+      signing_declined_at: action === "decline" ? now : null,
       signature_name: action === "accept" ? signatureName : null,
       signature_ip: req.headers.get("x-forwarded-for") ?? null,
       signature_user_agent: req.headers.get("user-agent") ?? null,
@@ -283,6 +286,23 @@ serve(async (req) => {
       },
     });
     if (activityError) return jsonResponse(500, { success: false, error: "Lead status updated, but activity logging failed." });
+
+    const { error: signingSessionUpdateError } = await supabase
+      .from("proposal_signing_sessions")
+      .update({
+        status: action === "accept" ? "signed" : "declined",
+        last_synced_at: now,
+        updated_at: now,
+        last_error_message: null,
+      })
+      .eq("floral_proposal_id", floralProposalId);
+
+    if (signingSessionUpdateError) {
+      logError("Signing session update failed", {
+        floral_proposal_id: floralProposalId,
+        error: sanitizeError(signingSessionUpdateError),
+      });
+    }
 
     try {
       await sendMailgunMessage({

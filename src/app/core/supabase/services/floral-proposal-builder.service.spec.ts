@@ -327,6 +327,101 @@ describe('FloralProposalBuilderService', () => {
     );
   });
 
+  it('validates contract template field maps while ignoring reserved provider metadata', () => {
+    const renderPayload = service.buildRenderPayload({
+      lines: [
+        service.recalculateLine({
+          ...service.createEmptyLine(0),
+          item_name: 'Reception Install',
+          quantity: 2,
+          components: [
+            {
+              ...service.createEmptyComponentRow(0, 20),
+              catalog_item_name: 'Smilax',
+              quantity_per_unit: 3,
+              base_unit_cost: 8,
+              purchase_unit_cost: 8,
+              applied_markup_percent: 25,
+            },
+          ],
+        }),
+      ],
+      taxRegion,
+      defaultMarkupPercent: 30,
+      laborPercent: 15,
+      shoppingList: [],
+    });
+
+    const result = service.validateContractTemplateFieldMap({
+      lead: {
+        lead_id: 'lead-test-001',
+        event_type: 'wedding',
+        service_type: 'full service',
+        first_name: 'Avery',
+        last_name: 'Bloom',
+        email: 'avery@example.test',
+        phone: '555-0100',
+        preferred_contact_method: 'email',
+        event_date: '2026-10-24',
+        ceremony_venue_name: 'Test Garden',
+        ceremony_venue_city: 'Austin',
+        ceremony_venue_state: 'TX',
+        ceremony_start_time: null,
+        reception_venue_name: 'Test Hall',
+        reception_venue_city: 'Austin',
+        reception_venue_state: 'TX',
+        reception_start_time: null,
+        event_start_time: null,
+        budget_range: '$5,000-$7,500',
+        guest_count: 80,
+        inquiry_message: null,
+        source: 'website',
+        status: 'nurturing',
+        assigned_user_id: null,
+        decline_reason: null,
+        converted_project_id: null,
+        converted_primary_contact_id: null,
+        converted_at: null,
+        declined_at: null,
+        last_contacted_at: null,
+        created_at: '2026-06-02T12:00:00.000Z',
+        updated_at: '2026-06-02T12:00:00.000Z',
+        consultation_scheduled_at: null,
+        consultation_completed_at: null,
+        planner_name: null,
+        planner_phone: null,
+        planner_email: null,
+        partner_first_name: 'Jordan',
+        partner_last_name: 'Reed',
+      },
+      renderPayload,
+      proposalVersion: 4,
+      requiredFieldMap: {
+        customer_name: 'lead.full_name',
+        customer_email: 'lead.email',
+        proposal_total: { source: 'proposal.total_amount', provider_field_id: 'total_due' },
+        missing_guest_count: 'lead.missing_value',
+        __signwell: {
+          contract_pdf_url: 'https://provider.example.test/contracts/current.pdf',
+        },
+      },
+    });
+
+    expect(result.mergeData).toEqual(
+      jasmine.objectContaining({
+        lead: jasmine.objectContaining({
+          full_name: 'Avery Bloom',
+          email: 'avery@example.test',
+        }),
+        proposal: jasmine.objectContaining({
+          version: 4,
+          total_amount: renderPayload.totals.totalAmount,
+        }),
+      })
+    );
+    expect(result.missingFields).toEqual(['missing_guest_count']);
+  });
+
   it('builds and aggregates shopping list items with reserve and pack math', () => {
     const firstLine = service.recalculateLine({
       ...service.createEmptyLine(0),
