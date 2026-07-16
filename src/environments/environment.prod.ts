@@ -1,13 +1,13 @@
-import type { AppEnvironment } from './environment';
 
+    import type { AppEnvironment } from './environment.model';
 
     export const environment: AppEnvironment = {
         production: true,
         bypassAuth: false,
-        supabaseUrl: 'undefined',
-        supabaseAnonKey: 'undefined',
+        supabaseUrl: 'https://example.supabase.co',
+        supabaseAnonKey: 'test-anon-key',
         proposalPortalUrl: 'https://blackbegoniaflorals.com/proposal/auth',
-        grapesjsStudioLicenseKey: 'undefined',
-        googleClientId: 'undefined',
-        googleApiKey: 'undefined',
+        grapesjsStudioLicenseKey: 'default',
+        googleClientId: 'default',
+        googleApiKey: 'default',
     };

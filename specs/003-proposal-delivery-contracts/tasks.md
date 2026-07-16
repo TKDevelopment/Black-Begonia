@@ -146,6 +146,7 @@ story implementation.
 - [X] T040 Normalize lead `source` values to the Supabase `lead_sources` enum before inquiry insert and CRM lead update in `src/app/core/supabase/repositories/lead-repository.service.ts` and `src/app/core/supabase/repositories/lead-repository.service.spec.ts`
 - [X] T041 Preserve date-only `event_date` values without timezone day-shift across lead persistence and display in `src/app/core/utils/date-only.ts`, `src/app/core/supabase/repositories/lead-repository.service.ts`, `src/app/components/private/leads/`, `src/app/components/private/floral-proposal-builder/`, `src/app/components/proposal-access/proposal-review/`, and related specs
 - [X] T042 Preserve date-only `event_date` values without timezone day-shift in inquiry and proposal edge-function emails in `supabase/edge_functions/send-inquiry-emails.ts`, `supabase/edge_functions/send-inquiry-emails.test.ts`, `supabase/edge_functions/send-proposal-email.ts`, `supabase/edge_functions/submit-floral-proposal.ts`, `supabase/edge_functions/resend-floral-proposal-email.ts`, `supabase/edge_functions/submit-floral-proposal-response.ts`, and `supabase/edge_functions/preview-floral-proposal-pdf.ts`
+- [X] T043 Keep Netlify-generated production environment files aligned with `AppEnvironment` and proposal portal configuration in `set-env.cts`, `src/environments/environment.model.ts`, `src/environments/environment.ts`, and `src/environments/environment.prod.ts`
 
 ---
 
