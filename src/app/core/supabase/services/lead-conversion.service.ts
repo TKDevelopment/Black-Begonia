@@ -7,6 +7,7 @@ import { ProjectRepositoryService } from '../repositories/project-repository.ser
 import { ProjectContactRepositoryService } from '../repositories/project-contact-repository.service';
 import { LeadRepositoryService } from '../repositories/lead-repository.service';
 import { ActivityRepositoryService } from '../repositories/activity-repository.service';
+import { formatDateOnlyForDisplay } from '../../utils/date-only';
 
 export interface ConvertLeadInput {
   project_name: string;
@@ -136,11 +137,11 @@ export class LeadConversionService {
     const eventLabel = this.titleCase(lead.service_type || 'event');
     const clientLabel = `${lead.first_name} ${lead.last_name}`.trim();
     const dateLabel = lead.event_date
-      ? new Intl.DateTimeFormat('en-US', {
+      ? formatDateOnlyForDisplay(lead.event_date, '', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
-        }).format(new Date(lead.event_date))
+        })
       : null;
 
     return [clientLabel, eventLabel, dateLabel].filter(Boolean).join(' • ');

@@ -10,6 +10,12 @@ export interface ProposalAccessSession {
   version: number;
   file_name?: string | null;
   pdf_url: string | null;
+  combined_pdf_url?: string | null;
+  combined_file_name?: string | null;
+  signing_provider?: string | null;
+  signing_status?: string | null;
+  signing_session_reference?: string | null;
+  embedded_signing_url?: string | null;
   access_token: string;
   authenticated_at?: string | null;
   expires_at: string;

@@ -66,8 +66,20 @@ function formatDisplayValue(value: string | null | undefined): string {
 
 function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return "Not provided";
-  const date = new Date(`${dateString}T00:00:00`);
-  return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "America/New_York" }).format(date);
+  const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateOnlyMatch
+    ? new Date(Date.UTC(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      ))
+    : new Date(dateString);
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: dateOnlyMatch ? "UTC" : "America/New_York",
+  }).format(date);
 }
 
 function sanitizePdfText(value: string): string {

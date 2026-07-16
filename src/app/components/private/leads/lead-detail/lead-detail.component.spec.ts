@@ -178,6 +178,27 @@ describe('LeadDetailComponent', () => {
     );
   });
 
+  it('preserves newest-first proposal ordering from the workflow and defaults selection to the latest version', async () => {
+    const oldestProposal = {
+      ...testFloralProposal,
+      floral_proposal_id: 'proposal-v1',
+      version: 1,
+    };
+    const latestProposal = {
+      ...testFloralProposal,
+      floral_proposal_id: 'proposal-v3',
+      version: 3,
+      is_active: true,
+    };
+    proposalWorkflow.getLeadProposals.and.resolveTo([latestProposal, oldestProposal]);
+
+    createComponent();
+    await fixture.whenStable();
+
+    expect(component.proposals().map((proposal) => proposal.version)).toEqual([3, 1]);
+    expect(component.selectedProposalId()).toBe('proposal-v3');
+  });
+
   it('navigates back to the lead list when the route has no lead id', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { paramMap: convertToParamMap({}) } },
@@ -483,6 +504,7 @@ describe('LeadDetailComponent', () => {
     component.lead.set({ ...testLead, budget_range: null });
 
     expect(component.formatDate(null)).toBe('Not set');
+    expect(component.formatDate('2026-11-28')).toBe('November 28, 2026');
     expect(component.formatDateTime(undefined)).toBe('Not available');
     expect(component.formatCurrency(null)).toBe('Not provided');
     expect(component.getBudgetRange()).toBe('Not provided');

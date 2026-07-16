@@ -54,6 +54,26 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
+function isLocalPortalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ['localhost', '127.0.0.1', '0.0.0.0'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function resolvePortalUrl(requestedPortalUrl: string | null | undefined): string {
+  const requested = String(requestedPortalUrl ?? '').trim();
+  const configured = CLIENT_PORTAL_PROPOSAL_URL.trim();
+
+  if (configured && (!requested || isLocalPortalUrl(requested))) {
+    return configured;
+  }
+
+  return requested || configured;
+}
+
 function jsonResponse(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
     status,
@@ -68,13 +88,20 @@ function requireEnv(name: string, value: string | undefined) {
 function formatDate(dateString: string | null): string {
   if (!dateString) return "Not provided";
 
-  const date = new Date(`${dateString}T00:00:00`);
+  const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateOnlyMatch
+    ? new Date(Date.UTC(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      ))
+    : new Date(dateString);
 
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
-    timeZone: "America/New_York",
+    timeZone: dateOnlyMatch ? "UTC" : "America/New_York",
   }).format(date);
 }
 
@@ -369,7 +396,7 @@ serve(async (req) => {
     const body = (await req.json()) as RequestBody;
     const proposalId = body?.proposal_id;
     const passcode = String(body?.passcode ?? "").trim();
-    const portalUrl = String(body?.portal_url ?? CLIENT_PORTAL_PROPOSAL_URL ?? "").trim();
+    const portalUrl = resolvePortalUrl(body?.portal_url);
 
     if (!proposalId) {
       return jsonResponse(400, { error: "Missing proposal_id" });

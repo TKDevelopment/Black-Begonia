@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { testFloralProposal, testLead } from '../../testing/workflow-fixtures';
+import { environment } from '../../../../environments/environment';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
@@ -152,7 +153,11 @@ describe('FloralProposalWorkflowService', () => {
 
   it('loads lead proposals and signs stored proposal PDFs', async () => {
     repository.getLeadFloralProposals.and.resolveTo([
-      { ...testFloralProposal, pdf_storage_path: 'proposal-pdfs/test.pdf' },
+      {
+        ...testFloralProposal,
+        pdf_storage_path: 'proposal-pdfs/test.pdf',
+        combined_pdf_storage_path: 'proposal-packages/test-package.pdf',
+      },
       {
         ...testFloralProposal,
         floral_proposal_id: 'proposal-url-only-001',
@@ -169,8 +174,14 @@ describe('FloralProposalWorkflowService', () => {
 
     expect(repository.getLeadFloralProposals).toHaveBeenCalledWith(testLead.lead_id);
     expect(storageFromSpy).toHaveBeenCalledWith('floral-proposals');
-    expect(storageApi.createSignedUrl).toHaveBeenCalledWith('proposal-pdfs/test.pdf', 3600);
+    expect(storageApi.createSignedUrl).toHaveBeenCalledWith(
+      'proposal-packages/test-package.pdf',
+      3600
+    );
     expect(proposals[0].signed_url).toBe('https://signed.example.test/test.pdf');
+    expect(proposals[0].combined_pdf_signed_url).toBe(
+      'https://signed.example.test/test.pdf'
+    );
     expect(proposals[1].signed_url).toBe('https://example.test/proposal.pdf');
   });
 
@@ -291,7 +302,7 @@ describe('FloralProposalWorkflowService', () => {
     expect(functionsInvokeSpy).toHaveBeenCalledWith('submit-floral-proposal', {
       body: jasmine.objectContaining({
         lead_id: testLead.lead_id,
-        portal_url: jasmine.stringMatching(/\/proposal\/auth$/),
+        portal_url: environment.proposalPortalUrl,
       }),
     });
     expect(result).toEqual({
@@ -328,7 +339,7 @@ describe('FloralProposalWorkflowService', () => {
     expect(functionsInvokeSpy).toHaveBeenCalledWith('resend-floral-proposal-email', {
       body: jasmine.objectContaining({
         floral_proposal_id: 'proposal-test-001',
-        portal_url: jasmine.stringMatching(/\/proposal\/auth$/),
+        portal_url: environment.proposalPortalUrl,
       }),
     });
     await expectAsync(

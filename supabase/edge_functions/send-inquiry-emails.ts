@@ -73,16 +73,23 @@ function requireEnv(name: string, value: string | undefined) {
   if (!value) throw new Error(`Missing required env var: ${name}`);
 }
 
-function formatDate(dateString: string | null): string {
+export function formatDate(dateString: string | null): string {
   if (!dateString) return "Not provided";
 
-  const date = new Date(`${dateString}T00:00:00`);
+  const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateOnlyMatch
+    ? new Date(Date.UTC(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      ))
+    : new Date(dateString);
 
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
-    timeZone: "America/New_York",
+    timeZone: dateOnlyMatch ? "UTC" : "America/New_York",
   }).format(date);
 }
 
@@ -518,7 +525,7 @@ async function sendMailgunMessage(
   return parsed;
 }
 
-serve(async (req) => {
+async function handleRequest(req: Request): Promise<Response> {
   const requestId = generateRequestId();
   const startedAt = Date.now();
 
@@ -922,4 +929,8 @@ serve(async (req) => {
       request_id: requestId,
     });
   }
-});
+}
+
+if (import.meta.main) {
+  serve(handleRequest);
+}

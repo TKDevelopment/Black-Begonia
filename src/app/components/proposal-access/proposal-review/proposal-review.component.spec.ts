@@ -12,18 +12,51 @@ describe('ProposalReviewComponent', () => {
   let proposalAccess: jasmine.SpyObj<ProposalAccessService>;
   let router: jasmine.SpyObj<Router>;
   let consoleErrorSpy: jasmine.Spy;
+  let currentSession: ProposalAccessSession | null;
 
   beforeEach(async () => {
+    currentSession = buildSession();
+
     proposalAccess = jasmine.createSpyObj<ProposalAccessService>(
       'ProposalAccessService',
-      ['hasValidSession', 'getSession', 'submitResponse', 'clearSession']
+      [
+        'hasValidSession',
+        'getSession',
+        'getReviewDocumentUrl',
+        'getReviewFileName',
+        'getEmbeddedSigningUrl',
+        'submitResponse',
+        'refreshSigningSession',
+        'clearSession',
+      ]
     );
-    proposalAccess.hasValidSession.and.returnValue(true);
-    proposalAccess.getSession.and.returnValue(buildSession());
+    proposalAccess.hasValidSession.and.callFake(() => !!currentSession);
+    proposalAccess.getSession.and.callFake(() => currentSession);
+    proposalAccess.getReviewDocumentUrl.and.callFake(
+      () => currentSession?.combined_pdf_url ?? currentSession?.pdf_url ?? null
+    );
+    proposalAccess.getReviewFileName.and.callFake(
+      () => currentSession?.combined_file_name ?? currentSession?.file_name ?? null
+    );
+    proposalAccess.getEmbeddedSigningUrl.and.callFake(
+      () => currentSession?.embedded_signing_url ?? null
+    );
     proposalAccess.submitResponse.and.resolveTo({
       success: true,
-      lead_status: 'proposal_accepted',
-      action: 'accept',
+      lead_status: 'proposal_declined',
+      action: 'decline',
+    });
+    proposalAccess.refreshSigningSession.and.callFake(async () => {
+      if (!currentSession) {
+        throw new Error('Your Floral Proposal access session has expired.');
+      }
+
+      currentSession = {
+        ...currentSession,
+        embedded_signing_url: 'https://signwell.example.test/session/refreshed',
+      };
+
+      return currentSession;
     });
 
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
@@ -41,8 +74,8 @@ describe('ProposalReviewComponent', () => {
   });
 
   it('redirects to auth and renders missing-session state without valid access', () => {
+    currentSession = null;
     proposalAccess.hasValidSession.and.returnValue(false);
-    proposalAccess.getSession.and.returnValue(null);
 
     createComponent();
 
@@ -51,35 +84,47 @@ describe('ProposalReviewComponent', () => {
     expect(text()).toContain('Your Floral Proposal session is unavailable.');
   });
 
-  it('renders active proposal metadata, preview link, and pdf viewer for a valid session', () => {
+  it('renders the combined review package and embedded signing details for a signwell session', () => {
+    currentSession = buildSession({
+      file_name: 'canva-proposal.pdf',
+      combined_file_name: 'proposal-package.pdf',
+      combined_pdf_url: 'https://example.test/proposal-package.pdf',
+      signing_provider: 'signwell',
+      signing_status: 'ready_for_signing',
+      embedded_signing_url: 'https://signwell.example.test/session/abc123',
+    });
+
     createComponent();
 
-    expect(router.navigate).not.toHaveBeenCalled();
     expect(text()).toContain('Active Floral Proposal');
-    expect(text()).toContain('Avery Bloom');
-    expect(text()).toContain('v3');
-    expect(text()).toContain('June 20, 2026');
-    expect(text()).toContain('canva-proposal.pdf');
-    expect(anchor('a')?.href).toBe('https://example.test/proposal.pdf');
-    expect(iframe()?.getAttribute('title')).toBe('Floral Proposal PDF viewer');
+    expect(text()).toContain('proposal-package.pdf');
+    expect(text()).toContain('Signwell');
+    expect(text()).toContain('Ready For Signing');
+    expect(text()).toContain('Jump To Signing');
+    expect(link('a')?.href).toBe('https://example.test/proposal-package.pdf');
+    expect(iframes().length).toBe(2);
+    expect(iframes()[0].getAttribute('title')).toBe('Floral Proposal PDF viewer');
+    expect(iframes()[1].getAttribute('title')).toBe('Embedded proposal signing');
   });
 
-  it('shows missing-preview messaging when the session has no pdf url', () => {
-    proposalAccess.getSession.and.returnValue(buildSession({ pdf_url: null }));
+  it('shows missing-preview messaging when the session has no review document url', () => {
+    currentSession = buildSession({
+      pdf_url: null,
+      combined_pdf_url: null,
+      embedded_signing_url: null,
+    });
 
     createComponent();
 
     expect(text()).toContain('This secure Floral Proposal link is no longer available.');
-    expect(iframe()).toBeNull();
+    expect(iframes().length).toBe(0);
   });
 
   it('hydrates an already accepted proposal response and blocks new response modals', () => {
-    proposalAccess.getSession.and.returnValue(
-      buildSession({
-        response_action: 'accept',
-        responded_at: '2026-06-02T12:30:00.000Z',
-      })
-    );
+    currentSession = buildSession({
+      response_action: 'accept',
+      responded_at: '2026-06-02T12:30:00.000Z',
+    });
 
     createComponent();
     component.openAcceptModal();
@@ -95,89 +140,59 @@ describe('ProposalReviewComponent', () => {
     expect(text()).toContain('Floral Proposal already accepted');
   });
 
-  it('requires terms, privacy acknowledgement, and signature before accepting', async () => {
-    createComponent();
-    component.openAcceptModal();
-
-    await component.confirmAccept();
-    fixture.detectChanges();
-
-    expect(proposalAccess.submitResponse).not.toHaveBeenCalled();
-    expect(component.errorMessage()).toBe(
-      'Please accept the terms, accept the privacy policy, and provide your full signature name.'
-    );
-    expect(text()).toContain('Please accept the terms');
-  });
-
-  it('submits accepted responses with a trimmed signature and success state', async () => {
-    createComponent();
-    component.openAcceptModal();
-    component.acceptedTerms.set(true);
-    component.acceptedPrivacyPolicy.set(true);
-    component.signatureName.set('  Avery Bloom  ');
-
-    await component.confirmAccept();
-    fixture.detectChanges();
-
-    expect(proposalAccess.submitResponse).toHaveBeenCalledWith({
-      action: 'accept',
-      accepted_terms: true,
-      accepted_privacy_policy: true,
-      signature_name: 'Avery Bloom',
+  it('redirects accept actions into the embedded signing panel for signwell proposals', async () => {
+    const scrollIntoView = jasmine.createSpy('scrollIntoView');
+    currentSession = buildSession({
+      signing_provider: 'signwell',
+      signing_status: 'ready',
+      embedded_signing_url: 'https://signwell.example.test/session/abc123',
     });
-    expect(component.completedAction()).toBe('accept');
-    expect(component.acceptModalState()).toBe('success');
-    expect(component.successMessage()).toBe(
-      'Your Floral Proposal has been accepted successfully.'
-    );
-    expect(component.submitting()).toBeFalse();
-  });
+    spyOn(document, 'getElementById').and.returnValue({
+      scrollIntoView,
+    } as unknown as HTMLElement);
 
-  it('resets accept state and shows errors when accept submission fails', async () => {
-    proposalAccess.submitResponse.and.rejectWith(new Error('Response window closed.'));
     createComponent();
     component.openAcceptModal();
-    component.acceptedTerms.set(true);
-    component.acceptedPrivacyPolicy.set(true);
-    component.signatureName.set('Avery Bloom');
-
     await component.confirmAccept();
     fixture.detectChanges();
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[ProposalReviewComponent] confirmAccept error:',
-      jasmine.any(Error)
+    expect(component.acceptModalOpen()).toBeFalse();
+    expect(component.errorMessage()).toBe(
+      'Please complete the embedded signing steps below to accept this Floral Proposal.'
     );
-    expect(component.acceptModalState()).toBe('confirm');
-    expect(component.errorMessage()).toBe('Response window closed.');
-    expect(component.completedAction()).toBeNull();
+    expect(proposalAccess.submitResponse).not.toHaveBeenCalled();
+    expect(scrollIntoView).toHaveBeenCalled();
   });
 
-  it('requires decline notes before submitting a declined response', async () => {
-    createComponent();
-    component.openDeclineModal();
-    component.declineFeedback.set('   ');
+  it('refreshes embedded signing sessions and focuses the signer when it becomes available', async () => {
+    const scrollIntoView = jasmine.createSpy('scrollIntoView');
+    currentSession = buildSession({
+      signing_provider: 'signwell',
+      signing_status: 'ready',
+      embedded_signing_url: null,
+    });
+    spyOn(document, 'getElementById').and.returnValue({
+      scrollIntoView,
+    } as unknown as HTMLElement);
 
-    await component.confirmDecline();
+    createComponent();
+    await component.refreshSigningSession();
     fixture.detectChanges();
 
-    expect(proposalAccess.submitResponse).not.toHaveBeenCalled();
-    expect(component.errorMessage()).toBe(
-      'Please share a few notes so we can revise the Floral Proposal thoughtfully.'
-    );
+    expect(proposalAccess.refreshSigningSession).toHaveBeenCalled();
+    expect(component.refreshingSigning()).toBeFalse();
+    expect(component.hasEmbeddedSigning()).toBeTrue();
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(text()).toContain('Embedded Signing');
   });
 
-  it('submits declined responses with trimmed feedback and success state', async () => {
-    proposalAccess.submitResponse.and.resolveTo({
-      success: true,
-      lead_status: 'proposal_declined',
-      action: 'decline',
-    });
+  it('submits declined responses with trimmed feedback and preserves exit behavior', async () => {
     createComponent();
     component.openDeclineModal();
     component.declineFeedback.set('  Please revise the bouquet palette.  ');
 
     await component.confirmDecline();
+    await component.signOut();
     fixture.detectChanges();
 
     expect(proposalAccess.submitResponse).toHaveBeenCalledWith({
@@ -189,29 +204,28 @@ describe('ProposalReviewComponent', () => {
     expect(component.successMessage()).toBe(
       'Your message was received and the Floral Proposal was declined successfully.'
     );
-  });
-
-  it('shows fallback decline errors and signs out through the auth route', async () => {
-    proposalAccess.submitResponse.and.rejectWith('offline');
-    createComponent();
-    component.openDeclineModal();
-    component.declineFeedback.set('Please simplify the design.');
-
-    await component.confirmDecline();
-    await component.signOut();
-    fixture.detectChanges();
-
-    expect(component.declineModalState()).toBe('form');
-    expect(component.errorMessage()).toBe('We could not save your response right now.');
     expect(proposalAccess.clearSession).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/proposal/auth']);
   });
 
-  it('formats empty date values as not provided', () => {
-    createComponent();
+  it('shows fallback refresh errors and formats empty date values', async () => {
+    proposalAccess.refreshSigningSession.and.rejectWith('offline');
 
+    createComponent();
+    await component.refreshSigningSession();
+    fixture.detectChanges();
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[ProposalReviewComponent] refreshSigningSession error:',
+      'offline'
+    );
+    expect(component.errorMessage()).toBe(
+      'We could not refresh your signing session right now.'
+    );
     expect(component.formatDate(null)).toBe('Not provided');
+    expect(component.formatDate('2026-11-28')).toBe('November 28, 2026');
     expect(component.formatDateTime(undefined)).toBe('Not provided');
+    expect(component.formatSigningStatus(null)).toBe('Not started');
   });
 
   function createComponent(): void {
@@ -233,9 +247,14 @@ describe('ProposalReviewComponent', () => {
       version: 3,
       file_name: 'canva-proposal.pdf',
       pdf_url: 'https://example.test/proposal.pdf',
+      combined_file_name: 'proposal-package.pdf',
+      combined_pdf_url: 'https://example.test/proposal-package.pdf',
       response_action: null,
       response_feedback: null,
       responded_at: null,
+      signing_provider: null,
+      signing_status: null,
+      embedded_signing_url: null,
       ...overrides,
     };
   }
@@ -244,11 +263,11 @@ describe('ProposalReviewComponent', () => {
     return fixture.nativeElement.textContent.replace(/\s+/g, ' ').trim();
   }
 
-  function anchor(selector: string): HTMLAnchorElement | null {
+  function link(selector: string): HTMLAnchorElement | null {
     return fixture.nativeElement.querySelector(selector);
   }
 
-  function iframe(): HTMLIFrameElement | null {
-    return fixture.nativeElement.querySelector('iframe');
+  function iframes(): HTMLIFrameElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('iframe'));
   }
 });

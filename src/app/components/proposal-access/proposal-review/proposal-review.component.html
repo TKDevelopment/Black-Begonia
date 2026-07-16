@@ -49,11 +49,25 @@
                 <p class="mt-1 break-all text-stone-900">{{ session.customer_email }}</p>
               </div>
 
-              <div *ngIf="session.file_name">
+              <div *ngIf="proposalAccessService.getReviewFileName() as reviewFileName">
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
                   Proposal File
                 </p>
-                <p class="mt-1 break-all text-stone-900">{{ session.file_name }}</p>
+                <p class="mt-1 break-all text-stone-900">{{ reviewFileName }}</p>
+              </div>
+
+              <div *ngIf="session.signing_provider">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Signing Provider
+                </p>
+                <p class="mt-1 text-stone-900">{{ session.signing_provider | titlecase }}</p>
+              </div>
+
+              <div *ngIf="session.signing_status">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Signing Status
+                </p>
+                <p class="mt-1 text-stone-900">{{ formatSigningStatus(session.signing_status) }}</p>
               </div>
             </div>
           </div>
@@ -66,8 +80,26 @@
               Review and respond here.
             </h2>
             <p class="mt-4 text-sm leading-7 text-white/80">
-              Review the Floral Proposal, then accept it with terms, privacy acknowledgment, and your signature or decline it with revision notes.
+              Review the Floral Proposal package, then either complete the signing steps or decline it with revision notes.
             </p>
+
+            <div *ngIf="isSignWellProposal()" class="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-white/85">
+              <p class="font-oswald text-xs uppercase tracking-[0.22em] text-[#ea938c]">
+                SignWell Delivery
+              </p>
+              <p class="mt-2">
+                This proposal is configured for SignWell-backed signing. Review the combined proposal and contract package here, then finish your acceptance in the embedded signer below when it is available.
+              </p>
+              <button
+                *ngIf="!hasEmbeddedSigning()"
+                type="button"
+                (click)="refreshSigningSession()"
+                [disabled]="refreshingSigning()"
+                class="mt-4 inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 font-oswald text-[11px] uppercase tracking-[0.22em] text-white transition hover:border-[#ea938c] hover:text-[#ea938c] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {{ refreshingSigning() ? 'Refreshing Signing...' : 'Retry Signing Session' }}
+              </button>
+            </div>
 
             <div *ngIf="errorMessage()" class="mt-5 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
               {{ errorMessage() }}
@@ -95,16 +127,16 @@
               <button
                 type="button"
                 (click)="openAcceptModal()"
-                [disabled]="submitting() || !!completedAction()"
+                [disabled]="submitting() || refreshingSigning() || !!completedAction()"
                 class="inline-flex items-center justify-center rounded-full bg-[#ea938c] px-5 py-3 font-oswald text-xs uppercase tracking-[0.22em] text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Accept Floral Proposal
+                {{ usesEmbeddedSigningFlow() ? 'Jump To Signing' : 'Accept Floral Proposal' }}
               </button>
 
               <button
                 type="button"
                 (click)="openDeclineModal()"
-                [disabled]="submitting() || !!completedAction()"
+                [disabled]="submitting() || refreshingSigning() || !!completedAction()"
                 class="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-3 font-oswald text-xs uppercase tracking-[0.22em] text-white transition hover:border-[#ea938c] hover:text-[#ea938c] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Decline With Notes
@@ -133,8 +165,8 @@
             </div>
 
             <a
-              *ngIf="session.pdf_url"
-              [href]="session.pdf_url"
+              *ngIf="reviewDocumentUrl() as reviewDocumentUrl"
+              [href]="reviewDocumentUrl"
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex items-center justify-center rounded-full border border-stone-300 px-5 py-3 font-oswald text-xs uppercase tracking-[0.22em] text-stone-700 transition hover:border-[#ea938c] hover:text-[#ea938c]"
@@ -148,6 +180,26 @@
               [src]="previewUrl"
               title="Floral Proposal PDF viewer"
               class="h-[78vh] min-h-[640px] w-full"
+            ></iframe>
+          </div>
+
+          <div
+            *ngIf="embeddedSigningUrl() as signingUrl"
+            id="embedded-signing-panel"
+            class="mt-5 overflow-hidden rounded-[24px] border border-stone-200 bg-white"
+          >
+            <div class="border-b border-stone-200 px-4 py-3">
+              <p class="font-oswald text-xs uppercase tracking-[0.28em] text-[#ea938c]">
+                Embedded Signing
+              </p>
+              <p class="mt-1 text-sm text-stone-600">
+                Complete the contract signing steps below without leaving the secure Black Begonia portal.
+              </p>
+            </div>
+            <iframe
+              [src]="signingUrl"
+              title="Embedded proposal signing"
+              class="h-[72vh] min-h-[560px] w-full"
             ></iframe>
           </div>
 

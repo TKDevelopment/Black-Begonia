@@ -7,6 +7,7 @@ import {
   FloralProposalLineItemType,
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
+import { Lead } from '../../models/lead';
 import { TaxRegion } from '../../models/tax-region';
 
 export interface FloralProposalBuilderComponentRow {
@@ -90,10 +91,41 @@ export interface FloralProposalRenderPayload {
   };
 }
 
+export interface ContractTemplateValidationResult {
+  mergeData: Record<string, unknown>;
+  missingFields: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class FloralProposalBuilderService {
+  validateContractTemplateFieldMap(args: {
+    lead: Lead;
+    renderPayload: FloralProposalRenderPayload;
+    proposalVersion: number;
+    requiredFieldMap?: Record<string, unknown> | null;
+  }): ContractTemplateValidationResult {
+    const mergeData = this.buildContractMergeData(args);
+    const missingFields = Object.entries(args.requiredFieldMap ?? {}).flatMap(
+      ([fieldId, mapping]) => {
+        if (fieldId.startsWith('__')) {
+          return [];
+        }
+
+        const source = this.resolveTemplateMappingSource(mapping);
+        if (!source) {
+          return [fieldId];
+        }
+
+        const value = this.readMergeDataValue(mergeData, source);
+        return this.isMissingMergeValue(value) ? [fieldId] : [];
+      }
+    );
+
+    return { mergeData, missingFields };
+  }
+
   createEmptyLine(displayOrder: number): FloralProposalBuilderLine {
     return {
       local_id: this.createLocalId('line'),
@@ -435,6 +467,47 @@ export class FloralProposalBuilderService {
     };
   }
 
+  buildContractMergeData(args: {
+    lead: Lead;
+    renderPayload: FloralProposalRenderPayload;
+    proposalVersion: number;
+  }): Record<string, unknown> {
+    const { lead, renderPayload, proposalVersion } = args;
+
+    return {
+      lead: {
+        lead_id: lead.lead_id,
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        full_name: `${lead.first_name} ${lead.last_name}`.trim(),
+        partner_first_name: lead.partner_first_name ?? null,
+        partner_last_name: lead.partner_last_name ?? null,
+        email: lead.email,
+        phone: lead.phone ?? null,
+        event_type: lead.event_type ?? null,
+        service_type: lead.service_type,
+        event_date: lead.event_date ?? null,
+        ceremony_venue_name: lead.ceremony_venue_name ?? null,
+        ceremony_venue_city: lead.ceremony_venue_city ?? null,
+        ceremony_venue_state: lead.ceremony_venue_state ?? null,
+        reception_venue_name: lead.reception_venue_name ?? null,
+        reception_venue_city: lead.reception_venue_city ?? null,
+        reception_venue_state: lead.reception_venue_state ?? null,
+        budget_range: lead.budget_range ?? null,
+        guest_count: lead.guest_count ?? null,
+      },
+      proposal: {
+        version: proposalVersion,
+        subtotal: renderPayload.totals.subtotal,
+        tax_amount: renderPayload.totals.taxAmount,
+        total_amount: renderPayload.totals.totalAmount,
+        tax_rate: renderPayload.tax_rate,
+        line_items_count: renderPayload.line_items.length,
+        tax_region_name: renderPayload.tax_region_name ?? null,
+      },
+    };
+  }
+
   buildLineItemPayloads(
     lines: FloralProposalBuilderLine[]
   ): Omit<
@@ -766,6 +839,45 @@ export class FloralProposalBuilderService {
 
   private createLocalId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private resolveTemplateMappingSource(mapping: unknown): string | null {
+    if (typeof mapping === 'string' && mapping.trim().length) {
+      return mapping.trim();
+    }
+
+    if (
+      mapping &&
+      typeof mapping === 'object' &&
+      'source' in mapping &&
+      typeof mapping.source === 'string' &&
+      mapping.source.trim().length
+    ) {
+      return mapping.source.trim();
+    }
+
+    return null;
+  }
+
+  private readMergeDataValue(
+    mergeData: Record<string, unknown>,
+    sourcePath: string
+  ): unknown {
+    return sourcePath
+      .split('.')
+      .reduce<unknown>(
+        (value, segment) =>
+          value && typeof value === 'object' && segment in (value as Record<string, unknown>)
+            ? (value as Record<string, unknown>)[segment]
+            : undefined,
+        mergeData
+      );
+  }
+
+  private isMissingMergeValue(value: unknown): boolean {
+    if (value == null) return true;
+    if (typeof value === 'string') return value.trim().length === 0;
+    return false;
   }
 }
 

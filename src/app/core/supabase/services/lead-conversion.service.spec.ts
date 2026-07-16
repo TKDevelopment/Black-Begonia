@@ -200,8 +200,8 @@ describe('LeadConversionServiceService', () => {
       event_date: '2026-10-24',
     });
 
-    expect(name).toContain('Avery Bloom');
-    expect(name).toContain('Wedding Full Service');
-    expect(name).toContain('2026');
+      expect(name).toContain('Avery Bloom');
+      expect(name).toContain('Wedding Full Service');
+      expect(name).toContain('Oct 24, 2026');
+    });
   });
-});

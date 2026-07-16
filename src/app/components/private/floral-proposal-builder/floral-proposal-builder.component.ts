@@ -19,6 +19,7 @@ import { ActivityRepositoryService } from '../../../core/supabase/repositories/a
 import { CatalogItemRepositoryService } from '../../../core/supabase/repositories/catalog-item-repository.service';
 import { FloralProposalRepositoryService } from '../../../core/supabase/repositories/floral-proposal-repository.service';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
+import { ProposalContractTemplateRepositoryService } from '../../../core/supabase/repositories/proposal-contract-template-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
 import {
   FloralProposalBuilderComponentRow,
@@ -29,10 +30,14 @@ import {
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
 import { FloralProposalRendererService } from '../../../core/supabase/services/floral-proposal-renderer.service';
 import { ProposalDocumentSubmissionModalComponent } from './components/proposal-document-submission-modal/proposal-document-submission-modal.component';
+import { ProposalContractTemplateManagerComponent } from './components/proposal-contract-template-manager/proposal-contract-template-manager.component';
 import { EntityDetailShellComponent } from '../../../shared/components/private/entity-detail-shell/entity-detail-shell.component';
 import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
 import { LoadingStateBlockComponent } from '../../../shared/components/private/loading-state-block/loading-state-block.component';
 import { StatusBadgeComponent } from '../../../shared/components/private/status-badge/status-badge.component';
+import { ProposalContractTemplate } from '../../../core/models/proposal-contract-template';
+import { ProposalContractTemplateUpsertInput } from '../../../core/models/proposal-contract-template';
+import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
 
 @Component({
   selector: 'app-floral-proposal-builder',
@@ -42,6 +47,7 @@ import { StatusBadgeComponent } from '../../../shared/components/private/status-
     FormsModule,
     DragDropModule,
     ProposalDocumentSubmissionModalComponent,
+    ProposalContractTemplateManagerComponent,
     LoadingStateBlockComponent,
     ErrorStateBlockComponent,
     EntityDetailShellComponent,
@@ -56,6 +62,9 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly leadRepository = inject(LeadRepositoryService);
   private readonly taxRegionRepository = inject(TaxRegionRepositoryService);
   private readonly floralProposalRepository = inject(FloralProposalRepositoryService);
+  private readonly proposalContractTemplateRepository = inject(
+    ProposalContractTemplateRepositoryService
+  );
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
@@ -74,6 +83,10 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly lead = signal<Lead | null>(null);
   readonly proposals = signal<FloralProposal[]>([]);
   readonly activeProposal = signal<FloralProposal | null>(null);
+  readonly contractTemplates = signal<ProposalContractTemplate[]>([]);
+  readonly activeContractTemplate = signal<ProposalContractTemplate | null>(null);
+  readonly contractTemplateSaving = signal(false);
+  readonly contractTemplateError = signal<string | null>(null);
   readonly taxRegions = signal<TaxRegion[]>([]);
   readonly catalogItems = signal<CatalogItem[]>([]);
   readonly lineItems = signal<FloralProposalBuilderLine[]>([]);
@@ -139,16 +152,45 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly canSubmitDocument = computed(() => {
     const lead = this.lead();
     const proposal = this.activeProposal();
+    const activeContractTemplate = this.activeContractTemplate();
 
     return (
       !!lead &&
       !!proposal &&
+      !!activeContractTemplate &&
       proposal.status === 'draft' &&
       this.isProposalFinalized(proposal) &&
       !this.editModeEnabled() &&
       !this.saving() &&
       !this.isReadOnly(lead.status)
     );
+  });
+
+  readonly submissionBlockedReason = computed(() => {
+    const lead = this.lead();
+    const proposal = this.activeProposal();
+    const activeTemplate = this.activeContractTemplate();
+
+    if (!lead || !proposal) {
+      return null;
+    }
+
+    if (!activeTemplate) {
+      return 'An active SignWell contract template is required before you can submit a floral proposal document.';
+    }
+
+    const validation = this.floralProposalBuilderService.validateContractTemplateFieldMap({
+      lead,
+      renderPayload: this.renderPayload(),
+      proposalVersion: proposal.version,
+      requiredFieldMap: activeTemplate.required_field_map,
+    });
+
+    if (validation.missingFields.length) {
+      return `Complete the required contract merge fields before submission: ${validation.missingFields.join(', ')}.`;
+    }
+
+    return null;
   });
 
   readonly submissionFileName = computed(() => this.submissionFile()?.name ?? '');
@@ -193,21 +235,29 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const [lead, taxRegions, proposals, catalogItems] =
+      const [lead, taxRegions, proposals, contractTemplates, catalogItems] =
         await Promise.all([
           this.leadRepository.getLeadById(leadId),
           this.taxRegionRepository.getTaxRegions(),
           this.floralProposalRepository.getLeadFloralProposals(leadId),
+          this.proposalContractTemplateRepository.getTemplates(),
           this.catalogItemRepository.getCatalogItems(),
         ]);
 
       if (!lead) {
         this.error.set('We could not find this lead.');
+        this.contractTemplates.set([]);
+        this.activeContractTemplate.set(null);
         return;
       }
 
       this.lead.set(lead);
       this.taxRegions.set(taxRegions.filter((region) => region.is_active));
+      this.contractTemplates.set(contractTemplates);
+      this.activeContractTemplate.set(
+        contractTemplates.find((template) => template.is_active) ?? null
+      );
+      this.contractTemplateError.set(null);
       this.catalogItems.set(catalogItems);
       this.proposals.set(proposals);
       this.editModeEnabled.set(false);
@@ -246,6 +296,8 @@ export class FloralProposalBuilderComponent implements OnInit {
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] loadBuilder error:', error);
       this.error.set('We were unable to load the Floral Proposal builder right now.');
+      this.contractTemplates.set([]);
+      this.activeContractTemplate.set(null);
     } finally {
       this.loading.set(false);
     }
@@ -555,6 +607,84 @@ export class FloralProposalBuilderComponent implements OnInit {
     }
   }
 
+  async createContractTemplate(
+    payload: ProposalContractTemplateUpsertInput
+  ): Promise<void> {
+    const leadId = this.lead()?.lead_id ?? null;
+
+    try {
+      this.contractTemplateSaving.set(true);
+      this.contractTemplateError.set(null);
+      const template =
+        await this.proposalContractTemplateRepository.createTemplate(payload);
+
+      if (template.is_active) {
+        await this.proposalContractTemplateRepository.setActiveTemplate(
+          template.proposal_contract_template_id
+        );
+      }
+
+      if (leadId) {
+        await this.loadBuilder(leadId);
+      }
+
+      this.toast.showToast('Contract template saved.', 'success');
+    } catch (error) {
+      console.error(
+        '[FloralProposalBuilderComponent] createContractTemplate error:',
+        error
+      );
+      this.contractTemplateError.set(
+        error instanceof Error
+          ? error.message
+          : 'We were unable to save the contract template right now.'
+      );
+    } finally {
+      this.contractTemplateSaving.set(false);
+    }
+  }
+
+  async activateContractTemplate(templateId: string): Promise<void> {
+    const leadId = this.lead()?.lead_id ?? null;
+
+    try {
+      this.contractTemplateSaving.set(true);
+      this.contractTemplateError.set(null);
+      const template =
+        await this.proposalContractTemplateRepository.setActiveTemplate(
+          templateId
+        );
+
+      this.contractTemplates.update((templates) =>
+        templates.map((item) => ({
+          ...item,
+          is_active:
+            item.proposal_contract_template_id ===
+            template.proposal_contract_template_id,
+        }))
+      );
+      this.activeContractTemplate.set(template);
+
+      if (leadId) {
+        await this.loadBuilder(leadId);
+      }
+
+      this.toast.showToast('Active contract template updated.', 'success');
+    } catch (error) {
+      console.error(
+        '[FloralProposalBuilderComponent] activateContractTemplate error:',
+        error
+      );
+      this.contractTemplateError.set(
+        error instanceof Error
+          ? error.message
+          : 'We were unable to activate the contract template right now.'
+      );
+    } finally {
+      this.contractTemplateSaving.set(false);
+    }
+  }
+
   enableProposalEditing(): void {
     if (!this.canSubmitDocument()) return;
     const reopenedAt = new Date().toISOString();
@@ -678,6 +808,14 @@ export class FloralProposalBuilderComponent implements OnInit {
       hour: 'numeric',
       minute: '2-digit',
     }).format(new Date(value));
+  }
+
+  formatDate(value: string | null | undefined): string {
+    return formatDateOnlyForDisplay(value, 'Not set', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
   formatStatusLabel(status: string): string {

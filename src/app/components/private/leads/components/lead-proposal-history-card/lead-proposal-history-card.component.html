@@ -41,7 +41,7 @@
     </div>
   </div>
 
-  <ng-container *ngIf="proposals.length; else emptyState">
+  <ng-container *ngIf="sortedProposals().length; else emptyState">
     <div class="mt-4" *ngIf="selectedProposal() as proposal">
       <p class="text-sm text-stone-500">
         Viewing version {{ proposal.version }}
@@ -57,7 +57,7 @@
     <div class="mt-6 grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
       <div class="space-y-3">
         <button
-          *ngFor="let proposal of proposals"
+        *ngFor="let proposal of sortedProposals()"
           type="button"
           (click)="onSelect(proposal.floral_proposal_id)"
           class="w-full rounded-2xl border p-4 text-left transition"

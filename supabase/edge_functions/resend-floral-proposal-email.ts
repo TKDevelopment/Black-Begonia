@@ -50,6 +50,26 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
+function isLocalPortalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ['localhost', '127.0.0.1', '0.0.0.0'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function resolvePortalUrl(requestedPortalUrl: string | null | undefined): string {
+  const requested = String(requestedPortalUrl ?? '').trim();
+  const configured = CLIENT_PORTAL_PROPOSAL_URL.trim();
+
+  if (configured && (!requested || isLocalPortalUrl(requested))) {
+    return configured;
+  }
+
+  return requested || configured;
+}
+
 function jsonResponse(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders });
 }
@@ -88,8 +108,20 @@ function normalizeProviderMessageId(messageId: string | null | undefined): strin
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return "Not provided";
-  const date = new Date(`${dateString}T00:00:00`);
-  return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "America/New_York" }).format(date);
+  const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = dateOnlyMatch
+    ? new Date(Date.UTC(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      ))
+    : new Date(dateString);
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: dateOnlyMatch ? "UTC" : "America/New_York",
+  }).format(date);
 }
 
 function formatDisplayValue(value: string | null | undefined): string {
@@ -200,7 +232,7 @@ serve(async (req) => {
 
     const body = await req.json() as RequestBody;
     const floralProposalId = String(body.floral_proposal_id ?? "").trim();
-    const portalUrl = String(body.portal_url ?? "").trim() || CLIENT_PORTAL_PROPOSAL_URL;
+    const portalUrl = resolvePortalUrl(body.portal_url);
 
     if (!floralProposalId) return jsonResponse(400, { success: false, error: "Missing floral_proposal_id." });
     if (!portalUrl) return jsonResponse(500, { success: false, error: "Floral Proposal portal URL is not configured." });

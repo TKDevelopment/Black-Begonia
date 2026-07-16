@@ -7,6 +7,9 @@
         <p class="mt-2 text-sm leading-6 text-stone-600">
           Upload the finalized florist-created PDF that should be delivered to the client portal.
         </p>
+        <p class="mt-2 text-sm leading-6 text-stone-600" *ngIf="contractTemplateName">
+          Active contract template: <strong>{{ contractTemplateName }}</strong>
+        </p>
       </div>
       <button type="button" (click)="onOverlayClose()" [disabled]="saving" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-stone-500 transition hover:border-black/15 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -50,13 +53,16 @@
       <p *ngIf="errorMessage" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
         {{ errorMessage }}
       </p>
+      <p *ngIf="submissionBlockedReason" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        {{ submissionBlockedReason }}
+      </p>
     </div>
 
     <div class="flex items-center justify-end gap-3 border-t border-black/10 px-6 py-5">
       <button type="button" (click)="onOverlayClose()" [disabled]="saving" class="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
         Cancel
       </button>
-      <button type="button" (click)="submitDocument.emit()" [disabled]="saving" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="button" (click)="submitDocument.emit()" [disabled]="saving || !!submissionBlockedReason" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
         Submit Proposal Document
       </button>
     </div>

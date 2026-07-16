@@ -16,4 +16,8 @@ describe('development environment', () => {
     expect(environment.googleClientId).toBe('default');
     expect(environment.googleApiKey).toBe('default');
   });
+
+  it('uses the local proposal portal URL for development builds', () => {
+    expect(environment.proposalPortalUrl).toBe('http://localhost:4200/proposal/auth');
+  });
 });
