@@ -33,7 +33,12 @@ Fix floral proposal delivery so client emails always use the correct Black Begon
 - `SIGNWELL_EMBEDDED_SIGNING_URL_TEMPLATE` is optional and should contain `{{session_id}}` only when SignWell returns an embedded session id instead of a full URL.
 - `FLORAL_PROPOSAL_BUCKET` and `PROPOSAL_SIGNED_URL_TTL_SECONDS` define the storage boundary and review-link lifetime for proposal packages.
 
-**Scale/Scope**: Touches CRM lead detail proposal history, floral proposal builder submission flow, proposal-access auth and review UI, environment-aware proposal email delivery, the `floral_proposals` domain, floral proposal storage assets, related lead activity and email records, and new SignWell template/signing metadata for florist-managed contract delivery.
+**Lead Intake Data Integrity**:
+- Public inquiry and CRM-created leads must persist `service_type` values that match the Supabase `service_type` enum exactly. UI labels and historical catalog keys are normalized at the repository boundary before insert or update so proposal delivery, contract merge data, and lead filtering receive canonical service values.
+- Public inquiry and CRM-created leads must also persist `source` values that match the Supabase `lead_sources` enum exactly. Legacy or friendly source values such as `referral`, `personal referral`, and CRM free text are normalized to accepted values before insert or update.
+- Public inquiry and CRM-created leads must preserve date-only `event_date` values as the selected calendar day. Date inputs such as `2026-11-28` must be stored and displayed as November 28, 2026 without UTC/local timezone conversion shifting them to November 27.
+
+**Scale/Scope**: Touches CRM lead detail proposal history, floral proposal builder submission flow, proposal-access auth and review UI, environment-aware proposal email delivery, the `floral_proposals` domain, floral proposal storage assets, related lead activity and email records, lead enum normalization for proposal-ready intake data, and new SignWell template/signing metadata for florist-managed contract delivery.
 
 ## Constitution Check
 

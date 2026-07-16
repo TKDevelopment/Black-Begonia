@@ -504,6 +504,7 @@ describe('LeadDetailComponent', () => {
     component.lead.set({ ...testLead, budget_range: null });
 
     expect(component.formatDate(null)).toBe('Not set');
+    expect(component.formatDate('2026-11-28')).toBe('November 28, 2026');
     expect(component.formatDateTime(undefined)).toBe('Not available');
     expect(component.formatCurrency(null)).toBe('Not provided');
     expect(component.getBudgetRange()).toBe('Not provided');

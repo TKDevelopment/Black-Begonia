@@ -7,6 +7,8 @@ Verify the end-to-end proposal-delivery workflow where Black Begonia preserves i
 ## Preconditions
 
 - A lead exists in a submission-eligible floral proposal state.
+- Inquiry-created and CRM-created leads store Supabase-compatible enum values, including `service_type` values such as `full-service wedding`, `baby shower`, or `corporate`, and `source` values such as `instagram`, `venue partner`, `website`, or `other`.
+- Inquiry-created and CRM-created leads store event dates as the exact selected calendar date, such as `2026-11-28` for November 28, 2026.
 - The florist has finalized proposal data in the floral proposal builder.
 - A florist-created Canva proposal PDF is ready for upload.
 - One active SignWell contract template is configured for floral proposal use.
@@ -48,6 +50,18 @@ Verify the end-to-end proposal-delivery workflow where Black Begonia preserves i
 3. Confirm the submission succeeds and the lead status advances into the submitted proposal state.
 4. Confirm the lead detail page shows the newest proposal version first in the Floral Proposals section.
 5. Inspect the generated client email content and confirm the proposal-auth button points to the correct client-facing route for the active environment, with production using `blackbegoniaflorals.com/proposal/auth`.
+
+## Scenario 1a: Create inquiry leads with canonical enum values
+
+1. Submit a public wedding inquiry using `Full-Service Wedding`.
+2. Confirm the inserted lead stores `service_type` as `full-service wedding`.
+3. Submit a public general inquiry using `Baby Showers` or `Corporate Events`.
+4. Confirm the inserted lead stores `service_type` as `baby shower` or `corporate`.
+5. Submit a wedding inquiry with `Personal Referral` as the lead source.
+6. Confirm the inserted lead stores `source` as `other`, because `referral` is not a Supabase `lead_sources` enum value.
+7. Submit an inquiry with November 28, 2026 as the event date.
+8. Confirm the inserted lead stores `event_date` as `2026-11-28`, CRM lead views display November 28, 2026, and inquiry confirmation emails display November 28, 2026, not November 27.
+9. Edit a lead from the CRM using display labels or friendly source text and confirm the update still stores canonical Supabase enum values.
 
 ## Scenario 2: Build the canonical combined proposal package
 
@@ -92,3 +106,5 @@ Verify the end-to-end proposal-delivery workflow where Black Begonia preserves i
 - The existing passcode-auth proposal-access flow remains the portal entry point.
 - The florist's manual Canva PDF workflow remains unchanged except for contract attachment and embedded signing.
 - Proposal history, lead activity, and delivery metadata remain coherent across submission, review, decline, and signing completion.
+- Lead service types and lead sources remain canonical before proposal generation so SignWell merge data, proposal routing, filtering, and reporting do not inherit invalid inquiry values.
+- Lead event dates remain date-only calendar values across public intake, CRM display, inquiry emails, proposal builder context, proposal delivery emails, and project conversion names.

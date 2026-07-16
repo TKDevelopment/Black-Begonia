@@ -56,6 +56,22 @@
   - Call SignWell directly from the Angular client: rejected because it would expose privileged integration behavior and fragment workflow control.
   - Build a separate backend service outside Supabase for signing: rejected because the project already relies on Supabase edge functions for proposal lifecycle operations.
 
+## Decision 8: Normalize lead service types before persistence
+
+- **Decision**: Public inquiry forms and CRM lead creation may continue using catalog labels, legacy keys, or friendly lead-source labels, but `LeadRepositoryService` normalizes them to exact Supabase enum values before inserting or updating leads.
+- **Rationale**: Supabase rejects enum values such as `wedding-full-service`, `Baby Showers`, `Corporate Events`, or `referral` with a 400 response because the database accepts canonical values such as `full-service wedding`, `baby shower`, `corporate`, and `other`. Lead service type and source are also used later by proposal delivery, contract merge workflows, filtering, and reporting, so canonical persistence prevents downstream proposal-package failures.
+- **Alternatives considered**:
+  - Change every form option value to database enum values: rejected because CRM display labels, legacy keys, and friendly source labels still appear in edit flows and tests.
+  - Loosen the database enums: rejected because it would preserve inconsistent lead data and weaken proposal workflow routing.
+
+## Decision 9: Treat event dates as date-only calendar values
+
+- **Decision**: Public inquiry and CRM lead event dates are normalized to `YYYY-MM-DD` before persistence, and date-only values are displayed or emailed by constructing calendar dates rather than JavaScript UTC instants.
+- **Rationale**: Browser date inputs emit date-only strings such as `2026-11-28`. `new Date('2026-11-28')` treats that value as midnight UTC, which displays as November 27 in US Eastern time. Event dates are business calendar dates, not moments in time, so they must not shift by timezone.
+- **Alternatives considered**:
+  - Store event dates as timestamps: rejected because event dates do not need time-of-day semantics and would keep creating timezone edge cases.
+  - Add a day during display: rejected because it would mask the symptom while breaking users in other timezones or for already timestamped values.
+
 ## Operational setup guidance
 
 - `CLIENT_PORTAL_PROPOSAL_URL` must point to the deployed Black Begonia proposal-auth route used in client emails. Production should use `https://blackbegoniaflorals.com/proposal/auth`.
@@ -80,6 +96,10 @@
 - Floral proposal workflow and builder services under `src/app/core/supabase/services/`
 - Floral proposal, contract-template, and signing-session repositories under `src/app/core/supabase/repositories/`
 - Proposal domain models under `src/app/core/models/`
+- Floral service catalog normalization under `src/app/core/floral-services/floral-service-catalog.ts`
+- Lead `service_type` and `source` persistence normalization under `src/app/core/supabase/repositories/lead-repository.service.ts`
+- Date-only normalization and display helpers under `src/app/core/utils/date-only.ts`
+- Supabase edge-function email date formatting in `supabase/edge_functions/send-inquiry-emails.ts` and proposal email helpers
 
 ### Supabase schemas and storage
 

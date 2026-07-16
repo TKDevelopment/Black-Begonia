@@ -223,6 +223,7 @@ describe('ProposalReviewComponent', () => {
       'We could not refresh your signing session right now.'
     );
     expect(component.formatDate(null)).toBe('Not provided');
+    expect(component.formatDate('2026-11-28')).toBe('November 28, 2026');
     expect(component.formatDateTime(undefined)).toBe('Not provided');
     expect(component.formatSigningStatus(null)).toBe('Not started');
   });
@@ -269,4 +270,4 @@ describe('ProposalReviewComponent', () => {
   function iframes(): HTMLIFrameElement[] {
     return Array.from(fixture.nativeElement.querySelectorAll('iframe'));
   }
-}
+});

@@ -5,6 +5,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 
 import { ProposalAccessService } from '../../../core/proposal-access/proposal-access.service';
+import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
 
 @Component({
   selector: 'app-proposal-review',
@@ -74,13 +75,11 @@ export class ProposalReviewComponent implements OnInit {
   }
 
   formatDate(value: string | null | undefined): string {
-    if (!value) return 'Not provided';
-
-    return new Intl.DateTimeFormat('en-US', {
+    return formatDateOnlyForDisplay(value, 'Not provided', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-    }).format(new Date(value));
+    });
   }
 
   formatDateTime(value: string | null | undefined): string {

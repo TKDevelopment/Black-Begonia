@@ -28,6 +28,7 @@ import { LeadUpsertPayload } from './components/lead-upsert-modal/lead-upsert.ty
 import { CreateGeneralLeadInput } from '../../../core/models/create-general-lead-input';
 import { CreateWeddingLeadInput } from '../../../core/models/create-wedding-lead-input';
 import { ToastService } from '../../../core/services/toast.service';
+import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
 
 @Component({
   selector: 'app-leads',
@@ -412,13 +413,11 @@ export class LeadsComponent implements OnInit {
   }
 
   formatEventDate(value: string | null | undefined): string {
-    if (!value) return 'Not set';
-
-    return new Intl.DateTimeFormat('en-US', {
+    return formatDateOnlyForDisplay(value, 'Not set', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    }).format(new Date(value));
+    });
   }
 
   formatCreatedAt(value: string): string {

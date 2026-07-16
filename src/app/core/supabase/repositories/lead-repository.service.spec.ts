@@ -88,7 +88,7 @@ describe('LeadRepositoryService', () => {
     client.from.and.returnValue(query);
 
     const lead = await service.createGeneralLead({
-      service_type: 'custom-installation',
+      service_type: 'Baby Showers',
       first_name: '  Iris ',
       last_name: ' Miller  ',
       email: ' IRIS@EXAMPLE.COM ',
@@ -100,7 +100,7 @@ describe('LeadRepositoryService', () => {
     });
 
     expect(query.insert).toHaveBeenCalledWith({
-      service_type: 'custom-installation',
+      service_type: 'baby shower',
       event_type: 'general',
       first_name: 'Iris',
       last_name: 'Miller',
@@ -109,7 +109,7 @@ describe('LeadRepositoryService', () => {
       preferred_contact_method: 'email',
       event_date: null,
       inquiry_message: 'Lobby flowers',
-      source: 'referral',
+      source: 'other',
     });
     expect(query.select).toHaveBeenCalledWith(jasmine.stringMatching('lead_id'));
     expect(lead).toEqual(testLead);
@@ -144,11 +144,11 @@ describe('LeadRepositoryService', () => {
       planner_name: '  Casey Planner ',
       planner_phone: ' 555-010-3000 ',
       planner_email: ' casey@example.com ',
-      source: '',
+      source: 'referral',
     });
 
     expect(query.insert).toHaveBeenCalledWith({
-      service_type: 'wedding-full-service',
+      service_type: 'full-service wedding',
       event_type: 'wedding',
       first_name: 'Iris',
       last_name: 'Miller',
@@ -211,6 +211,78 @@ describe('LeadRepositoryService', () => {
     );
     expect(query.eq).toHaveBeenCalledWith('lead_id', testLead.lead_id);
     expect(lead).toEqual(testLead);
+  });
+
+  it('normalizes service type when updating a lead', async () => {
+    const query = createUpdateEqSelectSingleQuery({ data: testLead, error: null });
+    client.from.and.returnValue(query);
+
+    await service.updateLead(testLead.lead_id, {
+      event_type: 'general',
+      service_type: 'Corporate Events',
+    });
+
+    expect(query.update).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        event_type: 'general',
+        service_type: 'corporate',
+        updated_at: jasmine.any(String),
+      })
+    );
+  });
+
+  it('normalizes lead source aliases and free text before update', async () => {
+    const query = createUpdateEqSelectSingleQuery({ data: testLead, error: null });
+    client.from.and.returnValue(query);
+
+    await service.updateLead(testLead.lead_id, {
+      source: 'Personal Referral',
+    });
+
+    expect(query.update).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        source: 'other',
+        updated_at: jasmine.any(String),
+      })
+    );
+
+    query.update.calls.reset();
+    await service.updateLead(testLead.lead_id, {
+      source: 'Venue Partner',
+    });
+
+    expect(query.update).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        source: 'venue partner',
+      })
+    );
+
+    query.update.calls.reset();
+    await service.updateLead(testLead.lead_id, {
+      source: 'crm',
+    });
+
+    expect(query.update).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        source: 'other',
+      })
+    );
+  });
+
+  it('normalizes event dates as date-only values before update', async () => {
+    const query = createUpdateEqSelectSingleQuery({ data: testLead, error: null });
+    client.from.and.returnValue(query);
+
+    await service.updateLead(testLead.lead_id, {
+      event_date: '2026-11-28T05:00:00.000Z',
+    });
+
+    expect(query.update).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        event_date: '2026-11-28',
+        updated_at: jasmine.any(String),
+      })
+    );
   });
 
   it('throws Supabase errors when update fails', async () => {

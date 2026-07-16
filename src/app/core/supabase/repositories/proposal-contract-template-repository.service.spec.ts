@@ -224,4 +224,4 @@ describe('ProposalContractTemplateRepositoryService', () => {
       ...overrides,
     };
   }
-}
+});

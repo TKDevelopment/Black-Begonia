@@ -132,4 +132,4 @@ describe('ProposalContractTemplateManagerComponent', () => {
   function text(): string {
     return fixture.nativeElement.textContent.replace(/\s+/g, ' ').trim();
   }
-}
+});

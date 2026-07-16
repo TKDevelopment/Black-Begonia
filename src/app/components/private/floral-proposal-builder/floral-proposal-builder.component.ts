@@ -37,6 +37,7 @@ import { LoadingStateBlockComponent } from '../../../shared/components/private/l
 import { StatusBadgeComponent } from '../../../shared/components/private/status-badge/status-badge.component';
 import { ProposalContractTemplate } from '../../../core/models/proposal-contract-template';
 import { ProposalContractTemplateUpsertInput } from '../../../core/models/proposal-contract-template';
+import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
 
 @Component({
   selector: 'app-floral-proposal-builder',
@@ -807,6 +808,14 @@ export class FloralProposalBuilderComponent implements OnInit {
       hour: 'numeric',
       minute: '2-digit',
     }).format(new Date(value));
+  }
+
+  formatDate(value: string | null | undefined): string {
+    return formatDateOnlyForDisplay(value, 'Not set', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
   formatStatusLabel(status: string): string {

@@ -34,6 +34,7 @@ import {
   LeadConvertModalComponent,
   LeadConvertPayload,
 } from '../components/lead-convert-modal/lead-convert-modal.component';
+import { formatDateOnlyForDisplay } from '../../../../core/utils/date-only';
 import { LeadProposalHistoryCardComponent } from '../components/lead-proposal-history-card/lead-proposal-history-card.component';
 import { LeadUpsertModalComponent } from '../components/lead-upsert-modal/lead-upsert-modal.component';
 import { LeadUpsertPayload } from '../components/lead-upsert-modal/lead-upsert.types';
@@ -438,13 +439,11 @@ export class LeadDetailComponent implements OnInit {
   }
 
   formatDate(value: string | null | undefined): string {
-    if (!value) return 'Not set';
-
-    return new Intl.DateTimeFormat('en-US', {
+    return formatDateOnlyForDisplay(value, 'Not set', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-    }).format(new Date(value));
+    });
   }
 
   formatDateTime(value: string | null | undefined): string {

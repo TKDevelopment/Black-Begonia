@@ -3,10 +3,30 @@ import { ProposalRendererKey } from '../proposal-templates/proposal-renderer.typ
 export type FloralServiceEventType = 'general' | 'wedding';
 export type FloralServiceWorkflowMode = 'project' | 'subscription';
 export type FloralServiceDocumentMode = 'proposal' | 'agreement';
+export type SupabaseLeadServiceType =
+  | 'full-service wedding'
+  | 'ceremony-only wedding'
+  | 'reception-only wedding'
+  | 'elopement'
+  | 'engagement'
+  | 'birthday'
+  | 'funeral'
+  | 'corporate'
+  | 'bridal shower'
+  | 'baby shower'
+  | 'anniversary'
+  | 'rehearsal'
+  | 'proposal'
+  | 'subscription'
+  | 'private lessons'
+  | 'other'
+  | 'workshop'
+  | 'private event';
 
 export interface FloralServiceDefinition {
   key: string;
   label: string;
+  supabaseValue: SupabaseLeadServiceType;
   eventType: FloralServiceEventType;
   workflowMode: FloralServiceWorkflowMode;
   documentMode: FloralServiceDocumentMode;
@@ -20,6 +40,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'wedding-full-service',
     label: 'Full-Service Wedding',
+    supabaseValue: 'full-service wedding',
     eventType: 'wedding',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -30,6 +51,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'wedding-ceremony-only',
     label: 'Ceremony-Only Wedding',
+    supabaseValue: 'ceremony-only wedding',
     eventType: 'wedding',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -40,6 +62,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'wedding-reception-only',
     label: 'Reception-Only Wedding',
+    supabaseValue: 'reception-only wedding',
     eventType: 'wedding',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -50,6 +73,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'elopement',
     label: 'Elopement',
+    supabaseValue: 'elopement',
     eventType: 'wedding',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -59,6 +83,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'engagement',
     label: 'Engagements',
+    supabaseValue: 'engagement',
     eventType: 'wedding',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -69,6 +94,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'baby-shower',
     label: 'Baby Showers',
+    supabaseValue: 'baby shower',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -79,6 +105,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'bridal-shower',
     label: 'Bridal Showers',
+    supabaseValue: 'bridal shower',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -89,6 +116,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'quinceanera-celebration',
     label: 'Quinceanera Celebrations',
+    supabaseValue: 'private event',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -99,6 +127,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'memorial-florals',
     label: 'Memorial Florals',
+    supabaseValue: 'funeral',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -109,6 +138,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'rehearsal-dinner',
     label: 'Rehearsal Dinners',
+    supabaseValue: 'rehearsal',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -119,6 +149,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'anniversary-dinner',
     label: 'Anniversary Dinners',
+    supabaseValue: 'anniversary',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -129,6 +160,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'private-gathering',
     label: 'Private Gatherings',
+    supabaseValue: 'private event',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -139,6 +171,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'birthday-celebration',
     label: 'Birthday Celebrations',
+    supabaseValue: 'birthday',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -149,6 +182,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'proposal-florals',
     label: 'Proposal Florals',
+    supabaseValue: 'proposal',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -159,6 +193,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'flower-bar',
     label: 'Build-Your-Own Flower Bar',
+    supabaseValue: 'private event',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -169,6 +204,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'corporate-event',
     label: 'Corporate Events',
+    supabaseValue: 'corporate',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -179,6 +215,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'private-workshop',
     label: 'Private Workshops',
+    supabaseValue: 'workshop',
     eventType: 'general',
     workflowMode: 'project',
     documentMode: 'proposal',
@@ -189,6 +226,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'floral-subscription',
     label: 'Floral Subscriptions',
+    supabaseValue: 'subscription',
     eventType: 'general',
     workflowMode: 'subscription',
     documentMode: 'agreement',
@@ -199,6 +237,7 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
   {
     key: 'private-lesson',
     label: 'Private Lessons',
+    supabaseValue: 'private lessons',
     eventType: 'general',
     workflowMode: 'subscription',
     documentMode: 'agreement',
@@ -206,6 +245,27 @@ export const FLORAL_SERVICE_CATALOG: FloralServiceDefinition[] = [
     description: 'Private lesson bookings that share the same subscription-style lifecycle.',
     aliases: ['private lesson', 'private lessons'],
   },
+];
+
+const SUPABASE_LEAD_SERVICE_TYPES: readonly SupabaseLeadServiceType[] = [
+  'full-service wedding',
+  'ceremony-only wedding',
+  'reception-only wedding',
+  'elopement',
+  'engagement',
+  'birthday',
+  'funeral',
+  'corporate',
+  'bridal shower',
+  'baby shower',
+  'anniversary',
+  'rehearsal',
+  'proposal',
+  'subscription',
+  'private lessons',
+  'other',
+  'workshop',
+  'private event',
 ];
 
 function normalizeCatalogValue(value: string | null | undefined): string {
@@ -219,6 +279,14 @@ function normalizeCatalogValue(value: string | null | undefined): string {
 }
 
 const FLORAL_SERVICE_LOOKUP = new Map<string, FloralServiceDefinition>();
+const SUPABASE_LEAD_SERVICE_TYPE_LOOKUP = new Map<string, SupabaseLeadServiceType>();
+
+SUPABASE_LEAD_SERVICE_TYPES.forEach((serviceType) => {
+  SUPABASE_LEAD_SERVICE_TYPE_LOOKUP.set(
+    normalizeCatalogValue(serviceType),
+    serviceType
+  );
+});
 
 for (const service of FLORAL_SERVICE_CATALOG) {
   const indexValues = [service.key, service.label, ...(service.aliases ?? [])];
@@ -271,6 +339,25 @@ export function resolveFloralServiceLabel(
   eventType?: FloralServiceEventType | null
 ): string | null {
   return findFloralService(value, eventType)?.label ?? null;
+}
+
+export function resolveFloralServiceDatabaseValue(
+  value: string | null | undefined,
+  eventType?: FloralServiceEventType | null
+): SupabaseLeadServiceType | null {
+  const normalized = normalizeCatalogValue(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const directDatabaseValue = SUPABASE_LEAD_SERVICE_TYPE_LOOKUP.get(normalized);
+
+  if (directDatabaseValue) {
+    return directDatabaseValue;
+  }
+
+  return findFloralService(value, eventType)?.supabaseValue ?? null;
 }
 
 export function getFloralServiceWorkflowMode(

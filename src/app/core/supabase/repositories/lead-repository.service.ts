@@ -3,6 +3,44 @@ import { Lead } from '../../models/lead';
 import { SupabaseService } from '../clients/supabase.service';
 import { CreateGeneralLeadInput } from '../../models/create-general-lead-input';
 import { CreateWeddingLeadInput } from '../../models/create-wedding-lead-input';
+import {
+  normalizeFloralServiceEventType,
+  resolveFloralServiceDatabaseValue,
+} from '../../floral-services/floral-service-catalog';
+import { normalizeDateOnly } from '../../utils/date-only';
+
+type SupabaseLeadSource =
+  | 'instagram'
+  | 'facebook'
+  | 'google'
+  | 'pinterest'
+  | 'the knot'
+  | 'wedding wire'
+  | 'yelp'
+  | 'venue partner'
+  | 'bridal show'
+  | 'other'
+  | 'website';
+
+const SUPABASE_LEAD_SOURCES: readonly SupabaseLeadSource[] = [
+  'instagram',
+  'facebook',
+  'google',
+  'pinterest',
+  'the knot',
+  'wedding wire',
+  'yelp',
+  'venue partner',
+  'bridal show',
+  'other',
+  'website',
+];
+
+const LEAD_SOURCE_ALIASES = new Map<string, SupabaseLeadSource>([
+  ['personal referral', 'other'],
+  ['referral', 'other'],
+  ['crm', 'other'],
+]);
 
 @Injectable({
   providedIn: 'root',
@@ -84,16 +122,16 @@ export class LeadRepositoryService {
 
   async createGeneralLead(payload: CreateGeneralLeadInput): Promise<Lead> {
     const normalizedPayload = {
-      service_type: payload.service_type,
+      service_type: this.normalizeServiceType(payload.service_type, 'general'),
       event_type: 'general',
       first_name: payload.first_name.trim(),
       last_name: payload.last_name.trim(),
       email: payload.email.trim().toLowerCase(),
       phone: payload.phone?.trim() || null,
       preferred_contact_method: payload.preferred_contact_method || null,
-      event_date: payload.event_date || null,
+      event_date: normalizeDateOnly(payload.event_date),
       inquiry_message: payload.inquiry_message?.trim() || null,
-      source: payload.source?.trim() || 'other',
+      source: this.normalizeLeadSource(payload.source),
     };
 
     const { data, error } = await this.supabaseService
@@ -113,7 +151,7 @@ export class LeadRepositoryService {
 
   async createWeddingLead(payload: CreateWeddingLeadInput): Promise<Lead> {
     const normalizedPayload = {
-      service_type: payload.service_type,
+      service_type: this.normalizeServiceType(payload.service_type, 'wedding'),
       event_type: 'wedding',
       first_name: payload.first_name.trim(),
       last_name: payload.last_name.trim(),
@@ -122,7 +160,7 @@ export class LeadRepositoryService {
       email: payload.email.trim().toLowerCase(),
       phone: payload.phone?.trim() || null,
       preferred_contact_method: payload.preferred_contact_method || null,
-      event_date: payload.event_date || null,
+      event_date: normalizeDateOnly(payload.event_date),
       ceremony_venue_name: payload.ceremony_venue_name?.trim() || null,
       ceremony_venue_city: payload.ceremony_venue_city?.trim() || null,
       ceremony_venue_state: payload.ceremony_venue_state?.trim() || null,
@@ -143,7 +181,7 @@ export class LeadRepositoryService {
       planner_name: payload.planner_name?.trim() || null,
       planner_phone: payload.planner_phone?.trim() || null,
       planner_email: payload.planner_email?.trim() || null,
-      source: payload.source?.trim() || 'other',
+      source: this.normalizeLeadSource(payload.source),
     };
 
     const { data, error } = await this.supabaseService
@@ -167,6 +205,20 @@ export class LeadRepositoryService {
   ): Promise<Lead> {
     const payload = {
       ...updates,
+      ...(updates.service_type !== undefined
+        ? {
+            service_type: this.normalizeServiceType(
+              updates.service_type,
+              updates.event_type
+            ),
+          }
+        : {}),
+      ...(updates.source !== undefined
+        ? { source: this.normalizeLeadSource(updates.source) }
+        : {}),
+      ...(updates.event_date !== undefined
+        ? { event_date: normalizeDateOnly(updates.event_date) }
+        : {}),
       updated_at: new Date().toISOString(),
     };
 
@@ -184,6 +236,42 @@ export class LeadRepositoryService {
     }
 
     return data as Lead;
+  }
+
+  private normalizeServiceType(
+    serviceType: string,
+    eventType?: string | null
+  ): string {
+    return (
+      resolveFloralServiceDatabaseValue(
+        serviceType,
+        normalizeFloralServiceEventType(eventType)
+      ) ?? serviceType.trim()
+    );
+  }
+
+  private normalizeLeadSource(source: string | null | undefined): SupabaseLeadSource {
+    const normalized = this.normalizeEnumInput(source);
+
+    if (!normalized) {
+      return 'other';
+    }
+
+    const directSource = SUPABASE_LEAD_SOURCES.find(
+      (leadSource) => this.normalizeEnumInput(leadSource) === normalized
+    );
+
+    return directSource ?? LEAD_SOURCE_ALIASES.get(normalized) ?? 'other';
+  }
+
+  private normalizeEnumInput(value: string | null | undefined): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   async deleteLead(leadId: string): Promise<void> {

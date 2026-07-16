@@ -211,13 +211,13 @@ describe('FloralProposalBuilderService', () => {
     );
     expect(payload.line_items[0].components.length).toBe(1);
     expect(payload.line_items[1].line_type_label).toBe('Fee');
-    expect(payload.line_items[0] as Record<string, unknown>).not.toEqual(
+    expect(payload.line_items[0] as unknown as Record<string, unknown>).not.toEqual(
       jasmine.objectContaining({
         template_id: jasmine.anything(),
         template_name: jasmine.anything(),
       })
     );
-    expect(payload as Record<string, unknown>).not.toEqual(
+    expect(payload as unknown as Record<string, unknown>).not.toEqual(
       jasmine.objectContaining({
         template_id: jasmine.anything(),
         template_name: jasmine.anything(),

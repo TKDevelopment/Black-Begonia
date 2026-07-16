@@ -223,6 +223,13 @@ describe('LeadsComponent', () => {
     ]);
   });
 
+  it('formats date-only event dates without shifting the selected day', async () => {
+    createComponent();
+    await fixture.whenStable();
+
+    expect(component.formatEventDate('2026-11-28')).toBe('Nov 28, 2026');
+  });
+
   it('creates a manual general lead and refreshes the list', async () => {
     leadRepository.createGeneralLead.and.resolveTo(testLead);
     activityRepository.createLeadActivity.and.resolveTo({} as never);

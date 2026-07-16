@@ -442,7 +442,7 @@
             </div>
             <div>
               <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Event Date</p>
-              <p class="mt-1 text-stone-800">{{ lead()!.event_date ? formatDateTime(lead()!.event_date) : 'Not set' }}</p>
+              <p class="mt-1 text-stone-800">{{ formatDate(lead()!.event_date) }}</p>
             </div>
             <div>
               <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Budget Range</p>
