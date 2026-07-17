@@ -41,7 +41,8 @@ frontend service-role secrets; Supabase RLS and storage policies required for
 data changes; every new or modified table schema requires an executable SQL
 migration in `supabase/migrations/`; every Supabase Edge Function must be
 standalone with no `_shared` directory or local cross-function imports; public
-site changes require product owner approval.
+site changes require product owner approval; AI agents must not run git commit
+or push commands.
 
 **Scale/Scope**: [Feature scope, affected routes, affected tables, users, and
 operational workflows or NEEDS CLARIFICATION]
@@ -76,6 +77,9 @@ operational workflows or NEEDS CLARIFICATION]
 - **Security and privacy**: Confirm no service-role keys or privileged secrets
   enter frontend code, and describe handling for emails, proposal passcodes,
   signatures, customer data, PDFs, and payment-related records.
+- **Git publication boundary**: Confirm the AI agent will not run `git commit`,
+  `git push`, or commit/push-capable automation. Record any source-control
+  summary or suggested commit message as human handoff only.
 
 ## Project Structure
 

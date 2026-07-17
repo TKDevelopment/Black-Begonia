@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { FloralProposal } from '../../../../../core/models/floral-proposal';
 import { FloralProposalResponseSummary } from '../../../../../core/models/floral-proposal';
@@ -13,18 +12,13 @@ import { FloralProposalResponseSummary } from '../../../../../core/models/floral
   styleUrl: './lead-proposal-history-card.component.scss',
 })
 export class LeadProposalHistoryCardComponent {
-  private sanitizer = inject(DomSanitizer);
-
   @Input() proposals: FloralProposal[] = [];
   @Input() selectedProposalId: string | null = null;
   @Input() proposalResponses: Record<string, FloralProposalResponseSummary[]> = {};
   @Input() resending = false;
   @Input() canSubmitProposal = false;
-  @Input() canResendProposal = true;
 
   @Output() selectProposal = new EventEmitter<string>();
-  @Output() openProposal = new EventEmitter<string>();
-  @Output() resendProposal = new EventEmitter<string>();
   @Output() submitProposal = new EventEmitter<void>();
 
   readonly sortedProposals = computed(() =>
@@ -53,11 +47,6 @@ export class LeadProposalHistoryCardComponent {
     return this.sortedProposals()[0];
   });
 
-  getPreviewUrl(url: string | null | undefined): SafeResourceUrl | null {
-    if (!url) return null;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
-  }
-
   formatDateTime(value: string): string {
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -74,16 +63,6 @@ export class LeadProposalHistoryCardComponent {
 
   onSelect(proposalId: string): void {
     this.selectProposal.emit(proposalId);
-  }
-
-  onOpen(url: string | null | undefined): void {
-    if (!url) return;
-    this.openProposal.emit(url);
-  }
-
-  onResend(proposalId: string): void {
-    if (!this.canResendProposal) return;
-    this.resendProposal.emit(proposalId);
   }
 
   onSubmitProposal(): void {

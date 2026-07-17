@@ -30,6 +30,8 @@ export interface Project {
   source_lead_id?: string | null;
   primary_contact_id?: string | null;
   assigned_user_id?: string | null;
+  active_proposal_invoice_snapshot_id?: string | null;
+  active_proposal_document_version_id?: string | null;
   booked_at?: string | null;
   completed_at?: string | null;
   canceled_at?: string | null;
@@ -60,4 +62,6 @@ export interface CreateProjectInput {
   source_lead_id?: string | null;
   primary_contact_id?: string | null;
   assigned_user_id?: string | null;
+  active_proposal_invoice_snapshot_id?: string | null;
+  active_proposal_document_version_id?: string | null;
 }

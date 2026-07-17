@@ -13,10 +13,4 @@ describe('default environment', () => {
     expect(environment.googleClientId).toBe('default');
     expect(environment.googleApiKey).toBe('default');
   });
-
-  it('defines the client-facing proposal portal URL used for proposal delivery', () => {
-    expect(environment.proposalPortalUrl).toBe(
-      'https://blackbegoniaflorals.com/proposal/auth'
-    );
-  });
 });

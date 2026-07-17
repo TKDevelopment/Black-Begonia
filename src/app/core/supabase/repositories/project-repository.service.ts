@@ -32,6 +32,8 @@ export class ProjectRepositoryService {
     source_lead_id,
     primary_contact_id,
     assigned_user_id,
+    active_proposal_invoice_snapshot_id,
+    active_proposal_document_version_id,
     booked_at,
     completed_at,
     canceled_at,
@@ -81,12 +83,39 @@ export class ProjectRepositoryService {
         source_lead_id: payload.source_lead_id ?? null,
         primary_contact_id: payload.primary_contact_id ?? null,
         assigned_user_id: payload.assigned_user_id ?? null,
+        active_proposal_invoice_snapshot_id:
+          payload.active_proposal_invoice_snapshot_id ?? null,
+        active_proposal_document_version_id:
+          payload.active_proposal_document_version_id ?? null,
       })
       .select(this.projectSelect)
       .single();
 
     if (error) {
       console.error('[ProjectRepositoryService] createProject error:', error);
+      throw error;
+    }
+
+    return data as Project;
+  }
+
+  async updateProject(
+    projectId: string,
+    updates: Partial<Project>
+  ): Promise<Project> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('projects')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('project_id', projectId)
+      .select(this.projectSelect)
+      .single();
+
+    if (error) {
+      console.error('[ProjectRepositoryService] updateProject error:', error);
       throw error;
     }
 

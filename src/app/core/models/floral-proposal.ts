@@ -7,17 +7,6 @@ export type FloralProposalStatus =
   | 'declined'
   | 'accepted'
   | 'expired';
-export type FloralProposalSigningStatus =
-  | 'not_started'
-  | 'draft_created'
-  | 'sending'
-  | 'sent'
-  | 'completed'
-  | 'ready'
-  | 'viewed'
-  | 'signed'
-  | 'declined'
-  | 'failed';
 
 export type FloralProposalLineItemType = 'product' | 'fee' | 'discount' | 'labor';
 export type FloralProposalShoppingListStatus = 'generated' | 'exported';
@@ -188,22 +177,6 @@ export interface FloralProposal {
   is_active: boolean;
   status: FloralProposalStatus;
   customer_email: string;
-  pdf_storage_path?: string | null;
-  pdf_url?: string | null;
-  canva_pdf_storage_path?: string | null;
-  canva_pdf_file_name?: string | null;
-  signed_url?: string | null;
-  combined_pdf_storage_path?: string | null;
-  combined_pdf_file_name?: string | null;
-  combined_pdf_signed_url?: string | null;
-  contract_template_source?: string | null;
-  contract_template_revision?: string | null;
-  signing_provider?: string | null;
-  signing_status?: FloralProposalSigningStatus | null;
-  signing_session_reference?: string | null;
-  signed_package_storage_path?: string | null;
-  signing_completed_at?: string | null;
-  signing_declined_at?: string | null;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;
@@ -214,18 +187,9 @@ export interface FloralProposal {
   retainer_due_date?: string | null;
   terms_version: string;
   privacy_policy_version: string;
-  accepted_terms: boolean;
-  accepted_privacy_policy: boolean;
   finalized_at?: string | null;
   edit_reopened_at?: string | null;
   submitted_at?: string | null;
-  accepted_at?: string | null;
-  declined_at?: string | null;
-  signed_at?: string | null;
-  signature_name?: string | null;
-  signature_ip?: string | null;
-  signature_user_agent?: string | null;
-  decline_feedback?: string | null;
   snapshot: Record<string, unknown>;
   created_by?: string | null;
   created_at: string;
@@ -304,9 +268,6 @@ export interface CreateFloralProposalInput {
   is_active?: boolean;
   status?: FloralProposalStatus;
   customer_email: string;
-  passcode_hash?: string | null;
-  pdf_storage_path?: string | null;
-  pdf_url?: string | null;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;

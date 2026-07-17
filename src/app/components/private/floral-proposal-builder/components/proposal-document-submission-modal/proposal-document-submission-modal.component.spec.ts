@@ -23,7 +23,7 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     fixture.detectChanges();
 
     const text = textContent();
-    expect(text).toContain('Submit Floral Proposal PDF');
+    expect(text).toContain('Submit Signed Proposal PDF');
     expect(text).toContain('Manual PDF upload is the required submission path for this release.');
     expect(text).toContain('Canva import is optional and is not enabled in this workflow yet.');
   });
@@ -88,11 +88,11 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
 
     component.saving = true;
-    component.progressMessage = 'Uploading the proposal PDF securely…';
+    component.progressMessage = 'Uploading the signed proposal PDF securely...';
     fixture.detectChanges();
 
     expect(submitButton()?.disabled).toBeTrue();
-    expect(textContent()).toContain('Uploading the proposal PDF securely…');
+    expect(textContent()).toContain('Uploading the signed proposal PDF securely...');
     expect(fixture.nativeElement.querySelector('[role="status"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('input[type="file"]')?.disabled).toBeTrue();
   });
@@ -105,3 +105,4 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     return fixture.nativeElement.querySelector('button:last-of-type');
   }
 });
+

@@ -327,7 +327,7 @@ describe('FloralProposalBuilderService', () => {
     );
   });
 
-  it('validates contract template field maps while ignoring reserved provider metadata', () => {
+  it('validates contract template field maps and reports missing fields', () => {
     const renderPayload = service.buildRenderPayload({
       lines: [
         service.recalculateLine({
@@ -401,9 +401,6 @@ describe('FloralProposalBuilderService', () => {
         customer_email: 'lead.email',
         proposal_total: { source: 'proposal.total_amount', provider_field_id: 'total_due' },
         missing_guest_count: 'lead.missing_value',
-        __signwell: {
-          contract_pdf_url: 'https://provider.example.test/contracts/current.pdf',
-        },
       },
     });
 

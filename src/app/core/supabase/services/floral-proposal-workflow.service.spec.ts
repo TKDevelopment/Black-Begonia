@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
 import { testFloralProposal, testLead } from '../../testing/workflow-fixtures';
-import { environment } from '../../../../environments/environment';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
@@ -151,58 +150,14 @@ describe('FloralProposalWorkflowService', () => {
     service = TestBed.inject(FloralProposalWorkflowService);
   });
 
-  it('loads lead proposals and signs stored proposal PDFs', async () => {
-    repository.getLeadFloralProposals.and.resolveTo([
-      {
-        ...testFloralProposal,
-        pdf_storage_path: 'proposal-pdfs/test.pdf',
-        combined_pdf_storage_path: 'proposal-packages/test-package.pdf',
-      },
-      {
-        ...testFloralProposal,
-        floral_proposal_id: 'proposal-url-only-001',
-        pdf_storage_path: null,
-        pdf_url: 'https://example.test/proposal.pdf',
-      },
-    ]);
-    storageApi.createSignedUrl.and.resolveTo({
-      data: { signedUrl: 'https://signed.example.test/test.pdf' },
-      error: null,
-    });
+  it('loads lead proposal versions without generating public proposal URLs', async () => {
+    repository.getLeadFloralProposals.and.resolveTo([testFloralProposal]);
 
     const proposals = await service.getLeadProposals(testLead.lead_id);
 
     expect(repository.getLeadFloralProposals).toHaveBeenCalledWith(testLead.lead_id);
-    expect(storageFromSpy).toHaveBeenCalledWith('floral-proposals');
-    expect(storageApi.createSignedUrl).toHaveBeenCalledWith(
-      'proposal-packages/test-package.pdf',
-      3600
-    );
-    expect(proposals[0].signed_url).toBe('https://signed.example.test/test.pdf');
-    expect(proposals[0].combined_pdf_signed_url).toBe(
-      'https://signed.example.test/test.pdf'
-    );
-    expect(proposals[1].signed_url).toBe('https://example.test/proposal.pdf');
-  });
-
-  it('falls back to existing proposal PDF URLs when signing fails', async () => {
-    spyOn(console, 'error');
-    repository.getLeadFloralProposals.and.resolveTo([
-      {
-        ...testFloralProposal,
-        pdf_storage_path: 'proposal-pdfs/test.pdf',
-        pdf_url: 'https://example.test/fallback.pdf',
-      },
-    ]);
-    storageApi.createSignedUrl.and.resolveTo({
-      data: null,
-      error: { message: 'storage failed' },
-    });
-
-    const proposals = await service.getLeadProposals(testLead.lead_id);
-
-    expect(proposals[0].signed_url).toBe('https://example.test/fallback.pdf');
-    expect(console.error).toHaveBeenCalled();
+    expect(storageFromSpy).not.toHaveBeenCalledWith('floral-proposals');
+    expect(proposals).toEqual([testFloralProposal]);
   });
 
   it('allows proposal submission only for nurturing or previously declined proposal leads', () => {
@@ -268,11 +223,30 @@ describe('FloralProposalWorkflowService', () => {
     });
 
     expect(client.storage.from).toHaveBeenCalledWith('floral-proposals');
-    expect(result.storagePath).toBe('lead-001/proposal-001/request-001-final-proposal.pdf');
+    expect(result.storagePath).toBe(
+      'pending-leads/lead-001/proposal-documents/proposal-001/request-001-final-proposal.pdf'
+    );
     expect(storageApi.upload).toHaveBeenCalledWith(
       result.storagePath,
       file,
       jasmine.objectContaining({ contentType: 'application/pdf', upsert: false })
+    );
+  });
+
+  it('uploads project proposal revisions under the owning project path', async () => {
+    storageApi.upload.and.resolveTo({ error: null });
+    const file = new File(['%PDF-test'], 'Revision 2.pdf', { type: 'application/pdf' });
+
+    const result = await service.uploadProposalPdf({
+      leadId: 'lead-001',
+      projectId: 'project-001',
+      proposalId: 'proposal-001',
+      idempotencyKey: 'request-002',
+      file,
+    });
+
+    expect(result.storagePath).toBe(
+      'projects/project-001/proposal-documents/proposal-001/request-002-revision-2.pdf'
     );
   });
 
@@ -307,15 +281,17 @@ describe('FloralProposalWorkflowService', () => {
     ).toBeResolvedTo(null);
   });
 
-  it('submits the stored proposal PDF through the direct SignWell edge contract', async () => {
+  it('submits the stored signed proposal PDF through the manual booking edge contract', async () => {
     functionsInvokeSpy.and.resolveTo({
       data: {
         success: true,
+        project_id: 'project-001',
+        lead_id: 'lead-001',
         floral_proposal_id: 'proposal-submitted-001',
-        version: 3,
-        signwell_document_id: 'document-001',
-        signing_status: 'sent',
-        pdf_storage_path: 'lead/proposal/proposal.pdf',
+        proposal_document_version_id: 'document-version-001',
+        active_invoice_snapshot_id: 'snapshot-001',
+        signed_pdf_storage_path: 'pending-leads/lead-001/proposal-documents/proposal-001/proposal.pdf',
+        submitted_at: '2026-06-02T12:00:00.000Z',
       },
       error: null,
     });
@@ -323,18 +299,28 @@ describe('FloralProposalWorkflowService', () => {
     const result = await service.submitProposal(minimalSubmissionPayload());
 
     expect(functionsInvokeSpy).toHaveBeenCalledWith('submit-floral-proposal', {
-      body: minimalSubmissionPayload(),
+      body: {
+        mode: 'initial_booking',
+        lead_id: 'lead-001',
+        project_id: null,
+        floral_proposal_id: 'proposal-001',
+        pdf_storage_path: 'pending-leads/lead-001/proposal-documents/proposal-001/proposal.pdf',
+        pdf_file_name: 'proposal.pdf',
+        idempotency_key: 'request-001',
+      },
     });
     expect(result).toEqual({
+      project_id: 'project-001',
+      lead_id: 'lead-001',
       floral_proposal_id: 'proposal-submitted-001',
-      version: 3,
-      signwell_document_id: 'document-001',
-      signing_status: 'sent',
-      pdf_storage_path: 'lead/proposal/proposal.pdf',
+      proposal_document_version_id: 'document-version-001',
+      active_invoice_snapshot_id: 'snapshot-001',
+      signed_pdf_storage_path: 'pending-leads/lead-001/proposal-documents/proposal-001/proposal.pdf',
+      submitted_at: '2026-06-02T12:00:00.000Z',
     });
   });
 
-  it('throws friendly errors when submit and resend edge functions fail', async () => {
+  it('throws friendly errors when the submit edge function fails', async () => {
     spyOn(console, 'error');
     functionsInvokeSpy.and.resolveTo({
       data: null,
@@ -344,9 +330,6 @@ describe('FloralProposalWorkflowService', () => {
     await expectAsync(
       service.submitProposal(minimalSubmissionPayload())
     ).toBeRejectedWithError('We could not submit the Floral Proposal right now.');
-    await expectAsync(
-      service.resendProposalAccessEmail('proposal-test-001')
-    ).toBeRejectedWithError('We could not resend Floral Proposal access right now.');
 
     expect(console.error).toHaveBeenCalled();
   });
@@ -380,27 +363,8 @@ describe('FloralProposalWorkflowService', () => {
     await expectAsync(
       service.submitProposal(minimalSubmissionPayload())
     ).toBeRejectedWithError(
-      'The proposal service exceeded its processing limit. Deploy the latest submission function, then retry Finalize and Send.'
+      'The proposal service exceeded its processing limit. Deploy the latest submission function, then retry Finalize Proposal.'
     );
-  });
-
-  it('resends proposal access emails and rejects missing proposal ids', async () => {
-    functionsInvokeSpy.and.resolveTo({
-      data: { success: true },
-      error: null,
-    });
-
-    await service.resendProposalAccessEmail('proposal-test-001');
-
-    expect(functionsInvokeSpy).toHaveBeenCalledWith('resend-floral-proposal-email', {
-      body: jasmine.objectContaining({
-        floral_proposal_id: 'proposal-test-001',
-        portal_url: environment.proposalPortalUrl,
-      }),
-    });
-    await expectAsync(
-      service.resendProposalAccessEmail('')
-    ).toBeRejectedWithError('A Floral Proposal is required to resend access.');
   });
 
   it('builds manual submission payloads with finalized snapshot metadata and product components', () => {
@@ -482,11 +446,11 @@ describe('FloralProposalWorkflowService', () => {
 
   function minimalSubmissionPayload(): FinalizeFloralProposalRequest {
     return {
-      proposalId: 'proposal-001',
-      pdfStoragePath: 'lead/proposal/proposal.pdf',
+      leadId: 'lead-001',
+      floralProposalId: 'proposal-001',
+      pdfStoragePath: 'pending-leads/lead-001/proposal-documents/proposal-001/proposal.pdf',
       pdfFileName: 'proposal.pdf',
       idempotencyKey: 'request-001',
-      expectedVersion: 3,
     };
   }
 });

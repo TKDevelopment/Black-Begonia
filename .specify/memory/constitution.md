@@ -1,11 +1,10 @@
 <!--
 Sync Impact Report
-Version change: 1.1.0 -> 1.2.0
+Version change: 1.2.0 -> 1.3.0
 Modified principles:
-- II. Secure Supabase Data Boundaries: require an executable SQL migration for
-  every new or modified Supabase table schema
-Added sections:
 - None
+Added sections:
+- VI. Human-Owned Git Publication
 Removed sections:
 - None
 Templates requiring updates:
@@ -14,6 +13,9 @@ Templates requiring updates:
 - ✅ updated: .specify/templates/tasks-template.md
 - ✅ verified not present: .specify/templates/commands/*.md
 Runtime guidance updates:
+- updated: AGENTS.md
+- updated: .specify/extensions.yml to disable commit-capable Spec Kit hooks
+- updated: specs/003-proposal-delivery-contracts/plan.md
 - ✅ updated: README.md
 Follow-up TODOs:
 - None
@@ -110,6 +112,21 @@ Rationale: The florist's preferred creative workflow is Canva. The application
 should support financial accuracy and client delivery without forcing complex
 template authoring into the CRM.
 
+### VI. Human-Owned Git Publication
+AI agents MUST NOT run `git commit`, `git push`, or any command, script, hook,
+alias, or tool workflow whose primary effect is to create commits or push
+changes to an origin repository. Committing local changes and pushing branches
+or tags to remotes MUST be performed only by the human operator. AI agents MAY
+inspect source-control state with read-only commands such as `git status`,
+`git diff`, `git log`, and `git show`; they MAY also prepare patches, summaries,
+release notes, commit-message suggestions, and handoff instructions for human
+review.
+
+Rationale: The human operator owns the final source-control publication
+boundary. This keeps repository history, remote updates, and release intent
+under explicit human control while still allowing AI agents to help prepare and
+verify the work.
+
 ## Current Project Context
 
 Black Begonia is an Angular 19 brownfield web application for Black Begonia
@@ -184,6 +201,11 @@ remove template-studio behavior, split frontends, or alter proposal delivery
 MUST be planned as dedicated features with migration steps, rollback
 considerations, and regression tests.
 
+AI agents MUST leave all commit and push actions to the human operator. Plans,
+tasks, and implementation reports MAY include a suggested commit message or
+source-control summary, but MUST NOT require or execute agent-run commits or
+pushes.
+
 ## Governance
 
 This constitution supersedes ad hoc developer preference for Black Begonia work.
@@ -201,5 +223,6 @@ this file. Versioning follows semantic versioning:
 Compliance is reviewed during Spec Kit planning, task generation, and code
 review. Plans that violate a principle MUST document the violation, explain why
 it is necessary, and name the simpler or safer alternative that was rejected.
+No violation may authorize an AI agent to commit or push repository changes.
 
-**Version**: 1.2.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-27
+**Version**: 1.3.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-07-17
