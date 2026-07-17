@@ -229,7 +229,9 @@ export const routes: Routes = [
       {
         path: 'projects/:projectId',
         loadComponent: () =>
-          import('./components/private/projects/projects.component').then(m => m.ProjectsComponent),
+          import('./components/private/projects/project-details/project-details.component').then(
+            m => m.ProjectDetailsComponent
+          ),
       },
       {
         path: 'tasks',

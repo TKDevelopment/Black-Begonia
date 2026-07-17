@@ -1,0 +1,33 @@
+<section class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+  <div class="flex flex-col gap-1">
+    <h2 class="font-cormorant text-2xl text-stone-900">Financial Summary</h2>
+    <p class="text-sm text-stone-600">Active proposal total and project-level payment context.</p>
+  </div>
+
+  <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="crm-stat-card summary-cell">
+      <dt>Active Proposal</dt>
+      <dd>{{ formatCurrency(snapshot?.total_amount) }}</dd>
+      <p *ngIf="snapshot">Version {{ snapshot.version }}</p>
+      <p *ngIf="!snapshot">No active snapshot</p>
+    </div>
+
+    <div class="crm-stat-card summary-cell">
+      <dt>Deposit</dt>
+      <dd>{{ formatStatus(deposit?.status) }}</dd>
+      <p>{{ formatCurrency(deposit?.amount_paid) }} paid</p>
+    </div>
+
+    <div class="crm-stat-card summary-cell">
+      <dt>Final Payment</dt>
+      <dd>{{ formatStatus(finalPayment?.status) }}</dd>
+      <p>{{ formatCurrency(finalPayment?.amount_paid) }} paid</p>
+    </div>
+
+    <div class="crm-stat-card summary-cell">
+      <dt>Outstanding</dt>
+      <dd>{{ formatCurrency(outstandingBalance) }}</dd>
+      <p>Unavailable values are not treated as zero</p>
+    </div>
+  </dl>
+</section>

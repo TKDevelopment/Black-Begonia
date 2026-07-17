@@ -316,7 +316,7 @@ export const testProject: Project = {
   guest_count: testLead.guest_count,
   style_notes: 'Soft garden style.',
   internal_notes: 'Synthetic project fixture.',
-  status: 'proposal',
+  status: 'awaiting_deposit',
   source_lead_id: testLead.lead_id,
   primary_contact_id: testContact.contact_id,
   active_proposal_invoice_snapshot_id: null,

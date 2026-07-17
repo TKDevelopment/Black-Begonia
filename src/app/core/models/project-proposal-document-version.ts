@@ -13,6 +13,7 @@ export interface ProjectProposalDocumentVersion {
   uploaded_by?: string | null;
   submitted_at: string;
   is_active: boolean;
+  status?: string | null;
   created_at: string;
 }
 
@@ -30,4 +31,5 @@ export interface CreateProjectProposalDocumentVersionInput {
   uploaded_by?: string | null;
   submitted_at?: string;
   is_active?: boolean;
+  status?: string | null;
 }

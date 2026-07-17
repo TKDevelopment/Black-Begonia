@@ -13,6 +13,7 @@ create table public.project_proposal_document_versions (
   uploaded_by uuid null,
   submitted_at timestamp with time zone not null default now(),
   is_active boolean not null default true,
+  status text not null default 'submitted'::text,
   created_at timestamp with time zone not null default now(),
   constraint project_proposal_document_versions_pkey primary key (project_proposal_document_version_id),
   constraint project_proposal_document_versions_project_version_unique unique (project_id, version),
@@ -20,6 +21,7 @@ create table public.project_proposal_document_versions (
   constraint project_proposal_document_versions_project_id_fkey foreign KEY (project_id) references projects (project_id) on delete CASCADE,
   constraint project_proposal_document_versions_source_floral_proposal_id_fkey foreign KEY (source_floral_proposal_id) references floral_proposals (floral_proposal_id) on delete set null,
   constraint project_proposal_document_versions_source_lead_id_fkey foreign KEY (source_lead_id) references leads (lead_id) on delete set null,
+  constraint project_proposal_document_versions_status_check check (status in ('submitted', 'superseded', 'archived')),
   constraint project_proposal_document_versions_uploaded_by_fkey foreign KEY (uploaded_by) references profiles (id) on delete set null
 ) TABLESPACE pg_default;
 
