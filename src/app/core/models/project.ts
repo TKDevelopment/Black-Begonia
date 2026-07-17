@@ -1,10 +1,19 @@
 export type ProjectStatus =
-  | 'inquiry_converted'
-  | 'proposal'
-  | 'estimate_sent'
+  | 'awaiting_deposit'
   | 'booked'
+  | 'awaiting_final_payment'
+  | 'final_prep'
   | 'completed'
   | 'canceled';
+
+export const PROJECT_STATUSES: ProjectStatus[] = [
+  'awaiting_deposit',
+  'booked',
+  'awaiting_final_payment',
+  'final_prep',
+  'completed',
+  'canceled',
+];
 
 export interface Project {
   project_id: string;
@@ -65,3 +74,33 @@ export interface CreateProjectInput {
   active_proposal_invoice_snapshot_id?: string | null;
   active_proposal_document_version_id?: string | null;
 }
+
+export type UpdateProjectInput = Partial<
+  Pick<
+    Project,
+    | 'project_name'
+    | 'service_type'
+    | 'event_type'
+    | 'event_date'
+    | 'ceremony_venue_name'
+    | 'ceremony_venue_city'
+    | 'ceremony_venue_state'
+    | 'ceremony_venue_address'
+    | 'ceremony_venue_zipcode'
+    | 'reception_venue_name'
+    | 'reception_venue_city'
+    | 'reception_venue_state'
+    | 'reception_venue_address'
+    | 'reception_venue_zipcode'
+    | 'budget_range'
+    | 'guest_count'
+    | 'style_notes'
+    | 'internal_notes'
+    | 'status'
+    | 'active_proposal_invoice_snapshot_id'
+    | 'active_proposal_document_version_id'
+    | 'booked_at'
+    | 'completed_at'
+    | 'canceled_at'
+  >
+>;

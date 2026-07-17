@@ -49,7 +49,7 @@ describe('ProjectProposalInvoiceSnapshotRepositoryService', () => {
     consoleErrorSpy = spyOn(console, 'error');
   });
 
-  it('lists project invoice snapshots newest version first', async () => {
+  it('lists project invoice snapshots oldest version first for comparison', async () => {
     const query = createSelectEqOrderQuery({
       data: [snapshot],
       error: null,
@@ -60,7 +60,7 @@ describe('ProjectProposalInvoiceSnapshotRepositoryService', () => {
 
     expect(client.from).toHaveBeenCalledWith('project_proposal_invoice_snapshots');
     expect(query.eq).toHaveBeenCalledWith('project_id', testProject.project_id);
-    expect(query.order).toHaveBeenCalledWith('version', { ascending: false });
+    expect(query.order).toHaveBeenCalledWith('version', { ascending: true });
     expect(snapshots).toEqual([snapshot]);
   });
 

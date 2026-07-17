@@ -27,27 +27,65 @@ export class ProjectProposalDocumentVersionRepositoryService {
     uploaded_by,
     submitted_at,
     is_active,
+    status,
+    created_at
+  `;
+
+  private readonly documentVersionSelectWithoutStatus = `
+    project_proposal_document_version_id,
+    project_id,
+    source_lead_id,
+    source_floral_proposal_id,
+    invoice_snapshot_id,
+    version,
+    file_name,
+    storage_bucket,
+    storage_path,
+    content_type,
+    file_size_bytes,
+    uploaded_by,
+    submitted_at,
+    is_active,
     created_at
   `;
 
   async getProjectDocumentVersions(projectId: string): Promise<ProjectProposalDocumentVersion[]> {
-    const { data, error } = await this.supabaseService
+    const result = await this.supabaseService
       .getClient()
       .from('project_proposal_document_versions')
       .select(this.documentVersionSelect)
       .eq('project_id', projectId)
-      .order('version', { ascending: false });
+      .order('version', { ascending: true });
 
-    if (error) {
-      console.error('[ProjectProposalDocumentVersionRepositoryService] getProjectDocumentVersions error:', error);
+    if (this.isMissingStatusColumnError(result.error)) {
+      const fallback = await this.supabaseService
+        .getClient()
+        .from('project_proposal_document_versions')
+        .select(this.documentVersionSelectWithoutStatus)
+        .eq('project_id', projectId)
+        .order('version', { ascending: true });
+
+      if (fallback.error) {
+        console.error('[ProjectProposalDocumentVersionRepositoryService] getProjectDocumentVersions error:', fallback.error);
+        return [];
+      }
+
+      return (fallback.data ?? []).map((document) => ({
+        ...document,
+        status: 'submitted',
+      })) as ProjectProposalDocumentVersion[];
+    }
+
+    if (result.error) {
+      console.error('[ProjectProposalDocumentVersionRepositoryService] getProjectDocumentVersions error:', result.error);
       return [];
     }
 
-    return (data ?? []) as ProjectProposalDocumentVersion[];
+    return (result.data ?? []) as ProjectProposalDocumentVersion[];
   }
 
   async getActiveProjectDocumentVersion(projectId: string): Promise<ProjectProposalDocumentVersion | null> {
-    const { data, error } = await this.supabaseService
+    const result = await this.supabaseService
       .getClient()
       .from('project_proposal_document_versions')
       .select(this.documentVersionSelect)
@@ -55,12 +93,31 @@ export class ProjectProposalDocumentVersionRepositoryService {
       .eq('is_active', true)
       .maybeSingle();
 
-    if (error) {
-      console.error('[ProjectProposalDocumentVersionRepositoryService] getActiveProjectDocumentVersion error:', error);
+    if (this.isMissingStatusColumnError(result.error)) {
+      const fallback = await this.supabaseService
+        .getClient()
+        .from('project_proposal_document_versions')
+        .select(this.documentVersionSelectWithoutStatus)
+        .eq('project_id', projectId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (fallback.error) {
+        console.error('[ProjectProposalDocumentVersionRepositoryService] getActiveProjectDocumentVersion error:', fallback.error);
+        return null;
+      }
+
+      return fallback.data
+        ? ({ ...fallback.data, status: 'submitted' } as ProjectProposalDocumentVersion)
+        : null;
+    }
+
+    if (result.error) {
+      console.error('[ProjectProposalDocumentVersionRepositoryService] getActiveProjectDocumentVersion error:', result.error);
       return null;
     }
 
-    return (data as ProjectProposalDocumentVersion | null) ?? null;
+    return (result.data as ProjectProposalDocumentVersion | null) ?? null;
   }
 
   async createDocumentVersion(
@@ -84,7 +141,7 @@ export class ProjectProposalDocumentVersionRepositoryService {
         submitted_at: payload.submitted_at ?? new Date().toISOString(),
         is_active: payload.is_active ?? true,
       })
-      .select(this.documentVersionSelect)
+      .select(this.documentVersionSelectWithoutStatus)
       .single();
 
     if (error) {
@@ -92,6 +149,20 @@ export class ProjectProposalDocumentVersionRepositoryService {
       throw error;
     }
 
-    return data as ProjectProposalDocumentVersion;
+    return {
+      ...data,
+      status: payload.status ?? 'submitted',
+    } as ProjectProposalDocumentVersion;
+  }
+
+  private isMissingStatusColumnError(error: unknown): boolean {
+    return Boolean(
+      error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '42703' &&
+        'message' in error &&
+        String(error.message).includes('project_proposal_document_versions.status')
+    );
   }
 }

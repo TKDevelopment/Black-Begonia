@@ -74,7 +74,7 @@ export class LeadConversionService {
       guest_count: lead.guest_count ?? null,
       style_notes: lead.inquiry_message ?? null,
       internal_notes: payload.internal_notes ?? null,
-      status: 'inquiry_converted',
+      status: 'awaiting_deposit',
       source_lead_id: lead.lead_id,
       primary_contact_id: primaryContact.contact_id,
       assigned_user_id: lead.assigned_user_id ?? null,

@@ -47,7 +47,7 @@ describe('ProjectProposalDocumentVersionRepositoryService', () => {
     consoleErrorSpy = spyOn(console, 'error');
   });
 
-  it('lists project document versions newest version first', async () => {
+  it('lists project document versions oldest version first for revision display', async () => {
     const query = createSelectEqOrderQuery({
       data: [documentVersion],
       error: null,
@@ -58,7 +58,7 @@ describe('ProjectProposalDocumentVersionRepositoryService', () => {
 
     expect(client.from).toHaveBeenCalledWith('project_proposal_document_versions');
     expect(query.eq).toHaveBeenCalledWith('project_id', testProject.project_id);
-    expect(query.order).toHaveBeenCalledWith('version', { ascending: false });
+    expect(query.order).toHaveBeenCalledWith('version', { ascending: true });
     expect(versions).toEqual([documentVersion]);
   });
 

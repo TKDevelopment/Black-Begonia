@@ -1,17 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 
-import { Project } from '../../../core/models/project';
-import { ProjectProposalDocumentVersion } from '../../../core/models/project-proposal-document-version';
+import { Project, ProjectStatus } from '../../../core/models/project';
 import { ProjectRepositoryService } from '../../../core/supabase/repositories/project-repository.service';
-import { ProjectProposalDocumentVersionRepositoryService } from '../../../core/supabase/repositories/project-proposal-document-version-repository.service';
-import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 import { CrmPageHeaderComponent } from '../../../shared/components/private/crm-page-header/crm-page-header.component';
-import { LoadingStateBlockComponent } from '../../../shared/components/private/loading-state-block/loading-state-block.component';
 import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
 import { StatusBadgeComponent } from '../../../shared/components/private/status-badge/status-badge.component';
 import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
+import {
+  SearchFilterBarComponent,
+  SearchFilterGroup,
+} from '../../../shared/components/private/search-filter-bar/search-filter-bar.component';
+import {
+  AdminTableColumn,
+  EntityTableShellComponent,
+} from '../../../shared/components/private/entity-table-shell/entity-table-shell.component';
+import { EntityTableCellDirective } from '../../../shared/components/private/entity-table-shell/entity-table-cell.directive';
 
 @Component({
   selector: 'app-projects',
@@ -19,7 +24,9 @@ import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
   imports: [
     CommonModule,
     CrmPageHeaderComponent,
-    LoadingStateBlockComponent,
+    SearchFilterBarComponent,
+    EntityTableShellComponent,
+    EntityTableCellDirective,
     ErrorStateBlockComponent,
     StatusBadgeComponent,
   ],
@@ -27,22 +34,107 @@ import { formatDateOnlyForDisplay } from '../../../core/utils/date-only';
   styleUrl: './projects.component.scss',
 })
 export class ProjectsComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly projectRepository = inject(ProjectRepositoryService);
-  private readonly documentVersionRepository = inject(ProjectProposalDocumentVersionRepositoryService);
-  private readonly supabaseService = inject(SupabaseService);
 
   readonly loading = signal(true);
-  readonly documentLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly projects = signal<Project[]>([]);
-  readonly selectedProjectId = signal<string | null>(null);
-  readonly documentVersions = signal<ProjectProposalDocumentVersion[]>([]);
+  readonly searchTerm = signal('');
+  readonly statusFilter = signal('all');
+  readonly eventTypeFilter = signal('all');
+  readonly serviceTypeFilter = signal('all');
 
-  readonly selectedProject = computed(() => {
-    const selectedId = this.selectedProjectId();
-    return this.projects().find((project) => project.project_id === selectedId) ?? this.projects()[0] ?? null;
+  readonly columns: AdminTableColumn[] = [
+    { key: 'project', label: 'Project' },
+    { key: 'service_type', label: 'Service Type' },
+    { key: 'event_date', label: 'Event Date' },
+    { key: 'status', label: 'Status' },
+    { key: 'actions', label: 'Actions', headerClassName: 'text-right', className: 'text-right' },
+  ];
+
+  readonly filteredProjects = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    const status = this.statusFilter();
+    const eventType = this.eventTypeFilter();
+    const serviceType = this.serviceTypeFilter();
+
+    return this.projects().filter((project) => {
+      const searchFields = [
+        project.project_name,
+        project.service_type,
+        project.event_type,
+        this.formatProjectStatus(project.status),
+        this.formatDate(project.event_date),
+        project.ceremony_venue_name,
+        project.ceremony_venue_city,
+        project.ceremony_venue_state,
+        project.ceremony_venue_address,
+        project.ceremony_venue_zipcode,
+        project.reception_venue_name,
+        project.reception_venue_city,
+        project.reception_venue_state,
+        project.reception_venue_address,
+        project.reception_venue_zipcode,
+      ];
+
+      const matchesSearch =
+        !term ||
+        searchFields
+          .filter((value): value is string => !!value)
+          .some((value) => value.toLowerCase().includes(term));
+      const matchesStatus = status === 'all' || project.status === status;
+      const matchesEventType = eventType === 'all' || (project.event_type ?? '') === eventType;
+      const matchesServiceType = serviceType === 'all' || (project.service_type ?? '') === serviceType;
+
+      return matchesSearch && matchesStatus && matchesEventType && matchesServiceType;
+    });
+  });
+
+  readonly filters = computed<SearchFilterGroup[]>(() => {
+    const eventTypes = this.uniqueOptions(this.projects().map((project) => project.event_type));
+    const serviceTypes = this.uniqueOptions(this.projects().map((project) => project.service_type));
+
+    return [
+      {
+        key: 'status',
+        label: 'Status',
+        value: this.statusFilter(),
+        options: [
+          { label: 'All Statuses', value: 'all' },
+          { label: 'Awaiting Deposit', value: 'awaiting_deposit' },
+          { label: 'Booked', value: 'booked' },
+          { label: 'Awaiting Final Payment', value: 'awaiting_final_payment' },
+          { label: 'Final Prep', value: 'final_prep' },
+          { label: 'Completed', value: 'completed' },
+          { label: 'Canceled', value: 'canceled' },
+        ],
+      },
+      {
+        key: 'event_type',
+        label: 'Event Type',
+        value: this.eventTypeFilter(),
+        options: [
+          { label: 'All Event Types', value: 'all' },
+          ...eventTypes.map((eventType) => ({
+            label: this.formatDisplayValue(eventType),
+            value: eventType,
+          })),
+        ],
+      },
+      {
+        key: 'service_type',
+        label: 'Service Type',
+        value: this.serviceTypeFilter(),
+        options: [
+          { label: 'All Service Types', value: 'all' },
+          ...serviceTypes.map((serviceType) => ({
+            label: this.formatDisplayValue(serviceType),
+            value: serviceType,
+          })),
+        ],
+      },
+    ];
   });
 
   async ngOnInit(): Promise<void> {
@@ -56,16 +148,6 @@ export class ProjectsComponent implements OnInit {
     try {
       const projects = await this.projectRepository.getProjects();
       this.projects.set(projects);
-      const routeProjectId =
-        this.route.snapshot.paramMap.get('projectId') ??
-        this.route.snapshot.queryParamMap.get('projectId') ??
-        projects[0]?.project_id ??
-        null;
-      this.selectedProjectId.set(routeProjectId);
-
-      if (routeProjectId) {
-        await this.loadDocumentVersions(routeProjectId);
-      }
     } catch (error) {
       console.error('[ProjectsComponent] loadProjects error:', error);
       this.error.set('We could not load projects right now.');
@@ -74,52 +156,33 @@ export class ProjectsComponent implements OnInit {
     }
   }
 
-  async selectProject(projectId: string): Promise<void> {
-    this.selectedProjectId.set(projectId);
-    await this.router.navigate(['/admin/projects', projectId]);
-    await this.loadDocumentVersions(projectId);
+  onSearchChange(value: string): void {
+    this.searchTerm.set(value);
   }
 
-  async loadDocumentVersions(projectId: string): Promise<void> {
-    this.documentLoading.set(true);
+  onFilterChange(event: { key: string; value: string }): void {
+    if (event.key === 'status') {
+      this.statusFilter.set(event.value);
+    }
 
-    try {
-      this.documentVersions.set(
-        await this.documentVersionRepository.getProjectDocumentVersions(projectId)
-      );
-    } catch (error) {
-      console.error('[ProjectsComponent] loadDocumentVersions error:', error);
-      this.error.set('We could not load proposal document history right now.');
-    } finally {
-      this.documentLoading.set(false);
+    if (event.key === 'event_type') {
+      this.eventTypeFilter.set(event.value);
+    }
+
+    if (event.key === 'service_type') {
+      this.serviceTypeFilter.set(event.value);
     }
   }
 
-  async openDocument(version: ProjectProposalDocumentVersion): Promise<void> {
-    const { data, error } = await this.supabaseService
-      .getClient()
-      .storage
-      .from(version.storage_bucket)
-      .createSignedUrl(version.storage_path, 60 * 10);
-
-    if (error || !data?.signedUrl) {
-      this.error.set('We could not open this proposal document right now.');
-      return;
-    }
-
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  resetFilters(): void {
+    this.searchTerm.set('');
+    this.statusFilter.set('all');
+    this.eventTypeFilter.set('all');
+    this.serviceTypeFilter.set('all');
   }
 
-  reviseProposal(project: Project): void {
-    if (!project.source_lead_id) {
-      this.error.set('This project is not linked to a source lead proposal builder.');
-      return;
-    }
-
-    void this.router.navigate(
-      ['/admin/leads', project.source_lead_id, 'floral-proposal-builder'],
-      { queryParams: { projectId: project.project_id } }
-    );
+  openProject(project: Project): void {
+    void this.router.navigate(['/admin/projects', project.project_id]);
   }
 
   formatDate(value: string | null | undefined): string {
@@ -130,21 +193,43 @@ export class ProjectsComponent implements OnInit {
     });
   }
 
-  formatDateTime(value: string | null | undefined): string {
-    if (!value) return 'Not recorded';
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    }).format(new Date(value));
+  formatDisplayValue(value: string | null | undefined): string {
+    if (!value) {
+      return 'Not set';
+    }
+
+    return value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
-  formatCurrency(value: number | null | undefined): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value ?? 0);
+  formatProjectStatus(status: ProjectStatus): string {
+    return this.formatDisplayValue(status);
+  }
+
+  getProjectStatusTone(
+    status: ProjectStatus
+  ): 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'purple' {
+    switch (status) {
+      case 'awaiting_deposit':
+        return 'warning';
+      case 'booked':
+        return 'success';
+      case 'awaiting_final_payment':
+        return 'danger';
+      case 'final_prep':
+        return 'purple';
+      case 'completed':
+        return 'success';
+      case 'canceled':
+      default:
+        return 'neutral';
+    }
+  }
+
+  private uniqueOptions(values: (string | null | undefined)[]): string[] {
+    return Array.from(
+      new Set(values.filter((value): value is string => !!value && value.trim().length > 0))
+    ).sort((a, b) => a.localeCompare(b));
   }
 }

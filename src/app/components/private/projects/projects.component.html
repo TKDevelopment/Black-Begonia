@@ -1,135 +1,66 @@
-<div class="space-y-6">
-  <app-crm-page-header
-    eyebrow="CRM"
-    title="Projects"
-    subtitle="Booked projects, active proposal records, and signed proposal document history."
-  />
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] space-y-5 px-3 py-5 sm:px-4 md:space-y-6 md:px-6 md:py-8 2xl:px-8">
+    <app-crm-page-header
+      title="Projects"
+      subtitle="Browse booked projects, operational statuses, event dates, and project actions."
+    />
 
-  <app-error-state-block
-    *ngIf="error()"
-    title="Unable to load projects"
-    [description]="error()!"
-  />
-  <app-loading-state-block *ngIf="loading()" message="Loading projects..." />
+    <app-error-state-block
+      *ngIf="error()"
+      title="Unable to load projects"
+      [description]="error()!"
+    />
 
-  <div *ngIf="!loading()" class="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-    <aside class="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-      <h2 class="font-cormorant text-2xl text-stone-900">Booked Projects</h2>
+    <app-search-filter-bar
+      searchPlaceholder="Search by project, venue, service type, event type, status, or date"
+      [searchValue]="searchTerm()"
+      [filters]="filters()"
+      (searchChange)="onSearchChange($event)"
+      (filterChange)="onFilterChange($event)"
+      (reset)="resetFilters()"
+    />
 
-      <div class="mt-4 space-y-3" *ngIf="projects().length; else emptyProjects">
-        <button
-          *ngFor="let project of projects()"
-          type="button"
-          (click)="selectProject(project.project_id)"
-          class="w-full rounded-xl border px-4 py-3 text-left transition"
-          [ngClass]="selectedProject().project_id === project.project_id ? 'border-stone-900 bg-stone-100' : 'border-black/10 bg-white hover:bg-stone-50'"
-        >
-          <p class="text-sm font-semibold text-stone-900">{{ project.project_name }}</p>
-          <p class="mt-1 text-xs text-stone-500">{{ formatDate(project.event_date) }}</p>
-        </button>
-      </div>
-
-      <ng-template #emptyProjects>
-        <p class="mt-4 rounded-xl border border-dashed border-black/10 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
-          No booked projects yet.
-        </p>
+    <app-entity-table-shell
+      [columns]="columns"
+      [rows]="filteredProjects()"
+      [loading]="loading()"
+      [clickableRows]="true"
+      trackByField="project_id"
+      emptyTitle="No projects found"
+      emptyDescription="Try adjusting search or filters to find the project you need."
+      (rowClick)="openProject($event)"
+    >
+      <ng-template appEntityTableCell="project" let-row>
+        <div class="space-y-0.5">
+          <div class="font-medium text-stone-900">{{ row.project_name }}</div>
+          <div class="text-xs text-stone-500">{{ formatDisplayValue(row.event_type) }}</div>
+        </div>
       </ng-template>
-    </aside>
 
-    <section *ngIf="selectedProject() as project" class="space-y-6">
-      <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Booked Project</p>
-            <h2 class="mt-2 font-cormorant text-4xl text-stone-900">{{ project.project_name }}</h2>
-            <p class="mt-2 text-sm leading-6 text-stone-600">
-              {{ project.service_type | titlecase }} / {{ formatDate(project.event_date) }}
-            </p>
-          </div>
+      <ng-template appEntityTableCell="service_type" let-row>
+        <span>{{ formatDisplayValue(row.service_type) }}</span>
+      </ng-template>
 
-          <div class="flex flex-wrap items-center gap-3">
-            <app-status-badge [label]="project.status" tone="success" />
-            <button
-              type="button"
-              (click)="reviseProposal(project)"
-              class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
-            >
-              Revise Proposal
-            </button>
-          </div>
-        </div>
+      <ng-template appEntityTableCell="event_date" let-row>
+        <span>{{ formatDate(row.event_date) }}</span>
+      </ng-template>
 
-        <dl class="mt-6 grid gap-4 md:grid-cols-3">
-          <div class="rounded-xl bg-stone-50 px-4 py-3">
-            <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">Guest Count</dt>
-            <dd class="mt-1 text-sm text-stone-900">{{ project.guest_count || 'Not set' }}</dd>
-          </div>
-          <div class="rounded-xl bg-stone-50 px-4 py-3">
-            <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">Booked</dt>
-            <dd class="mt-1 text-sm text-stone-900">{{ formatDateTime(project.booked_at) }}</dd>
-          </div>
-          <div class="rounded-xl bg-stone-50 px-4 py-3">
-            <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">Source Lead</dt>
-            <dd class="mt-1 text-sm text-stone-900">{{ project.source_lead_id || 'Unlinked' }}</dd>
-          </div>
-        </dl>
-      </div>
+      <ng-template appEntityTableCell="status" let-row>
+        <app-status-badge
+          [label]="formatProjectStatus(row.status)"
+          [tone]="getProjectStatusTone(row.status)"
+        />
+      </ng-template>
 
-      <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <h3 class="font-cormorant text-3xl text-stone-900">Proposal Documents</h3>
-            <p class="mt-2 text-sm leading-6 text-stone-600">
-              The active signed proposal PDF is used with the active invoice snapshot for future financial outlooks.
-            </p>
-          </div>
-        </div>
-
-        <app-loading-state-block *ngIf="documentLoading()" message="Loading proposal documents..." />
-
-        <div *ngIf="!documentLoading() && documentVersions().length" class="mt-5 overflow-hidden rounded-xl border border-black/10">
-          <table class="min-w-full divide-y divide-black/10 text-sm">
-            <thead class="bg-stone-50 text-left text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
-              <tr>
-                <th class="px-4 py-3">Version</th>
-                <th class="px-4 py-3">File</th>
-                <th class="px-4 py-3">Submitted</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-black/10 bg-white">
-              <tr *ngFor="let version of documentVersions()">
-                <td class="px-4 py-3 font-medium text-stone-900">v{{ version.version }}</td>
-                <td class="px-4 py-3 text-stone-700">{{ version.file_name }}</td>
-                <td class="px-4 py-3 text-stone-600">{{ formatDateTime(version.submitted_at) }}</td>
-                <td class="px-4 py-3">
-                  <span
-                    class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                    [ngClass]="version.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-600'"
-                  >
-                    {{ version.is_active ? 'Active' : 'Historical' }}
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    (click)="openDocument(version)"
-                    class="inline-flex items-center justify-center rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50"
-                  >
-                    Open PDF
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div *ngIf="!documentLoading() && !documentVersions().length" class="mt-5 rounded-xl border border-dashed border-black/10 bg-stone-50 px-6 py-10 text-center text-sm text-stone-500">
-          No signed proposal documents have been submitted for this project yet.
-        </div>
-      </div>
-    </section>
+      <ng-template appEntityTableCell="actions" let-row>
+        <button
+          type="button"
+          (click)="$event.stopPropagation(); openProject(row)"
+          class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50"
+        >
+          View
+        </button>
+      </ng-template>
+    </app-entity-table-shell>
   </div>
 </div>
-

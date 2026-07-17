@@ -1,0 +1,140 @@
+<div *ngIf="open && project" class="modal-backdrop">
+  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="edit-project-title">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 id="edit-project-title" class="font-cormorant text-2xl text-stone-900">Edit Project Information</h2>
+        <p class="mt-1 text-sm text-stone-600">Update project details without changing lead, document, invoice, or payment links.</p>
+      </div>
+      <button type="button" class="crm-secondary-button icon-button" (click)="close.emit()" aria-label="Close">X</button>
+    </div>
+
+    <form class="mt-4 grid gap-3" (ngSubmit)="submit()">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label>
+          <span>Project</span>
+          <input name="project_name" [(ngModel)]="form.project_name" />
+        </label>
+        <label>
+          <span>Status</span>
+          <select name="status" [(ngModel)]="form.status">
+            <option *ngFor="let status of statuses" [value]="status">{{ formatStatus(status) }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-3">
+        <label>
+          <span>Event Type</span>
+          <select name="event_type" [ngModel]="selectedEventType" (ngModelChange)="onEventTypeChange($event)">
+            <option *ngFor="let eventType of eventTypes" [value]="eventType">
+              {{ formatEventType(eventType) }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Service Type</span>
+          <select name="service_type" [(ngModel)]="form.service_type">
+            <option value="" disabled>Select a service type</option>
+            <option *ngFor="let option of serviceTypeOptions" [value]="option.label">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Event Date</span>
+          <input name="event_date" type="date" [(ngModel)]="form.event_date" />
+        </label>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-3">
+        <label>
+          <span>Event Start</span>
+          <input name="event_start_time" type="time" [disabled]="!timingEditable" [(ngModel)]="form.event_start_time" />
+        </label>
+        <label>
+          <span>Ceremony Start</span>
+          <input name="ceremony_start_time" type="time" [disabled]="!timingEditable" [(ngModel)]="form.ceremony_start_time" />
+        </label>
+        <label>
+          <span>Reception Start</span>
+          <input name="reception_start_time" type="time" [disabled]="!timingEditable" [(ngModel)]="form.reception_start_time" />
+        </label>
+      </div>
+
+      <p *ngIf="!timingEditable" class="text-xs text-stone-500">
+        Timing can be edited after linked lead details load for this project.
+      </p>
+
+      <fieldset class="modal-field-group">
+        <legend>Ceremony Location</legend>
+        <div class="grid gap-3 md:grid-cols-12">
+          <label class="md:col-span-3">
+            <span>Venue</span>
+            <input name="ceremony_venue_name" [(ngModel)]="form.ceremony_venue_name" />
+          </label>
+          <label class="md:col-span-4">
+            <span>Address</span>
+            <input name="ceremony_venue_address" [(ngModel)]="form.ceremony_venue_address" />
+          </label>
+          <label class="md:col-span-2">
+            <span>City</span>
+            <input name="ceremony_venue_city" [(ngModel)]="form.ceremony_venue_city" />
+          </label>
+          <label class="md:col-span-1">
+            <span>State</span>
+            <input name="ceremony_venue_state" [(ngModel)]="form.ceremony_venue_state" />
+          </label>
+          <label class="md:col-span-2">
+            <span>ZIP</span>
+            <input name="ceremony_venue_zipcode" [(ngModel)]="form.ceremony_venue_zipcode" />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="modal-field-group">
+        <legend>Reception Location</legend>
+        <div class="grid gap-3 md:grid-cols-12">
+          <label class="md:col-span-3">
+            <span>Venue</span>
+            <input name="reception_venue_name" [(ngModel)]="form.reception_venue_name" />
+          </label>
+          <label class="md:col-span-4">
+            <span>Address</span>
+            <input name="reception_venue_address" [(ngModel)]="form.reception_venue_address" />
+          </label>
+          <label class="md:col-span-2">
+            <span>City</span>
+            <input name="reception_venue_city" [(ngModel)]="form.reception_venue_city" />
+          </label>
+          <label class="md:col-span-1">
+            <span>State</span>
+            <input name="reception_venue_state" [(ngModel)]="form.reception_venue_state" />
+          </label>
+          <label class="md:col-span-2">
+            <span>ZIP</span>
+            <input name="reception_venue_zipcode" [(ngModel)]="form.reception_venue_zipcode" />
+          </label>
+        </div>
+      </fieldset>
+
+      <label>
+        <span>Style Notes</span>
+        <textarea name="style_notes" rows="2" [(ngModel)]="form.style_notes"></textarea>
+      </label>
+
+      <label>
+        <span>Internal Notes</span>
+        <textarea name="internal_notes" rows="2" [(ngModel)]="form.internal_notes"></textarea>
+      </label>
+
+      <p *ngIf="error" class="text-sm font-medium text-rose-700">{{ error }}</p>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" class="crm-secondary-button secondary-button" (click)="close.emit()">Cancel</button>
+        <button type="submit" class="crm-primary-button primary-button" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'Save Changes' }}
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
