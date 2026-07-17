@@ -1,6 +1,7 @@
 ﻿import { Injectable } from '@angular/core';
 import { SupabaseService } from '../clients/supabase.service';
 import { LeadActivity, LeadActivityType } from '../../models/lead-activity';
+import { ActivityLogEntry, ActivityLogType } from '../../models/activity-log';
 
 @Injectable({
   providedIn: 'root',
@@ -79,6 +80,60 @@ export class ActivityRepositoryService {
 
     if (error) {
       console.error('[ActivityRepositoryService] createLeadActivity error:', error);
+      throw error;
+    }
+  }
+
+  async getProjectActivity(projectId: string): Promise<ActivityLogEntry[]> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('activity_log')
+      .select(`
+        activity_log_id,
+        entity_type,
+        entity_id,
+        activity_type,
+        activity_label,
+        description,
+        performed_by,
+        metadata,
+        created_at
+      `)
+      .eq('entity_type', 'project')
+      .eq('entity_id', projectId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[ActivityRepositoryService] getProjectActivity error:', error);
+      return [];
+    }
+
+    return (data ?? []) as ActivityLogEntry[];
+  }
+
+  async createProjectActivity(payload: {
+    project_id: string;
+    activity_type: ActivityLogType;
+    activity_label: string;
+    description?: string | null;
+    performed_by?: string | null;
+    metadata?: Record<string, unknown> | null;
+  }): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('activity_log')
+      .insert({
+        entity_type: 'project',
+        entity_id: payload.project_id,
+        activity_type: payload.activity_type,
+        activity_label: payload.activity_label,
+        description: payload.description ?? null,
+        performed_by: payload.performed_by ?? null,
+        metadata: payload.metadata ?? {},
+      });
+
+    if (error) {
+      console.error('[ActivityRepositoryService] createProjectActivity error:', error);
       throw error;
     }
   }

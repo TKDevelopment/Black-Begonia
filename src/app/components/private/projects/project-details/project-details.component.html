@@ -1,0 +1,262 @@
+<div class="min-h-screen bg-[#f7f4f1]">
+  <div class="mx-auto w-full max-w-[1880px] space-y-5 px-3 py-5 sm:px-4 md:space-y-6 md:px-6 md:py-8 2xl:px-8">
+    <button
+      type="button"
+      class="crm-secondary-button inline-flex items-center rounded-xl border border-black/10 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
+      (click)="backToProjects()"
+    >
+      Back to Projects
+    </button>
+
+    <app-error-state-block
+      *ngIf="error()"
+      title="Unable to load project"
+      [description]="error()!"
+    />
+
+    <app-loading-state-block *ngIf="loading()" message="Loading project..." />
+
+    <ng-container *ngIf="!loading() && project() as project">
+      <app-crm-page-header
+        eyebrow="Project"
+        [title]="project.project_name"
+        [subtitle]="formatDisplayValue(project.service_type) + ' / ' + formatDate(project.event_date)"
+      />
+
+      <section class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div class="flex flex-wrap items-center gap-3">
+              <app-status-badge
+                [label]="formatDisplayValue(project.status)"
+                [tone]="getProjectStatusTone(project.status)"
+              />
+            </div>
+            <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div class="crm-stat-card detail-cell">
+                <dt>Event Date</dt>
+                <dd>{{ formatDate(project.event_date) }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Ceremony</dt>
+                <dd>{{ project.ceremony_venue_name || 'Not set' }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Reception</dt>
+                <dd>{{ project.reception_venue_name || 'Not set' }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Guests</dt>
+                <dd>{{ project.guest_count || 'Not set' }}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="crm-secondary-button secondary-button" (click)="editModalOpen.set(true)">
+              Edit
+            </button>
+            <button type="button" class="crm-secondary-button secondary-button" (click)="openActivePdf()">
+              Open Active PDF
+            </button>
+            <button type="button" class="crm-primary-button primary-button" (click)="reviseProposal()">
+              Revise Proposal
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+        <div class="grid gap-5 xl:grid-cols-3">
+          <div>
+            <h2 class="font-cormorant text-2xl text-stone-900">Customer</h2>
+            <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+              <div class="crm-stat-card detail-cell">
+                <dt>Customer</dt>
+                <dd>{{ formatPersonName(sourceLead()?.first_name, sourceLead()?.last_name) }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Partner</dt>
+                <dd>{{ formatPersonName(sourceLead()?.partner_first_name, sourceLead()?.partner_last_name) }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Email</dt>
+                <dd>{{ sourceLead()?.email || 'Not set' }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Phone</dt>
+                <dd>{{ formatPhone(sourceLead()?.phone) }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell sm:col-span-2">
+                <dt>Preferred Contact</dt>
+                <dd>{{ formatDisplayValue(sourceLead()?.preferred_contact_method) }}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div>
+            <h2 class="font-cormorant text-2xl text-stone-900">Planner</h2>
+            <dl class="mt-4 grid gap-3">
+              <div class="crm-stat-card detail-cell">
+                <dt>Name</dt>
+                <dd>{{ sourceLead()?.planner_name || 'Not set' }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Email</dt>
+                <dd>{{ sourceLead()?.planner_email || 'Not set' }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Phone</dt>
+                <dd>{{ formatPhone(sourceLead()?.planner_phone) }}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div>
+            <h2 class="font-cormorant text-2xl text-stone-900">Timing</h2>
+            <dl class="mt-4 grid gap-3">
+              <div class="crm-stat-card detail-cell">
+                <dt>Event Start</dt>
+                <dd>{{ formatTime(sourceLead()?.event_start_time) }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Ceremony Start</dt>
+                <dd>{{ formatTime(sourceLead()?.ceremony_start_time) }}</dd>
+              </div>
+              <div class="crm-stat-card detail-cell">
+                <dt>Reception Start</dt>
+                <dd>{{ formatTime(sourceLead()?.reception_start_time) }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+        <h2 class="font-cormorant text-2xl text-stone-900">Locations</h2>
+        <div class="mt-4 grid gap-3 lg:grid-cols-2">
+          <div class="crm-stat-card detail-cell">
+            <dt>Ceremony Address</dt>
+            <dd>
+              {{ formatAddress([
+                project.ceremony_venue_name || sourceLead()?.ceremony_venue_name,
+                project.ceremony_venue_address || sourceLead()?.ceremony_venue_address,
+                project.ceremony_venue_city || sourceLead()?.ceremony_venue_city,
+                project.ceremony_venue_state || sourceLead()?.ceremony_venue_state,
+                project.ceremony_venue_zipcode || sourceLead()?.ceremony_venue_zipcode
+              ]) }}
+            </dd>
+          </div>
+          <div class="crm-stat-card detail-cell">
+            <dt>Reception Address</dt>
+            <dd>
+              {{ formatAddress([
+                project.reception_venue_name || sourceLead()?.reception_venue_name,
+                project.reception_venue_address || sourceLead()?.reception_venue_address,
+                project.reception_venue_city || sourceLead()?.reception_venue_city,
+                project.reception_venue_state || sourceLead()?.reception_venue_state,
+                project.reception_venue_zipcode || sourceLead()?.reception_venue_zipcode
+              ]) }}
+            </dd>
+          </div>
+        </div>
+      </section>
+
+      <app-error-state-block
+        *ngIf="sectionError()"
+        title="Some project details need attention"
+        [description]="sectionError()!"
+      />
+
+      <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div class="space-y-5">
+          <app-project-financial-summary-card
+            [snapshot]="activeSnapshot()"
+            [payments]="payments()"
+          />
+
+          <div class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="font-cormorant text-2xl text-stone-900">Payments</h2>
+                <p class="text-sm text-stone-600">Deposit and final-payment records for this project.</p>
+              </div>
+              <button type="button" class="crm-secondary-button secondary-button" (click)="paymentModalOpen.set(true)">
+                Log Payment
+              </button>
+            </div>
+
+            <div *ngIf="sortedPayments().length; else emptyPayments" class="mt-5 overflow-x-auto rounded-xl border border-black/10">
+              <table class="crm-table min-w-full divide-y divide-black/10 text-sm">
+                <thead class="crm-table-head bg-stone-50 text-left text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                  <tr>
+                    <th class="px-4 py-3">Payment</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Due</th>
+                    <th class="px-4 py-3">Paid</th>
+                    <th class="px-4 py-3">Amount</th>
+                    <th class="px-4 py-3">Method</th>
+                  </tr>
+                </thead>
+                <tbody class="crm-table-body divide-y divide-black/10">
+                  <tr *ngFor="let payment of sortedPayments()" class="crm-table-row">
+                    <td class="crm-table-cell px-4 py-3 font-medium text-stone-900">
+                      {{ formatPaymentKind(payment.payment_kind) }}
+                    </td>
+                    <td class="crm-table-cell px-4 py-3 text-stone-700">
+                      {{ formatDisplayValue(payment.status) }}
+                    </td>
+                    <td class="crm-table-cell px-4 py-3 text-stone-600">
+                      {{ formatDate(payment.due_date) }}
+                    </td>
+                    <td class="crm-table-cell px-4 py-3 text-stone-600">
+                      {{ formatDateTime(payment.paid_date) }}
+                    </td>
+                    <td class="crm-table-cell px-4 py-3 text-stone-700">
+                      <span class="block font-medium">{{ formatCurrency(payment.amount_paid) }}</span>
+                      <span class="text-xs text-stone-500">of {{ formatCurrency(payment.amount_due) }}</span>
+                    </td>
+                    <td class="crm-table-cell px-4 py-3 text-stone-700">
+                      {{ formatPaymentMethod(payment.payment_method) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ng-template #emptyPayments>
+              <p class="crm-empty-dashed mt-5 rounded-xl border border-dashed border-black/10 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
+                No payments have been logged for this project yet.
+              </p>
+            </ng-template>
+          </div>
+
+          <app-project-proposal-documents-section
+            [documents]="documents()"
+            [snapshots]="snapshots()"
+            [loading]="documentsLoading()"
+            (openPdf)="openDocument($event)"
+          />
+        </div>
+
+        <app-project-activity-panel [activities]="activities()" />
+      </div>
+
+      <app-project-payment-log-modal
+        [open]="paymentModalOpen()"
+        [saving]="savingPayment()"
+        (close)="paymentModalOpen.set(false)"
+        (confirm)="savePayment($event)"
+      />
+
+      <app-project-edit-modal
+        [open]="editModalOpen()"
+        [saving]="savingProject()"
+        [project]="project"
+        [sourceLead]="sourceLead()"
+        (close)="editModalOpen.set(false)"
+        (confirm)="saveProject($event)"
+      />
+    </ng-container>
+  </div>
+</div>

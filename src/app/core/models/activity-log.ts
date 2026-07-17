@@ -14,7 +14,11 @@ export type ActivityLogType =
   | 'note_added'
   | 'task_created'
   | 'task_completed'
-  | 'status_change';
+  | 'status_change'
+  | 'payment_recorded'
+  | 'proposal_revision_submitted'
+  | 'proposal_document_submitted'
+  | 'active_invoice_snapshot_changed';
 
 export interface ActivityLogEntry {
   activity_log_id: string;

@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.summary-cell {
+  border-radius: 0.75rem;
+  background: var(--crm-surface-muted, #faf8f5);
+  padding: 0.9rem 1rem;
+}
+
+.summary-cell dt {
+  color: var(--crm-text-soft, #78716c);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.summary-cell dd {
+  color: var(--crm-text-strong, #1c1917);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0.35rem;
+}
+
+.summary-cell p {
+  color: var(--crm-text-soft, #78716c);
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+}

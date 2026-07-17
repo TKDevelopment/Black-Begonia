@@ -1,0 +1,90 @@
+:host {
+  display: contents;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(28, 25, 23, 0.42);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 60;
+}
+
+.modal-panel {
+  background: var(--crm-surface, #fff);
+  border: 1px solid var(--crm-border, rgba(0, 0, 0, 0.1));
+  border-radius: 0.75rem;
+  max-height: calc(100vh - 2rem);
+  max-width: 980px;
+  overflow: auto;
+  padding: 1rem;
+  width: 100%;
+}
+
+.modal-field-group {
+  background: var(--crm-surface-muted, #faf8f5);
+  border: 1px solid var(--crm-border, rgba(0, 0, 0, 0.1));
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.modal-field-group legend {
+  color: var(--crm-text-strong, #292524);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0 0.25rem;
+}
+
+label span {
+  color: var(--crm-text-muted, #57534e);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+input,
+select,
+textarea {
+  background: var(--crm-surface-elevated, #fff);
+  border: 1px solid var(--crm-border-strong, rgba(0, 0, 0, 0.1));
+  border-radius: 0.6rem;
+  color: var(--crm-text, #292524);
+  font-size: 0.82rem;
+  line-height: 1.25rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.6rem;
+  width: 100%;
+}
+
+.primary-button,
+.secondary-button,
+.icon-button {
+  border-radius: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 0.8rem;
+}
+
+.primary-button {
+  background: var(--crm-accent, #ea938c);
+  color: #fff;
+}
+
+.secondary-button,
+.icon-button {
+  background: var(--crm-surface-elevated, #fff);
+  border: 1px solid var(--crm-border-strong, rgba(0, 0, 0, 0.1));
+  color: var(--crm-text-strong, #44403c);
+}
+
+:host-context(.crm-shell.crm-theme-dark) .modal-backdrop {
+  background: rgba(2, 8, 16, 0.62);
+}
+
+:host-context(.crm-shell.crm-theme-dark) .primary-button {
+  color: #0b0f14;
+}

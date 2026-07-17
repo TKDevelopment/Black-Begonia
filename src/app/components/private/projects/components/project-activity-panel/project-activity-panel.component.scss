@@ -1,0 +1,93 @@
+:host {
+  display: block;
+}
+
+.activity-scroll {
+  max-height: 38rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-color: var(--crm-border-strong, rgba(0, 0, 0, 0.2)) transparent;
+  scrollbar-width: thin;
+}
+
+.activity-scroll::-webkit-scrollbar {
+  width: 0.45rem;
+}
+
+.activity-scroll::-webkit-scrollbar-thumb {
+  background: var(--crm-border-strong, rgba(0, 0, 0, 0.2));
+  border-radius: 999px;
+}
+
+.activity-list {
+  display: grid;
+  gap: 0.85rem;
+  position: relative;
+}
+
+.activity-list::before {
+  background: var(--crm-border, rgba(0, 0, 0, 0.1));
+  bottom: 0.75rem;
+  content: '';
+  left: 0.42rem;
+  position: absolute;
+  top: 0.75rem;
+  width: 1px;
+}
+
+.activity-item {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 0.9rem minmax(0, 1fr);
+  position: relative;
+}
+
+.activity-marker {
+  background: var(--crm-accent, #ea938c);
+  border: 3px solid var(--crm-surface, #fff);
+  border-radius: 999px;
+  height: 0.85rem;
+  margin-top: 1rem;
+  position: relative;
+  width: 0.85rem;
+  z-index: 1;
+}
+
+.activity-card {
+  padding: 0.85rem 0.95rem;
+}
+
+.metadata-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.metadata-chip {
+  align-items: flex-start;
+  background: var(--crm-surface-elevated, #fff);
+  border: 1px solid var(--crm-border, rgba(0, 0, 0, 0.1));
+  border-radius: 0.7rem;
+  display: inline-flex;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.35rem 0.55rem;
+}
+
+.metadata-chip dt {
+  color: var(--crm-text-soft, #78716c);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.metadata-chip dd {
+  color: var(--crm-text-strong, #1c1917);
+  font-size: 0.72rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:host-context(.crm-shell.crm-theme-dark) .activity-marker {
+  border-color: var(--crm-surface, #12171d);
+}

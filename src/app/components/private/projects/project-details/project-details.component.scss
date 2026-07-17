@@ -1,0 +1,47 @@
+:host {
+  display: block;
+}
+
+.detail-cell {
+  background: var(--crm-surface-muted, #faf8f5);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.detail-cell dt {
+  color: var(--crm-text-soft, #78716c);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.detail-cell dd {
+  color: var(--crm-text-strong, #1c1917);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-top: 0.3rem;
+}
+
+.primary-button,
+.secondary-button {
+  border-radius: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.6rem 0.9rem;
+}
+
+.primary-button {
+  background: var(--crm-accent, #ea938c);
+  color: #fff;
+}
+
+.secondary-button {
+  background: var(--crm-surface-elevated, #fff);
+  border: 1px solid var(--crm-border-strong, rgba(0, 0, 0, 0.1));
+  color: var(--crm-text-strong, #44403c);
+}
+
+:host-context(.crm-shell.crm-theme-dark) .primary-button {
+  color: #0b0f14;
+}

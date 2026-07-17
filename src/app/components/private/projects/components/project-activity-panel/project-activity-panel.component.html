@@ -1,0 +1,39 @@
+<section class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+  <div class="flex items-end justify-between gap-3">
+    <div>
+      <h2 class="font-cormorant text-2xl text-stone-900">Activity</h2>
+      <p class="mt-1 text-xs text-stone-500">{{ activities.length }} records</p>
+    </div>
+  </div>
+
+  <div *ngIf="activities.length; else emptyActivity" class="activity-scroll mt-4">
+    <ol class="activity-list">
+      <li *ngFor="let activity of activities" class="activity-item">
+        <div class="activity-marker" aria-hidden="true"></div>
+        <article class="crm-detail-list-item activity-card rounded-xl border border-black/10 bg-[#fcfaf8]">
+          <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <h3 class="text-sm font-semibold text-stone-900">{{ activity.activity_label }}</h3>
+              <time class="shrink-0 text-xs text-stone-500">{{ formatDateTime(activity.created_at) }}</time>
+            </div>
+            <p *ngIf="activity.description" class="text-sm leading-6 text-stone-600">
+              {{ activity.description }}
+            </p>
+            <dl *ngIf="metadataEntries(activity).length" class="metadata-list">
+              <div *ngFor="let entry of metadataEntries(activity)" class="metadata-chip">
+                <dt>{{ entry.key }}</dt>
+                <dd>{{ entry.value }}</dd>
+              </div>
+            </dl>
+          </div>
+        </article>
+      </li>
+    </ol>
+  </div>
+
+  <ng-template #emptyActivity>
+    <p class="crm-empty-dashed mt-4 rounded-xl border border-dashed border-black/10 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
+      No project activity has been recorded yet.
+    </p>
+  </ng-template>
+</section>

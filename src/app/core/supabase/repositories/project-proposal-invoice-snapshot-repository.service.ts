@@ -38,7 +38,7 @@ export class ProjectProposalInvoiceSnapshotRepositoryService {
       .from('project_proposal_invoice_snapshots')
       .select(this.snapshotSelect)
       .eq('project_id', projectId)
-      .order('version', { ascending: false });
+      .order('version', { ascending: true });
 
     if (error) {
       console.error('[ProjectProposalInvoiceSnapshotRepositoryService] getProjectSnapshots error:', error);

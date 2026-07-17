@@ -124,7 +124,7 @@ describe('LeadConversionServiceService', () => {
     expect(projectRepository.createProject).toHaveBeenCalledWith(
       jasmine.objectContaining({
         project_name: 'Avery Wedding',
-        status: 'inquiry_converted',
+        status: 'awaiting_deposit',
         source_lead_id: acceptedLead.lead_id,
         primary_contact_id: primaryContact.contact_id,
         ceremony_venue_address: acceptedLead.ceremony_venue_address,

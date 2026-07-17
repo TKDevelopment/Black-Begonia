@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.secondary-button,
+.tab-button {
+  border: 1px solid var(--crm-border-strong, rgba(0, 0, 0, 0.1));
+  border-radius: 0.75rem;
+  color: var(--crm-text-strong, #44403c);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 0.8rem;
+}
+
+.secondary-button {
+  background: var(--crm-surface-elevated, #fff);
+}
+
+.tab-button {
+  background: var(--crm-surface-muted, #f5f3f0);
+}
+
+.tab-button.active {
+  background: var(--crm-accent, #ea938c);
+  color: #fff;
+}
+
+:host-context(.crm-shell.crm-theme-dark) .tab-button.active {
+  color: #0b0f14;
+}

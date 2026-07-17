@@ -11,7 +11,7 @@ create table public.projects (
   guest_count integer null,
   style_notes text null,
   internal_notes text null,
-  status public.project_status not null default 'inquiry_converted'::project_status,
+  status public.project_status not null default 'awaiting_deposit'::project_status,
   source_lead_id uuid null,
   primary_contact_id uuid null,
   assigned_user_id uuid null,

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CreateProjectInput, Project } from '../../models/project';
+import { CreateProjectInput, Project, UpdateProjectInput } from '../../models/project';
 import { SupabaseService } from '../clients/supabase.service';
 
 @Injectable({
@@ -42,6 +42,8 @@ export class ProjectRepositoryService {
   `;
 
   async getProjects(): Promise<Project[]> {
+    await this.refreshProjectPaymentStatuses();
+
     const { data, error } = await this.supabaseService
       .getClient()
       .from('projects')
@@ -54,6 +56,24 @@ export class ProjectRepositoryService {
     }
 
     return (data ?? []) as Project[];
+  }
+
+  async getProjectById(projectId: string): Promise<Project | null> {
+    await this.refreshProjectPaymentStatuses(projectId);
+
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('projects')
+      .select(this.projectSelect)
+      .eq('project_id', projectId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[ProjectRepositoryService] getProjectById error:', error);
+      return null;
+    }
+
+    return (data as Project | null) ?? null;
   }
 
   async createProject(payload: CreateProjectInput): Promise<Project> {
@@ -79,7 +99,7 @@ export class ProjectRepositoryService {
         guest_count: payload.guest_count ?? null,
         style_notes: payload.style_notes?.trim() || null,
         internal_notes: payload.internal_notes?.trim() || null,
-        status: payload.status ?? 'inquiry_converted',
+        status: payload.status ?? 'awaiting_deposit',
         source_lead_id: payload.source_lead_id ?? null,
         primary_contact_id: payload.primary_contact_id ?? null,
         assigned_user_id: payload.assigned_user_id ?? null,
@@ -101,13 +121,14 @@ export class ProjectRepositoryService {
 
   async updateProject(
     projectId: string,
-    updates: Partial<Project>
+    updates: UpdateProjectInput
   ): Promise<Project> {
+    const safeUpdates = this.toSafeUpdatePayload(updates);
     const { data, error } = await this.supabaseService
       .getClient()
       .from('projects')
       .update({
-        ...updates,
+        ...safeUpdates,
         updated_at: new Date().toISOString(),
       })
       .eq('project_id', projectId)
@@ -120,5 +141,53 @@ export class ProjectRepositoryService {
     }
 
     return data as Project;
+  }
+
+  async refreshProjectPaymentStatuses(projectId?: string): Promise<void> {
+    const client = this.supabaseService.getClient();
+    const { error } = await client.rpc('refresh_project_payment_statuses', {
+      target_project_id: projectId ?? null,
+    });
+
+    if (error) {
+      console.error('[ProjectRepositoryService] refreshProjectPaymentStatuses error:', error);
+    }
+  }
+
+  private toSafeUpdatePayload(updates: UpdateProjectInput): UpdateProjectInput {
+    const allowedKeys: (keyof UpdateProjectInput)[] = [
+      'project_name',
+      'service_type',
+      'event_type',
+      'event_date',
+      'ceremony_venue_name',
+      'ceremony_venue_city',
+      'ceremony_venue_state',
+      'ceremony_venue_address',
+      'ceremony_venue_zipcode',
+      'reception_venue_name',
+      'reception_venue_city',
+      'reception_venue_state',
+      'reception_venue_address',
+      'reception_venue_zipcode',
+      'budget_range',
+      'guest_count',
+      'style_notes',
+      'internal_notes',
+      'status',
+      'active_proposal_invoice_snapshot_id',
+      'active_proposal_document_version_id',
+      'booked_at',
+      'completed_at',
+      'canceled_at',
+    ];
+
+    return allowedKeys.reduce<UpdateProjectInput>((payload, key) => {
+      if (Object.prototype.hasOwnProperty.call(updates, key)) {
+        (payload as Record<string, unknown>)[key] = updates[key];
+      }
+
+      return payload;
+    }, {});
   }
 }

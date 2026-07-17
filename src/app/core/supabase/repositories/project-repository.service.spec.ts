@@ -7,12 +7,13 @@ import { ProjectRepositoryService } from './project-repository.service';
 describe('ProjectRepositoryService', () => {
   let service: ProjectRepositoryService;
   let supabaseService: jasmine.SpyObj<SupabaseService>;
-  let client: { from: jasmine.Spy };
+  let client: { from: jasmine.Spy; rpc: jasmine.Spy };
   let consoleErrorSpy: jasmine.Spy;
 
   beforeEach(() => {
     client = {
       from: jasmine.createSpy('from'),
+      rpc: jasmine.createSpy('rpc').and.resolveTo({ error: null }),
     };
     supabaseService = jasmine.createSpyObj<SupabaseService>('SupabaseService', [
       'getClient',
@@ -42,6 +43,9 @@ describe('ProjectRepositoryService', () => {
     const projects = await service.getProjects();
 
     expect(client.from).toHaveBeenCalledWith('projects');
+    expect(client.rpc).toHaveBeenCalledWith('refresh_project_payment_statuses', {
+      target_project_id: null,
+    });
     expect(query.select).toHaveBeenCalledWith(
       jasmine.stringMatching('active_proposal_invoice_snapshot_id')
     );
@@ -112,6 +116,19 @@ describe('ProjectRepositoryService', () => {
       error
     );
   });
+
+  it('loads a single project after refreshing its payment status', async () => {
+    const query = createSelectEqMaybeSingleQuery({ data: testProject, error: null });
+    client.from.and.returnValue(query);
+
+    const project = await service.getProjectById(testProject.project_id);
+
+    expect(client.rpc).toHaveBeenCalledWith('refresh_project_payment_statuses', {
+      target_project_id: testProject.project_id,
+    });
+    expect(query.eq).toHaveBeenCalledWith('project_id', testProject.project_id);
+    expect(project).toEqual(testProject);
+  });
 });
 
 function createSelectOrderQuery(result: unknown) {
@@ -147,5 +164,17 @@ function createUpdateEqSelectSingleQuery(result: unknown) {
   query.eq.and.returnValue(query);
   query.select.and.returnValue(query);
   query.single.and.resolveTo(result);
+  return query;
+}
+
+function createSelectEqMaybeSingleQuery(result: unknown) {
+  const query = {
+    select: jasmine.createSpy('select'),
+    eq: jasmine.createSpy('eq'),
+    maybeSingle: jasmine.createSpy('maybeSingle'),
+  };
+  query.select.and.returnValue(query);
+  query.eq.and.returnValue(query);
+  query.maybeSingle.and.resolveTo(result);
   return query;
 }
