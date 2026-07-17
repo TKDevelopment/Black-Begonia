@@ -22,7 +22,8 @@ Functions, Netlify, Angular SSR/Express, Karma/Jasmine, and any feature-specific
 libraries such as FullCalendar, Canva, GrapesJS, or Mailgun.
 
 **Storage**: Supabase Postgres, Supabase Storage, and edge-function-managed
-records where applicable; document table, RLS, and storage policy impact.
+records where applicable; document table, migration SQL, RLS, and storage policy
+impact.
 
 **Testing**: Karma/Jasmine unit tests by default; focused integration checks for
 proposal, lead, inquiry, Supabase, and edge-function flows when touched.
@@ -37,7 +38,10 @@ client portal, and CRM admin portal surfaces.
 
 **Constraints**: Preserve brownfield behavior unless explicitly approved; no
 frontend service-role secrets; Supabase RLS and storage policies required for
-data changes; public site changes require product owner approval.
+data changes; every new or modified table schema requires an executable SQL
+migration in `supabase/migrations/`; every Supabase Edge Function must be
+standalone with no `_shared` directory or local cross-function imports; public
+site changes require product owner approval.
 
 **Scale/Scope**: [Feature scope, affected routes, affected tables, users, and
 operational workflows or NEEDS CLARIFICATION]
@@ -54,6 +58,12 @@ operational workflows or NEEDS CLARIFICATION]
 - **Supabase security**: For any database/storage/edge-function change,
   document RLS intent, role access, storage policies, secret handling, and
   frontend/backend data boundaries.
+- **Schema migration**: Identify the executable `supabase/migrations/*.sql` file
+  that applies every new or modified table schema to an existing environment;
+  describe data preservation, application order, and any manual intervention.
+- **Standalone edge functions**: Confirm every affected Supabase Edge Function
+  is independently deployable and contains no `_shared` directory, local shared
+  function module, or import from another edge function.
 - **Testing plan**: Define Karma/Jasmine unit tests and any focused integration
   checks required for proposal, lead, inquiry, or authorization flows. Explain
   how the work contributes toward the 80% coverage target.
@@ -94,8 +104,9 @@ src/
   environments/                 # Environment config
 
 supabase/
+  migrations/                   # Executable SQL for every table schema change
   schemas/public/tables/        # Supabase table definitions
-  edge_functions/               # Supabase Edge Functions
+  edge_functions/               # Standalone Supabase Edge Functions; no _shared
   s3_storage/                   # Storage bucket organization
 
 scripts/                        # Build and sitemap helpers

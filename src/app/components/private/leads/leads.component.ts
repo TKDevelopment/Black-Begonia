@@ -163,6 +163,10 @@ export class LeadsComponent implements OnInit {
         (lead.service_type ?? '').toLowerCase().includes(term) ||
         lead.source.toLowerCase().includes(term) ||
         (lead.ceremony_venue_name ?? '').toLowerCase().includes(term) ||
+        (lead.ceremony_venue_address ?? '').toLowerCase().includes(term) ||
+        (lead.ceremony_venue_zipcode ?? '').toLowerCase().includes(term) ||
+        (lead.reception_venue_address ?? '').toLowerCase().includes(term) ||
+        (lead.reception_venue_zipcode ?? '').toLowerCase().includes(term) ||
         (proposal?.status ?? '').toLowerCase().includes(term) ||
         (response?.feedback ?? '').toLowerCase().includes(term);
 
@@ -303,10 +307,14 @@ export class LeadsComponent implements OnInit {
             ceremony_venue_name: payload.ceremony_venue_name ?? null,
             ceremony_venue_city: payload.ceremony_venue_city ?? null,
             ceremony_venue_state: payload.ceremony_venue_state ?? null,
+            ceremony_venue_address: payload.ceremony_venue_address ?? null,
+            ceremony_venue_zipcode: payload.ceremony_venue_zipcode ?? null,
             ceremony_start_time: payload.ceremony_start_time ?? null,
             reception_venue_name: payload.reception_venue_name ?? null,
             reception_venue_city: payload.reception_venue_city ?? null,
             reception_venue_state: payload.reception_venue_state ?? null,
+            reception_venue_address: payload.reception_venue_address ?? null,
+            reception_venue_zipcode: payload.reception_venue_zipcode ?? null,
             reception_start_time: payload.reception_start_time ?? null,
             budget_range: payload.budget_range ?? null,
             guest_count: payload.guest_count ?? null,

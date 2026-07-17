@@ -27,6 +27,8 @@ export class FloralProposalRepositoryService {
     customer_email,
     pdf_storage_path,
     pdf_url,
+    canva_pdf_storage_path,
+    canva_pdf_file_name,
     combined_pdf_storage_path,
     combined_pdf_file_name,
     contract_template_source,
@@ -41,6 +43,10 @@ export class FloralProposalRepositoryService {
     tax_rate,
     tax_amount,
     total_amount,
+    final_balance_amount,
+    retainer_amount,
+    final_balance_due_date,
+    retainer_due_date,
     terms_version,
     privacy_policy_version,
     accepted_terms,
@@ -119,8 +125,7 @@ export class FloralProposalRepositoryService {
       .from('floral_proposals')
       .select(this.proposalSelect)
       .eq('lead_id', leadId)
-      .order('submitted_at', { ascending: false })
-      .order('updated_at', { ascending: false });
+      .order('version', { ascending: false });
 
     if (error) {
       console.error(
@@ -272,6 +277,10 @@ export class FloralProposalRepositoryService {
         tax_rate: payload.tax_rate,
         tax_amount: payload.tax_amount,
         total_amount: payload.total_amount,
+        final_balance_amount: payload.final_balance_amount ?? payload.total_amount,
+        retainer_amount: payload.retainer_amount ?? Number((payload.total_amount * 0.3).toFixed(2)),
+        final_balance_due_date: payload.final_balance_due_date ?? null,
+        retainer_due_date: payload.retainer_due_date ?? null,
         terms_version: payload.terms_version ?? 'v1',
         privacy_policy_version: payload.privacy_policy_version ?? 'v1',
         finalized_at: payload.finalized_at ?? null,

@@ -33,6 +33,7 @@ implementation and testing of each story.
 - Core services/models/guards: `src/app/core/...`
 - Shared UI: `src/app/shared/...`
 - Supabase tables: `supabase/schemas/public/tables/...`
+- Supabase migrations: `supabase/migrations/...`
 - Supabase Edge Functions: `supabase/edge_functions/...`
 
 ## Phase 1: Setup (Shared Infrastructure)
@@ -57,14 +58,20 @@ story implementation.
 
 - [ ] T005 Document data model, Supabase RLS intent, storage policy intent, and
   edge-function access boundaries for affected data paths
-- [ ] T006 Confirm no service-role keys or privileged secrets are exposed to
+- [ ] T006 Add an executable SQL migration in `supabase/migrations/` for every
+  new or modified Supabase table schema, including required application order
+  or manual steps
+- [ ] T007 Confirm every affected Supabase Edge Function is standalone and does
+  not create, use, or import `_shared`, another edge function, or a local shared
+  function module
+- [ ] T008 Confirm no service-role keys or privileged secrets are exposed to
   frontend code
-- [ ] T007 Define Karma/Jasmine unit-test scope and integration-check scope
-- [ ] T008 Define validation/error handling for customer data, emails,
+- [ ] T009 Define Karma/Jasmine unit-test scope and integration-check scope
+- [ ] T010 Define validation/error handling for customer data, emails,
   passcodes, signatures, proposal PDFs, and payment-related records
-- [ ] T009 For frontend split work, define staged routing, auth, deployment,
+- [ ] T011 For frontend split work, define staged routing, auth, deployment,
   shared code, and rollback considerations
-- [ ] T010 For proposal work, confirm manual Canva PDF upload remains the
+- [ ] T012 For proposal work, confirm manual Canva PDF upload remains the
   primary document path unless the approved spec says otherwise
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
@@ -82,18 +89,18 @@ story implementation.
 > Write these tests first where practical, and make sure they fail before the
 > implementation changes satisfy them.
 
-- [ ] T011 [P] [US1] Add Karma/Jasmine unit test for [component/service/guard]
+- [ ] T013 [P] [US1] Add Karma/Jasmine unit test for [component/service/guard]
   in src/app/[path]/[name].spec.ts
-- [ ] T012 [P] [US1] Add focused integration check for
+- [ ] T014 [P] [US1] Add focused integration check for
   [proposal/lead/inquiry/auth flow] in [test path]
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Update Angular model/type in src/app/core/models/[entity].ts
-- [ ] T014 [P] [US1] Update Supabase repository/service in src/app/core/supabase/[path]/[service].ts
-- [ ] T015 [US1] Implement UI/workflow changes in src/app/[surface]/[path]
-- [ ] T016 [US1] Add validation, error handling, and customer-data safeguards
-- [ ] T017 [US1] Verify brownfield behavior listed in plan.md remains unchanged
+- [ ] T015 [P] [US1] Update Angular model/type in src/app/core/models/[entity].ts
+- [ ] T016 [P] [US1] Update Supabase repository/service in src/app/core/supabase/[path]/[service].ts
+- [ ] T017 [US1] Implement UI/workflow changes in src/app/[surface]/[path]
+- [ ] T018 [US1] Add validation, error handling, and customer-data safeguards
+- [ ] T019 [US1] Verify brownfield behavior listed in plan.md remains unchanged
 
 **Checkpoint**: User Story 1 is functional and independently testable.
 
@@ -107,18 +114,18 @@ story implementation.
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add Karma/Jasmine unit test for [component/service/guard]
+- [ ] T020 [P] [US2] Add Karma/Jasmine unit test for [component/service/guard]
   in src/app/[path]/[name].spec.ts
-- [ ] T019 [P] [US2] Add focused integration check for
+- [ ] T021 [P] [US2] Add focused integration check for
   [proposal/lead/inquiry/auth flow] in [test path]
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Update Angular model/type in src/app/core/models/[entity].ts
-- [ ] T021 [US2] Implement service or edge-function changes in src/app/core or
+- [ ] T022 [P] [US2] Update Angular model/type in src/app/core/models/[entity].ts
+- [ ] T023 [US2] Implement service or edge-function changes in src/app/core or
   supabase/edge_functions
-- [ ] T022 [US2] Implement UI/workflow changes in src/app/[surface]/[path]
-- [ ] T023 [US2] Integrate with User Story 1 components if needed
+- [ ] T024 [US2] Implement UI/workflow changes in src/app/[surface]/[path]
+- [ ] T025 [US2] Integrate with User Story 1 components if needed
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 
@@ -132,17 +139,17 @@ story implementation.
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add Karma/Jasmine unit test for [component/service/guard]
+- [ ] T026 [P] [US3] Add Karma/Jasmine unit test for [component/service/guard]
   in src/app/[path]/[name].spec.ts
-- [ ] T025 [P] [US3] Add focused integration check for
+- [ ] T027 [P] [US3] Add focused integration check for
   [proposal/lead/inquiry/auth flow] in [test path]
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Update Angular model/type in src/app/core/models/[entity].ts
-- [ ] T027 [US3] Implement service or edge-function changes in src/app/core or
+- [ ] T028 [P] [US3] Update Angular model/type in src/app/core/models/[entity].ts
+- [ ] T029 [US3] Implement service or edge-function changes in src/app/core or
   supabase/edge_functions
-- [ ] T028 [US3] Implement UI/workflow changes in src/app/[surface]/[path]
+- [ ] T030 [US3] Implement UI/workflow changes in src/app/[surface]/[path]
 
 **Checkpoint**: All user stories are independently functional.
 
@@ -179,3 +186,7 @@ story implementation.
 - Each user story must remain independently completable and testable.
 - Avoid vague tasks, unauthorized public site edits, secret exposure, and
   cross-story dependencies that break independent delivery.
+- Never change a Supabase table schema without a matching executable SQL
+  migration in `supabase/migrations/`.
+- Never create or use an `_shared` edge-function directory, local shared
+  edge-function module, or import between Supabase Edge Functions.

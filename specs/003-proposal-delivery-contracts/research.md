@@ -1,118 +1,42 @@
-# Research: Proposal Delivery and Embedded SignWell Signing
+# Research: Automated SignWell Contract Delivery
 
-## Decision 1: Keep Black Begonia proposal-auth as the client entry point
+## Decisions
 
-- **Decision**: Preserve the existing email-plus-passcode proposal-auth flow and use it as the only client entry path before launching any embedded SignWell experience.
-- **Rationale**: The current passcode flow already protects proposal access, fits the existing client portal, and preserves CRM history assumptions tied to proposal-auth and proposal-review routes. Replacing it with direct third-party entry would increase branding drift and reduce Black Begonia control over proposal history and decline behavior.
-- **Alternatives considered**:
-  - Redirect clients directly to SignWell from the email: rejected because it weakens the existing Black Begonia portal experience and splits proposal history.
-  - Keep the portal only for PDF viewing and send signing elsewhere: rejected because it creates two separate client experiences for one proposal flow.
+- Use `POST /document_templates/documents` with `draft: true`, then `POST /documents/{id}/send`. Persisting the document ID between those calls prevents blind duplicate creation.
+- Use one `SIGNWELL_TEMPLATE_ID` and one client placeholder supplied through edge-function secrets; no CRM template manager or database lookup remains.
+- Use `template_fields` for the thirteen approved API IDs. `dateSigned` is signer/provider output and is never prefilled.
+- Use SignWell supplemental `files` for the Canva PDF. It is appended after template content, producing contract-first/proposal-second ordering. Omit the optional supplemental `fields` property because no fields are added to the Canva PDF; the live provider rejects an empty `fields: [[]]` value.
+- Upload the PDF to private Supabase Storage before orchestration. The edge function reads object metadata and only the first five bytes to validate size and the `%PDF-` signature, then supplies SignWell a 15-minute signed `file_url`. SignWell retrieves the private file directly, avoiding full-file edge downloads, base64 expansion, and duplicate JSON allocations that can trigger Supabase 546 resource-limit failures.
+- Let SignWell deliver its configured email. Do not send Mailgun proposal-auth email for new submissions.
+- Treat only verified `document_completed` and `document_declined` states as terminal. Retrieve the provider document before mutating CRM status.
+- Read `dateSigned` first and use the client recipient `signed_at` date only for recovery; record mismatch/recovery metadata.
+- Preserve legacy proposal-access routes and columns for historical data, but stop producing new passcodes, combined PDFs, or embedded sessions.
+- Keep every edge function standalone. Do not introduce `_shared` modules or edge-function unit-test files; independently type-check deployable sources and use SignWell test-mode smoke scenarios for provider behavior.
+- Use the SignWell Workspace Callback URL as the single callback registration. Supabase hosts the receiver, SignWell posts to it, and a Black Begonia-generated URL-safe token authenticates callbacks because SignWell does not issue this token.
+- Normalize human-readable service labels to the deployed lowercase `public.service_type` enum at the lead repository boundary. This prevents PostgREST 400 responses while keeping presentation labels independent from persistence values.
+- Build the compact lead modal from CRM theme variables rather than fixed light-only component colors so the existing theme toggle updates the modal immediately.
+- Disable Angular component HMR in the workspace serve target. A stale Vite dependency-cache lock left an orphaned `ng serve` process and surfaced a misleading missing-JIT-compiler error; AOT output and ordinary live rebuild remain authoritative.
 
-## Decision 2: Use SignWell-managed templates and field mapping instead of an in-house contract editor
+## SignWell constraints
 
-- **Decision**: The florist will configure the reusable contract template in SignWell, including the field locations that accept CRM data and signature inputs, and Black Begonia will store only the active template reference and mapping metadata needed to populate it.
-- **Rationale**: This matches the florist's preference to avoid building a template editor in-house and leans on SignWell for template setup, auto-fill fields, reusable templates, and embedded signing support.
-- **Alternatives considered**:
-  - Build a Black Begonia contract-template editor: rejected because it recreates the same template-authoring complexity the florist already rejected for proposals.
-  - Upload plain contract PDFs and discover merge locations automatically at runtime: rejected because the workflow is not reliable from a raw PDF alone and duplicates field-placement behavior that SignWell already supports.
+- Recipients must be assigned to a template placeholder.
+- Appended-file fields use a two-dimensional array with one entry per supplemental file.
+- Completed PDFs can lag completion briefly, so webhook storage is best-effort and the provider reference remains authoritative for later retrieval.
+- Production smoke testing requires real account template/placeholder identifiers and cannot be completed from the repository alone.
+- The fixed client recipient placeholder is `Client` unless the SignWell template is deliberately renamed; the configured value must match the template role exactly and case-sensitively.
+- `SIGNWELL_API_KEY` is copied from SignWell Settings > API, while `SIGNWELL_TEMPLATE_ID` is the template UUID rather than its display name.
+- SignWell's current `TemplateRecipients` schema requires both `id` and `email`; `placeholder_name` is additionally required by the template assignment workflow. The single client is sent with stable request ID `"1"`.
+- Provider 400/422 bodies may use nested `errors` or `meta.messages` instead of a top-level `message`; integration logging must flatten those structures while redacting URLs and email addresses.
+- Although SignWell's published schema describes supplemental `fields`, its live create-from-template validator reports an empty two-dimensional value as an invalid key value. Omitting the optional property is valid and preserves all template-owned fields.
+- The live template reports both `Client` and `Document Sender` as required placeholder roles. Use optional backend sender name/email overrides when configured; otherwise use the authenticated submitting florist's active CRM profile with auth metadata/email fallback. SignWell rejects duplicate recipient emails, so the sender and client addresses must differ.
+- SignWell's live DateField validator rejects a date-only `YYYY-MM-DD` string even though it is an ISO-8601 calendar-date representation. Send a full midnight-UTC timestamp (`YYYY-MM-DDT00:00:00.000Z`) to preserve the intended date and let the template's `date_format` setting control client-visible formatting.
+- Browser-visible progress is limited to real await boundaries: proposal persistence, Storage upload, edge/SignWell orchestration, and history reload. Deeper provider milestones require a separate polling or realtime status protocol and are not fabricated in this synchronous workflow.
 
-## Decision 3: Create one canonical combined proposal package at submission time
+## Repository findings
 
-- **Decision**: On floral proposal submission, generate one canonical combined package with the florist-created Canva proposal PDF first and the SignWell-prepared contract second, then store that combined package as the proposal's review artifact in Black Begonia.
-- **Rationale**: This was the chosen clarification path and keeps client review, stored proposal history, and embedded signing anchored to the same document package instead of separate review and signing artifacts.
-- **Alternatives considered**:
-  - Assemble a separate SignWell runtime packet on demand: rejected because it risks drift between what the client reviews and what they sign.
-  - Sign only the contract while reviewing the proposal PDF separately: retained only as a fallback if the preferred combined-package path proves unworkable in implementation.
-
-## Decision 4: Fix proposal-auth email origin from backend configuration, not frontend runtime state
-
-- **Decision**: Proposal-access emails should use an environment-controlled client-facing portal origin sourced from backend configuration, with production pointing to `blackbegoniaflorals.com/proposal/auth`.
-- **Rationale**: The current localhost bug indicates backend delivery is relying on an origin that is unsafe for production email generation. The authoritative email destination needs to come from deployment configuration rather than whichever host triggered the submission request.
-- **Alternatives considered**:
-  - Continue using request-origin or browser-origin values: rejected because those can leak local or staging hosts into client email delivery.
-  - Hardcode the production hostname everywhere: rejected because staging and development environments still need environment-specific behavior.
-
-## Decision 5: Track SignWell proposal-delivery metadata explicitly in the proposal domain
-
-- **Decision**: Track the active SignWell contract template reference, contract revision used, combined-package storage reference, and signing status metadata directly in the floral proposal domain rather than burying everything in opaque notes.
-- **Rationale**: The florist needs accurate proposal history, and the system must preserve which contract version was used, whether a signing session exists, and how the final outcome maps back to the proposal lifecycle.
-- **Alternatives considered**:
-  - Store all signing information only inside a proposal snapshot blob: rejected because operational querying, debugging, and future reporting become more difficult.
-  - Store everything only in SignWell: rejected because Black Begonia would lose authoritative CRM-side history and make recovery harder.
-
-## Decision 6: Preserve decline and exit behavior even when embedded signing is unavailable
-
-- **Decision**: The client portal continues to support decline with notes and exit-secure-view independently of SignWell signing availability, and the system should surface a retryable signing-state error if the embedded signer cannot load.
-- **Rationale**: Proposal clients still need a way to respond or leave safely when third-party signing is degraded. This reduces failure risk while preserving the current review-cycle continuity.
-- **Alternatives considered**:
-  - Block all client interaction when SignWell embed fails: rejected because it prevents decline feedback and stalls the proposal process unnecessarily.
-  - Fall back immediately to direct third-party redirect: rejected because it breaks the chosen in-portal experience and complicates history handling.
-
-## Decision 7: Add explicit SignWell integration boundaries in Supabase edge functions
-
-- **Decision**: Keep SignWell orchestration in Supabase edge functions rather than frontend code, including template lookup, proposal-to-contract data mapping, package generation, signing-session creation, and webhook-driven status updates.
-- **Rationale**: This keeps secrets out of the frontend, aligns with the repo's current proposal-delivery architecture, and allows proposal, email, storage, and signing updates to be coordinated transactionally as much as practical.
-- **Alternatives considered**:
-  - Call SignWell directly from the Angular client: rejected because it would expose privileged integration behavior and fragment workflow control.
-  - Build a separate backend service outside Supabase for signing: rejected because the project already relies on Supabase edge functions for proposal lifecycle operations.
-
-## Decision 8: Normalize lead service types before persistence
-
-- **Decision**: Public inquiry forms and CRM lead creation may continue using catalog labels, legacy keys, or friendly lead-source labels, but `LeadRepositoryService` normalizes them to exact Supabase enum values before inserting or updating leads.
-- **Rationale**: Supabase rejects enum values such as `wedding-full-service`, `Baby Showers`, `Corporate Events`, or `referral` with a 400 response because the database accepts canonical values such as `full-service wedding`, `baby shower`, `corporate`, and `other`. Lead service type and source are also used later by proposal delivery, contract merge workflows, filtering, and reporting, so canonical persistence prevents downstream proposal-package failures.
-- **Alternatives considered**:
-  - Change every form option value to database enum values: rejected because CRM display labels, legacy keys, and friendly source labels still appear in edit flows and tests.
-  - Loosen the database enums: rejected because it would preserve inconsistent lead data and weaken proposal workflow routing.
-
-## Decision 9: Treat event dates as date-only calendar values
-
-- **Decision**: Public inquiry and CRM lead event dates are normalized to `YYYY-MM-DD` before persistence, and date-only values are displayed or emailed by constructing calendar dates rather than JavaScript UTC instants.
-- **Rationale**: Browser date inputs emit date-only strings such as `2026-11-28`. `new Date('2026-11-28')` treats that value as midnight UTC, which displays as November 27 in US Eastern time. Event dates are business calendar dates, not moments in time, so they must not shift by timezone.
-- **Alternatives considered**:
-  - Store event dates as timestamps: rejected because event dates do not need time-of-day semantics and would keep creating timezone edge cases.
-  - Add a day during display: rejected because it would mask the symptom while breaking users in other timezones or for already timestamped values.
-
-## Operational setup guidance
-
-- `CLIENT_PORTAL_PROPOSAL_URL` must point to the deployed Black Begonia proposal-auth route used in client emails. Production should use `https://blackbegoniaflorals.com/proposal/auth`.
-- `PROPOSAL_ACCESS_SIGNING_KEY` signs proposal-access refresh tokens for the secure portal and must never be exposed to the frontend.
-- `SIGNWELL_WEBHOOK_TOKEN` should be configured in every deployed Supabase environment and mirrored in SignWell webhook delivery settings.
-- `ALLOW_UNSIGNED_SIGNWELL_WEBHOOK=true` is acceptable only for controlled local development when SignWell cannot supply the shared webhook token header.
-- `SIGNWELL_EMBEDDED_SIGNING_URL_TEMPLATE` is optional and should be left blank when SignWell returns a full embedded signing URL. If only a session id is returned, the template must contain `{{session_id}}`.
-- `FLORAL_PROPOSAL_BUCKET` should remain scoped to proposal-package storage only, and `PROPOSAL_SIGNED_URL_TTL_SECONDS` should stay short-lived so review links expire automatically.
-
-## Affected implementation inventory
-
-### Routes and UI surfaces
-
-- CRM admin proposal workflow under `src/app/components/private/floral-proposal-builder/`
-- CRM lead proposal history under `src/app/components/private/leads/lead-detail/` and `src/app/components/private/leads/components/lead-proposal-history-card/`
-- Client proposal access routes under `src/app/components/proposal-access/proposal-auth/` and `src/app/components/proposal-access/proposal-review/`
-
-### Angular services, guards, repositories, and models
-
-- Proposal-access session models and services under `src/app/core/proposal-access/`
-- Proposal-access route protection in `src/app/core/guards/proposal-access.guard.ts`
-- Floral proposal workflow and builder services under `src/app/core/supabase/services/`
-- Floral proposal, contract-template, and signing-session repositories under `src/app/core/supabase/repositories/`
-- Proposal domain models under `src/app/core/models/`
-- Floral service catalog normalization under `src/app/core/floral-services/floral-service-catalog.ts`
-- Lead `service_type` and `source` persistence normalization under `src/app/core/supabase/repositories/lead-repository.service.ts`
-- Date-only normalization and display helpers under `src/app/core/utils/date-only.ts`
-- Supabase edge-function email date formatting in `supabase/edge_functions/send-inquiry-emails.ts` and proposal email helpers
-
-### Supabase schemas and storage
-
-- Proposal delivery metadata in `supabase/schemas/public/tables/floral_proposals.sql`
-- Active contract template records in `supabase/schemas/public/tables/proposal_contract_templates.sql`
-- Embedded signing session records in `supabase/schemas/public/tables/proposal_signing_sessions.sql`
-- Canonical combined proposal-package assets in the `FLORAL_PROPOSAL_BUCKET` storage boundary
-
-### Supabase edge functions
-
-- `supabase/edge_functions/submit-floral-proposal.ts`
-- `supabase/edge_functions/send-proposal-email.ts`
-- `supabase/edge_functions/resend-floral-proposal-email.ts`
-- `supabase/edge_functions/verify-floral-proposal-access.ts`
-- `supabase/edge_functions/submit-floral-proposal-response.ts`
-- `supabase/edge_functions/signwell-webhook.ts`
+- The former submission edge function composed proposal-first PDFs and sent Mailgun portal emails without creating a real SignWell template document.
+- `projects` already contained venue street addresses but not ZIP codes; lead conversion did not copy addresses.
+- Proposal history already sorts successfully submitted records by submission/update/version and is retained.
+- The previous lead edit UI displayed the new address fields but omitted them from the update payload, accepted service display labels that did not match the database enum, and used component-local light backgrounds that bypassed CRM dark-theme variables.
+- Public inquiry forms and CRM lead creation may continue using catalog labels, legacy keys, or friendly lead-source labels, but `LeadRepositoryService` normalizes service type and source to exact Supabase enum values before inserting or updating leads.
+- Event dates are business calendar dates, not moments in time. Lead persistence and display helpers normalize date-only input to `YYYY-MM-DD` so a selected date such as `2026-11-28` never displays as November 27 because of local timezone conversion.

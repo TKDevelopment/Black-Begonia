@@ -65,38 +65,36 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     expect(fileSpy).toHaveBeenCalledWith(pdfFile);
   });
 
-  it('shows selected file and optional canva copy when enabled', () => {
+  it('shows selected file, errors, and optional canva copy when enabled', () => {
     component.open = true;
     component.fileName = 'proposal.pdf';
     component.canvaImportAvailable = true;
-    component.contractTemplateName = 'Black Begonia Standard Contract';
     component.errorMessage = 'Upload a valid PDF proposal document.';
-    component.submissionBlockedReason =
-      'An active contract template is required before you can submit the proposal document.';
 
     fixture.detectChanges();
 
     const text = textContent();
-    expect(text).toContain('Active contract template: Black Begonia Standard Contract');
     expect(text).toContain('proposal.pdf');
     expect(text).toContain('Canva PDF import is available as an optional shortcut for completed designs.');
     expect(text).toContain('Upload a valid PDF proposal document.');
-    expect(text).toContain(
-      'An active contract template is required before you can submit the proposal document.'
-    );
-    expect(submitButton()?.disabled).toBeTrue();
+    expect(submitButton()?.disabled).toBeFalse();
   });
 
-  it('keeps submit enabled only when the workflow is not blocked', () => {
+  it('shows progress and disables submission controls while finalization is running', () => {
     component.open = true;
     fixture.detectChanges();
 
     expect(submitButton()?.disabled).toBeFalse();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
 
-    component.submissionBlockedReason = 'Missing required mapped contract data.';
+    component.saving = true;
+    component.progressMessage = 'Uploading the proposal PDF securely…';
     fixture.detectChanges();
 
     expect(submitButton()?.disabled).toBeTrue();
+    expect(textContent()).toContain('Uploading the proposal PDF securely…');
+    expect(fixture.nativeElement.querySelector('[role="status"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('input[type="file"]')?.disabled).toBeTrue();
   });
 
   function textContent(): string {

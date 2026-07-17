@@ -52,14 +52,8 @@
               <button type="button" (click)="saveDraft()" [disabled]="!canEdit()" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3.5 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
                 Save Draft
               </button>
-              <button *ngIf="!canSubmitDocument()" type="button" (click)="finalizeProposal()" [disabled]="!canFinalize()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
+              <button type="button" (click)="finalizeProposal()" [disabled]="!canFinalize()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
                 Finalize Proposal
-              </button>
-              <button *ngIf="canSubmitDocument()" type="button" (click)="enableProposalEditing()" class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3.5 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
-                Edit Proposal Data
-              </button>
-              <button *ngIf="canSubmitDocument()" type="button" (click)="openDocumentSubmission()" class="inline-flex items-center justify-center rounded-xl bg-[#ea938c] px-3.5 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 xl:px-3 xl:py-1.5 xl:text-[12px] 2xl:px-4 2xl:py-2.5 2xl:text-[13px]">
-                Submit Proposal Document
               </button>
             </div>
           </div>
@@ -92,12 +86,6 @@
                 </option>
               </select>
             </div>
-          </div>
-          <div *ngIf="canSubmitDocument()" class="mt-3 rounded-2xl border border-[#d9c7b8] bg-white px-4 py-3 text-[13px] leading-6 text-stone-600">
-            Proposal data is finalized and locked. Choose <strong>Edit Proposal Data</strong> to make changes, or <strong>Submit Proposal Document</strong> to upload the florist-created PDF you want clients to review.
-          </div>
-          <div *ngIf="!canSubmitDocument() && submissionBlockedReason()" class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] leading-6 text-amber-800">
-            {{ submissionBlockedReason() }}
           </div>
         </div>
 
@@ -424,15 +412,6 @@
       </div>
 
       <div detail-sidebar>
-        <app-proposal-contract-template-manager
-          [templates]="contractTemplates()"
-          [activeTemplateId]="activeContractTemplate()?.proposal_contract_template_id ?? null"
-          [saving]="contractTemplateSaving()"
-          [errorMessage]="contractTemplateError()"
-          (createTemplate)="createContractTemplate($event)"
-          (activateTemplate)="activateContractTemplate($event)"
-        />
-
         <div class="builder-panel rounded-2xl border border-[#d5c2b3] bg-white p-6 shadow-[0_10px_30px_rgba(84,57,38,0.05)] xl:p-4 2xl:p-6">
           <h3 class="text-lg font-semibold text-stone-900 xl:text-[15px] 2xl:text-[18px]">Lead Context</h3>
           <div class="mt-5 space-y-4 text-sm xl:mt-3 xl:space-y-3 xl:text-[12px] 2xl:mt-4 2xl:space-y-4 2xl:text-[14px]">
@@ -553,9 +532,8 @@
   [saving]="saving()"
   [fileName]="submissionFileName()"
   [errorMessage]="submissionError()"
+  [progressMessage]="submissionProgress()"
   [canvaImportAvailable]="false"
-  [contractTemplateName]="activeContractTemplate()?.display_name ?? null"
-  [submissionBlockedReason]="submissionBlockedReason()"
   (closeModal)="closeDocumentSubmission()"
   (fileSelected)="onSubmissionFileSelected($event)"
   (submitDocument)="submitProposalDocument()"

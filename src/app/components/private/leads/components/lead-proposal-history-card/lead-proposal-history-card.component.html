@@ -20,7 +20,7 @@
       </button>
 
       <button
-        *ngIf="selectedProposal()?.is_active && canResendProposal"
+        *ngIf="selectedProposal()?.is_active && canResendProposal && !selectedProposal()?.signing_provider"
         type="button"
         (click)="onResend(selectedProposal()!.floral_proposal_id)"
         [disabled]="resending"

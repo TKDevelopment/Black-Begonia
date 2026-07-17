@@ -106,8 +106,11 @@ describe('FloralProposalBuilderComponent', () => {
     proposalWorkflow = jasmine.createSpyObj<FloralProposalWorkflowService>(
       'FloralProposalWorkflowService',
       [
-        'buildManualSubmissionPayload',
         'submitProposal',
+        'uploadProposalPdf',
+        'resolveStoredProposalStatus',
+        'buildProposalSnapshot',
+        'buildEditableProposalSnapshot',
         'uploadLineItemImage',
         'removeLineItemImage',
         'getSignedLineItemImageUrl',
@@ -149,12 +152,27 @@ describe('FloralProposalBuilderComponent', () => {
       catalogItem,
       { ...catalogItem, item_id: 'inactive-catalog', is_active: false },
     ]);
-    proposalWorkflow.buildManualSubmissionPayload.and.returnValue({
-      payload: 'submission',
-    } as any);
     proposalWorkflow.submitProposal.and.resolveTo({
       version: 3,
     } as any);
+    proposalWorkflow.uploadProposalPdf.and.resolveTo({
+      storagePath: `${testLead.lead_id}/proposal-draft-001/upload/proposal.pdf`,
+    });
+    proposalWorkflow.resolveStoredProposalStatus.and.callFake((status) =>
+      status === 'finalized' ? 'draft' : status
+    );
+    proposalWorkflow.buildProposalSnapshot.and.callFake((args: any) => ({
+      ...(args.existingSnapshot ?? {}),
+      proposal_status: args.proposalStatus ?? 'draft',
+      finalized_at: args.lifecycle?.finalizedAt ?? null,
+      edit_reopened_at: args.lifecycle?.editReopenedAt ?? null,
+      default_markup_percent: args.renderPayload.default_markup_percent,
+      labor_percent: args.renderPayload.labor_percent,
+    }));
+    proposalWorkflow.buildEditableProposalSnapshot.and.callFake((snapshot: any) => ({
+      ...snapshot,
+      proposal_status: 'draft',
+    }));
     proposalWorkflow.uploadLineItemImage.and.resolveTo({
       storagePath: 'proposal-images/lead-test-001/line-001.jpg',
       signedUrl: 'https://example.test/line-001.jpg',
@@ -355,72 +373,92 @@ describe('FloralProposalBuilderComponent', () => {
     expect(component.saving()).toBeFalse();
   });
 
-  it('finalizes proposal data and exposes the locked-state submission actions', async () => {
+  it('opens finalization without locking and cancel keeps the draft editable', async () => {
     createSubmittableComponent();
 
     await component.finalizeProposal();
 
-    expect(proposalRepository.createFloralProposal).toHaveBeenCalledWith(
-      jasmine.objectContaining({
-        lead_id: testLead.lead_id,
-        status: 'draft',
-        snapshot: jasmine.objectContaining({
-          proposal_status: 'finalized',
-        }),
-      })
-    );
-    expect(activityRepository.createLeadActivity).toHaveBeenCalledWith(
-      jasmine.objectContaining({
-        activity_label: 'Floral Proposal v2 finalized saved',
-      })
-    );
-    expect(toast.showToast).toHaveBeenCalledWith(
-      'Floral Proposal v2 finalized successfully.',
-      'success'
-    );
-
-    createFinalizedComponent();
-    expect(component.canSubmitDocument()).toBeTrue();
-
-    component.openDocumentSubmission();
     expect(component.submissionModalOpen()).toBeTrue();
+    expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
+    expect(component.canEdit()).toBeTrue();
 
-    component.enableProposalEditing();
-    expect(component.editModeEnabled()).toBeTrue();
+    component.closeDocumentSubmission();
     expect(component.submissionModalOpen()).toBeFalse();
-    expect(component.canSubmitDocument()).toBeFalse();
     expect(component.canFinalize()).toBeTrue();
   });
 
-  it('submits florist-supplied PDF documents after finalization', async () => {
-    createFinalizedComponent();
+  it('persists, uploads, and submits florist-supplied PDF documents atomically', async () => {
+    createSubmittableComponent();
     const pdfFile = new File(['%PDF-test'], 'proposal.pdf', {
       type: 'application/pdf',
     });
 
-    component.openDocumentSubmission();
+    await component.finalizeProposal();
     component.onSubmissionFileSelected(pdfFile);
     await component.submitProposalDocument();
 
-    expect(proposalWorkflow.buildManualSubmissionPayload).toHaveBeenCalledWith(
+    expect(proposalRepository.createFloralProposal).toHaveBeenCalledWith(
       jasmine.objectContaining({
-        lead: jasmine.objectContaining({ lead_id: testLead.lead_id }),
-        proposal: jasmine.objectContaining({
-          floral_proposal_id: 'proposal-finalized-001',
-        }),
-        pdfFileName: 'proposal.pdf',
-        pdfBase64: jasmine.any(String),
+        lead_id: testLead.lead_id,
+        final_balance_amount: jasmine.any(Number),
+        retainer_amount: jasmine.any(Number),
       })
     );
-    expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith({
-      payload: 'submission',
-    } as any);
+    expect(proposalWorkflow.uploadProposalPdf).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        leadId: testLead.lead_id,
+        proposalId: draftProposal.floral_proposal_id,
+        file: pdfFile,
+        idempotencyKey: jasmine.any(String),
+      })
+    );
+    expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        proposalId: draftProposal.floral_proposal_id,
+        pdfFileName: 'proposal.pdf',
+        expectedVersion: draftProposal.version,
+      })
+    );
     expect(toast.showToast).toHaveBeenCalledWith(
       'Floral Proposal v3 submitted successfully.',
       'success'
     );
     expect(component.submissionModalOpen()).toBeFalse();
     expect(component.submissionFile()).toBeNull();
+    expect(component.saving()).toBeFalse();
+  });
+
+  it('reports observable finalization milestones while the modal remains locked', async () => {
+    createSubmittableComponent();
+    const pdfFile = new File(['%PDF-test'], 'proposal.pdf', {
+      type: 'application/pdf',
+    });
+    proposalRepository.createFloralProposal.and.callFake(async () => {
+      expect(component.submissionProgress()).toBe('Saving proposal details…');
+      expect(component.saving()).toBeTrue();
+      return draftProposal;
+    });
+    proposalWorkflow.uploadProposalPdf.and.callFake(async () => {
+      expect(component.submissionProgress()).toBe('Uploading the proposal PDF securely…');
+      return { storagePath: 'lead/proposal/proposal.pdf' };
+    });
+    proposalWorkflow.submitProposal.and.callFake(async () => {
+      expect(component.submissionProgress()).toBe('Creating and sending the SignWell signing packet…');
+      return {
+        floral_proposal_id: draftProposal.floral_proposal_id,
+        version: 3,
+        signwell_document_id: 'document-test-001',
+        signing_status: 'sent',
+        pdf_storage_path: 'lead/proposal/proposal.pdf',
+      };
+    });
+
+    await component.finalizeProposal();
+    component.onSubmissionFileSelected(pdfFile);
+    await component.submitProposalDocument();
+
+    expect(component.submissionModalOpen()).toBeFalse();
+    expect(component.submissionProgress()).toBeNull();
     expect(component.saving()).toBeFalse();
   });
 
@@ -440,8 +478,8 @@ describe('FloralProposalBuilderComponent', () => {
       'error'
     );
 
-    createFinalizedComponent();
-    component.openDocumentSubmission();
+    createSubmittableComponent();
+    await component.finalizeProposal();
     await component.submitProposalDocument();
 
     expect(component.submissionError()).toBe(
@@ -460,12 +498,11 @@ describe('FloralProposalBuilderComponent', () => {
       '[FloralProposalBuilderComponent] submitProposalDocument error:',
       jasmine.any(Error)
     );
-    expect(component.submissionError()).toBe(
-      'We were unable to submit the proposal document right now.'
-    );
+    expect(component.submissionError()).toBe('submit failed');
+    expect(component.canEdit()).toBeTrue();
   });
 
-  it('requires edit plus re-finalization before replacement submission after a decline', () => {
+  it('allows declined proposals to return through the single finalization action', async () => {
     createFinalizedComponent({
       status: 'declined',
       snapshot: {
@@ -474,10 +511,8 @@ describe('FloralProposalBuilderComponent', () => {
     });
 
     expect(component.canEdit()).toBeTrue();
-    expect(component.canSubmitDocument()).toBeFalse();
-
-    component.openDocumentSubmission();
-    expect(component.submissionModalOpen()).toBeFalse();
+    await component.finalizeProposal();
+    expect(component.submissionModalOpen()).toBeTrue();
   });
 
   it('uploads, removes, and rejects invalid line-item image interactions', async () => {
@@ -586,11 +621,10 @@ describe('FloralProposalBuilderComponent', () => {
 
     await component.saveDraft();
     await component.finalizeProposal();
-    component.openDocumentSubmission();
     await component.submitProposalDocument();
 
     expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
-    expect(proposalWorkflow.buildManualSubmissionPayload).not.toHaveBeenCalled();
+    expect(proposalWorkflow.uploadProposalPdf).not.toHaveBeenCalled();
     expect(proposalWorkflow.submitProposal).not.toHaveBeenCalled();
   });
 

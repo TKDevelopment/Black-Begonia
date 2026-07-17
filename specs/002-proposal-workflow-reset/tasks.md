@@ -101,7 +101,7 @@
 - [X] T033 [P] [US3] Add document-submission modal tests for manual PDF validation and optional Canva affordance in src/app/components/private/floral-proposal-builder/components/proposal-document-submission-modal/proposal-document-submission-modal.component.spec.ts
 - [X] T034 [P] [US3] Expand workflow-service submission and resubmission tests in src/app/core/supabase/services/floral-proposal-workflow.service.spec.ts
 - [X] T035 [P] [US3] Expand proposal-access service and review continuity tests in src/app/core/proposal-access/proposal-access.service.spec.ts and src/app/components/proposal-access/proposal-review/proposal-review.component.spec.ts
-- [X] T036 [P] [US3] Add focused edge-function tests for florist-supplied PDF submission in supabase/edge_functions/submit-floral-proposal.test.ts
+- [X] T036 [P] [US3] Verify florist-supplied PDF submission through standalone-function review and deployed smoke scenarios
 
 ### Implementation for User Story 3
 

@@ -52,6 +52,14 @@ export interface SubmitFloralProposalPayload {
   pdf_file_name?: string | null;
 }
 
+export interface FinalizeFloralProposalRequest {
+  proposalId: string;
+  pdfStoragePath: string;
+  pdfFileName: string;
+  idempotencyKey: string;
+  expectedVersion: number;
+}
+
 export interface ProposalSnapshotLifecycle {
   finalizedAt?: string | null;
   editReopenedAt?: string | null;
@@ -65,7 +73,7 @@ export class FloralProposalWorkflowService {
   private readonly lineItemImageBucket = 'floral-proposal-line-items';
   private readonly signedUrlExpirySeconds = 60 * 60;
   private readonly proposalPortalUrl =
-    environment.proposalPortalUrl?.trim() || '/proposal/auth';
+    (environment as { proposalPortalUrl?: string }).proposalPortalUrl?.trim() || '/proposal/auth';
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -150,6 +158,35 @@ export class FloralProposalWorkflowService {
     return { storagePath, signedUrl };
   }
 
+  async uploadProposalPdf(args: {
+    leadId: string;
+    proposalId: string;
+    idempotencyKey: string;
+    file: File;
+  }): Promise<{ storagePath: string }> {
+    const fileName = args.file.name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, '-')
+      .replace(/-+/g, '-');
+    const storagePath = `${args.leadId}/${args.proposalId}/${args.idempotencyKey}-${fileName}`;
+    const { error } = await this.supabaseService
+      .getClient()
+      .storage.from(this.floralProposalBucket)
+      .upload(storagePath, args.file, {
+        cacheControl: '3600',
+        contentType: 'application/pdf',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('[FloralProposalWorkflowService] uploadProposalPdf error:', error);
+      throw new Error('We could not securely upload the proposal PDF.');
+    }
+
+    return { storagePath };
+  }
+
   async removeLineItemImage(storagePath: string): Promise<void> {
     if (!storagePath) return;
 
@@ -179,17 +216,17 @@ export class FloralProposalWorkflowService {
     await this.floralProposalRepository.clearLineItemImage(lineItemId);
   }
 
-  async submitProposal(payload: SubmitFloralProposalPayload): Promise<{
+  async submitProposal(payload: FinalizeFloralProposalRequest): Promise<{
     floral_proposal_id: string;
     version: number;
+    signwell_document_id: string;
+    signing_status: string;
+    pdf_storage_path: string;
   }> {
     const { data, error } = await this.supabaseService
       .getClient()
       .functions.invoke('submit-floral-proposal', {
-        body: {
-          ...payload,
-          portal_url: this.proposalPortalUrl,
-        },
+        body: payload,
       });
 
     if (error) {
@@ -197,7 +234,12 @@ export class FloralProposalWorkflowService {
         '[FloralProposalWorkflowService] submitProposal invoke error:',
         error
       );
-      throw new Error('We could not submit the Floral Proposal right now.');
+      throw new Error(
+        await this.resolveFunctionError(
+          error,
+          'We could not submit the Floral Proposal right now.'
+        )
+      );
     }
 
     if (data?.success === false || !data?.floral_proposal_id) {
@@ -210,6 +252,9 @@ export class FloralProposalWorkflowService {
     return {
       floral_proposal_id: data.floral_proposal_id as string,
       version: Number(data.version ?? 1),
+      signwell_document_id: String(data.signwell_document_id ?? ''),
+      signing_status: String(data.signing_status ?? 'sent'),
+      pdf_storage_path: String(data.pdf_storage_path ?? payload.pdfStoragePath),
     };
   }
 
@@ -319,6 +364,36 @@ export class FloralProposalWorkflowService {
       proposal_status: 'draft',
       edit_reopened_at: editReopenedAt,
     };
+  }
+
+  private async resolveFunctionError(
+    error: unknown,
+    fallbackMessage: string
+  ): Promise<string> {
+    const context = (error as { context?: unknown } | null)?.context;
+    if (!(context instanceof Response)) {
+      return fallbackMessage;
+    }
+
+    if (context.status === 546) {
+      return 'The proposal service exceeded its processing limit. Deploy the latest submission function, then retry Finalize and Send.';
+    }
+
+    try {
+      const payload = (await context.clone().json()) as {
+        error?: unknown;
+        message?: unknown;
+      };
+      const message =
+        typeof payload.error === 'string'
+          ? payload.error
+          : typeof payload.message === 'string'
+            ? payload.message
+            : '';
+      return message.trim() || fallbackMessage;
+    } catch {
+      return fallbackMessage;
+    }
   }
 
   buildManualSubmissionPayload(args: {

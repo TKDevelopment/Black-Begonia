@@ -3,44 +3,12 @@ import { Lead } from '../../models/lead';
 import { SupabaseService } from '../clients/supabase.service';
 import { CreateGeneralLeadInput } from '../../models/create-general-lead-input';
 import { CreateWeddingLeadInput } from '../../models/create-wedding-lead-input';
+import { normalizeLeadSource } from '../../leads/lead-source-catalog';
 import {
   normalizeFloralServiceEventType,
   resolveFloralServiceDatabaseValue,
 } from '../../floral-services/floral-service-catalog';
 import { normalizeDateOnly } from '../../utils/date-only';
-
-type SupabaseLeadSource =
-  | 'instagram'
-  | 'facebook'
-  | 'google'
-  | 'pinterest'
-  | 'the knot'
-  | 'wedding wire'
-  | 'yelp'
-  | 'venue partner'
-  | 'bridal show'
-  | 'other'
-  | 'website';
-
-const SUPABASE_LEAD_SOURCES: readonly SupabaseLeadSource[] = [
-  'instagram',
-  'facebook',
-  'google',
-  'pinterest',
-  'the knot',
-  'wedding wire',
-  'yelp',
-  'venue partner',
-  'bridal show',
-  'other',
-  'website',
-];
-
-const LEAD_SOURCE_ALIASES = new Map<string, SupabaseLeadSource>([
-  ['personal referral', 'other'],
-  ['referral', 'other'],
-  ['crm', 'other'],
-]);
 
 @Injectable({
   providedIn: 'root',
@@ -63,10 +31,14 @@ export class LeadRepositoryService {
     ceremony_venue_name,
     ceremony_venue_city,
     ceremony_venue_state,
+    ceremony_venue_address,
+    ceremony_venue_zipcode,
     ceremony_start_time,
     reception_venue_name,
     reception_venue_city,
     reception_venue_state,
+    reception_venue_address,
+    reception_venue_zipcode,
     reception_start_time,
     event_start_time,
     budget_range,
@@ -131,7 +103,7 @@ export class LeadRepositoryService {
       preferred_contact_method: payload.preferred_contact_method || null,
       event_date: normalizeDateOnly(payload.event_date),
       inquiry_message: payload.inquiry_message?.trim() || null,
-      source: this.normalizeLeadSource(payload.source),
+      source: normalizeLeadSource(payload.source),
     };
 
     const { data, error } = await this.supabaseService
@@ -164,10 +136,14 @@ export class LeadRepositoryService {
       ceremony_venue_name: payload.ceremony_venue_name?.trim() || null,
       ceremony_venue_city: payload.ceremony_venue_city?.trim() || null,
       ceremony_venue_state: payload.ceremony_venue_state?.trim() || null,
+      ceremony_venue_address: payload.ceremony_venue_address?.trim() || null,
+      ceremony_venue_zipcode: payload.ceremony_venue_zipcode?.trim() || null,
       ceremony_start_time: payload.ceremony_start_time || null,
       reception_venue_name: payload.reception_venue_name?.trim() || null,
       reception_venue_city: payload.reception_venue_city?.trim() || null,
       reception_venue_state: payload.reception_venue_state?.trim() || null,
+      reception_venue_address: payload.reception_venue_address?.trim() || null,
+      reception_venue_zipcode: payload.reception_venue_zipcode?.trim() || null,
       reception_start_time: payload.reception_start_time || null,
       event_start_time: payload.event_start_time || null,
       budget_range: payload.budget_range?.trim() || null,
@@ -181,7 +157,7 @@ export class LeadRepositoryService {
       planner_name: payload.planner_name?.trim() || null,
       planner_phone: payload.planner_phone?.trim() || null,
       planner_email: payload.planner_email?.trim() || null,
-      source: this.normalizeLeadSource(payload.source),
+      source: normalizeLeadSource(payload.source),
     };
 
     const { data, error } = await this.supabaseService
@@ -214,7 +190,7 @@ export class LeadRepositoryService {
           }
         : {}),
       ...(updates.source !== undefined
-        ? { source: this.normalizeLeadSource(updates.source) }
+        ? { source: normalizeLeadSource(updates.source) }
         : {}),
       ...(updates.event_date !== undefined
         ? { event_date: normalizeDateOnly(updates.event_date) }
@@ -231,7 +207,12 @@ export class LeadRepositoryService {
       .single();
 
     if (error) {
-      console.error('[LeadRepositoryService] updateLead error:', error);
+      console.error('[LeadRepositoryService] updateLead error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       throw error;
     }
 
@@ -248,30 +229,6 @@ export class LeadRepositoryService {
         normalizeFloralServiceEventType(eventType)
       ) ?? serviceType.trim()
     );
-  }
-
-  private normalizeLeadSource(source: string | null | undefined): SupabaseLeadSource {
-    const normalized = this.normalizeEnumInput(source);
-
-    if (!normalized) {
-      return 'other';
-    }
-
-    const directSource = SUPABASE_LEAD_SOURCES.find(
-      (leadSource) => this.normalizeEnumInput(leadSource) === normalized
-    );
-
-    return directSource ?? LEAD_SOURCE_ALIASES.get(normalized) ?? 'other';
-  }
-
-  private normalizeEnumInput(value: string | null | undefined): string {
-    return String(value ?? '')
-      .trim()
-      .toLowerCase()
-      .replace(/&/g, 'and')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
   }
 
   async deleteLead(leadId: string): Promise<void> {

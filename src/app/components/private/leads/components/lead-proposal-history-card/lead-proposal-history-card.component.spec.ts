@@ -58,7 +58,7 @@ describe('LeadProposalHistoryCardComponent', () => {
     fallbackComponent.proposals = [archivedProposal, activeProposal];
     fallbackComponent.selectedProposalId = 'missing-proposal';
 
-    expect(fallbackComponent.selectedProposal()).toEqual(archivedProposal);
+    expect(fallbackComponent.selectedProposal()).toEqual(activeProposal);
   });
 
   it('renders proposal versions, active state, and latest client response', () => {

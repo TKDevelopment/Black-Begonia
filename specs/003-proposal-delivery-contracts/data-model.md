@@ -1,170 +1,63 @@
-# Data Model: Proposal Delivery and Embedded SignWell Signing
+# Data Model: SignWell Proposal Delivery
 
-## 1. Floral Proposal
+## Lead
 
-Represents the authoritative proposal record already stored in Black Begonia and extended for canonical package delivery plus embedded signing history.
+Adds nullable `ceremony_venue_address`, `ceremony_venue_zipcode`, `reception_venue_address`, and `reception_venue_zipcode`. Existing city/state fields form `City, ST ZIP` values. Applicable wedding services require complete address groups at delivery time.
 
-### Core fields
+The CRM edit modal exposes all lead business values: service/event type, client and partner names, contact preferences, event date and timing, ceremony/reception details, budget and guest count, inquiry/source, workflow status, assignment, decline context, consultation milestones, and planner details. It excludes `lead_id`, conversion foreign keys/timestamps, `declined_at`, `last_contacted_at`, `created_at`, and `updated_at` because those are identity, relationship, or system-maintained metadata.
 
-- `floral_proposal_id`
-- `lead_id`
-- `version`
-- `is_active`
-- `status`
-- `customer_email`
-- `pdf_storage_path`
-- `pdf_url`
-- `subtotal`
-- `tax_rate`
-- `tax_amount`
-- `total_amount`
-- `finalized_at`
-- `submitted_at`
-- `accepted_at`
-- `declined_at`
-- `snapshot`
+### Service type persistence
 
-### New or extended delivery-signing fields
+CRM labels are normalized to `public.service_type` enum values before insert/update:
 
-- `combined_pdf_storage_path`
-  Purpose: points to the canonical combined proposal package used for portal review and embedded signing.
-- `combined_pdf_file_name`
-  Purpose: client-visible package file name for review and downloads.
-- `contract_template_source`
-  Purpose: identifies the active SignWell contract template selected for this proposal.
-- `contract_template_revision`
-  Purpose: records the exact SignWell contract revision used at submission time.
-- `signing_provider`
-  Purpose: identifies the signing provider used for the proposal package.
-- `signing_status`
-  Allowed values:
-  - `not_started`
-  - `ready`
-  - `viewed`
-  - `signed`
-  - `declined`
-  - `failed`
-- `signing_session_reference`
-  Purpose: stores the active SignWell document or embedded session reference needed by the portal and webhook handlers.
-- `signed_package_storage_path`
-  Purpose: points to the final signed combined package if SignWell returns a signed artifact.
-- `signing_completed_at`
-  Purpose: records when required signatures were completed.
-- `signing_declined_at`
-  Purpose: records when the signing session was explicitly declined or abandoned by decision rather than portal exit.
+| CRM label | Database value |
+|---|---|
+| Full-Service Wedding | `full-service wedding` |
+| Ceremony-Only Wedding | `ceremony-only wedding` |
+| Reception-Only Wedding | `reception-only wedding` |
+| Elopement | `elopement` |
+| Engagements | `engagement` |
+| Birthday Celebrations | `birthday` |
+| Memorial Florals | `funeral` |
+| Corporate Events | `corporate` |
+| Bridal Showers | `bridal shower` |
+| Baby Showers | `baby shower` |
+| Anniversary Dinners | `anniversary` |
+| Rehearsal Dinners | `rehearsal` |
+| Proposal Florals | `proposal` |
+| Floral Subscriptions | `subscription` |
+| Private Lessons | `private lessons` |
+| Private Workshops | `workshop` |
+| Private Gatherings | `private event` |
+| Quinceanera Celebrations / Build-Your-Own Flower Bar | `private event` |
 
-### Relationships
+Values already matching the enum remain unchanged.
 
-- Belongs to one `Lead`
-- Has many `FloralProposalLineItem`
-- Has many `FloralProposalComponent` through line items
-- Has zero or one active `ProposalSigningSession`
-- References one `SignWellContractTemplateConfig` at submission time
+## Project
 
-### State transitions
+Adds nullable ceremony/reception ZIP codes and reuses existing address fields. Lead conversion copies all venue name, street, city, state, and ZIP values.
 
-- `draft` -> `submitted`
-- `submitted` -> `accepted`
-- `submitted` -> `declined`
-- `declined` -> `draft` through edit plus re-finalize
-- Signing state evolves independently from delivery creation:
-  - `not_started` -> `ready` -> `viewed` -> `signed`
-  - `ready` or `viewed` -> `declined`
-  - any in-flight state -> `failed`
+## Floral Proposal
 
-## 2. SignWell Contract Template Config
+- `final_balance_amount`: authoritative `total_amount` snapshot.
+- `retainer_amount`: rounded 30% of final balance.
+- `final_balance_due_date`: event date minus 30 calendar days.
+- `retainer_due_date`: nullable until verified completion.
+- `canva_pdf_storage_path` / `canva_pdf_file_name`: private source attachment.
+- Existing signing/status/provider fields remain the proposal delivery summary.
+- `passcode_hash` becomes nullable for direct-delivery records; historical hashes remain valid.
 
-Represents the CRM-side designation of which SignWell contract template is active for floral proposals.
+## Proposal Signing Session
 
-### Fields
+- `provider_document_id`: unique SignWell document reference.
+- `idempotency_key`: unique CRM finalization attempt reference.
+- `send_state`: `not_started`, `draft_created`, `sending`, `sent`, `failed`, or `unknown`.
+- Existing embedded-session fields remain nullable for historical compatibility.
 
-- `proposal_contract_template_id`
-- `provider`
-  Expected initial value: `signwell`
-- `provider_template_id`
-- `provider_template_name`
-- `provider_template_revision`
-- `is_active`
-- `display_name`
-- `description`
-- `required_field_map`
-  Purpose: stores the supported mapping between Black Begonia source fields and SignWell field identifiers.
-- `created_by`
-- `created_at`
-- `updated_at`
+## Storage
 
-### Validation rules
+The private `floral-proposals` bucket accepts PDFs up to 50 MB. Authenticated active admin/staff users may manage objects; edge functions read and write with service-role access.
 
-- Only one active template is allowed for floral proposal submissions at a time.
-- `provider_template_id` must be unique within the provider.
-- Required mapping entries must exist for all contract fields designated mandatory by the signing workflow.
+## Production migration
 
-### Relationships
-
-- Can be referenced by many historical `FloralProposal` records
-- Only one configuration may be active for new submissions at a time
-
-## 3. Proposal Signing Session
-
-Represents the per-proposal signing orchestration state used to embed and reconcile SignWell activity with CRM records.
-
-### Fields
-
-- `proposal_signing_session_id`
-- `floral_proposal_id`
-- `provider`
-- `provider_document_id`
-- `provider_embedded_session_id`
-- `provider_signer_reference`
-- `status`
-- `last_synced_at`
-- `last_error_message`
-- `webhook_payload_snapshot`
-- `created_at`
-- `updated_at`
-
-### Validation rules
-
-- One active in-flight signing session per active floral proposal.
-- `status` must stay aligned with the parent floral proposal's delivery state.
-- Webhook reconciliation must never change historical proposal versions other than the targeted active signing record.
-
-### Relationships
-
-- Belongs to one `FloralProposal`
-
-## 4. Proposal Package Artifact
-
-Represents storage-backed documents associated with the proposal lifecycle.
-
-### Fields
-
-- `artifact_type`
-  Allowed values:
-  - `proposal_pdf_original`
-  - `contract_pdf_filled`
-  - `proposal_package_combined`
-  - `proposal_package_signed`
-- `storage_path`
-- `file_name`
-- `source_provider`
-- `created_at`
-
-### Notes
-
-- This may be implemented as explicit columns plus snapshot metadata on `FloralProposal`, or as a dedicated artifact table if query needs justify it.
-- Historical proposal packages must remain immutable once delivered.
-
-## 5. Lead Proposal List Ordering
-
-Represents the CRM projection used on the lead detail page.
-
-### Ordering rules
-
-- Newest submitted version first
-- If a draft is re-used and submitted, the lead detail view must still surface it as the newest relevant proposal
-- Historical records remain visible but sorted below the newest version
-
-### Operational rule
-
-- The lead detail page should not rely on stale client-side ordering assumptions after submission; it must be driven by the updated proposal records returned from the repository layer
+`supabase/migrations/20260627000000_signwell_proposal_delivery.sql` adds the lead, project, proposal, and signing-session fields without recreating tables or deleting historical data. It also creates the signing-session uniqueness indexes, makes legacy `passcode_hash` nullable, and notifies PostgREST to reload its schema cache.

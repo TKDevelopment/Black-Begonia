@@ -127,6 +127,10 @@ describe('LeadConversionServiceService', () => {
         status: 'inquiry_converted',
         source_lead_id: acceptedLead.lead_id,
         primary_contact_id: primaryContact.contact_id,
+        ceremony_venue_address: acceptedLead.ceremony_venue_address,
+        ceremony_venue_zipcode: acceptedLead.ceremony_venue_zipcode,
+        reception_venue_address: acceptedLead.reception_venue_address,
+        reception_venue_zipcode: acceptedLead.reception_venue_zipcode,
       }),
     );
     expect(projectContactRepository.createProjectContact).toHaveBeenCalledWith({

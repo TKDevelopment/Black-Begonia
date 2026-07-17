@@ -122,11 +122,11 @@ describe('ProposalAccessService', () => {
       error: null,
     });
 
-    const refreshed = await service.refreshSigningSession();
-
     expect(service.getReviewDocumentUrl()).toBe('https://example.test/proposal-package.pdf');
     expect(service.getReviewFileName()).toBe('proposal-package.pdf');
     expect(service.hasEmbeddedSigning()).toBeFalse();
+
+    const refreshed = await service.refreshSigningSession();
     expect(invokeSpy).toHaveBeenCalledWith('verify-floral-proposal-access', {
       body: {
         floral_proposal_id: session.floral_proposal_id,

@@ -18,6 +18,10 @@ describe('LeadUpsertModalComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    document.body.classList.remove('crm-shell', 'crm-theme-dark');
+  });
+
   it('renders create mode when opened', () => {
     component.open = true;
     component.mode = 'create';
@@ -26,7 +30,8 @@ describe('LeadUpsertModalComponent', () => {
     expect(component.title).toBe('Create Lead');
     expect(component.confirmLabel).toBe('Create Lead');
     expect(fixture.nativeElement.textContent).toContain('Create Lead');
-    expect(fixture.nativeElement.textContent).toContain('New Record');
+    expect(fixture.nativeElement.textContent).not.toContain('Record Focus');
+    expect(fixture.nativeElement.textContent).not.toContain('Required For Save');
   });
 
   it('hydrates edit mode from the provided lead', () => {
@@ -35,9 +40,17 @@ describe('LeadUpsertModalComponent', () => {
     component.lead = {
       ...testLead,
       service_type: 'Full-Service Wedding',
+      phone: '5550101000',
       planner_name: 'Casey Planner',
+      planner_phone: '5550102000',
       guest_count: 120,
+      source: 'venue partner',
+      status: 'contacted',
+      event_start_time: '15:30',
+      consultation_scheduled_at: '2026-06-20T14:30:00.000Z',
     };
+    component.internalUsers = [{ id: 'user-test-001', email: 'designer@example.test' }];
+    component.allowedStatuses = ['contacted', 'consultation_scheduled'];
 
     component.ngOnChanges({
       open: new SimpleChange(false, true, false),
@@ -48,9 +61,34 @@ describe('LeadUpsertModalComponent', () => {
     expect(component.eventType()).toBe('wedding');
     expect(component.serviceType()).toBe('Full-Service Wedding');
     expect(component.firstName()).toBe(testLead.first_name);
+    expect(component.phone()).toBe('(555) 010-1000');
     expect(component.plannerName()).toBe('Casey Planner');
+    expect(component.plannerPhone()).toBe('(555) 010-2000');
     expect(component.guestCount()).toBe('120');
-    expect(fixture.nativeElement.textContent).toContain('Wedding Planning');
+    expect(component.source()).toBe('venue partner');
+    expect(component.status()).toBe('contacted');
+    expect(component.eventStartTime()).toBe('15:30');
+    expect(component.consultationScheduledAt()).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('Workflow');
+    expect(fixture.nativeElement.textContent).not.toContain('Assigned User');
+    expect(fixture.nativeElement.textContent).toContain('Venue Partner');
+  });
+
+  it('uses the CRM dark theme surfaces when dark mode is active', () => {
+    document.body.classList.add('crm-shell', 'crm-theme-dark');
+    component.open = true;
+    component.mode = 'edit';
+    component.lead = { ...testLead, service_type: 'full-service wedding' };
+    component.ngOnChanges({ open: new SimpleChange(false, true, false) });
+    fixture.detectChanges();
+
+    const shell = fixture.nativeElement.querySelector('.lead-modal-shell') as HTMLElement;
+    const card = fixture.nativeElement.querySelector('.lead-card') as HTMLElement;
+    const input = fixture.nativeElement.querySelector('.lead-field input') as HTMLElement;
+
+    expect(getComputedStyle(shell).backgroundColor).toBe('rgb(11, 15, 20)');
+    expect(getComputedStyle(card).backgroundColor).toBe('rgb(18, 23, 29)');
+    expect(getComputedStyle(input).backgroundColor).toBe('rgb(26, 32, 40)');
   });
 
   it('clears invalid service type when switching event type', () => {
@@ -61,6 +99,52 @@ describe('LeadUpsertModalComponent', () => {
 
     expect(component.eventType()).toBe('general');
     expect(component.serviceType()).toBe('');
+  });
+
+  it('renders lead source options from the Supabase enum values', () => {
+    component.open = true;
+    fixture.detectChanges();
+
+    const sourceSelect = Array.from(
+      fixture.nativeElement.querySelectorAll('select')
+    ).find((select): select is HTMLSelectElement =>
+      Array.from((select as HTMLSelectElement).options).some(
+        (option) => option.value === 'venue partner'
+      )
+    );
+
+    expect(sourceSelect).toBeTruthy();
+    expect(
+      Array.from(sourceSelect!.options).map((option) => option.value)
+    ).toEqual([
+      'instagram',
+      'facebook',
+      'google',
+      'pinterest',
+      'the knot',
+      'wedding wire',
+      'yelp',
+      'venue partner',
+      'bridal show',
+      'other',
+      'website',
+    ]);
+  });
+
+  it('formats phone fields while typing', () => {
+    component.onPhoneInput('5550101000');
+    component.onPlannerPhoneInput('(555) 010-2000 ext 99');
+
+    expect(component.phone()).toBe('(555) 010-1000');
+    expect(component.plannerPhone()).toBe('(555) 010-2000');
+
+    component.onPhoneInput('5550');
+
+    expect(component.phone()).toBe('(555) 0');
+
+    component.onPhoneInput('+1 (555) 010-1000');
+
+    expect(component.phone()).toBe('(555) 010-1000');
   });
 
   it('validates required fields before confirming', () => {
@@ -112,23 +196,32 @@ describe('LeadUpsertModalComponent', () => {
     component.partnerFirstName.set(' Rowan ');
     component.partnerLastName.set(' Lee ');
     component.plannerName.set(' Casey Planner ');
+    component.plannerPhone.set(' (555) 010-3000 ');
     component.plannerEmail.set(' CASEY@EXAMPLE.TEST ');
     component.email.set(' IRIS@EXAMPLE.TEST ');
-    component.phone.set(' 555-010-1000 ');
+    component.phone.set(' (555) 010-1000 ');
     component.preferredContactMethod.set(' email ');
     component.eventDate.set(' 2026-10-24 ');
     component.ceremonyVenueName.set(' Garden Hall ');
     component.ceremonyVenueCity.set(' Austin ');
     component.ceremonyVenueState.set(' TX ');
+    component.ceremonyVenueAddress.set(' 100 Garden Way ');
+    component.ceremonyVenueZipcode.set(' 78701 ');
     component.ceremonyStartTime.set('16:00');
     component.receptionVenueName.set(' Reception Hall ');
     component.receptionVenueCity.set(' Austin ');
     component.receptionVenueState.set(' TX ');
+    component.receptionVenueAddress.set(' 200 Hall Road ');
+    component.receptionVenueZipcode.set(' 78702 ');
     component.receptionStartTime.set('18:00');
+    component.eventStartTime.set('15:30');
     component.budgetRange.set(' $5,000-$7,500 ');
-    component.guestCount.set('120');
+    component.guestCount.set(120);
     component.inquiryMessage.set(' Floral design notes ');
-    component.source.set('');
+    component.source.set('website');
+    component.status.set('contacted');
+    component.declineReason.set(' Not the right fit ');
+    component.consultationScheduledAt.set('2026-06-20T10:30');
 
     component.onConfirm();
 
@@ -136,23 +229,32 @@ describe('LeadUpsertModalComponent', () => {
     expect(emitted).toEqual([
       jasmine.objectContaining({
         event_type: 'wedding',
-        service_type: 'Full-Service Wedding',
+        service_type: 'full-service wedding',
         first_name: 'Iris',
         last_name: 'Miller',
         partner_first_name: 'Rowan',
         partner_last_name: 'Lee',
         planner_name: 'Casey Planner',
+        planner_phone: '5550103000',
         planner_email: 'casey@example.test',
         email: 'iris@example.test',
-        phone: '555-010-1000',
+        phone: '5550101000',
         preferred_contact_method: 'email',
         event_date: '2026-10-24',
         ceremony_venue_name: 'Garden Hall',
+        ceremony_venue_address: '100 Garden Way',
+        ceremony_venue_zipcode: '78701',
         reception_venue_name: 'Reception Hall',
+        reception_venue_address: '200 Hall Road',
+        reception_venue_zipcode: '78702',
+        event_start_time: '15:30',
         budget_range: '$5,000-$7,500',
         guest_count: 120,
         inquiry_message: 'Floral design notes',
-        source: 'other',
+        source: 'website',
+        status: 'contacted',
+        decline_reason: 'Not the right fit',
+        consultation_scheduled_at: jasmine.any(String),
       }),
     ]);
   });

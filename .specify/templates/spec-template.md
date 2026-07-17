@@ -90,6 +90,12 @@ priorities as P1, P2, P3, etc., where P1 is the most critical.
   refactor or removal.
 - **Supabase Security**: Data features MUST define affected tables, RLS policy
   expectations, storage policy expectations, and edge-function access paths.
+- **Schema Migration**: Every new or modified Supabase table MUST identify the
+  executable SQL migration that updates an existing environment; declarative
+  table definitions alone are not sufficient.
+- **Standalone Edge Functions**: Any affected Supabase Edge Function MUST be
+  independently deployable without an `_shared` directory, local shared
+  function module, or import from another edge function.
 - **Testing Expectations**: Feature MUST state unit-test coverage expectations
   and whether proposal, lead, inquiry, or authorization integration checks are
   required.

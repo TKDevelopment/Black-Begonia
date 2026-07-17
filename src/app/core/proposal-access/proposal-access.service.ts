@@ -98,7 +98,7 @@ export class ProposalAccessService {
       {
         errorContext: '[ProposalAccessService] verifyAccess invoke error:',
         fallbackError:
-          'The email or passcode you entered is not valid.',
+          'We could not verify your Floral Proposal access right now.',
       }
     );
   }

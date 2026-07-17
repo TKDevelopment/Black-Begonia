@@ -5,6 +5,8 @@ export interface ProposalSigningSession {
   floral_proposal_id: string;
   provider: string;
   provider_document_id?: string | null;
+  idempotency_key?: string | null;
+  send_state?: 'not_started' | 'draft_created' | 'sending' | 'sent' | 'failed' | 'unknown';
   provider_embedded_session_id?: string | null;
   provider_signer_reference?: string | null;
   status: FloralProposalSigningStatus;

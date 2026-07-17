@@ -14,6 +14,8 @@ export class ProposalSigningSessionRepositoryService {
     floral_proposal_id,
     provider,
     provider_document_id,
+    idempotency_key,
+    send_state,
     provider_embedded_session_id,
     provider_signer_reference,
     status,
@@ -59,6 +61,8 @@ export class ProposalSigningSessionRepositoryService {
         floral_proposal_id: payload.floral_proposal_id,
         provider: payload.provider,
         provider_document_id: payload.provider_document_id ?? null,
+        idempotency_key: payload.idempotency_key ?? null,
+        send_state: payload.send_state ?? 'not_started',
         provider_embedded_session_id:
           payload.provider_embedded_session_id ?? null,
         provider_signer_reference: payload.provider_signer_reference ?? null,
