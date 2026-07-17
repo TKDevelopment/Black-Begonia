@@ -119,6 +119,9 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "hmr": false
+          },
           "configurations": {
             "prod": {
               "buildTarget": "Black-Begonia:build:prod"
@@ -140,6 +143,7 @@
               "zone.js/testing"
             ],
             "tsConfig": "tsconfig.spec.json",
+            "karmaConfig": "karma.conf.cjs",
             "codeCoverage": true,
             "inlineStyleLanguage": "scss",
             "assets": [

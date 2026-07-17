@@ -66,6 +66,7 @@
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Ceremony Venue</p>
                 <p class="mt-1 text-sm text-stone-800">{{ (lead.ceremony_venue_name || 'Not provided') | titlecase }}</p>
+                <p *ngIf="lead.ceremony_venue_address" class="mt-1 text-sm text-stone-600">{{ lead.ceremony_venue_address }}</p>
               </div>
 
               <div>
@@ -73,7 +74,8 @@
                 <p class="mt-1 text-sm text-stone-800">
                   <ng-container *ngIf="lead.ceremony_venue_city || lead.ceremony_venue_state; else noCeremonyLocation">
                     {{ (lead.ceremony_venue_city || '-') | titlecase }}
-                    <ng-container *ngIf="lead.ceremony_venue_state">, {{ lead.ceremony_venue_state | titlecase }}</ng-container>
+                    <ng-container *ngIf="lead.ceremony_venue_state">, {{ lead.ceremony_venue_state | uppercase }}</ng-container>
+                    <ng-container *ngIf="lead.ceremony_venue_zipcode"> {{ lead.ceremony_venue_zipcode }}</ng-container>
                   </ng-container>
                   <ng-template #noCeremonyLocation>Not provided</ng-template>
                 </p>
@@ -82,6 +84,7 @@
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Reception Venue</p>
                 <p class="mt-1 text-sm text-stone-800">{{ (lead.reception_venue_name || 'Not provided') | titlecase }}</p>
+                <p *ngIf="lead.reception_venue_address" class="mt-1 text-sm text-stone-600">{{ lead.reception_venue_address }}</p>
               </div>
 
               <div>
@@ -89,7 +92,8 @@
                 <p class="mt-1 text-sm text-stone-800">
                   <ng-container *ngIf="lead.reception_venue_city || lead.reception_venue_state; else noReceptionLocation">
                     {{ (lead.reception_venue_city || '-') | titlecase }}
-                    <ng-container *ngIf="lead.reception_venue_state">, {{ lead.reception_venue_state | titlecase }}</ng-container>
+                    <ng-container *ngIf="lead.reception_venue_state">, {{ lead.reception_venue_state | uppercase }}</ng-container>
+                    <ng-container *ngIf="lead.reception_venue_zipcode"> {{ lead.reception_venue_zipcode }}</ng-container>
                   </ng-container>
                   <ng-template #noReceptionLocation>Not provided</ng-template>
                 </p>
@@ -609,6 +613,8 @@
       [saving]="editSaving()"
       mode="edit"
       [lead]="lead()"
+      [internalUsers]="internalUsers()"
+      [allowedStatuses]="allowedStatuses()"
       (close)="closeEditModal()"
       (confirm)="saveLeadEdits($event)"
     />

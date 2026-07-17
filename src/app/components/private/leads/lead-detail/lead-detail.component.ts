@@ -746,28 +746,41 @@ export class LeadDetailComponent implements OnInit {
       service_type: payload.service_type,
       first_name: payload.first_name,
       last_name: payload.last_name,
-      partner_first_name: payload.event_type === 'wedding' ? payload.partner_first_name ?? null : null,
-      partner_last_name: payload.event_type === 'wedding' ? payload.partner_last_name ?? null : null,
-      planner_name: payload.event_type === 'wedding' ? payload.planner_name ?? null : null,
-      planner_phone: payload.event_type === 'wedding' ? payload.planner_phone ?? null : null,
-      planner_email: payload.event_type === 'wedding' ? payload.planner_email ?? null : null,
+      partner_first_name: payload.partner_first_name ?? null,
+      partner_last_name: payload.partner_last_name ?? null,
+      planner_name: payload.planner_name ?? null,
+      planner_phone: payload.planner_phone ?? null,
+      planner_email: payload.planner_email ?? null,
       email: payload.email,
       phone: payload.phone ?? null,
       preferred_contact_method: payload.preferred_contact_method ?? null,
       event_date: payload.event_date ?? null,
-      ceremony_venue_name: payload.event_type === 'wedding' ? payload.ceremony_venue_name ?? null : null,
-      ceremony_venue_city: payload.event_type === 'wedding' ? payload.ceremony_venue_city ?? null : null,
-      ceremony_venue_state: payload.event_type === 'wedding' ? payload.ceremony_venue_state ?? null : null,
-      ceremony_start_time: payload.event_type === 'wedding' ? payload.ceremony_start_time ?? null : null,
-      reception_venue_name: payload.event_type === 'wedding' ? payload.reception_venue_name ?? null : null,
-      reception_venue_city: payload.event_type === 'wedding' ? payload.reception_venue_city ?? null : null,
-      reception_venue_state: payload.event_type === 'wedding' ? payload.reception_venue_state ?? null : null,
-      reception_start_time: payload.event_type === 'wedding' ? payload.reception_start_time ?? null : null,
-      budget_range: payload.event_type === 'wedding' ? payload.budget_range ?? null : null,
-      guest_count: payload.event_type === 'wedding' ? payload.guest_count ?? null : null,
+      ceremony_venue_name: payload.ceremony_venue_name ?? null,
+      ceremony_venue_city: payload.ceremony_venue_city ?? null,
+      ceremony_venue_state: payload.ceremony_venue_state ?? null,
+      ceremony_venue_address: payload.ceremony_venue_address ?? null,
+      ceremony_venue_zipcode: payload.ceremony_venue_zipcode ?? null,
+      ceremony_start_time: payload.ceremony_start_time ?? null,
+      reception_venue_name: payload.reception_venue_name ?? null,
+      reception_venue_city: payload.reception_venue_city ?? null,
+      reception_venue_state: payload.reception_venue_state ?? null,
+      reception_venue_address: payload.reception_venue_address ?? null,
+      reception_venue_zipcode: payload.reception_venue_zipcode ?? null,
+      reception_start_time: payload.reception_start_time ?? null,
+      event_start_time: payload.event_start_time ?? null,
+      budget_range: payload.budget_range ?? null,
+      guest_count: payload.guest_count ?? null,
       inquiry_message: payload.inquiry_message ?? null,
       source: payload.source ?? 'other',
+      status: payload.status ?? lead.status,
+      decline_reason: payload.decline_reason ?? null,
+      consultation_scheduled_at: payload.consultation_scheduled_at ?? null,
+      consultation_completed_at: payload.consultation_completed_at ?? null,
     };
+
+    if ('assigned_user_id' in payload) {
+      updates.assigned_user_id = payload.assigned_user_id ?? null;
+    }
 
     const changedFields = this.getChangedFields(lead, updates);
 
@@ -793,7 +806,9 @@ export class LeadDetailComponent implements OnInit {
       this.toast.showToast('Lead updated successfully.', 'success');
     } catch (error) {
       console.error('[LeadDetailComponent] saveLeadEdits error:', error);
-      this.error.set('We were unable to save lead updates right now.');
+      const message = this.getLeadSaveErrorMessage(error);
+      this.error.set(message);
+      this.toast.showToast(message, 'error');
     } finally {
       this.editSaving.set(false);
     }
@@ -1101,13 +1116,25 @@ export class LeadDetailComponent implements OnInit {
       ceremony_venue_name: 'ceremony venue',
       ceremony_venue_city: 'ceremony city',
       ceremony_venue_state: 'ceremony state',
+      ceremony_venue_address: 'ceremony street address',
+      ceremony_venue_zipcode: 'ceremony ZIP code',
+      ceremony_start_time: 'ceremony start time',
       reception_venue_name: 'reception venue',
       reception_venue_city: 'reception city',
       reception_venue_state: 'reception state',
+      reception_venue_address: 'reception street address',
+      reception_venue_zipcode: 'reception ZIP code',
+      reception_start_time: 'reception start time',
+      event_start_time: 'event start time',
       budget_range: 'budget range',
       guest_count: 'guest count',
       inquiry_message: 'inquiry message',
       source: 'source',
+      status: 'status',
+      assigned_user_id: 'assigned user',
+      decline_reason: 'decline reason',
+      consultation_scheduled_at: 'consultation scheduled time',
+      consultation_completed_at: 'consultation completed time',
     };
 
     const currentValues = lead as unknown as Record<string, unknown>;
@@ -1115,6 +1142,30 @@ export class LeadDetailComponent implements OnInit {
     return Object.entries(updates)
       .filter(([key, value]) => currentValues[key] !== value)
       .map(([key]) => labels[key] ?? key.replace(/_/g, ' '));
+  }
+
+  private getLeadSaveErrorMessage(error: unknown): string {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String(error['code'] ?? '')
+        : '';
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String(error['message'] ?? '')
+        : '';
+    const normalizedMessage = message.toLowerCase();
+
+    if (
+      code === 'PGRST204' ||
+      (normalizedMessage.includes('could not find') && normalizedMessage.includes('column')) ||
+      (normalizedMessage.includes('column') && normalizedMessage.includes('does not exist'))
+    ) {
+      return 'The database lead schema is out of date. Apply the SignWell proposal-delivery migration, refresh the Supabase schema cache, and try again.';
+    }
+
+    return message
+      ? `We were unable to save lead updates: ${message}`
+      : 'We were unable to save lead updates right now.';
   }
 
   private getDeleteLeadErrorMessage(error: unknown): string {

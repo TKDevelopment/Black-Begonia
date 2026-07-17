@@ -11,10 +11,9 @@ export class ProposalDocumentSubmissionModalComponent {
   @Input() open = false;
   @Input() saving = false;
   @Input() fileName = '';
+  @Input() progressMessage: string | null = null;
   @Input() errorMessage: string | null = null;
   @Input() canvaImportAvailable = false;
-  @Input() contractTemplateName: string | null = null;
-  @Input() submissionBlockedReason: string | null = null;
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() fileSelected = new EventEmitter<File | null>();
@@ -29,6 +28,7 @@ export class ProposalDocumentSubmissionModalComponent {
   }
 
   onFileInputChange(event: Event): void {
+    if (this.saving) return;
     const input = event.target as HTMLInputElement | null;
     const file = input?.files?.[0] ?? null;
     this.fileSelected.emit(file);
@@ -41,6 +41,7 @@ export class ProposalDocumentSubmissionModalComponent {
   onFileDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    if (this.saving) return;
     const file = event.dataTransfer?.files?.[0] ?? null;
     this.fileSelected.emit(file);
   }

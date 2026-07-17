@@ -13,7 +13,7 @@ describe('proposalAccessGuard', () => {
     authTree = { toString: () => '/proposal/auth' } as UrlTree;
     proposalAccessService = jasmine.createSpyObj<ProposalAccessService>(
       'ProposalAccessService',
-      ['hasValidSession']
+      ['getSession', 'getReviewDocumentUrl', 'getEmbeddedSigningUrl', 'clearSession']
     );
     router = jasmine.createSpyObj<Router>('Router', ['createUrlTree']);
     router.createUrlTree.and.returnValue(authTree);
@@ -33,14 +33,17 @@ describe('proposalAccessGuard', () => {
   );
 
   it('allows proposal review when a valid proposal access session exists', () => {
-    proposalAccessService.hasValidSession.and.returnValue(true);
+    proposalAccessService.getSession.and.returnValue({ response_action: null } as never);
+    proposalAccessService.getReviewDocumentUrl.and.returnValue('https://example.test/proposal.pdf');
 
     expect(executeGuard()).toBeTrue();
     expect(router.createUrlTree).not.toHaveBeenCalled();
   });
 
   it('redirects to proposal authentication when no valid session exists', () => {
-    proposalAccessService.hasValidSession.and.returnValue(false);
+    proposalAccessService.getSession.and.returnValue(null);
+    proposalAccessService.getReviewDocumentUrl.and.returnValue(null);
+    proposalAccessService.getEmbeddedSigningUrl.and.returnValue(null);
 
     expect(executeGuard()).toBe(authTree);
     expect(router.createUrlTree).toHaveBeenCalledWith(['/proposal/auth']);

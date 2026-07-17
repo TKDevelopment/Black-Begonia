@@ -88,7 +88,7 @@ describe('LeadRepositoryService', () => {
     client.from.and.returnValue(query);
 
     const lead = await service.createGeneralLead({
-      service_type: 'Baby Showers',
+      service_type: 'Corporate Events',
       first_name: '  Iris ',
       last_name: ' Miller  ',
       email: ' IRIS@EXAMPLE.COM ',
@@ -100,7 +100,7 @@ describe('LeadRepositoryService', () => {
     });
 
     expect(query.insert).toHaveBeenCalledWith({
-      service_type: 'baby shower',
+      service_type: 'corporate',
       event_type: 'general',
       first_name: 'Iris',
       last_name: 'Miller',
@@ -161,10 +161,14 @@ describe('LeadRepositoryService', () => {
       ceremony_venue_name: 'Garden Hall',
       ceremony_venue_city: 'Ann Arbor',
       ceremony_venue_state: 'MI',
+      ceremony_venue_address: null,
+      ceremony_venue_zipcode: null,
       ceremony_start_time: '15:00',
       reception_venue_name: null,
       reception_venue_city: null,
       reception_venue_state: null,
+      reception_venue_address: null,
+      reception_venue_zipcode: null,
       reception_start_time: null,
       event_start_time: null,
       budget_range: '$3,000 - $5,000',
@@ -213,19 +217,18 @@ describe('LeadRepositoryService', () => {
     expect(lead).toEqual(testLead);
   });
 
-  it('normalizes service type when updating a lead', async () => {
+  it('normalizes a service display label before updating an enum column', async () => {
     const query = createUpdateEqSelectSingleQuery({ data: testLead, error: null });
     client.from.and.returnValue(query);
 
     await service.updateLead(testLead.lead_id, {
-      event_type: 'general',
-      service_type: 'Corporate Events',
+      event_type: 'wedding',
+      service_type: 'Ceremony-Only Wedding',
     });
 
     expect(query.update).toHaveBeenCalledWith(
       jasmine.objectContaining({
-        event_type: 'general',
-        service_type: 'corporate',
+        service_type: 'ceremony-only wedding',
         updated_at: jasmine.any(String),
       })
     );
@@ -294,7 +297,7 @@ describe('LeadRepositoryService', () => {
     ).toBeRejectedWith(error);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '[LeadRepositoryService] updateLead error:',
-      error
+      jasmine.objectContaining({ message: 'update failed' })
     );
   });
 

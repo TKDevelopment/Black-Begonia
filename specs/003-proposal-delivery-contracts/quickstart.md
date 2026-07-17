@@ -1,57 +1,47 @@
-# Quickstart: Proposal Delivery and Embedded SignWell Signing
+# Quickstart: Direct SignWell Proposal Delivery
 
-## Goal
+## Configure
 
-Verify the end-to-end proposal-delivery workflow where Black Begonia preserves its secure portal, SignWell supplies the reusable contract and embedded signing experience, and the canonical combined proposal package is the document clients review and sign.
+1. Apply `supabase/migrations/20260627000000_signwell_proposal_delivery.sql`, then apply the private storage bucket and policies in `supabase/schemas/storage/floral_proposals.sql`.
+2. Confirm the migration added all lead/project/proposal/signing-session columns and completed `NOTIFY pgrst, 'reload schema'` before testing CRM writes.
+3. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SIGNWELL_API_KEY`, `SIGNWELL_TEMPLATE_ID`, `SIGNWELL_CLIENT_PLACEHOLDER_NAME`, `SIGNWELL_WEBHOOK_TOKEN`, and `SIGNWELL_TEST_MODE=true`. Set `SIGNWELL_SENDER_PLACEHOLDER_NAME` only if the template role differs from `Document Sender`. Optionally set `SIGNWELL_SENDER_EMAIL` and `SIGNWELL_SENDER_NAME` to a stable florist signer identity; its email must differ from every client recipient email.
+4. Deploy `submit-floral-proposal` with JWT verification enabled and `signwell-webhook` with gateway JWT verification disabled. The webhook validates its own opaque token.
+5. Confirm the SignWell template contains the thirteen prefilled API IDs plus signer-controlled `dateSigned`.
+6. Set the SignWell Workspace Callback URL to the deployed webhook URL with the opaque token query parameter.
 
-## Preconditions
+### SignWell secret sources
 
-- A lead exists in a submission-eligible floral proposal state.
-- Inquiry-created and CRM-created leads store Supabase-compatible enum values, including `service_type` values such as `full-service wedding`, `baby shower`, or `corporate`, and `source` values such as `instagram`, `venue partner`, `website`, or `other`.
-- Inquiry-created and CRM-created leads store event dates as the exact selected calendar date, such as `2026-11-28` for November 28, 2026.
-- The florist has finalized proposal data in the floral proposal builder.
-- A florist-created Canva proposal PDF is ready for upload.
-- One active SignWell contract template is configured for floral proposal use.
-- Required SignWell field mappings for client and proposal data are configured.
-- Proposal-auth delivery environment variables are configured for the correct client-facing hostname.
+- `SIGNWELL_API_KEY`: copy from SignWell **Settings > API**.
+- `SIGNWELL_TEMPLATE_ID`: copy the UUID from the **Black Begonia Floral Contract Template** page URL; do not use the display name.
+- `SIGNWELL_CLIENT_PLACEHOLDER_NAME`: use `Client` and confirm the SignWell recipient role matches exactly, including case.
+- `SIGNWELL_SENDER_PLACEHOLDER_NAME`: optional; defaults to `Document Sender` and must match that second required role exactly if overridden.
+- `SIGNWELL_SENDER_EMAIL`: optional florist signer override. When omitted, the authenticated CRM profile/auth email is used. SignWell requires this address to differ from the client's email.
+- `SIGNWELL_SENDER_NAME`: optional florist signer display-name override used with the sender email.
+- `SIGNWELL_WEBHOOK_TOKEN`: generate this Black Begonia-owned secret locally; SignWell does not supply it.
 
-## Required configuration
+Generate a URL-safe 256-bit token in PowerShell:
 
-- Frontend environment:
-  - `proposalPortalUrl`
-- Supabase edge function secrets:
-  - `CLIENT_PORTAL_PROPOSAL_URL`
-  - `PROPOSAL_ACCESS_SIGNING_KEY`
-  - `MG_API_KEY`
-  - `MG_BASE_URL`
-  - `MG_DOMAIN`
-  - `MG_FROM_EMAIL`
-  - `MG_TO_REPLY`
-  - `SUPABASE_URL`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-- Supabase edge function optional settings:
-  - `FLORAL_PROPOSAL_BUCKET`
-  - `PROPOSAL_SIGNED_URL_TTL_SECONDS`
-  - `SIGNWELL_EMBEDDED_SIGNING_URL_TEMPLATE`
-  - `SIGNWELL_WEBHOOK_TOKEN`
-  - `ALLOW_UNSIGNED_SIGNWELL_WEBHOOK`
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$rng.Dispose()
+[Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+','-').Replace('/','_')
+```
 
-## Security notes
+Never commit secret values or place them in Angular environment files.
 
-- Production webhook delivery should always configure `SIGNWELL_WEBHOOK_TOKEN`.
-- `ALLOW_UNSIGNED_SIGNWELL_WEBHOOK=true` should be used only for controlled local testing.
-- `SIGNWELL_EMBEDDED_SIGNING_URL_TEMPLATE` should contain `{{session_id}}` only if SignWell returns an embedded session id instead of a full URL.
-- Review links are intentionally short-lived and are regenerated through the proposal-access flow.
+### Workspace callback
 
-## Scenario 1: Submit a proposal and deliver the correct client link
+Supabase hosts the endpoint; SignWell registers and calls it. In SignWell's **Workspace Callback URL**, enter:
 
-1. Open the floral proposal builder for an eligible lead.
-2. Upload the finalized Canva proposal PDF and submit the proposal.
-3. Confirm the submission succeeds and the lead status advances into the submitted proposal state.
-4. Confirm the lead detail page shows the newest proposal version first in the Floral Proposals section.
-5. Inspect the generated client email content and confirm the proposal-auth button points to the correct client-facing route for the active environment, with production using `blackbegoniaflorals.com/proposal/auth`.
+```text
+https://<project-ref>.supabase.co/functions/v1/signwell-webhook?token=<SIGNWELL_WEBHOOK_TOKEN>
+```
 
-## Scenario 1a: Create inquiry leads with canonical enum values
+The query token must exactly match the Supabase edge-function secret. Do not also register the same callback through `POST /hooks`, which would duplicate deliveries. The workspace callback also reports unrelated workspace documents; those must never mutate CRM records without a matching provider document session.
+
+## Verify lead intake data
 
 1. Submit a public wedding inquiry using `Full-Service Wedding`.
 2. Confirm the inserted lead stores `service_type` as `full-service wedding`.
@@ -63,48 +53,62 @@ Verify the end-to-end proposal-delivery workflow where Black Begonia preserves i
 8. Confirm the inserted lead stores `event_date` as `2026-11-28`, CRM lead views display November 28, 2026, and inquiry confirmation emails display November 28, 2026, not November 27.
 9. Edit a lead from the CRM using display labels or friendly source text and confirm the update still stores canonical Supabase enum values.
 
-## Scenario 2: Build the canonical combined proposal package
+## Verify finalization
 
-1. Submit a finalized floral proposal while an active SignWell contract template is configured.
-2. Confirm the backend retrieves the active SignWell contract template and maps lead or proposal values into the required fields.
-3. Confirm the system creates one canonical combined proposal package:
-   - florist-created proposal PDF first
-   - filled contract second
-4. Confirm the combined package is stored as the proposal's client-review artifact and historical record.
-5. Confirm the proposal record captures which SignWell template and revision were used.
+1. Open an eligible lead and complete proposal pricing.
+2. Confirm applicable venue address fields and event date are present.
+3. Click Finalize Proposal; cancel once and confirm the draft remains editable.
+4. Reopen Finalize, upload a valid Canva PDF, and send.
+5. Confirm the proposal becomes submitted only after SignWell accepts the send, the lead becomes `proposal_submitted`, and no Black Begonia proposal-auth email is sent.
+6. Confirm the delivered packet is contract first and Canva proposal second, with the template-owned email subject/body.
 
-## Scenario 3: Review and sign inside the secure client portal
+### Recover from a 546 submission failure
 
-1. Open the proposal-auth link from the client email.
-2. Authenticate with the client email address and six-digit passcode.
-3. Confirm the secure portal loads the canonical combined proposal package.
-4. Confirm the embedded SignWell signing experience is available for the contract portion without leaving the Black Begonia portal.
-5. Complete the required contract signatures.
-6. Confirm signing completion updates proposal status history and preserves CRM traceability.
+A `546 WORKER_RESOURCE_LIMIT` response with `CPU Time exceeded` or `Memory limit exceeded` means an older deployment buffered and base64-encoded the PDF. Deploy the current standalone `submit-floral-proposal.ts`, then retry Finalize and Send using the same proposal. The corrected function validates only storage metadata and five signature bytes before passing SignWell a 15-minute signed file URL. If an earlier attempt created a provider draft, the existing signing-session reference is reconciled instead of creating a duplicate.
 
-## Scenario 4: Decline or exit without signing
+### Diagnose a SignWell 400 or 422
 
-1. Authenticate through the proposal-auth flow.
-2. Open the secure review experience.
-3. Choose `Decline` and provide revision notes.
-4. Confirm decline notes are recorded and the florist's CRM history updates correctly.
-5. Repeat the review flow and choose `Exit Secure View`.
-6. Confirm the client can leave without corrupting the active signing session or proposal history.
+Deploy the current `submit-floral-proposal.ts` before retrying. The function now supplies required recipient ID `"1"` and logs `operation`, `provider_status`, and redacted `provider_details` for SignWell failures. If another provider validation remains, use that field path to confirm the template UUID, exact case-sensitive `Client` placeholder, all thirteen API IDs, and the signed PDF URL. Do not paste API keys or full signed URLs into logs or support messages.
 
-## Scenario 5: Error handling and submission blocking
+If `provider_details` reports `invalid_keys[0]: fields`, the deployed function is still sending the obsolete empty `fields: [[]]` value. Redeploy the current function, which omits the optional supplemental-fields property while retaining every field already configured on the template.
 
-1. Attempt to submit a floral proposal with no active SignWell contract template.
-2. Confirm submission is blocked with a clear florist-facing explanation.
-3. Attempt to submit with missing required mapped contract data.
-4. Confirm submission is blocked and the missing fields are identified.
-5. Simulate an embedded SignWell launch failure after successful passcode authentication.
-6. Confirm the client can still decline or exit safely while the system surfaces a retryable signing error and a `Retry Signing Session` action.
+If SignWell reports `missing_placeholder_names: document sender`, confirm the template role is exactly `Document Sender` or set the placeholder override, and confirm the submitting CRM profile or sender override has an email. If it reports `recipients.duplicated_emails`, the client and Document Sender resolve to the same normalized address; set `SIGNWELL_SENDER_EMAIL` to the florist's distinct signing address or use a different client email for the test. If it reports `invalid_date_format`, redeploy the current function, which sends `eventDate` and `finalBalanceDueDate` as full midnight-UTC ISO-8601 timestamps.
 
-## Expected Verification Notes
+During a normal submission the modal displays: **Saving proposal details**, **Uploading the proposal PDF securely**, **Creating and sending the SignWell signing packet**, and **Refreshing proposal history**. The modal cannot be dismissed or have its file replaced while these stages are active.
 
-- The canonical combined proposal package is the only review and signing artifact used in the primary workflow.
-- The existing passcode-auth proposal-access flow remains the portal entry point.
-- The florist's manual Canva PDF workflow remains unchanged except for contract attachment and embedded signing.
-- Proposal history, lead activity, and delivery metadata remain coherent across submission, review, decline, and signing completion.
-- Lead service types and lead sources remain canonical before proposal generation so SignWell merge data, proposal routing, filtering, and reporting do not inherit invalid inquiry values.
-- Lead event dates remain date-only calendar values across public intake, CRM display, inquiry emails, proposal builder context, proposal delivery emails, and project conversion names.
+## Verify outcomes
+
+1. Complete the client signing flow and confirm `document_completed` produces proposal `accepted`, lead `proposal_accepted`, and a populated `retainer_due_date` from `dateSigned`.
+2. Repeat with a test document declined and confirm proposal/lead decline states.
+3. Replay each webhook and confirm no duplicate lead activity.
+4. Interrupt a send after draft creation and retry; confirm the persisted provider document is reconciled rather than duplicated.
+
+## Verify CRM lead editing
+
+1. Open Edit Lead and confirm the Record Focus and Required For Save cards are absent.
+2. Confirm all non-metadata lead business fields are editable, including complete ceremony/reception addresses, event timing, workflow, assignment, consultation, decline, and planner values.
+3. Save each service category and confirm Supabase stores the exact lowercase `public.service_type` enum value rather than the CRM display label.
+4. Toggle light and dark mode with the modal open and confirm its shell, cards, controls, feedback, buttons, shadows, scrollbar, and date/time controls update immediately.
+5. If Supabase returns HTTP 400, inspect the structured repository error. A missing-column message requires reapplying the migration/schema reload; an invalid enum message indicates a service mapping mismatch.
+
+## Local development
+
+Component HMR is disabled in `angular.json` because a locked Vite dependency cache produced stale lazy-component metadata. Use ordinary live rebuild:
+
+```powershell
+ng serve
+```
+
+If Vite reports `EPERM` under `.angular/cache`, stop every project `ng serve` process before deleting the generated `.angular/cache` directory and restarting.
+
+## Automated checks
+
+```powershell
+npx tsc -p tsconfig.app.json --noEmit
+npx tsc -p tsconfig.spec.json --noEmit
+npx ng test --watch=false --browsers=ChromeHeadlessNoSandbox
+npx -y deno check --config supabase/deno.json supabase/edge_functions/submit-floral-proposal.ts supabase/edge_functions/signwell-webhook.ts
+npx ng build --configuration dev
+```
+
+The edge-functions directory intentionally contains no `_shared` directory and no edge-function unit tests. The live SignWell smoke scenarios require deployed secrets, template access, and webhook registration. Keep `SIGNWELL_TEST_MODE=true` until all scenarios pass.

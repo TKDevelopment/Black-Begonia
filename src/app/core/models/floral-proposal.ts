@@ -9,6 +9,10 @@ export type FloralProposalStatus =
   | 'expired';
 export type FloralProposalSigningStatus =
   | 'not_started'
+  | 'draft_created'
+  | 'sending'
+  | 'sent'
+  | 'completed'
   | 'ready'
   | 'viewed'
   | 'signed'
@@ -186,6 +190,8 @@ export interface FloralProposal {
   customer_email: string;
   pdf_storage_path?: string | null;
   pdf_url?: string | null;
+  canva_pdf_storage_path?: string | null;
+  canva_pdf_file_name?: string | null;
   signed_url?: string | null;
   combined_pdf_storage_path?: string | null;
   combined_pdf_file_name?: string | null;
@@ -202,6 +208,10 @@ export interface FloralProposal {
   tax_rate: number;
   tax_amount: number;
   total_amount: number;
+  final_balance_amount?: number;
+  retainer_amount?: number;
+  final_balance_due_date?: string | null;
+  retainer_due_date?: string | null;
   terms_version: string;
   privacy_policy_version: string;
   accepted_terms: boolean;
@@ -294,13 +304,17 @@ export interface CreateFloralProposalInput {
   is_active?: boolean;
   status?: FloralProposalStatus;
   customer_email: string;
-  passcode_hash: string;
+  passcode_hash?: string | null;
   pdf_storage_path?: string | null;
   pdf_url?: string | null;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;
   total_amount: number;
+  final_balance_amount?: number;
+  retainer_amount?: number;
+  final_balance_due_date?: string | null;
+  retainer_due_date?: string | null;
   terms_version?: string;
   privacy_policy_version?: string;
   finalized_at?: string | null;

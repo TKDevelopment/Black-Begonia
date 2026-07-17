@@ -345,6 +345,13 @@ describe('LeadDetailComponent', () => {
       last_name: 'Bloom',
       email: 'avery.new@example.test',
       source: 'crm',
+      ceremony_venue_address: '100 Updated Garden Way',
+      ceremony_venue_zipcode: '78703',
+      reception_venue_address: '200 Updated Hall Road',
+      reception_venue_zipcode: '78704',
+      event_start_time: '15:30',
+      status: 'contacted',
+      assigned_user_id: 'user-test-001',
     });
 
     expect(leadRepository.updateLead).toHaveBeenCalledWith(
@@ -355,6 +362,13 @@ describe('LeadDetailComponent', () => {
         email: 'avery.new@example.test',
         partner_first_name: null,
         guest_count: null,
+        ceremony_venue_address: '100 Updated Garden Way',
+        ceremony_venue_zipcode: '78703',
+        reception_venue_address: '200 Updated Hall Road',
+        reception_venue_zipcode: '78704',
+        event_start_time: '15:30',
+        status: 'contacted',
+        assigned_user_id: 'user-test-001',
       })
     );
     expect(activityRepository.createLeadActivity).toHaveBeenCalledWith(
@@ -371,6 +385,23 @@ describe('LeadDetailComponent', () => {
       'Lead updated successfully.',
       'success'
     );
+  });
+
+  it('does not clear assignment when edit payload omits assigned user', async () => {
+    createComponent();
+    await fixture.whenStable();
+
+    await component.saveLeadEdits({
+      event_type: 'general',
+      service_type: 'custom-installation',
+      first_name: 'Avery',
+      last_name: 'Bloom',
+      email: 'avery.new@example.test',
+      source: 'website',
+    });
+
+    const [, updates] = leadRepository.updateLead.calls.mostRecent().args;
+    expect(Object.prototype.hasOwnProperty.call(updates, 'assigned_user_id')).toBeFalse();
   });
 
   it('validates and saves internal notes', async () => {
@@ -590,7 +621,7 @@ describe('LeadDetailComponent', () => {
       email: 'avery@example.test',
       source: 'crm',
     });
-    expect(component.error()).toBe('We were unable to save lead updates right now.');
+    expect(component.error()).toBe('We were unable to save lead updates: update failed');
   });
 
   function createComponent(): void {

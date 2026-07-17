@@ -1,25 +1,20 @@
 <!--
 Sync Impact Report
-Version change: template -> 1.0.0
+Version change: 1.1.0 -> 1.2.0
 Modified principles:
-- Placeholder Principle 1 -> I. Brownfield Stability and Product Owner Approval
-- Placeholder Principle 2 -> II. Secure Supabase Data Boundaries
-- Placeholder Principle 3 -> III. Tested CRM and Proposal Workflows
-- Placeholder Principle 4 -> IV. Purpose-Built Frontend Boundaries
-- Placeholder Principle 5 -> V. Proposal Workflow Simplicity and Financial Traceability
+- II. Secure Supabase Data Boundaries: require an executable SQL migration for
+  every new or modified Supabase table schema
 Added sections:
-- Current Project Context
-- Architecture and Technology Constraints
-- Development Workflow and Quality Gates
+- None
 Removed sections:
-- Template placeholder sections and sample comments
+- None
 Templates requiring updates:
-- updated: .specify/templates/plan-template.md
-- updated: .specify/templates/spec-template.md
-- updated: .specify/templates/tasks-template.md
-- not present: .specify/templates/commands/*.md
+- ✅ updated: .specify/templates/plan-template.md
+- ✅ updated: .specify/templates/spec-template.md
+- ✅ updated: .specify/templates/tasks-template.md
+- ✅ verified not present: .specify/templates/commands/*.md
 Runtime guidance updates:
-- updated: README.md
+- ✅ updated: README.md
 Follow-up TODOs:
 - None
 -->
@@ -47,14 +42,28 @@ data, customer data, storage assets, and edge functions. Every new or changed
 table MUST be designed with Row Level Security in mind before implementation.
 Features that create or modify tables MUST document intended RLS policies,
 allowed roles, edge-function access paths, and any storage bucket policies.
+Every new or modified Supabase table schema MUST include a matching executable
+SQL migration in `supabase/migrations/` as part of the same change. Updating a
+declarative table definition alone is insufficient. The migration MUST contain
+the statements needed to bring an existing Supabase environment to the intended
+schema, preserve existing data unless a destructive change is explicitly
+approved, and document any required application order or manual intervention.
 Frontend code MUST NOT contain Supabase service-role keys or other privileged
 secrets. Emails, proposal passcodes, signatures, payment-related records, and
 customer data MUST be validated, minimized, and handled only through approved
-client, server, or edge-function boundaries.
+client, server, or edge-function boundaries. Every Supabase Edge Function MUST
+be a standalone deployment unit whose required application logic is contained
+within that function's own directory. Edge functions MUST NOT create, use, or
+import from an `_shared` directory, another edge function, or any local shared
+function module. Generators, plans, and implementation tasks MUST NOT introduce
+shared local edge-function code.
 
 Rationale: The application stores sensitive lead, event, proposal, financial,
 and customer response data. Security must be designed into the data model rather
-than patched after release.
+than patched after release. Committed migrations make schema changes repeatable
+and directly applicable to existing Supabase environments. Standalone functions
+preserve independent deployment, make each function's security boundary
+explicit, and prevent hidden runtime coupling between backend workflows.
 
 ### III. Tested CRM and Proposal Workflows
 Karma/Jasmine unit testing is the default testing stack for Angular code. New
@@ -128,7 +137,10 @@ Black Begonia's approved technology baseline is:
 
 - Angular 19 with Angular Material/CDK for frontend application work.
 - Supabase client, Supabase database, Supabase storage, and Supabase Edge
-  Functions for backend workflows.
+  Functions for backend workflows. Every edge function is self-contained; local
+  `_shared` modules and imports between edge functions are prohibited. Table
+  schema changes are delivered through executable SQL files in
+  `supabase/migrations/`.
 - Netlify deployment with Angular SSR/Express server build pieces where needed.
 - FullCalendar for calendar experiences.
 - Canva integration for proposal-document workflows where the API supports the
@@ -154,7 +166,10 @@ Plans MUST document:
 
 - Existing functionality that must remain unchanged.
 - Data entities, RLS expectations, storage policies, and edge-function
-  boundaries for Supabase changes.
+  boundaries for Supabase changes, including confirmation that every affected
+  edge function remains standalone and has no local shared-function dependency.
+- The executable SQL migration path for every new or modified Supabase table,
+  including data-preservation and deployment-order considerations.
 - Unit-test and integration-check scope, including the path toward 80% coverage
   where relevant.
 - Security considerations for secrets, customer data, emails, passcodes,
@@ -187,4 +202,4 @@ Compliance is reviewed during Spec Kit planning, task generation, and code
 review. Plans that violate a principle MUST document the violation, explain why
 it is necessary, and name the simpler or safer alternative that was rejected.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-02
+**Version**: 1.2.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-27

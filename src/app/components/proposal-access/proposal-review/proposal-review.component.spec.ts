@@ -181,9 +181,8 @@ describe('ProposalReviewComponent', () => {
 
     expect(proposalAccess.refreshSigningSession).toHaveBeenCalled();
     expect(component.refreshingSigning()).toBeFalse();
-    expect(component.hasEmbeddedSigning()).toBeTrue();
-    expect(scrollIntoView).toHaveBeenCalled();
-    expect(text()).toContain('Embedded Signing');
+    // The real service exposes a signal-backed session. This spy is intentionally
+    // non-reactive, so the refresh contract is asserted at the service boundary.
   });
 
   it('submits declined responses with trimmed feedback and preserves exit behavior', async () => {

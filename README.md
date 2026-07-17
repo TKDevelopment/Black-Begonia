@@ -12,9 +12,13 @@ and edge functions.
 Development is governed by the project constitution in
 `.specify/memory/constitution.md`. Public website changes require product owner
 approval before implementation. Supabase work must account for RLS, storage
-policies, edge-function boundaries, and secret handling. Karma/Jasmine is the
-default unit-test stack, with focused integration checks required for proposal,
-lead, inquiry, authorization, and sensitive data flows when touched.
+policies, edge-function boundaries, and secret handling. Every new or modified
+Supabase table schema must include a matching executable SQL migration in
+`supabase/migrations/`. Every Supabase Edge Function must be standalone; do not
+create or use `_shared` directories, local shared edge-function modules, or
+imports between edge functions. Karma/Jasmine is the default unit-test stack,
+with focused integration checks required for proposal, lead, inquiry,
+authorization, and sensitive data flows when touched.
 
 ## Development server
 

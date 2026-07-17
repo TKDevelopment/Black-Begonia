@@ -1,9 +1,20 @@
 import {
+  FLORAL_SERVICE_CATALOG,
+  FLORAL_SERVICE_DATABASE_VALUES,
   resolveFloralServiceDatabaseValue,
   resolveFloralServiceLabel,
 } from './floral-service-catalog';
 
 describe('floral service catalog', () => {
+  it('maps every CRM display label to a valid Supabase enum value', () => {
+    for (const service of FLORAL_SERVICE_CATALOG) {
+      expect(FLORAL_SERVICE_DATABASE_VALUES).toContain(service.databaseValue);
+      expect(resolveFloralServiceDatabaseValue(service.label, service.eventType))
+        .withContext(service.label)
+        .toBe(service.databaseValue);
+    }
+  });
+
   it('maps public wedding service keys and labels to Supabase enum values', () => {
     expect(resolveFloralServiceDatabaseValue('wedding-full-service', 'wedding')).toBe(
       'full-service wedding'
@@ -29,10 +40,9 @@ describe('floral service catalog', () => {
   });
 
   it('keeps direct Supabase enum values unchanged', () => {
-    expect(resolveFloralServiceDatabaseValue('other', 'general')).toBe('other');
-    expect(resolveFloralServiceDatabaseValue('private event', 'general')).toBe(
-      'private event'
-    );
+    for (const value of FLORAL_SERVICE_DATABASE_VALUES) {
+      expect(resolveFloralServiceDatabaseValue(value)).withContext(value).toBe(value);
+    }
   });
 
   it('routes catalog offerings without one-to-one enum entries to accepted values', () => {

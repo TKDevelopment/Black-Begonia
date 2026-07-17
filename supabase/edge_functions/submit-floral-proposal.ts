@@ -1,132 +1,75 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
 
-type LeadRow = {
+type RequestBody = {
+  proposalId: string;
+  pdfStoragePath: string;
+  pdfFileName: string;
+  idempotencyKey: string;
+  expectedVersion: number;
+};
+
+export type ContractLead = {
   lead_id: string;
   first_name: string;
   last_name: string;
   email: string;
+  phone: string | null;
   service_type: string;
-  event_type: string | null;
   event_date: string | null;
   status: string;
+  ceremony_venue_address: string | null;
+  ceremony_venue_city: string | null;
+  ceremony_venue_state: string | null;
+  ceremony_venue_zipcode: string | null;
+  reception_venue_address: string | null;
+  reception_venue_city: string | null;
+  reception_venue_state: string | null;
+  reception_venue_zipcode: string | null;
 };
 
-type FloralProposalRow = {
+export type ProposalRow = {
   floral_proposal_id: string;
-  version: number;
-  is_active: boolean;
-  status: string;
-  snapshot?: Record<string, unknown> | null;
-};
-
-type ActiveContractTemplateRow = {
-  proposal_contract_template_id: string;
-  provider: string;
-  provider_template_id: string;
-  provider_template_name: string;
-  provider_template_revision: string | null;
-  required_field_map: Record<string, unknown> | null;
-};
-
-type MailgunSuccessResponse = {
-  id: string;
-  message: string;
-};
-
-type EmailMessageRow = {
-  email_message_id: string;
-};
-
-type RequestLineComponent = {
-  display_order: number;
-  catalog_item_id?: string | null;
-  catalog_item_name: string;
-  quantity_per_unit: number;
-  extended_quantity: number;
-  base_unit_cost: number;
-  applied_markup_percent: number;
-  sell_unit_price: number;
-  subtotal: number;
-  reserve_percent?: number;
-  snapshot?: Record<string, unknown>;
-};
-
-type RequestLineItem = {
-  display_order: number;
-  line_item_type: "product" | "fee" | "discount";
-  item_name: string;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  description?: string | null;
-  image_storage_path?: string | null;
-  image_alt_text?: string | null;
-  image_caption?: string | null;
-  notes?: string | null;
-  snapshot?: Record<string, unknown>;
-  components?: RequestLineComponent[];
-};
-
-type RequestBody = {
-  floral_proposal_id?: string | null;
   lead_id: string;
-  tax_region_id?: string | null;
-  portal_url?: string | null;
-  line_items: RequestLineItem[];
-  shopping_list_items?: Record<string, unknown>[];
-  subtotal: number;
-  tax_rate: number;
-  tax_amount: number;
+  version: number;
+  status: string;
   total_amount: number;
-  terms_version?: string;
-  privacy_policy_version?: string;
-  snapshot?: Record<string, unknown>;
-  pdf_base64?: string | null;
-  pdf_file_name?: string | null;
+  snapshot: Record<string, unknown> | null;
 };
 
-type ContractProviderConfig = {
-  contract_pdf_url?: string;
-  contract_pdf_url_template?: string;
-  auth_header?: string;
-  auth_token?: string;
+type SigningSessionRow = {
+  proposal_signing_session_id: string;
+  provider_document_id: string | null;
+  idempotency_key: string | null;
+  send_state: string;
+  status: string;
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const PROPOSAL_ACCESS_SIGNING_KEY = Deno.env.get("PROPOSAL_ACCESS_SIGNING_KEY")!;
-const MG_API_KEY = Deno.env.get("MG_API_KEY")!;
-const MG_BASE_URL = Deno.env.get("MG_BASE_URL")!;
-const MG_DOMAIN = Deno.env.get("MG_DOMAIN")!;
-const MG_FROM_EMAIL = Deno.env.get("MG_FROM_EMAIL")!;
-const MG_TO_REPLY = Deno.env.get("MG_TO_REPLY")!;
-const CLIENT_PORTAL_PROPOSAL_URL = Deno.env.get("CLIENT_PORTAL_PROPOSAL_URL") ?? "";
-const FLORAL_PROPOSAL_BUCKET = Deno.env.get("FLORAL_PROPOSAL_BUCKET") ?? "floral-proposals";
+type SenderProfile = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+};
+
+export type SignWellTemplateField = { api_id: string; value: string };
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const SIGNWELL_API_KEY = Deno.env.get("SIGNWELL_API_KEY") ?? "";
-const SIGNWELL_AUTH_HEADER = Deno.env.get("SIGNWELL_AUTH_HEADER") ?? "X-Api-Key";
-const SIGNWELL_CONTRACT_PDF_URL_TEMPLATE =
-  Deno.env.get("SIGNWELL_CONTRACT_PDF_URL_TEMPLATE") ?? "";
-
-const REQUIRED_ENV_VARS = [
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "PROPOSAL_ACCESS_SIGNING_KEY",
-  "MG_API_KEY",
-  "MG_BASE_URL",
-  "MG_DOMAIN",
-  "MG_FROM_EMAIL",
-  "MG_TO_REPLY",
-] as const;
-
-const OPTIONAL_ENV_VARS = [
-  "CLIENT_PORTAL_PROPOSAL_URL",
-  "FLORAL_PROPOSAL_BUCKET",
-  "SIGNWELL_API_KEY",
-  "SIGNWELL_AUTH_HEADER",
-  "SIGNWELL_CONTRACT_PDF_URL_TEMPLATE",
-] as const;
+const SIGNWELL_TEMPLATE_ID = Deno.env.get("SIGNWELL_TEMPLATE_ID") ?? "";
+const SIGNWELL_CLIENT_PLACEHOLDER_NAME =
+  Deno.env.get("SIGNWELL_CLIENT_PLACEHOLDER_NAME") ?? "Client";
+const SIGNWELL_SENDER_PLACEHOLDER_NAME =
+  Deno.env.get("SIGNWELL_SENDER_PLACEHOLDER_NAME") ?? "Document Sender";
+const SIGNWELL_SENDER_EMAIL = Deno.env.get("SIGNWELL_SENDER_EMAIL")?.trim().toLowerCase() ?? "";
+const SIGNWELL_SENDER_NAME = Deno.env.get("SIGNWELL_SENDER_NAME")?.trim() ?? "";
+const SIGNWELL_API_BASE_URL =
+  (Deno.env.get("SIGNWELL_API_BASE_URL") ?? "https://www.signwell.com/api/v1").replace(/\/$/, "");
+const SIGNWELL_TEST_MODE = Deno.env.get("SIGNWELL_TEST_MODE") === "true";
+const FLORAL_PROPOSAL_BUCKET = Deno.env.get("FLORAL_PROPOSAL_BUCKET") ?? "floral-proposals";
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
+const SIGNED_PDF_URL_TTL_SECONDS = 15 * 60;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -141,1023 +84,572 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
   });
 }
 
-function requireEnv(name: string, value: string | undefined) {
-  if (!value) throw new Error(`Missing required env var: ${name}`);
+function requireConfiguration(): void {
+  const missing = [
+    ["SUPABASE_URL", SUPABASE_URL],
+    ["SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY],
+    ["SIGNWELL_API_KEY", SIGNWELL_API_KEY],
+    ["SIGNWELL_TEMPLATE_ID", SIGNWELL_TEMPLATE_ID],
+    ["SIGNWELL_CLIENT_PLACEHOLDER_NAME", SIGNWELL_CLIENT_PLACEHOLDER_NAME],
+  ].filter(([, value]) => !value.trim()).map(([name]) => name);
+
+  if (missing.length) throw new Error(`Missing required configuration: ${missing.join(", ")}`);
 }
 
-function sanitizeError(error: unknown) {
-  if (error instanceof Error) {
-    return { name: error.name, message: error.message, stack: error.stack };
+function requiredString(value: unknown, name: string): string {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is required.`);
+  return value.trim();
+}
+
+export function roundCurrency(value: number): number {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+export function subtractCalendarDays(dateValue: string, days: number): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (!match) throw new Error("eventDate must be a valid date.");
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatSignWellDateTime(dateValue: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (!match) throw new Error("SignWell date values must use YYYY-MM-DD source dates.");
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) {
+    throw new Error("SignWell date values must be valid calendar dates.");
   }
 
-  return { error };
+  return date.toISOString();
 }
 
-function logInfo(message: string, data?: Record<string, unknown>) {
-  console.log(JSON.stringify({ level: "INFO", function: "submit-floral-proposal", message, ...data }));
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
-function logError(message: string, data?: Record<string, unknown>) {
-  console.error(JSON.stringify({ level: "ERROR", function: "submit-floral-proposal", message, ...data }));
+export function buildCityStateZipcode(
+  city: string | null,
+  state: string | null,
+  zipcode: string | null,
+): string {
+  const normalizedCity = city?.trim() ?? "";
+  const stateZip = [state?.trim().toUpperCase(), zipcode?.trim()].filter(Boolean).join(" ");
+  return [normalizedCity, stateZip].filter(Boolean).join(", ");
 }
 
-async function hashPasscode(passcode: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(passcode));
-  return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+function completeVenue(lead: ContractLead, prefix: "ceremony" | "reception"): boolean {
+  const values = prefix === "ceremony"
+    ? [lead.ceremony_venue_address, lead.ceremony_venue_city, lead.ceremony_venue_state, lead.ceremony_venue_zipcode]
+    : [lead.reception_venue_address, lead.reception_venue_city, lead.reception_venue_state, lead.reception_venue_zipcode];
+  return values.every((value) => Boolean(value?.trim()));
 }
 
-function generatePasscode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+export function validateServiceVenueData(lead: ContractLead): string[] {
+  const service = lead.service_type.trim().toLowerCase();
+  const requiresCeremony = ["full-service wedding", "ceremony-only wedding", "elopement"].includes(service);
+  const requiresReception = ["full-service wedding", "reception-only wedding"].includes(service);
+  const missing: string[] = [];
+  if (requiresCeremony && !completeVenue(lead, "ceremony")) missing.push("complete ceremony address");
+  if (requiresReception && !completeVenue(lead, "reception")) missing.push("complete reception address");
+  return missing;
 }
 
-function formatDate(dateString: string | null): string {
-  if (!dateString) return "Not provided";
-  const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  const date = dateOnlyMatch
-    ? new Date(Date.UTC(
-        Number(dateOnlyMatch[1]),
-        Number(dateOnlyMatch[2]) - 1,
-        Number(dateOnlyMatch[3]),
-      ))
-    : new Date(dateString);
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: dateOnlyMatch ? "UTC" : "America/New_York",
-  }).format(date);
+export function buildTemplateFields(args: {
+  lead: ContractLead;
+  finalBalanceAmount: number;
+  retainerAmount: number;
+  finalBalanceDueDate: string;
+}): SignWellTemplateField[] {
+  const { lead } = args;
+  if (!lead.event_date) throw new Error("Event date is required.");
+  return [
+    { api_id: "clientName", value: lead.first_name.trim() },
+    { api_id: "serviceType", value: lead.service_type.trim() },
+    { api_id: "eventDate", value: formatSignWellDateTime(lead.event_date) },
+    { api_id: "ceremonyAddress", value: lead.ceremony_venue_address?.trim() ?? "" },
+    { api_id: "ceremonyCityStateZipcode", value: buildCityStateZipcode(lead.ceremony_venue_city, lead.ceremony_venue_state, lead.ceremony_venue_zipcode) },
+    { api_id: "receptionAddress", value: lead.reception_venue_address?.trim() ?? "" },
+    { api_id: "receptionCityStateZipcode", value: buildCityStateZipcode(lead.reception_venue_city, lead.reception_venue_state, lead.reception_venue_zipcode) },
+    { api_id: "clientEmail", value: lead.email.trim().toLowerCase() },
+    { api_id: "clientPhone", value: lead.phone?.trim() ?? "" },
+    { api_id: "retainerAmount", value: formatCurrency(args.retainerAmount) },
+    { api_id: "finalBalanceAmount", value: formatCurrency(args.finalBalanceAmount) },
+    { api_id: "finalBalanceDueDate", value: formatSignWellDateTime(args.finalBalanceDueDate) },
+    { api_id: "clientFullName", value: `${lead.first_name} ${lead.last_name}`.trim() },
+  ];
 }
 
-function formatDisplayValue(value: string | null | undefined): string {
-  if (!value) return "Not provided";
-  return value.replace(/_/g, " ").replace(/\b\w/g, (char: string) => char.toUpperCase());
+export function hasPdfSignature(bytes: Uint8Array): boolean {
+  if (bytes.length < 5) return false;
+  return new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-";
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value ?? 0));
-}
+async function readResponsePrefix(response: Response, byteCount: number): Promise<Uint8Array> {
+  if (!response.body) throw new Error("Proposal PDF could not be inspected.");
 
-function buildStoragePath(leadId: string, version: number): string {
-  return `${leadId}/floral-proposal-v${version}-${Date.now()}.pdf`;
-}
-
-function isLocalPortalUrl(value: string): boolean {
+  const reader = response.body.getReader();
+  const prefix = new Uint8Array(byteCount);
+  let offset = 0;
   try {
-    const url = new URL(value);
-    return ['localhost', '127.0.0.1', '0.0.0.0'].includes(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
-export function resolvePortalUrl(requestedPortalUrl: string | null | undefined): string {
-  const requested = String(requestedPortalUrl ?? '').trim();
-  const configured = CLIENT_PORTAL_PROPOSAL_URL.trim();
-
-  if (configured && (!requested || isLocalPortalUrl(requested))) {
-    return configured;
+    while (offset < byteCount) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const bytesToCopy = Math.min(value.length, byteCount - offset);
+      prefix.set(value.subarray(0, bytesToCopy), offset);
+      offset += bytesToCopy;
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
   }
 
-  return requested || configured;
+  return prefix.subarray(0, offset);
 }
 
-function normalizeProviderMessageId(messageId: string | null | undefined): string | null {
-  const normalized = String(messageId ?? "").trim().replace(/^<|>$/g, "");
-  return normalized || null;
-}
-
-export function buildProposalMergeData(args: {
-  lead: LeadRow;
-  proposalVersion: number;
-  subtotal: number;
-  taxRate: number;
-  taxAmount: number;
-  totalAmount: number;
-  lineItemsCount: number;
+export function buildSignWellCreatePayload(args: {
+  templateId: string;
+  placeholderName: string;
+  lead: ContractLead;
+  proposal: ProposalRow;
+  senderName: string;
+  senderEmail: string;
+  senderPlaceholderName: string;
+  pdfFileName: string;
+  pdfFileUrl: string;
+  templateFields: SignWellTemplateField[];
+  testMode: boolean;
 }) {
   return {
-    lead: {
+    test_mode: args.testMode,
+    template_id: args.templateId,
+    name: `Black Begonia Floral Contract - ${args.lead.first_name} ${args.lead.last_name}`,
+    recipients: [{
+      id: "1",
+      placeholder_name: args.placeholderName,
+      name: `${args.lead.first_name} ${args.lead.last_name}`.trim(),
+      email: args.lead.email.trim().toLowerCase(),
+    }, {
+      id: "2",
+      placeholder_name: args.senderPlaceholderName,
+      name: args.senderName,
+      email: args.senderEmail,
+    }],
+    draft: true,
+    embedded_signing: false,
+    apply_signing_order: true,
+    metadata: {
+      floral_proposal_id: args.proposal.floral_proposal_id,
       lead_id: args.lead.lead_id,
-      first_name: args.lead.first_name,
-      last_name: args.lead.last_name,
-      full_name: `${args.lead.first_name} ${args.lead.last_name}`.trim(),
-      email: args.lead.email,
-      service_type: args.lead.service_type,
-      event_type: args.lead.event_type,
-      event_date: args.lead.event_date,
+      proposal_version: String(args.proposal.version),
     },
-    proposal: {
-      version: args.proposalVersion,
-      subtotal: args.subtotal,
-      tax_rate: args.taxRate,
-      tax_amount: args.taxAmount,
-      total_amount: args.totalAmount,
-      line_items_count: args.lineItemsCount,
-    },
+    template_fields: args.templateFields,
+    files: [{ name: args.pdfFileName, file_url: args.pdfFileUrl }],
   };
 }
 
-export function validateRequiredFieldMap(
-  requiredFieldMap: Record<string, unknown> | null | undefined,
-  mergeData: Record<string, unknown>
-): string[] {
-  return Object.entries(requiredFieldMap ?? {}).flatMap(([fieldId, mapping]) => {
-    if (fieldId.startsWith("__")) {
-      return [];
-    }
-
-    const source = resolveMappingSource(mapping);
-    if (!source) {
-      return [fieldId];
-    }
-
-    const value = readMergeValue(mergeData, source);
-    return isMissingMergeValue(value) ? [fieldId] : [];
-  });
-}
-
-function resolveMappingSource(mapping: unknown): string | null {
-  if (typeof mapping === "string" && mapping.trim().length) {
-    return mapping.trim();
+function providerDocumentId(value: Record<string, unknown>): string | null {
+  for (const key of ["id", "document_id"]) {
+    const candidate = value[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
   }
-
-  if (
-    mapping &&
-    typeof mapping === "object" &&
-    "source" in mapping &&
-    typeof mapping.source === "string" &&
-    mapping.source.trim().length
-  ) {
-    return mapping.source.trim();
-  }
-
   return null;
 }
 
-function readMergeValue(
-  mergeData: Record<string, unknown>,
-  sourcePath: string
-): unknown {
-  return sourcePath.split(".").reduce<unknown>((value, segment) => {
-    if (!value || typeof value !== "object") {
-      return undefined;
+function signWellOperation(path: string): string {
+  if (path === "/document_templates/documents") return "create-from-template request";
+  if (path.endsWith("/send")) return "send request";
+  if (path.startsWith("/documents/")) return "document lookup";
+  return "request";
+}
+
+function redactProviderDetail(value: string): string {
+  return value
+    .replace(/https?:\/\/[^\s"']+/gi, "[URL redacted]")
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email redacted]")
+    .trim();
+}
+
+function collectProviderErrors(
+  value: unknown,
+  path = "",
+  messages: string[] = [],
+  depth = 0,
+): string[] {
+  if (messages.length >= 8 || depth > 6 || value == null) return messages;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    const detail = redactProviderDetail(String(value));
+    if (detail) messages.push(path ? `${path}: ${detail}` : detail);
+    return messages;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectProviderErrors(item, path ? `${path}[${index}]` : `[${index}]`, messages, depth + 1));
+    return messages;
+  }
+  if (typeof value === "object") {
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      const childPath = ["errors", "meta"].includes(key) ? path : (path ? `${path}.${key}` : key);
+      collectProviderErrors(child, childPath, messages, depth + 1);
+      if (messages.length >= 8) break;
     }
-
-    return segment in (value as Record<string, unknown>)
-      ? (value as Record<string, unknown>)[segment]
-      : undefined;
-  }, mergeData);
+  }
+  return messages;
 }
 
-function isMissingMergeValue(value: unknown): boolean {
-  if (value == null) return true;
-  if (typeof value === "string") return value.trim().length === 0;
-  return false;
+function providerErrorDetails(body: unknown, responseText: string): string {
+  const messages = collectProviderErrors(body);
+  if (messages.length) return messages.join("; ").slice(0, 1200);
+  return redactProviderDetail(responseText).slice(0, 1200);
 }
 
-export function buildCanonicalPackageMetadata(args: {
-  leadId: string;
-  uploadedPdfFileName: string | null;
-  proposalVersion: number;
-}) {
-  const timestamp = Date.now();
-
-  return {
-    combinedPdfStoragePath: `${args.leadId}/floral-proposal-package-v${args.proposalVersion}-${timestamp}.pdf`,
-    combinedPdfFileName:
-      args.uploadedPdfFileName?.trim() ||
-      `floral-proposal-package-v${args.proposalVersion}.pdf`,
-  };
-}
-
-function resolveContractTemplateRevision(
-  template: Pick<
-    ActiveContractTemplateRow,
-    "provider_template_revision" | "provider_template_name"
-  >
-): string {
-  return template.provider_template_revision ?? template.provider_template_name;
-}
-
-function buildSigningSessionSnapshot(args: {
-  floralProposalId: string;
-  proposalVersion: number;
-  activeContractTemplate: ActiveContractTemplateRow;
-  contractMergeFields: Record<string, unknown>;
-  contractPdfSourceUrl: string;
-}): Record<string, unknown> {
-  return {
-    floral_proposal_id: args.floralProposalId,
-    contract_template_id: args.activeContractTemplate.proposal_contract_template_id,
-    contract_template_source: args.activeContractTemplate.provider_template_id,
-    contract_template_revision: resolveContractTemplateRevision(
-      args.activeContractTemplate
-    ),
-    proposal_version: args.proposalVersion,
-    contract_merge_fields: args.contractMergeFields,
-    contract_pdf_source_url: args.contractPdfSourceUrl,
-  };
-}
-
-function extractContractProviderConfig(
-  requiredFieldMap: Record<string, unknown> | null | undefined
-): ContractProviderConfig {
-  const config =
-    (requiredFieldMap?.["__signwell"] as Record<string, unknown> | undefined) ??
-    (requiredFieldMap?.["__provider"] as Record<string, unknown> | undefined) ??
-    {};
-
-  return {
-    contract_pdf_url:
-      typeof config["contract_pdf_url"] === "string"
-        ? config["contract_pdf_url"].trim()
-        : undefined,
-    contract_pdf_url_template:
-      typeof config["contract_pdf_url_template"] === "string"
-        ? config["contract_pdf_url_template"].trim()
-        : undefined,
-    auth_header:
-      typeof config["auth_header"] === "string"
-        ? config["auth_header"].trim()
-        : undefined,
-    auth_token:
-      typeof config["auth_token"] === "string"
-        ? config["auth_token"].trim()
-        : undefined,
-  };
-}
-
-export function buildContractMergeFields(
-  requiredFieldMap: Record<string, unknown> | null | undefined,
-  mergeData: Record<string, unknown>
-): Record<string, unknown> {
-  return Object.entries(requiredFieldMap ?? {}).reduce<Record<string, unknown>>(
-    (acc, [fieldId, mapping]) => {
-      if (fieldId.startsWith("__")) {
-        return acc;
-      }
-
-      const source = resolveMappingSource(mapping);
-      if (!source) {
-        return acc;
-      }
-
-      const providerFieldId =
-        mapping &&
-        typeof mapping === "object" &&
-        "provider_field_id" in mapping &&
-        typeof mapping.provider_field_id === "string" &&
-        mapping.provider_field_id.trim().length
-          ? mapping.provider_field_id.trim()
-          : fieldId;
-
-      acc[providerFieldId] = readMergeValue(mergeData, source) ?? null;
-      return acc;
+async function signWellRequest(path: string, init?: RequestInit): Promise<Record<string, unknown>> {
+  const operation = signWellOperation(path);
+  const response = await fetch(`${SIGNWELL_API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "X-Api-Key": SIGNWELL_API_KEY,
+      Accept: "application/json",
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...(init?.headers ?? {}),
     },
-    {}
-  );
-}
-
-export function resolveContractPdfUrl(args: {
-  providerTemplateId: string;
-  providerTemplateRevision: string;
-  providerConfig: ContractProviderConfig;
-}): string | null {
-  const directUrl = args.providerConfig.contract_pdf_url?.trim();
-  if (directUrl) return directUrl;
-
-  const template =
-    args.providerConfig.contract_pdf_url_template?.trim() ||
-    SIGNWELL_CONTRACT_PDF_URL_TEMPLATE.trim();
-  if (!template) return null;
-
-  return template
-    .replaceAll("{{template_id}}", encodeURIComponent(args.providerTemplateId))
-    .replaceAll(
-      "{{template_revision}}",
-      encodeURIComponent(args.providerTemplateRevision)
-    );
-}
-
-async function fetchContractPdf(args: {
-  contractPdfUrl: string;
-  providerConfig: ContractProviderConfig;
-}): Promise<Uint8Array> {
-  const headers = new Headers({
-    Accept: "application/pdf",
   });
-
-  const authToken = args.providerConfig.auth_token?.trim() || SIGNWELL_API_KEY.trim();
-  if (authToken) {
-    headers.set(
-      args.providerConfig.auth_header?.trim() || SIGNWELL_AUTH_HEADER,
-      authToken
-    );
+  const text = await response.text();
+  let body: unknown = {};
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = {};
+    }
   }
-
-  const response = await fetch(args.contractPdfUrl, {
-    method: "GET",
-    headers,
-  });
-
   if (!response.ok) {
-    throw new Error(
-      `Unable to retrieve the configured contract PDF (${response.status}).`
-    );
+    const details = providerErrorDetails(body, text);
+    console.error(JSON.stringify({
+      level: "ERROR",
+      function: "submit-floral-proposal",
+      event: "signwell_request_failed",
+      operation,
+      provider_status: response.status,
+      provider_details: details || null,
+    }));
+    const message = `SignWell ${operation} failed (${response.status})${details ? `: ${details}` : "."}`;
+    throw new Error(message);
   }
-
-  return new Uint8Array(await response.arrayBuffer());
+  return body && typeof body === "object" && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
 }
 
-async function composeCombinedProposalPdf(args: {
-  proposalPdfBytes: Uint8Array;
-  contractPdfBytes: Uint8Array;
-}): Promise<Uint8Array> {
-  const combinedPdf = await PDFDocument.create();
-  const proposalPdf = await PDFDocument.load(args.proposalPdfBytes);
-  const contractPdf = await PDFDocument.load(args.contractPdfBytes);
-
-  const proposalPages = await combinedPdf.copyPages(
-    proposalPdf,
-    proposalPdf.getPageIndices()
-  );
-  for (const page of proposalPages) {
-    combinedPdf.addPage(page);
-  }
-
-  const contractPages = await combinedPdf.copyPages(
-    contractPdf,
-    contractPdf.getPageIndices()
-  );
-  for (const page of contractPages) {
-    combinedPdf.addPage(page);
-  }
-
-  return await combinedPdf.save();
+export function isSentStatus(status: unknown): boolean {
+  return typeof status === "string" && ["sent", "pending", "viewed", "completed", "declined"].includes(status.toLowerCase());
 }
 
-
-export function decodePdfBase64(pdfBase64: string): Uint8Array {
-  return Uint8Array.from(atob(pdfBase64), (char) => char.charCodeAt(0));
+export function isHistoricalTerminalSession(status: string): boolean {
+  return ["declined", "completed"].includes(status);
 }
 
-export function buildProposalSubmissionSnapshot(args: {
-  existingSnapshot?: Record<string, unknown> | null;
-  incomingSnapshot?: Record<string, unknown> | null;
-  submittedAt: string;
-  pdfFileName?: string | null;
-}): Record<string, unknown> {
-  return {
-    ...(args.existingSnapshot ?? {}),
-    ...(args.incomingSnapshot ?? {}),
-    proposal_status: "submitted",
-    submitted_at: args.submittedAt,
-    submitted_pdf_file_name: args.pdfFileName ?? null,
-    generated_by: "submit-floral-proposal",
-    generated_at: args.submittedAt,
-  };
-}
-
-function buildClientSubject(lead: LeadRow, version: number): string {
-  return `Your Floral Proposal is ready, ${lead.first_name} - v${version}`;
-}
-
-function buildClientHtml(lead: LeadRow, version: number, passcode: string, portalUrl: string, totalAmount: number): string {
-  return `
-    <div style="margin:0;padding:0;background-color:#f7f4f1;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f7f4f1;margin:0;padding:32px 16px;">
-        <tr>
-          <td align="center">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:720px;background-color:#ffffff;border:1px solid #ece5df;border-radius:18px;overflow:hidden;">
-              <tr>
-                <td style="background-color:#111111;padding:28px 36px;text-align:center;">
-                  <div style="font-family:Georgia,'Times New Roman',serif;font-size:13px;letter-spacing:0.28em;text-transform:uppercase;color:#ea938c;margin-bottom:10px;">Black Begonia Floral Co.</div>
-                  <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;color:#f7f4f1;">Your Floral Proposal Is Ready</div>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:40px 36px 20px 36px;">
-                  <p style="margin:0 0 18px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.75;color:#222222;">Hi ${lead.first_name},</p>
-                  <p style="margin:0 0 18px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.75;color:#222222;">Your Floral Proposal is ready to review. Use the secure link below together with your 6-digit passcode to access it.</p>
-                  <div style="margin:28px 0;border:1px solid #ece5df;border-radius:18px;background-color:#f7f4f1;padding:24px;text-align:center;">
-                    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#7a746f;">Floral Proposal Passcode</p>
-                    <p style="margin:14px 0 0 0;font-family:Georgia,'Times New Roman',serif;font-size:36px;letter-spacing:0.18em;color:#111111;">${passcode}</p>
-                  </div>
-                  <p style="margin:0 0 24px 0;text-align:center;">
-                    <a href="${portalUrl}" style="display:inline-block;background-color:#111111;color:#f7f4f1;text-decoration:none;padding:14px 24px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:14px;letter-spacing:0.06em;text-transform:uppercase;">Review Floral Proposal</a>
-                  </p>
-                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.75;color:#222222;">Proposal version: ${version}<br/>Service type: ${formatDisplayValue(lead.service_type)}<br/>Event date: ${formatDate(lead.event_date)}<br/>Proposal total: ${formatCurrency(totalAmount)}</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </div>
-  `;
-}
-
-function buildClientText(lead: LeadRow, version: number, passcode: string, portalUrl: string, totalAmount: number): string {
-  return `Hi ${lead.first_name},\n\nYour Floral Proposal is ready to review.\n\nProposal version: ${version}\nService type: ${formatDisplayValue(lead.service_type)}\nEvent date: ${formatDate(lead.event_date)}\nProposal total: ${formatCurrency(totalAmount)}\n\nSecure Floral Proposal page:\n${portalUrl}\n\nYour 6-digit passcode:\n${passcode}\n\nWarmly,\nBlack Begonia Floral Co.`;
-}
-
-async function sendMailgunMessage(args: { to: string; subject: string; text: string; html: string; replyTo?: string }) {
-  const form = new FormData();
-  form.append("from", MG_FROM_EMAIL);
-  form.append("to", args.to);
-  form.append("subject", args.subject);
-  form.append("text", args.text);
-  form.append("html", args.html);
-  form.append("o:tracking-clicks", "no");
-  form.append("o:tracking-opens", "no");
-  if (args.replyTo) form.append("h:Reply-To", args.replyTo);
-
-  const auth = btoa(`api:${MG_API_KEY}`);
-  const response = await fetch(`${MG_BASE_URL}/v3/${MG_DOMAIN}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}` },
-    body: form,
-  });
-
-  const rawText = await response.text();
-  if (!response.ok) throw new Error(`Mailgun send failed (${response.status}): ${rawText}`);
-  return JSON.parse(rawText) as MailgunSuccessResponse;
-}
-
-async function isInternalCrmUser(supabase: ReturnType<typeof createClient>, userId: string) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, is_active, user_roles!inner(role)")
-    .eq("id", userId)
-    .in("user_roles.role", ["admin", "staff"])
-    .maybeSingle();
-
-  if (error) {
-    logError("CRM role lookup failed", { error: sanitizeError(error), user_id: userId });
-    return false;
-  }
-
-  return Boolean(data?.is_active);
-}
-
-async function handleRequest(req: Request): Promise<Response> {
+export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse(405, { success: false, error: "Method not allowed." });
 
-  let uploadedPdfPath: string | null = null;
-  let combinedPdfPath: string | null = null;
-  let createdProposalId: string | null = null;
-  let reusedDraftProposalId: string | null = null;
-  let deactivatedProposalIds: string[] = [];
-
   try {
-    requireEnv("SUPABASE_URL", SUPABASE_URL);
-    requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY);
-    requireEnv("PROPOSAL_ACCESS_SIGNING_KEY", PROPOSAL_ACCESS_SIGNING_KEY);
-    requireEnv("MG_API_KEY", MG_API_KEY);
-    requireEnv("MG_BASE_URL", MG_BASE_URL);
-    requireEnv("MG_DOMAIN", MG_DOMAIN);
-    requireEnv("MG_FROM_EMAIL", MG_FROM_EMAIL);
-    requireEnv("MG_TO_REPLY", MG_TO_REPLY);
+    requireConfiguration();
+    const authorization = req.headers.get("authorization") ?? "";
+    const accessToken = authorization.replace(/^Bearer\s+/i, "").trim();
+    if (!accessToken) return jsonResponse(401, { success: false, error: "Authentication is required." });
 
-    logInfo("Environment contract resolved", {
-      required_env_vars: REQUIRED_ENV_VARS,
-      optional_env_vars: OPTIONAL_ENV_VARS,
-      client_portal_origin_configured: Boolean(CLIENT_PORTAL_PROPOSAL_URL.trim()),
-      floral_proposal_bucket: FLORAL_PROPOSAL_BUCKET,
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
+    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !userData.user) return jsonResponse(401, { success: false, error: "Authentication is invalid." });
 
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    if (!token) return jsonResponse(401, { success: false, error: "Missing authorization token." });
+    const body = await req.json() as Partial<RequestBody>;
+    const proposalId = requiredString(body.proposalId, "proposalId");
+    const pdfStoragePath = requiredString(body.pdfStoragePath, "pdfStoragePath");
+    const pdfFileName = requiredString(body.pdfFileName, "pdfFileName");
+    const idempotencyKey = requiredString(body.idempotencyKey, "idempotencyKey");
+    const expectedVersion = Number(body.expectedVersion);
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new Error("expectedVersion is invalid.");
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    const user = userData?.user;
-    if (userError || !user) return jsonResponse(401, { success: false, error: "Unable to validate user session." });
-
-    if (!(await isInternalCrmUser(supabase, user.id))) {
-      return jsonResponse(403, { success: false, error: "You do not have permission to submit Floral Proposals." });
+    const { data: proposalData, error: proposalError } = await supabase
+      .from("floral_proposals")
+      .select("floral_proposal_id,lead_id,version,status,total_amount,snapshot")
+      .eq("floral_proposal_id", proposalId)
+      .single();
+    if (proposalError || !proposalData) throw proposalError ?? new Error("Proposal not found.");
+    const proposal = proposalData as ProposalRow;
+    if (proposal.version !== expectedVersion) return jsonResponse(409, { success: false, error: "The proposal changed. Reload before finalizing." });
+    if (!["draft", "declined"].includes(proposal.status)) return jsonResponse(409, { success: false, error: "This proposal can no longer be finalized." });
+    if (!pdfStoragePath.includes(proposal.lead_id) || !pdfStoragePath.includes(proposal.floral_proposal_id)) {
+      return jsonResponse(400, { success: false, error: "The PDF storage path does not belong to this proposal." });
     }
 
-    const body = await req.json() as RequestBody;
-    const requestedProposalId = String(body.floral_proposal_id ?? "").trim() || null;
-    const leadId = String(body.lead_id ?? "").trim();
-    const portalUrl = resolvePortalUrl(body.portal_url);
-
-    if (!leadId) return jsonResponse(400, { success: false, error: "Missing lead_id." });
-    if (!portalUrl) return jsonResponse(500, { success: false, error: "Floral Proposal portal URL is not configured." });
-    if (!Array.isArray(body.line_items) || !body.line_items.length) {
-      return jsonResponse(400, { success: false, error: "At least one Floral Proposal line item is required." });
-    }
-    if (!body.pdf_base64?.trim()) {
-      return jsonResponse(400, { success: false, error: "A finalized Floral Proposal PDF is required before submission." });
-    }
-
-    const { data: lead, error: leadError } = await supabase
+    const { data: leadData, error: leadError } = await supabase
       .from("leads")
-      .select("lead_id, first_name, last_name, email, service_type, event_type, event_date, status")
-      .eq("lead_id", leadId)
-      .single<LeadRow>();
-
-    if (leadError || !lead) return jsonResponse(404, { success: false, error: "Lead not found." });
-    if (lead.status !== "nurturing" && lead.status !== "proposal_declined") {
-      return jsonResponse(409, { success: false, error: `Cannot submit a Floral Proposal from status ${lead.status}.` });
+      .select("lead_id,first_name,last_name,email,phone,service_type,event_date,status,ceremony_venue_address,ceremony_venue_city,ceremony_venue_state,ceremony_venue_zipcode,reception_venue_address,reception_venue_city,reception_venue_state,reception_venue_zipcode")
+      .eq("lead_id", proposal.lead_id)
+      .single();
+    if (leadError || !leadData) throw leadError ?? new Error("Lead not found.");
+    const lead = leadData as ContractLead;
+    if (!lead.first_name?.trim() || !lead.last_name?.trim() || !lead.email?.trim() || !lead.event_date) {
+      return jsonResponse(422, { success: false, error: "Client name, email, and event date are required." });
     }
+    const missingVenues = validateServiceVenueData(lead);
+    if (missingVenues.length) return jsonResponse(422, { success: false, error: `Complete the following lead data: ${missingVenues.join(", ")}.` });
 
-    const { data: existingProposals, error: proposalsError } = await supabase
-      .from("floral_proposals")
-      .select("floral_proposal_id, version, is_active, status, snapshot")
-      .eq("lead_id", leadId)
-      .returns<FloralProposalRow[]>();
-
-    if (proposalsError) throw proposalsError;
-
-    const { data: activeContractTemplate, error: activeContractTemplateError } = await supabase
-      .from("proposal_contract_templates")
-      .select("proposal_contract_template_id, provider, provider_template_id, provider_template_name, provider_template_revision, required_field_map")
-      .eq("is_active", true)
-      .maybeSingle<ActiveContractTemplateRow>();
-
-    if (activeContractTemplateError) throw activeContractTemplateError;
-    if (!activeContractTemplate) {
-      return jsonResponse(409, {
+    const { data: senderProfileData, error: senderProfileError } = await supabase
+      .from("profiles")
+      .select("email,first_name,last_name,display_name")
+      .eq("id", userData.user.id)
+      .maybeSingle();
+    if (senderProfileError) throw senderProfileError;
+    const senderProfile = senderProfileData as SenderProfile | null;
+    const senderEmail = SIGNWELL_SENDER_EMAIL
+      || (senderProfile?.email ?? userData.user.email ?? "").trim().toLowerCase();
+    if (!senderEmail) {
+      return jsonResponse(422, { success: false, error: "The submitting florist needs an email address before sending through SignWell." });
+    }
+    const senderName = SIGNWELL_SENDER_NAME
+      || senderProfile?.display_name?.trim()
+      || [senderProfile?.first_name?.trim(), senderProfile?.last_name?.trim()].filter(Boolean).join(" ")
+      || String(userData.user.user_metadata?.["full_name"] ?? userData.user.user_metadata?.["name"] ?? "").trim()
+      || senderEmail.split("@")[0];
+    if (senderEmail === lead.email.trim().toLowerCase()) {
+      return jsonResponse(422, {
         success: false,
-        error: "An active SignWell contract template is required before submitting a Floral Proposal.",
+        error: "The SignWell Document Sender and client must use different email addresses. Configure SIGNWELL_SENDER_EMAIL with the florist's signing email or use a different client email for this test.",
       });
     }
 
-    const reusableDraft = requestedProposalId
-      ? (existingProposals ?? []).find((proposal) =>
-          proposal.floral_proposal_id === requestedProposalId &&
-          proposal.is_active &&
-          proposal.status === "draft"
-        ) ?? null
-      : null;
+    const finalBalanceAmount = roundCurrency(Number(proposal.total_amount));
+    const retainerAmount = roundCurrency(finalBalanceAmount * 0.30);
+    const finalBalanceDueDate = subtractCalendarDays(lead.event_date, 30);
+    const templateFields = buildTemplateFields({ lead, finalBalanceAmount, retainerAmount, finalBalanceDueDate });
 
-    const proposalVersion = reusableDraft
-      ? reusableDraft.version
-      : (existingProposals ?? []).reduce((max, proposal) => Math.max(max, proposal.version), 0) + 1;
-
-    const pdfBytes = decodePdfBase64(body.pdf_base64);
-    const mergeData = buildProposalMergeData({
-      lead,
-      proposalVersion,
-      subtotal: body.subtotal,
-      taxRate: body.tax_rate,
-      taxAmount: body.tax_amount,
-      totalAmount: body.total_amount,
-      lineItemsCount: body.line_items.length,
-    });
-    const missingContractFields = validateRequiredFieldMap(
-      activeContractTemplate.required_field_map,
-      mergeData
-    );
-    const providerConfig = extractContractProviderConfig(
-      activeContractTemplate.required_field_map
-    );
-    const contractMergeFields = buildContractMergeFields(
-      activeContractTemplate.required_field_map,
-      mergeData
-    );
-
-    if (missingContractFields.length) {
-      return jsonResponse(409, {
-        success: false,
-        error: `Required contract merge fields are missing: ${missingContractFields.join(", ")}.`,
-      });
-    }
-
-    const contractTemplateRevision = resolveContractTemplateRevision(
-      activeContractTemplate
-    );
-    const contractPdfUrl = resolveContractPdfUrl({
-      providerTemplateId: activeContractTemplate.provider_template_id,
-      providerTemplateRevision: contractTemplateRevision,
-      providerConfig,
-    });
-
-    if (!contractPdfUrl) {
-      return jsonResponse(409, {
-        success: false,
-        error:
-          "The active contract template is missing a retrievable contract PDF source. Add a __signwell.contract_pdf_url or __signwell.contract_pdf_url_template entry before submitting.",
-      });
-    }
-
-    const contractPdfBytes = await fetchContractPdf({
-      contractPdfUrl,
-      providerConfig,
-    });
-    const combinedPdfBytes = await composeCombinedProposalPdf({
-      proposalPdfBytes: pdfBytes,
-      contractPdfBytes,
-    });
-
-    uploadedPdfPath = buildStoragePath(leadId, proposalVersion);
-    const { error: uploadError } = await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).upload(uploadedPdfPath, pdfBytes, {
-      contentType: "application/pdf",
-      upsert: false,
-      cacheControl: "3600",
-    });
-    if (uploadError) throw uploadError;
-
-    const canonicalPackage = buildCanonicalPackageMetadata({
-      leadId,
-      uploadedPdfFileName: body.pdf_file_name ?? null,
-      proposalVersion,
-    });
-    combinedPdfPath = canonicalPackage.combinedPdfStoragePath;
-    const { error: combinedUploadError } = await supabase.storage
-      .from(FLORAL_PROPOSAL_BUCKET)
-      .upload(canonicalPackage.combinedPdfStoragePath, combinedPdfBytes, {
-        contentType: "application/pdf",
-        upsert: false,
-        cacheControl: "3600",
-      });
-    if (combinedUploadError) throw combinedUploadError;
-
-    if (!reusableDraft) {
-      deactivatedProposalIds = (existingProposals ?? [])
-        .filter((proposal) => proposal.is_active)
-        .map((proposal) => proposal.floral_proposal_id);
-    }
-
-    if (deactivatedProposalIds.length) {
-      const { error: deactivateError } = await supabase
-        .from("floral_proposals")
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .in("floral_proposal_id", deactivatedProposalIds);
-      if (deactivateError) throw deactivateError;
-    }
-
-    const passcode = generatePasscode();
-    const passcodeHash = await hashPasscode(passcode);
-    const existingReusableSnapshot =
-      (reusableDraft?.snapshot as Record<string, unknown> | null | undefined) ?? {};
-    const submissionTimestamp = new Date().toISOString();
-    const snapshot = buildProposalSubmissionSnapshot({
-      existingSnapshot: reusableDraft ? existingReusableSnapshot : {},
-      incomingSnapshot: body.snapshot ?? {},
-      submittedAt: submissionTimestamp,
-      pdfFileName: body.pdf_file_name ?? null,
-    });
-    const enrichedSnapshot = {
-      ...snapshot,
-      contract_merge_fields: contractMergeFields,
-      contract_pdf_source_url: contractPdfUrl,
-    };
-
-    let proposal: { floral_proposal_id: string; version: number };
-
-    if (reusableDraft) {
-      reusedDraftProposalId = reusableDraft.floral_proposal_id;
-      const { data: updatedProposal, error: proposalUpdateError } = await supabase
-        .from("floral_proposals")
-        .update({
-          tax_region_id: body.tax_region_id ?? null,
-          is_active: true,
-          status: "submitted",
-          customer_email: lead.email,
-          passcode_hash: passcodeHash,
-          pdf_storage_path: uploadedPdfPath,
-          combined_pdf_storage_path: canonicalPackage.combinedPdfStoragePath,
-          combined_pdf_file_name: canonicalPackage.combinedPdfFileName,
-          contract_template_source: activeContractTemplate.provider_template_id,
-          contract_template_revision: contractTemplateRevision,
-          signing_provider: activeContractTemplate.provider,
-          signing_status: "ready",
-          finalized_at: snapshot["finalized_at"] ?? null,
-          edit_reopened_at: snapshot["edit_reopened_at"] ?? null,
-          submitted_at: submissionTimestamp,
-          subtotal: body.subtotal,
-          tax_rate: body.tax_rate,
-          tax_amount: body.tax_amount,
-          total_amount: body.total_amount,
-          terms_version: body.terms_version ?? "v1",
-          privacy_policy_version: body.privacy_policy_version ?? "v1",
-          snapshot: enrichedSnapshot,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("floral_proposal_id", reusableDraft.floral_proposal_id)
-        .select("floral_proposal_id, version")
-        .single<{ floral_proposal_id: string; version: number }>();
-
-      if (proposalUpdateError || !updatedProposal) {
-        throw proposalUpdateError ?? new Error("Unable to submit the existing Floral Proposal draft.");
-      }
-
-      proposal = updatedProposal;
-    } else {
-      const { data: insertedProposal, error: proposalInsertError } = await supabase
-        .from("floral_proposals")
-        .insert({
-          lead_id: leadId,
-          tax_region_id: body.tax_region_id ?? null,
-          version: proposalVersion,
-          is_active: true,
-          status: "submitted",
-          customer_email: lead.email,
-          passcode_hash: passcodeHash,
-          pdf_storage_path: uploadedPdfPath,
-          combined_pdf_storage_path: canonicalPackage.combinedPdfStoragePath,
-          combined_pdf_file_name: canonicalPackage.combinedPdfFileName,
-          contract_template_source: activeContractTemplate.provider_template_id,
-          contract_template_revision: contractTemplateRevision,
-          signing_provider: activeContractTemplate.provider,
-          signing_status: "ready",
-          finalized_at: snapshot["finalized_at"] ?? null,
-          edit_reopened_at: snapshot["edit_reopened_at"] ?? null,
-          submitted_at: submissionTimestamp,
-          subtotal: body.subtotal,
-          tax_rate: body.tax_rate,
-          tax_amount: body.tax_amount,
-          total_amount: body.total_amount,
-          terms_version: body.terms_version ?? "v1",
-          privacy_policy_version: body.privacy_policy_version ?? "v1",
-          snapshot: enrichedSnapshot,
-          created_by: user.id,
-        })
-        .select("floral_proposal_id, version")
-        .single<{ floral_proposal_id: string; version: number }>();
-
-      if (proposalInsertError || !insertedProposal) {
-        throw proposalInsertError ?? new Error("Unable to create Floral Proposal.");
-      }
-
-      proposal = insertedProposal;
-      createdProposalId = insertedProposal.floral_proposal_id;
-
-      const { data: insertedLineItems, error: lineItemError } = await supabase
-        .from("floral_proposal_line_items")
-        .insert(body.line_items.map((lineItem) => ({
-          floral_proposal_id: proposal.floral_proposal_id,
-          display_order: lineItem.display_order,
-          line_item_type: lineItem.line_item_type,
-          item_name: lineItem.item_name,
-          quantity: lineItem.quantity,
-          unit_price: lineItem.unit_price,
-          subtotal: lineItem.subtotal,
-          description: lineItem.description ?? null,
-          image_storage_path: lineItem.image_storage_path ?? null,
-          image_alt_text: lineItem.image_alt_text ?? null,
-          image_caption: lineItem.image_caption ?? null,
-          notes: lineItem.notes ?? null,
-          snapshot: lineItem.snapshot ?? {},
-        })))
-        .select("floral_proposal_line_item_id, display_order");
-
-      if (lineItemError) throw lineItemError;
-
-      const lineItemIdsByOrder = new Map<number, string>();
-      for (const row of insertedLineItems ?? []) {
-        lineItemIdsByOrder.set(row.display_order, row.floral_proposal_line_item_id);
-      }
-
-      const componentRows = body.line_items.flatMap((lineItem) => {
-        const lineItemId = lineItemIdsByOrder.get(lineItem.display_order);
-        if (!lineItemId) return [];
-        return (lineItem.components ?? []).map((component) => ({
-          floral_proposal_line_item_id: lineItemId,
-          display_order: component.display_order,
-          catalog_item_id: component.catalog_item_id ?? null,
-          catalog_item_name: component.catalog_item_name,
-          quantity_per_unit: component.quantity_per_unit,
-          extended_quantity: component.extended_quantity,
-          base_unit_cost: component.base_unit_cost,
-          applied_markup_percent: component.applied_markup_percent,
-          sell_unit_price: component.sell_unit_price,
-          subtotal: component.subtotal,
-          reserve_percent: component.reserve_percent ?? 0,
-          snapshot: component.snapshot ?? {},
-        }));
-      });
-
-      if (componentRows.length) {
-        const { error: componentError } = await supabase.from("floral_proposal_components").insert(componentRows);
-        if (componentError) throw componentError;
-      }
-
-      if (body.shopping_list_items?.length) {
-        const { data: shoppingList, error: shoppingListError } = await supabase
-          .from("floral_proposal_shopping_lists")
-          .insert({ floral_proposal_id: proposal.floral_proposal_id, status: "generated" })
-          .select("floral_proposal_shopping_list_id")
-          .single<{ floral_proposal_shopping_list_id: string }>();
-
-        if (shoppingListError || !shoppingList) {
-          throw shoppingListError ?? new Error("Unable to create shopping list.");
-        }
-
-        const { error: shoppingListItemsError } = await supabase.from("floral_proposal_shopping_list_items").insert(
-          body.shopping_list_items.map((item) => ({
-            floral_proposal_shopping_list_id: shoppingList.floral_proposal_shopping_list_id,
-            vendor_id: item["vendor_id"] ?? null,
-            vendor_item_pack_id: item["vendor_item_pack_id"] ?? null,
-            catalog_item_id: item["catalog_item_id"] ?? null,
-            item_name: item["item_name"],
-            item_type: item["item_type"],
-            unit_type: item["unit_type"],
-            required_units: item["required_units"],
-            reserve_percent: item["reserve_percent"] ?? 0,
-            reserve_units: item["reserve_units"] ?? 0,
-            total_units_to_buy: item["total_units_to_buy"] ?? item["required_units"] ?? 0,
-            units_per_pack: item["units_per_pack"] ?? null,
-            required_pack_count: item["required_pack_count"] ?? null,
-            estimated_pack_cost: item["estimated_pack_cost"] ?? null,
-            total_estimated_cost: item["total_estimated_cost"] ?? null,
-            notes: item["notes"] ?? null,
-          })),
-        );
-        if (shoppingListItemsError) throw shoppingListItemsError;
-      }
-    }
-
-    const signingSessionReference = `${activeContractTemplate.provider}:${proposal.floral_proposal_id}:v${proposal.version}`;
-    const { error: signingSessionError } = await supabase
+    const { data: existingData, error: sessionLookupError } = await supabase
       .from("proposal_signing_sessions")
-      .upsert({
-        floral_proposal_id: proposal.floral_proposal_id,
-        provider: activeContractTemplate.provider,
-        provider_signer_reference: lead.email,
-        status: "ready",
-        last_synced_at: submissionTimestamp,
-        webhook_payload_snapshot: buildSigningSessionSnapshot({
-          floralProposalId: proposal.floral_proposal_id,
-          proposalVersion: proposal.version,
-          activeContractTemplate,
-          contractMergeFields,
-          contractPdfSourceUrl: contractPdfUrl,
-        }),
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: "floral_proposal_id",
-      });
+      .select("proposal_signing_session_id,provider_document_id,idempotency_key,send_state,status")
+      .eq("floral_proposal_id", proposalId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (sessionLookupError) throw sessionLookupError;
+    let session = existingData as SigningSessionRow | null;
+    let documentId = session?.provider_document_id ?? null;
 
-    if (signingSessionError) throw signingSessionError;
-
-    const { error: signingReferenceUpdateError } = await supabase
-      .from("floral_proposals")
-      .update({
-        signing_session_reference: signingSessionReference,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("floral_proposal_id", proposal.floral_proposal_id);
-
-    if (signingReferenceUpdateError) throw signingReferenceUpdateError;
-
-    const emailSubject = buildClientSubject(lead, proposal.version);
-    const emailText = buildClientText(lead, proposal.version, passcode, portalUrl, body.total_amount);
-    const emailHtml = buildClientHtml(lead, proposal.version, passcode, portalUrl, body.total_amount);
-
-    const { data: emailMessage, error: emailMessageError } = await supabase
-      .from("email_messages")
-      .insert({
-        related_table: "floral_proposals",
-        related_id: proposal.floral_proposal_id,
-        inquiry_type: "floral_proposal",
-        provider: "mailgun",
-        to_email: lead.email,
-        to_name: `${lead.first_name} ${lead.last_name}`.trim(),
-        from_email: MG_FROM_EMAIL,
-        reply_to_email: MG_TO_REPLY,
-        subject: emailSubject,
-        template_key: "client_floral_proposal_notification",
-        message_role: "client_proposal_access",
-        status: "pending",
-        tags: ["floral-proposal", "client-notification"],
-        metadata: {
-          lead_id: lead.lead_id,
-          floral_proposal_id: proposal.floral_proposal_id,
-          floral_proposal_version: proposal.version,
-          proposal_total: body.total_amount,
-          portal_url: portalUrl,
-        },
-      })
-      .select("email_message_id")
-      .single<EmailMessageRow>();
-
-    if (emailMessageError || !emailMessage) {
-      throw emailMessageError ?? new Error("Unable to create floral proposal email log row.");
+    // A declined/completed historical session must never be reused for a new
+    // florist revision. Keep the old row for audit and create a fresh document.
+    if (session && isHistoricalTerminalSession(session.status)) {
+      session = null;
+      documentId = null;
     }
 
-    try {
-      const mailgunResponse = await sendMailgunMessage({
-        to: lead.email,
-        subject: emailSubject,
-        text: emailText,
-        html: emailHtml,
-        replyTo: MG_TO_REPLY,
+    let pdfFileUrl: string | null = null;
+    if (!documentId) {
+      const storage = supabase.storage.from(FLORAL_PROPOSAL_BUCKET);
+      const { data: pdfInfo, error: pdfInfoError } = await storage.info(pdfStoragePath);
+      if (pdfInfoError || !pdfInfo) {
+        throw pdfInfoError ?? new Error("Proposal PDF metadata could not be retrieved.");
+      }
+
+      const pdfSize = Number(pdfInfo.size ?? pdfInfo.metadata?.["size"]);
+      if (!Number.isFinite(pdfSize) || pdfSize < 5 || pdfSize > MAX_PDF_BYTES) {
+        return jsonResponse(422, {
+          success: false,
+          error: "The uploaded file is empty, too large, or has unavailable size metadata.",
+        });
+      }
+
+      const { data: signedPdf, error: signedPdfError } = await storage.createSignedUrl(
+        pdfStoragePath,
+        SIGNED_PDF_URL_TTL_SECONDS,
+      );
+      if (signedPdfError || !signedPdf?.signedUrl) {
+        throw signedPdfError ?? new Error("A secure proposal PDF URL could not be created.");
+      }
+
+      const signatureResponse = await fetch(signedPdf.signedUrl, {
+        headers: { Accept: "application/pdf", Range: "bytes=0-4" },
       });
+      if (!signatureResponse.ok) {
+        await signatureResponse.body?.cancel().catch(() => undefined);
+        throw new Error(`Proposal PDF could not be inspected (${signatureResponse.status}).`);
+      }
+      const pdfPrefix = await readResponsePrefix(signatureResponse, 5);
+      if (!hasPdfSignature(pdfPrefix)) {
+        return jsonResponse(422, { success: false, error: "The uploaded file is not a valid PDF." });
+      }
 
-      const normalizedProviderMessageId = normalizeProviderMessageId(mailgunResponse.id);
-      const emailAcceptedAt = new Date().toISOString();
-      const { error: emailUpdateError } = await supabase
-        .from("email_messages")
-        .update({
-          provider_message_id: normalizedProviderMessageId,
-          status: "accepted",
-          sent_at: emailAcceptedAt,
-          accepted_at: emailAcceptedAt,
-          last_event_at: emailAcceptedAt,
-        })
-        .eq("email_message_id", emailMessage.email_message_id);
+      pdfFileUrl = signedPdf.signedUrl;
+    }
 
-      if (emailUpdateError) throw emailUpdateError;
-    } catch (emailError) {
-      const failedAt = new Date().toISOString();
-      await supabase
-        .from("email_messages")
-        .update({
-          status: "failed",
-          failure_reason: emailError instanceof Error ? emailError.message : "Floral proposal email send failed.",
-          failed_at: failedAt,
-          last_event_at: failedAt,
-        })
-        .eq("email_message_id", emailMessage.email_message_id);
-      throw emailError;
+    await supabase.from("floral_proposals").update({
+      canva_pdf_storage_path: pdfStoragePath,
+      canva_pdf_file_name: pdfFileName,
+      pdf_storage_path: pdfStoragePath,
+      final_balance_amount: finalBalanceAmount,
+      retainer_amount: retainerAmount,
+      final_balance_due_date: finalBalanceDueDate,
+      retainer_due_date: null,
+      updated_at: new Date().toISOString(),
+    }).eq("floral_proposal_id", proposalId);
+
+    if (documentId) {
+      const providerDocument = await signWellRequest(`/documents/${encodeURIComponent(documentId)}`);
+      if (isSentStatus(providerDocument["status"])) {
+        const reconciledAt = new Date().toISOString();
+        await supabase.from("floral_proposals").update({
+          status: "submitted",
+          signing_provider: "signwell",
+          signing_status: "sent",
+          signing_session_reference: documentId,
+          submitted_at: reconciledAt,
+          finalized_at: reconciledAt,
+          submitted_by: userData.user.id,
+          updated_at: reconciledAt,
+        }).eq("floral_proposal_id", proposalId);
+        await supabase.from("proposal_signing_sessions").update({
+          send_state: "sent",
+          status: "sent",
+          last_synced_at: reconciledAt,
+          last_error_message: null,
+          updated_at: reconciledAt,
+        }).eq("provider_document_id", documentId);
+        if (["nurturing", "proposal_declined"].includes(lead.status)) {
+          await supabase.from("leads").update({ status: "proposal_submitted", updated_at: reconciledAt })
+            .eq("lead_id", lead.lead_id);
+        }
+        if (proposal.status !== "submitted") {
+          await supabase.from("lead_activity").insert({
+            lead_id: lead.lead_id,
+            activity_type: "proposal_sent",
+            activity_label: `Floral Proposal v${proposal.version} send reconciled`,
+            activity_description: "The existing SignWell document was confirmed as sent without creating a duplicate.",
+            performed_by: userData.user.id,
+            metadata: { floral_proposal_id: proposalId, provider_document_id: documentId, reconciled: true },
+          });
+        }
+        return jsonResponse(200, {
+          success: true,
+          floral_proposal_id: proposalId,
+          version: proposal.version,
+          signwell_document_id: documentId,
+          signing_status: String(providerDocument["status"]),
+          pdf_storage_path: pdfStoragePath,
+        });
+      }
+    } else {
+      const createPayload = buildSignWellCreatePayload({
+        templateId: SIGNWELL_TEMPLATE_ID,
+        placeholderName: SIGNWELL_CLIENT_PLACEHOLDER_NAME,
+        lead,
+        proposal,
+        senderName,
+        senderEmail,
+        senderPlaceholderName: SIGNWELL_SENDER_PLACEHOLDER_NAME,
+        pdfFileName,
+        pdfFileUrl: pdfFileUrl!,
+        templateFields,
+        testMode: SIGNWELL_TEST_MODE,
+      });
+      const created = await signWellRequest("/document_templates/documents", {
+        method: "POST",
+        body: JSON.stringify(createPayload),
+      });
+      documentId = providerDocumentId(created);
+      if (!documentId) throw new Error("SignWell did not return a document ID.");
+
+      const sessionPayload = {
+        floral_proposal_id: proposalId,
+        provider: "signwell",
+        provider_document_id: documentId,
+        idempotency_key: idempotencyKey,
+        send_state: "draft_created",
+        status: "draft_created",
+        last_synced_at: new Date().toISOString(),
+        last_error_message: null,
+      };
+      const write = session
+        ? supabase.from("proposal_signing_sessions").update(sessionPayload).eq("proposal_signing_session_id", session.proposal_signing_session_id)
+        : supabase.from("proposal_signing_sessions").insert(sessionPayload);
+      const { error: sessionWriteError } = await write;
+      if (sessionWriteError) throw sessionWriteError;
+    }
+
+    await supabase.from("proposal_signing_sessions").update({ send_state: "sending", status: "sending", updated_at: new Date().toISOString() })
+      .eq("provider_document_id", documentId);
+
+    let sent: Record<string, unknown>;
+    try {
+      sent = await signWellRequest(`/documents/${encodeURIComponent(documentId)}/send`, {
+        method: "POST",
+        body: JSON.stringify({ test_mode: SIGNWELL_TEST_MODE, apply_signing_order: true, embedded_signing: false }),
+      });
+    } catch (sendError) {
+      const reconciled = await signWellRequest(`/documents/${encodeURIComponent(documentId)}`);
+      if (!isSentStatus(reconciled["status"])) {
+        await supabase.from("proposal_signing_sessions").update({ send_state: "failed", status: "failed", last_error_message: sendError instanceof Error ? sendError.message : "Send failed." })
+          .eq("provider_document_id", documentId);
+        throw sendError;
+      }
+      sent = reconciled;
     }
 
     const now = new Date().toISOString();
-    const { error: leadUpdateError } = await supabase.from("leads").update({ status: "proposal_submitted", updated_at: now }).eq("lead_id", leadId);
-    if (leadUpdateError) throw leadUpdateError;
+    const { error: proposalUpdateError } = await supabase.from("floral_proposals").update({
+      status: "submitted",
+      signing_provider: "signwell",
+      signing_status: "sent",
+      signing_session_reference: documentId,
+      submitted_at: now,
+      finalized_at: now,
+      submitted_by: userData.user.id,
+      updated_at: now,
+    }).eq("floral_proposal_id", proposalId);
+    if (proposalUpdateError) throw proposalUpdateError;
 
-    const { error: activityError } = await supabase.from("lead_activity").insert({
-      lead_id: leadId,
-      activity_type: "status_changed",
-      activity_label: `Floral Proposal v${proposal.version} submitted`,
-      activity_description: "A Floral Proposal was generated, stored, and emailed to the client.",
-      performed_by: user.id,
-      metadata: {
-        floral_proposal_id: proposal.floral_proposal_id,
-        floral_proposal_version: proposal.version,
-        previous_status: lead.status,
-        next_status: "proposal_submitted",
-        customer_email: lead.email,
-        pdf_storage_path: uploadedPdfPath,
-        combined_pdf_storage_path: canonicalPackage.combinedPdfStoragePath,
-        combined_pdf_file_name: canonicalPackage.combinedPdfFileName,
-        pdf_supplied: Boolean(body.pdf_base64),
-        submitted_pdf_file_name: body.pdf_file_name ?? null,
-        contract_template_id: activeContractTemplate.proposal_contract_template_id,
-        contract_template_source: activeContractTemplate.provider_template_id,
-        contract_template_revision: contractTemplateRevision,
-        signing_session_reference: signingSessionReference,
-      },
-    });
-    if (activityError) throw activityError;
-
-    logInfo("Floral Proposal submission completed", {
-      floral_proposal_id: proposal.floral_proposal_id,
-      lead_id: leadId,
-      version: proposal.version,
-      draft_reused: Boolean(reusableDraft),
-    });
-    return jsonResponse(200, { success: true, floral_proposal_id: proposal.floral_proposal_id, version: proposal.version });
-  } catch (error) {
-    logError("Floral Proposal submission failed", {
-      error: sanitizeError(error),
-      uploaded_pdf_path: uploadedPdfPath,
-      created_floral_proposal_id: createdProposalId,
-      reused_draft_proposal_id: reusedDraftProposalId,
-      deactivated_proposal_ids: deactivatedProposalIds,
-    });
-    try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      if (createdProposalId) await supabase.from("floral_proposals").delete().eq("floral_proposal_id", createdProposalId);
-      if (reusedDraftProposalId) {
-        await supabase
-          .from("floral_proposals")
-          .update({
-            status: "draft",
-            passcode_hash: "draft",
-            pdf_storage_path: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("floral_proposal_id", reusedDraftProposalId);
-      }
-      if (deactivatedProposalIds.length) {
-        await supabase
-          .from("floral_proposals")
-          .update({ is_active: true, updated_at: new Date().toISOString() })
-          .in("floral_proposal_id", deactivatedProposalIds);
-      }
-      const storageCleanupPaths = [
-        uploadedPdfPath,
-        combinedPdfPath,
-      ].filter((value): value is string => Boolean(value));
-      if (storageCleanupPaths.length) {
-        await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).remove(storageCleanupPaths);
-      }
-    } catch (rollbackError) {
-      logError("Rollback failed", { error: sanitizeError(rollbackError) });
+    await supabase.from("proposal_signing_sessions").update({ send_state: "sent", status: "sent", last_synced_at: now, last_error_message: null, updated_at: now })
+      .eq("provider_document_id", documentId);
+    const previousLeadStatus = lead.status;
+    if (["nurturing", "proposal_declined"].includes(previousLeadStatus)) {
+      await supabase.from("leads").update({ status: "proposal_submitted", updated_at: now }).eq("lead_id", lead.lead_id);
+    }
+    if (previousLeadStatus !== "proposal_submitted") {
+      await supabase.from("lead_activity").insert({
+        lead_id: lead.lead_id,
+        activity_type: "proposal_sent",
+        activity_label: `Floral Proposal v${proposal.version} sent for signature`,
+        activity_description: "SignWell emailed the contract and appended Canva proposal directly to the client.",
+        performed_by: userData.user.id,
+        metadata: { floral_proposal_id: proposalId, provider_document_id: documentId, previous_status: previousLeadStatus, next_status: "proposal_submitted" },
+      });
     }
 
+    return jsonResponse(200, {
+      success: true,
+      floral_proposal_id: proposalId,
+      version: proposal.version,
+      signwell_document_id: documentId,
+      signing_status: String(sent["status"] ?? "sent"),
+      pdf_storage_path: pdfStoragePath,
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ level: "ERROR", function: "submit-floral-proposal", message: error instanceof Error ? error.message : "Submission failed" }));
     return jsonResponse(500, { success: false, error: error instanceof Error ? error.message : "Floral Proposal submission failed." });
   }
 }
 
-if (import.meta.main) {
-  serve(handleRequest);
-}
+if (import.meta.main) serve(handleRequest);

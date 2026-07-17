@@ -16,10 +16,12 @@ export interface Project {
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
   ceremony_venue_address?: string | null;
+  ceremony_venue_zipcode?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
   reception_venue_address?: string | null;
+  reception_venue_zipcode?: string | null;
   budget_range?: string | null;
   guest_count?: number | null;
   style_notes?: string | null;
@@ -44,10 +46,12 @@ export interface CreateProjectInput {
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
   ceremony_venue_address?: string | null;
+  ceremony_venue_zipcode?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
   reception_venue_address?: string | null;
+  reception_venue_zipcode?: string | null;
   budget_range?: string | null;
   guest_count?: number | null;
   style_notes?: string | null;
