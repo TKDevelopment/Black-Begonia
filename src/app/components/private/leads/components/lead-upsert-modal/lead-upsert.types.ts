@@ -1,4 +1,5 @@
 import { FloralServiceEventType } from '../../../../../core/floral-services/floral-service-catalog';
+import { LeadStatus } from '../../../../../core/models/lead-status';
 
 export interface LeadUpsertPayload {
   event_type: FloralServiceEventType;
@@ -17,13 +18,23 @@ export interface LeadUpsertPayload {
   ceremony_venue_name?: string | null;
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
+  ceremony_venue_address?: string | null;
+  ceremony_venue_zipcode?: string | null;
   ceremony_start_time?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
+  reception_venue_address?: string | null;
+  reception_venue_zipcode?: string | null;
   reception_start_time?: string | null;
+  event_start_time?: string | null;
   budget_range?: string | null;
   guest_count?: number | null;
   inquiry_message?: string | null;
   source?: string | null;
+  status?: LeadStatus;
+  assigned_user_id?: string | null;
+  decline_reason?: string | null;
+  consultation_scheduled_at?: string | null;
+  consultation_completed_at?: string | null;
 }

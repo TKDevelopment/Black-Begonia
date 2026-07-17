@@ -7,6 +7,7 @@ import { ProjectRepositoryService } from '../repositories/project-repository.ser
 import { ProjectContactRepositoryService } from '../repositories/project-contact-repository.service';
 import { LeadRepositoryService } from '../repositories/lead-repository.service';
 import { ActivityRepositoryService } from '../repositories/activity-repository.service';
+import { formatDateOnlyForDisplay } from '../../utils/date-only';
 
 export interface ConvertLeadInput {
   project_name: string;
@@ -62,9 +63,13 @@ export class LeadConversionService {
       ceremony_venue_name: lead.ceremony_venue_name ?? null,
       ceremony_venue_city: lead.ceremony_venue_city ?? null,
       ceremony_venue_state: lead.ceremony_venue_state ?? null,
+      ceremony_venue_address: lead.ceremony_venue_address ?? null,
+      ceremony_venue_zipcode: lead.ceremony_venue_zipcode ?? null,
       reception_venue_name: lead.reception_venue_name ?? null,
       reception_venue_city: lead.reception_venue_city ?? null,
       reception_venue_state: lead.reception_venue_state ?? null,
+      reception_venue_address: lead.reception_venue_address ?? null,
+      reception_venue_zipcode: lead.reception_venue_zipcode ?? null,
       budget_range: lead.budget_range ?? null,
       guest_count: lead.guest_count ?? null,
       style_notes: lead.inquiry_message ?? null,
@@ -136,11 +141,11 @@ export class LeadConversionService {
     const eventLabel = this.titleCase(lead.service_type || 'event');
     const clientLabel = `${lead.first_name} ${lead.last_name}`.trim();
     const dateLabel = lead.event_date
-      ? new Intl.DateTimeFormat('en-US', {
+      ? formatDateOnlyForDisplay(lead.event_date, '', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
-        }).format(new Date(lead.event_date))
+        })
       : null;
 
     return [clientLabel, eventLabel, dateLabel].filter(Boolean).join(' • ');

@@ -1,96 +1,69 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type LeadRow = {
-  lead_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  service_type: string;
-  event_type: string | null;
-  event_date: string | null;
-  status: string;
-};
-
-type FloralProposalRow = {
-  floral_proposal_id: string;
-  version: number;
-  is_active: boolean;
-  status: string;
-};
-
-type MailgunSuccessResponse = {
-  id: string;
-  message: string;
-};
-
-type EmailMessageRow = {
-  email_message_id: string;
-};
-
-type RequestLineComponent = {
-  display_order: number;
-  catalog_item_id?: string | null;
-  catalog_item_name: string;
-  quantity_per_unit: number;
-  extended_quantity: number;
-  base_unit_cost: number;
-  applied_markup_percent: number;
-  sell_unit_price: number;
-  subtotal: number;
-  reserve_percent?: number;
-  snapshot?: Record<string, unknown>;
-};
-
-type RequestLineItem = {
-  display_order: number;
-  line_item_type: "product" | "fee" | "discount";
-  item_name: string;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  description?: string | null;
-  image_storage_path?: string | null;
-  image_alt_text?: string | null;
-  image_caption?: string | null;
-  notes?: string | null;
-  snapshot?: Record<string, unknown>;
-  components?: RequestLineComponent[];
-};
+type SubmissionMode = "initial_booking" | "project_revision";
 
 type RequestBody = {
+  mode?: SubmissionMode;
+  lead_id?: string | null;
+  project_id?: string | null;
   floral_proposal_id?: string | null;
+  pdf_storage_path?: string | null;
+  pdf_file_name?: string | null;
+  idempotency_key?: string | null;
+};
+
+type LeadRow = {
   lead_id: string;
-  template_id?: string | null;
-  tax_region_id?: string | null;
-  portal_url?: string | null;
-  line_items: RequestLineItem[];
-  shopping_list_items?: Record<string, unknown>[];
+  service_type: string;
+  event_type: string | null;
+  first_name: string;
+  last_name: string;
+  partner_first_name: string | null;
+  partner_last_name: string | null;
+  email: string;
+  phone: string | null;
+  event_date: string | null;
+  ceremony_venue_name: string | null;
+  ceremony_venue_city: string | null;
+  ceremony_venue_state: string | null;
+  ceremony_venue_address: string | null;
+  ceremony_venue_zipcode: string | null;
+  reception_venue_name: string | null;
+  reception_venue_city: string | null;
+  reception_venue_state: string | null;
+  reception_venue_address: string | null;
+  reception_venue_zipcode: string | null;
+  budget_range: string | null;
+  guest_count: number | null;
+  inquiry_message: string | null;
+  status: string;
+  assigned_user_id: string | null;
+  converted_project_id: string | null;
+  converted_primary_contact_id: string | null;
+};
+
+type ProposalRow = {
+  floral_proposal_id: string;
+  lead_id: string;
+  version: number;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;
   total_amount: number;
-  terms_version?: string;
-  privacy_policy_version?: string;
-  snapshot?: Record<string, unknown>;
-  render_contract?: Record<string, unknown>;
-  render_html?: string | null;
-  pdf_base64?: string | null;
+  retainer_amount: number | null;
+  final_balance_amount: number | null;
+  retainer_due_date: string | null;
+  final_balance_due_date: string | null;
+  snapshot: Record<string, unknown> | null;
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const PROPOSAL_ACCESS_SIGNING_KEY = Deno.env.get("PROPOSAL_ACCESS_SIGNING_KEY")!;
-const MG_API_KEY = Deno.env.get("MG_API_KEY")!;
-const MG_BASE_URL = Deno.env.get("MG_BASE_URL")!;
-const MG_DOMAIN = Deno.env.get("MG_DOMAIN")!;
-const MG_FROM_EMAIL = Deno.env.get("MG_FROM_EMAIL")!;
-const MG_TO_REPLY = Deno.env.get("MG_TO_REPLY")!;
-const CLIENT_PORTAL_PROPOSAL_URL = Deno.env.get("CLIENT_PORTAL_PROPOSAL_URL") ?? "";
+type SupabaseAdminClient = ReturnType<typeof createClient<any>>;
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const FLORAL_PROPOSAL_BUCKET = Deno.env.get("FLORAL_PROPOSAL_BUCKET") ?? "floral-proposals";
-const GOTENBERG_URL = Deno.env.get("GOTENBERG_URL") ?? "";
-const GOTENBERG_USERNAME = Deno.env.get("GOTENBERG_USERNAME") ?? "";
-const GOTENBERG_PASSWORD = Deno.env.get("GOTENBERG_PASSWORD") ?? "";
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,657 +78,405 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
   });
 }
 
-function requireEnv(name: string, value: string | undefined) {
-  if (!value) throw new Error(`Missing required env var: ${name}`);
+function requireConfiguration(): void {
+  const missing = [
+    ["SUPABASE_URL", SUPABASE_URL],
+    ["SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY],
+  ].filter(([, value]) => !value.trim()).map(([name]) => name);
+
+  if (missing.length) throw new Error(`Missing required configuration: ${missing.join(", ")}`);
 }
 
-function sanitizeError(error: unknown) {
-  if (error instanceof Error) {
-    return { name: error.name, message: error.message, stack: error.stack };
+function requiredString(value: unknown, name: string): string {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is required.`);
+  return value.trim();
+}
+
+function optionalUuid(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const trimmed = value.trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)) {
+    throw new Error("A malformed UUID was supplied.");
+  }
+  return trimmed;
+}
+
+function sanitizeFileName(fileName: string): string {
+  return fileName.trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ");
+}
+
+function projectNameFromLead(lead: LeadRow): string {
+  const partner = [lead.partner_first_name, lead.partner_last_name].filter(Boolean).join(" ").trim();
+  const client = [lead.first_name, lead.last_name].filter(Boolean).join(" ").trim();
+  if (partner) return `${client} & ${partner}`;
+  return client || lead.email;
+}
+
+async function authenticateCrmUser(req: Request, supabase: SupabaseAdminClient): Promise<string> {
+  const authorization = req.headers.get("authorization") ?? "";
+  const token = authorization.replace(/^Bearer\s+/i, "").trim();
+  if (!token) throw new Response("Missing authorization token.", { status: 401 });
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) throw new Response("Invalid authorization token.", { status: 401 });
+
+  const { data: isInternal, error: roleError } = await supabase.rpc("is_internal_crm_user");
+  if (roleError) {
+    console.warn(JSON.stringify({ level: "WARN", function: "submit-floral-proposal", message: "Unable to evaluate CRM role through RPC.", error: roleError.message }));
   }
 
-  return { error };
-}
+  if (roleError || isInternal !== true) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", data.user.id)
+      .maybeSingle();
 
-function logInfo(message: string, data?: Record<string, unknown>) {
-  console.log(JSON.stringify({ level: "INFO", function: "submit-floral-proposal", message, ...data }));
-}
-
-function logError(message: string, data?: Record<string, unknown>) {
-  console.error(JSON.stringify({ level: "ERROR", function: "submit-floral-proposal", message, ...data }));
-}
-
-async function hashPasscode(passcode: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(passcode));
-  return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function generatePasscode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function formatDate(dateString: string | null): string {
-  if (!dateString) return "Not provided";
-  const date = new Date(`${dateString}T00:00:00`);
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "America/New_York",
-  }).format(date);
-}
-
-function formatDisplayValue(value: string | null | undefined): string {
-  if (!value) return "Not provided";
-  return value.replace(/_/g, " ").replace(/\b\w/g, (char: string) => char.toUpperCase());
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value ?? 0));
-}
-
-function sanitizePdfText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7E]/g, "");
-}
-
-function buildFallbackPdf(body: RequestBody, lead: LeadRow, version: number): Uint8Array {
-  const lines: string[] = [
-    "Black Begonia Floral Co.",
-    `Floral Proposal v${version}`,
-    "",
-    `Client: ${lead.first_name} ${lead.last_name}`.trim(),
-    `Email: ${lead.email}`,
-    `Service Type: ${formatDisplayValue(lead.service_type)}`,
-    `Event Type: ${formatDisplayValue(lead.event_type)}`,
-    `Event Date: ${formatDate(lead.event_date)}`,
-    "",
-    "Line Items",
-    ...body.line_items.flatMap((line) => {
-      const section = [`${line.item_name} | Qty ${line.quantity} | ${formatCurrency(line.subtotal)}`];
-      if (line.description?.trim()) section.push(line.description.trim());
-      return section.concat([""]);
-    }),
-    `Subtotal: ${formatCurrency(body.subtotal)}`,
-    `Tax Rate: ${body.tax_rate}%`,
-    `Tax Amount: ${formatCurrency(body.tax_amount)}`,
-    `Total: ${formatCurrency(body.total_amount)}`,
-    "",
-    "Terms, privacy acknowledgements, and signature acceptance are completed securely through the client portal.",
-  ];
-
-  const pageLines = lines.map((line, index) => {
-    const y = 760 - index * 18;
-    return `BT /F1 11 Tf 50 ${y} Td (${sanitizePdfText(line)}) Tj ET`;
-  }).join("\n");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj",
-    `4 0 obj << /Length ${pageLines.length} >> stream\n${pageLines}\nendstream endobj`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
-  ];
-
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  for (const object of objects) {
-    offsets.push(pdf.length);
-    pdf += `${object}\n`;
+    if (!profile) throw new Response("User is not authorized for CRM proposal booking.", { status: 403 });
   }
 
-  const xrefOffset = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += "0000000000 65535 f \n";
-  for (let i = 1; i <= objects.length; i++) {
-    pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
-  }
-  pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-
-  return new TextEncoder().encode(pdf);
+  return data.user.id;
 }
 
-function buildStoragePath(leadId: string, version: number): string {
-  return `${leadId}/floral-proposal-v${version}-${Date.now()}.pdf`;
-}
+async function verifyStoredPdf(
+  supabase: SupabaseAdminClient,
+  storagePath: string
+): Promise<{ size: number; contentType: string }> {
+  const { data, error } = await supabase.storage
+    .from(FLORAL_PROPOSAL_BUCKET)
+    .download(storagePath);
 
-function normalizeProviderMessageId(messageId: string | null | undefined): string | null {
-  const normalized = String(messageId ?? "").trim().replace(/^<|>$/g, "");
-  return normalized || null;
-}
+  if (error || !data) throw new Error("The submitted PDF could not be found in private storage.");
 
-function normalizeGotenbergUrl(value: string): string {
-  return value.trim().replace(/\/+$/, "");
-}
-
-async function buildStyledPdf(
-  renderHtml: string | null | undefined,
-  fallbackBody: RequestBody,
-  lead: LeadRow,
-  version: number,
-): Promise<Uint8Array> {
-  if (!renderHtml?.trim() || !GOTENBERG_URL.trim()) {
-    return buildFallbackPdf(fallbackBody, lead, version);
+  const contentType = data.type || "application/pdf";
+  if (contentType !== "application/pdf") {
+    throw new Error("The submitted document must be a PDF.");
   }
 
-  const form = new FormData();
-  form.append(
-    "files",
-    new File([renderHtml], "index.html", { type: "text/html; charset=utf-8" }),
-  );
-  form.append("printBackground", "true");
-  form.append("preferCssPageSize", "true");
+  const bytes = new Uint8Array(await data.arrayBuffer());
+  if (bytes.byteLength === 0) throw new Error("The submitted PDF is empty.");
+  if (bytes.byteLength > MAX_PDF_BYTES) throw new Error("The submitted PDF exceeds the 50 MB storage limit.");
 
-  const headers: HeadersInit = {};
-  if (GOTENBERG_USERNAME && GOTENBERG_PASSWORD) {
-    headers["Authorization"] = `Basic ${btoa(`${GOTENBERG_USERNAME}:${GOTENBERG_PASSWORD}`)}`;
+  const header = new TextDecoder().decode(bytes.slice(0, Math.min(bytes.byteLength, 1024)));
+  if (!header.startsWith("%PDF-")) throw new Error("The submitted PDF appears to be corrupt.");
+
+  const bodySample = new TextDecoder().decode(bytes.slice(0, Math.min(bytes.byteLength, 1024 * 1024)));
+  if (/\/Encrypt\b/.test(bodySample)) {
+    throw new Error("Password-protected PDFs cannot be submitted.");
   }
 
-  const response = await fetch(`${normalizeGotenbergUrl(GOTENBERG_URL)}/forms/chromium/convert/html`, {
-    method: "POST",
-    headers,
-    body: form,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logError("Gotenberg render failed, falling back to basic PDF", {
-      status: response.status,
-      response_preview: errorText.slice(0, 500),
-    });
-    return buildFallbackPdf(fallbackBody, lead, version);
-  }
-
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (!bytes.byteLength) {
-    logError("Gotenberg returned an empty PDF, falling back to basic PDF");
-    return buildFallbackPdf(fallbackBody, lead, version);
-  }
-
-  logInfo("Gotenberg render succeeded", { bytes: bytes.byteLength });
-  return bytes;
+  return { size: bytes.byteLength, contentType };
 }
 
-function buildClientSubject(lead: LeadRow, version: number): string {
-  return `Your Floral Proposal is ready, ${lead.first_name} - v${version}`;
-}
-
-function buildClientHtml(lead: LeadRow, version: number, passcode: string, portalUrl: string, totalAmount: number): string {
-  return `
-    <div style="margin:0;padding:0;background-color:#f7f4f1;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f7f4f1;margin:0;padding:32px 16px;">
-        <tr>
-          <td align="center">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:720px;background-color:#ffffff;border:1px solid #ece5df;border-radius:18px;overflow:hidden;">
-              <tr>
-                <td style="background-color:#111111;padding:28px 36px;text-align:center;">
-                  <div style="font-family:Georgia,'Times New Roman',serif;font-size:13px;letter-spacing:0.28em;text-transform:uppercase;color:#ea938c;margin-bottom:10px;">Black Begonia Floral Co.</div>
-                  <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;color:#f7f4f1;">Your Floral Proposal Is Ready</div>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:40px 36px 20px 36px;">
-                  <p style="margin:0 0 18px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.75;color:#222222;">Hi ${lead.first_name},</p>
-                  <p style="margin:0 0 18px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.75;color:#222222;">Your Floral Proposal is ready to review. Use the secure link below together with your 6-digit passcode to access it.</p>
-                  <div style="margin:28px 0;border:1px solid #ece5df;border-radius:18px;background-color:#f7f4f1;padding:24px;text-align:center;">
-                    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#7a746f;">Floral Proposal Passcode</p>
-                    <p style="margin:14px 0 0 0;font-family:Georgia,'Times New Roman',serif;font-size:36px;letter-spacing:0.18em;color:#111111;">${passcode}</p>
-                  </div>
-                  <p style="margin:0 0 24px 0;text-align:center;">
-                    <a href="${portalUrl}" style="display:inline-block;background-color:#111111;color:#f7f4f1;text-decoration:none;padding:14px 24px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:14px;letter-spacing:0.06em;text-transform:uppercase;">Review Floral Proposal</a>
-                  </p>
-                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.75;color:#222222;">Proposal version: ${version}<br/>Service type: ${formatDisplayValue(lead.service_type)}<br/>Event date: ${formatDate(lead.event_date)}<br/>Proposal total: ${formatCurrency(totalAmount)}</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </div>
-  `;
-}
-
-function buildClientText(lead: LeadRow, version: number, passcode: string, portalUrl: string, totalAmount: number): string {
-  return `Hi ${lead.first_name},\n\nYour Floral Proposal is ready to review.\n\nProposal version: ${version}\nService type: ${formatDisplayValue(lead.service_type)}\nEvent date: ${formatDate(lead.event_date)}\nProposal total: ${formatCurrency(totalAmount)}\n\nSecure Floral Proposal page:\n${portalUrl}\n\nYour 6-digit passcode:\n${passcode}\n\nWarmly,\nBlack Begonia Floral Co.`;
-}
-
-async function sendMailgunMessage(args: { to: string; subject: string; text: string; html: string; replyTo?: string }) {
-  const form = new FormData();
-  form.append("from", MG_FROM_EMAIL);
-  form.append("to", args.to);
-  form.append("subject", args.subject);
-  form.append("text", args.text);
-  form.append("html", args.html);
-  form.append("o:tracking-clicks", "no");
-  form.append("o:tracking-opens", "no");
-  if (args.replyTo) form.append("h:Reply-To", args.replyTo);
-
-  const auth = btoa(`api:${MG_API_KEY}`);
-  const response = await fetch(`${MG_BASE_URL}/v3/${MG_DOMAIN}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}` },
-    body: form,
-  });
-
-  const rawText = await response.text();
-  if (!response.ok) throw new Error(`Mailgun send failed (${response.status}): ${rawText}`);
-  return JSON.parse(rawText) as MailgunSuccessResponse;
-}
-
-async function isInternalCrmUser(supabase: ReturnType<typeof createClient>, userId: string) {
+async function getNextVersion(
+  supabase: SupabaseAdminClient,
+  table: "project_proposal_invoice_snapshots" | "project_proposal_document_versions",
+  projectId: string
+): Promise<number> {
   const { data, error } = await supabase
-    .from("profiles")
-    .select("id, is_active, user_roles!inner(role)")
-    .eq("id", userId)
-    .in("user_roles.role", ["admin", "staff"])
+    .from(table)
+    .select("version")
+    .eq("project_id", projectId)
+    .order("version", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  if (error) {
-    logError("CRM role lookup failed", { error: sanitizeError(error), user_id: userId });
-    return false;
+  if (error) throw error;
+  return Number(data?.version ?? 0) + 1;
+}
+
+async function findExistingDocumentByPath(
+  supabase: SupabaseAdminClient,
+  storagePath: string
+) {
+  const { data, error } = await supabase
+    .from("project_proposal_document_versions")
+    .select("project_proposal_document_version_id, project_id, source_lead_id, source_floral_proposal_id, invoice_snapshot_id, storage_path, submitted_at")
+    .eq("storage_bucket", FLORAL_PROPOSAL_BUCKET)
+    .eq("storage_path", storagePath)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function resolveProject(
+  supabase: SupabaseAdminClient,
+  mode: SubmissionMode,
+  lead: LeadRow | null,
+  projectId: string | null
+): Promise<string> {
+  if (mode === "project_revision") {
+    if (!projectId) throw new Error("project_id is required for project revisions.");
+    const { data, error } = await supabase
+      .from("projects")
+      .select("project_id")
+      .eq("project_id", projectId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("The selected project could not be found.");
+    return projectId;
   }
 
-  return Boolean(data?.is_active);
+  if (!lead) throw new Error("lead_id is required for initial booking.");
+  if (lead.converted_project_id) return lead.converted_project_id;
+
+  const { data: existingProject, error: existingError } = await supabase
+    .from("projects")
+    .select("project_id")
+    .eq("source_lead_id", lead.lead_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existingProject?.project_id) return String(existingProject.project_id);
+
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({
+      project_name: projectNameFromLead(lead),
+      service_type: lead.service_type,
+      event_type: lead.event_type,
+      event_date: lead.event_date,
+      ceremony_venue_name: lead.ceremony_venue_name,
+      ceremony_venue_city: lead.ceremony_venue_city,
+      ceremony_venue_state: lead.ceremony_venue_state,
+      ceremony_venue_address: lead.ceremony_venue_address,
+      ceremony_venue_zipcode: lead.ceremony_venue_zipcode,
+      reception_venue_name: lead.reception_venue_name,
+      reception_venue_city: lead.reception_venue_city,
+      reception_venue_state: lead.reception_venue_state,
+      reception_venue_address: lead.reception_venue_address,
+      reception_venue_zipcode: lead.reception_venue_zipcode,
+      budget_range: lead.budget_range,
+      guest_count: lead.guest_count,
+      style_notes: lead.inquiry_message,
+      status: "booked",
+      source_lead_id: lead.lead_id,
+      primary_contact_id: lead.converted_primary_contact_id,
+      assigned_user_id: lead.assigned_user_id,
+      booked_at: new Date().toISOString(),
+    })
+    .select("project_id")
+    .single();
+
+  if (error) throw error;
+  return String(data.project_id);
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse(405, { success: false, error: "Method not allowed." });
 
-  let uploadedPdfPath: string | null = null;
-  let createdProposalId: string | null = null;
-  let reusedDraftProposalId: string | null = null;
-  let deactivatedProposalIds: string[] = [];
-
   try {
-    requireEnv("SUPABASE_URL", SUPABASE_URL);
-    requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY);
-    requireEnv("PROPOSAL_ACCESS_SIGNING_KEY", PROPOSAL_ACCESS_SIGNING_KEY);
-    requireEnv("MG_API_KEY", MG_API_KEY);
-    requireEnv("MG_BASE_URL", MG_BASE_URL);
-    requireEnv("MG_DOMAIN", MG_DOMAIN);
-    requireEnv("MG_FROM_EMAIL", MG_FROM_EMAIL);
-    requireEnv("MG_TO_REPLY", MG_TO_REPLY);
-    if (GOTENBERG_URL.trim()) {
-      requireEnv("GOTENBERG_USERNAME", GOTENBERG_USERNAME);
-      requireEnv("GOTENBERG_PASSWORD", GOTENBERG_PASSWORD);
-    }
-
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    if (!token) return jsonResponse(401, { success: false, error: "Missing authorization token." });
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    const user = userData?.user;
-    if (userError || !user) return jsonResponse(401, { success: false, error: "Unable to validate user session." });
-
-    if (!(await isInternalCrmUser(supabase, user.id))) {
-      return jsonResponse(403, { success: false, error: "You do not have permission to submit Floral Proposals." });
-    }
-
-    const body = await req.json() as RequestBody;
-    const requestedProposalId = String(body.floral_proposal_id ?? "").trim() || null;
-    const leadId = String(body.lead_id ?? "").trim();
-    const portalUrl = String(body.portal_url ?? "").trim() || CLIENT_PORTAL_PROPOSAL_URL;
-
-    if (!leadId) return jsonResponse(400, { success: false, error: "Missing lead_id." });
-    if (!portalUrl) return jsonResponse(500, { success: false, error: "Floral Proposal portal URL is not configured." });
-    if (!Array.isArray(body.line_items) || !body.line_items.length) {
-      return jsonResponse(400, { success: false, error: "At least one Floral Proposal line item is required." });
-    }
-
-    const { data: lead, error: leadError } = await supabase
-      .from("leads")
-      .select("lead_id, first_name, last_name, email, service_type, event_type, event_date, status")
-      .eq("lead_id", leadId)
-      .single<LeadRow>();
-
-    if (leadError || !lead) return jsonResponse(404, { success: false, error: "Lead not found." });
-    if (lead.status !== "nurturing" && lead.status !== "proposal_declined") {
-      return jsonResponse(409, { success: false, error: `Cannot submit a Floral Proposal from status ${lead.status}.` });
-    }
-
-    const { data: existingProposals, error: proposalsError } = await supabase
-      .from("floral_proposals")
-      .select("floral_proposal_id, version, is_active, status")
-      .eq("lead_id", leadId)
-      .returns<FloralProposalRow[]>();
-
-    if (proposalsError) throw proposalsError;
-
-    const reusableDraft = requestedProposalId
-      ? (existingProposals ?? []).find((proposal) =>
-          proposal.floral_proposal_id === requestedProposalId &&
-          proposal.is_active &&
-          proposal.status === "draft"
-        ) ?? null
-      : null;
-
-    const proposalVersion = reusableDraft
-      ? reusableDraft.version
-      : (existingProposals ?? []).reduce((max, proposal) => Math.max(max, proposal.version), 0) + 1;
-
-    const pdfBytes = body.pdf_base64
-      ? Uint8Array.from(atob(body.pdf_base64), (char) => char.charCodeAt(0))
-      : await buildStyledPdf(body.render_html, body, lead, proposalVersion);
-
-    uploadedPdfPath = buildStoragePath(leadId, proposalVersion);
-    const { error: uploadError } = await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).upload(uploadedPdfPath, pdfBytes, {
-      contentType: "application/pdf",
-      upsert: false,
-      cacheControl: "3600",
+    requireConfiguration();
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
-    if (uploadError) throw uploadError;
+    const userId = await authenticateCrmUser(req, supabase);
+    const body = (await req.json()) as RequestBody;
 
-    if (!reusableDraft) {
-      deactivatedProposalIds = (existingProposals ?? [])
-        .filter((proposal) => proposal.is_active)
-        .map((proposal) => proposal.floral_proposal_id);
+    const mode = body.mode ?? "initial_booking";
+    if (mode !== "initial_booking" && mode !== "project_revision") {
+      return jsonResponse(400, { success: false, error: "mode must be initial_booking or project_revision." });
     }
 
-    if (deactivatedProposalIds.length) {
-      const { error: deactivateError } = await supabase
-        .from("floral_proposals")
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .in("floral_proposal_id", deactivatedProposalIds);
-      if (deactivateError) throw deactivateError;
+    const floralProposalId = optionalUuid(body.floral_proposal_id);
+    const leadId = optionalUuid(body.lead_id);
+    const projectId = optionalUuid(body.project_id);
+    const pdfStoragePath = requiredString(body.pdf_storage_path, "pdf_storage_path");
+    const pdfFileName = sanitizeFileName(requiredString(body.pdf_file_name, "pdf_file_name"));
+    requiredString(body.idempotency_key, "idempotency_key");
+
+    if (!pdfFileName.toLowerCase().endsWith(".pdf")) {
+      return jsonResponse(400, { success: false, error: "The submitted document must use a .pdf file name." });
     }
 
-    const passcode = generatePasscode();
-    const passcodeHash = await hashPasscode(passcode);
-    const snapshot = {
-      ...(body.snapshot ?? {}),
-      render_contract: body.render_contract ?? null,
-      render_html: body.render_html ?? null,
-      generated_by: "submit-floral-proposal",
-      generated_at: new Date().toISOString(),
-    };
-
-    let proposal: { floral_proposal_id: string; version: number };
-
-    if (reusableDraft) {
-      reusedDraftProposalId = reusableDraft.floral_proposal_id;
-      const { data: updatedProposal, error: proposalUpdateError } = await supabase
-        .from("floral_proposals")
-        .update({
-          template_id: body.template_id ?? null,
-          tax_region_id: body.tax_region_id ?? null,
-          is_active: true,
-          status: "submitted",
-          customer_email: lead.email,
-          passcode_hash: passcodeHash,
-          pdf_storage_path: uploadedPdfPath,
-          subtotal: body.subtotal,
-          tax_rate: body.tax_rate,
-          tax_amount: body.tax_amount,
-          total_amount: body.total_amount,
-          terms_version: body.terms_version ?? "v1",
-          privacy_policy_version: body.privacy_policy_version ?? "v1",
-          snapshot,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("floral_proposal_id", reusableDraft.floral_proposal_id)
-        .select("floral_proposal_id, version")
-        .single<{ floral_proposal_id: string; version: number }>();
-
-      if (proposalUpdateError || !updatedProposal) {
-        throw proposalUpdateError ?? new Error("Unable to submit the existing Floral Proposal draft.");
-      }
-
-      proposal = updatedProposal;
-    } else {
-      const { data: insertedProposal, error: proposalInsertError } = await supabase
-        .from("floral_proposals")
-        .insert({
-          lead_id: leadId,
-          template_id: body.template_id ?? null,
-          tax_region_id: body.tax_region_id ?? null,
-          version: proposalVersion,
-          is_active: true,
-          status: "submitted",
-          customer_email: lead.email,
-          passcode_hash: passcodeHash,
-          pdf_storage_path: uploadedPdfPath,
-          subtotal: body.subtotal,
-          tax_rate: body.tax_rate,
-          tax_amount: body.tax_amount,
-          total_amount: body.total_amount,
-          terms_version: body.terms_version ?? "v1",
-          privacy_policy_version: body.privacy_policy_version ?? "v1",
-          snapshot,
-          created_by: user.id,
-        })
-        .select("floral_proposal_id, version")
-        .single<{ floral_proposal_id: string; version: number }>();
-
-      if (proposalInsertError || !insertedProposal) {
-        throw proposalInsertError ?? new Error("Unable to create Floral Proposal.");
-      }
-
-      proposal = insertedProposal;
-      createdProposalId = insertedProposal.floral_proposal_id;
-
-      const { data: insertedLineItems, error: lineItemError } = await supabase
-        .from("floral_proposal_line_items")
-        .insert(body.line_items.map((lineItem) => ({
-          floral_proposal_id: proposal.floral_proposal_id,
-          display_order: lineItem.display_order,
-          line_item_type: lineItem.line_item_type,
-          item_name: lineItem.item_name,
-          quantity: lineItem.quantity,
-          unit_price: lineItem.unit_price,
-          subtotal: lineItem.subtotal,
-          description: lineItem.description ?? null,
-          image_storage_path: lineItem.image_storage_path ?? null,
-          image_alt_text: lineItem.image_alt_text ?? null,
-          image_caption: lineItem.image_caption ?? null,
-          notes: lineItem.notes ?? null,
-          snapshot: lineItem.snapshot ?? {},
-        })))
-        .select("floral_proposal_line_item_id, display_order");
-
-      if (lineItemError) throw lineItemError;
-
-      const lineItemIdsByOrder = new Map<number, string>();
-      for (const row of insertedLineItems ?? []) {
-        lineItemIdsByOrder.set(row.display_order, row.floral_proposal_line_item_id);
-      }
-
-      const componentRows = body.line_items.flatMap((lineItem) => {
-        const lineItemId = lineItemIdsByOrder.get(lineItem.display_order);
-        if (!lineItemId) return [];
-        return (lineItem.components ?? []).map((component) => ({
-          floral_proposal_line_item_id: lineItemId,
-          display_order: component.display_order,
-          catalog_item_id: component.catalog_item_id ?? null,
-          catalog_item_name: component.catalog_item_name,
-          quantity_per_unit: component.quantity_per_unit,
-          extended_quantity: component.extended_quantity,
-          base_unit_cost: component.base_unit_cost,
-          applied_markup_percent: component.applied_markup_percent,
-          sell_unit_price: component.sell_unit_price,
-          subtotal: component.subtotal,
-          reserve_percent: component.reserve_percent ?? 0,
-          snapshot: component.snapshot ?? {},
-        }));
+    const existingDocument = await findExistingDocumentByPath(supabase, pdfStoragePath);
+    if (existingDocument) {
+      return jsonResponse(200, {
+        success: true,
+        project_id: existingDocument.project_id,
+        lead_id: existingDocument.source_lead_id,
+        floral_proposal_id: existingDocument.source_floral_proposal_id,
+        proposal_document_version_id: existingDocument.project_proposal_document_version_id,
+        active_invoice_snapshot_id: existingDocument.invoice_snapshot_id,
+        signed_pdf_storage_path: existingDocument.storage_path,
+        submitted_at: existingDocument.submitted_at,
       });
-
-      if (componentRows.length) {
-        const { error: componentError } = await supabase.from("floral_proposal_components").insert(componentRows);
-        if (componentError) throw componentError;
-      }
-
-      if (body.shopping_list_items?.length) {
-        const { data: shoppingList, error: shoppingListError } = await supabase
-          .from("floral_proposal_shopping_lists")
-          .insert({ floral_proposal_id: proposal.floral_proposal_id, status: "generated" })
-          .select("floral_proposal_shopping_list_id")
-          .single<{ floral_proposal_shopping_list_id: string }>();
-
-        if (shoppingListError || !shoppingList) {
-          throw shoppingListError ?? new Error("Unable to create shopping list.");
-        }
-
-        const { error: shoppingListItemsError } = await supabase.from("floral_proposal_shopping_list_items").insert(
-          body.shopping_list_items.map((item) => ({
-            floral_proposal_shopping_list_id: shoppingList.floral_proposal_shopping_list_id,
-            vendor_id: item["vendor_id"] ?? null,
-            vendor_item_pack_id: item["vendor_item_pack_id"] ?? null,
-            catalog_item_id: item["catalog_item_id"] ?? null,
-            item_name: item["item_name"],
-            item_type: item["item_type"],
-            unit_type: item["unit_type"],
-            required_units: item["required_units"],
-            reserve_percent: item["reserve_percent"] ?? 0,
-            reserve_units: item["reserve_units"] ?? 0,
-            total_units_to_buy: item["total_units_to_buy"] ?? item["required_units"] ?? 0,
-            units_per_pack: item["units_per_pack"] ?? null,
-            required_pack_count: item["required_pack_count"] ?? null,
-            estimated_pack_cost: item["estimated_pack_cost"] ?? null,
-            total_estimated_cost: item["total_estimated_cost"] ?? null,
-            notes: item["notes"] ?? null,
-          })),
-        );
-        if (shoppingListItemsError) throw shoppingListItemsError;
-      }
     }
 
-    const emailSubject = buildClientSubject(lead, proposal.version);
-    const emailText = buildClientText(lead, proposal.version, passcode, portalUrl, body.total_amount);
-    const emailHtml = buildClientHtml(lead, proposal.version, passcode, portalUrl, body.total_amount);
+    const pdf = await verifyStoredPdf(supabase, pdfStoragePath);
 
-    const { data: emailMessage, error: emailMessageError } = await supabase
-      .from("email_messages")
-      .insert({
-        related_table: "floral_proposals",
-        related_id: proposal.floral_proposal_id,
-        inquiry_type: "floral_proposal",
-        provider: "mailgun",
-        to_email: lead.email,
-        to_name: `${lead.first_name} ${lead.last_name}`.trim(),
-        from_email: MG_FROM_EMAIL,
-        reply_to_email: MG_TO_REPLY,
-        subject: emailSubject,
-        template_key: "client_floral_proposal_notification",
-        message_role: "client_proposal_access",
-        status: "pending",
-        tags: ["floral-proposal", "client-notification"],
-        metadata: {
-          lead_id: lead.lead_id,
-          floral_proposal_id: proposal.floral_proposal_id,
-          floral_proposal_version: proposal.version,
-          proposal_total: body.total_amount,
-          portal_url: portalUrl,
-        },
-      })
-      .select("email_message_id")
-      .single<EmailMessageRow>();
+    const { data: proposal, error: proposalError } = floralProposalId
+      ? await supabase
+        .from("floral_proposals")
+        .select("floral_proposal_id, lead_id, version, subtotal, tax_rate, tax_amount, total_amount, retainer_amount, final_balance_amount, retainer_due_date, final_balance_due_date, snapshot")
+        .eq("floral_proposal_id", floralProposalId)
+        .maybeSingle()
+      : { data: null, error: null };
 
-    if (emailMessageError || !emailMessage) {
-      throw emailMessageError ?? new Error("Unable to create floral proposal email log row.");
+    if (proposalError) throw proposalError;
+    if (floralProposalId && !proposal) {
+      return jsonResponse(422, { success: false, error: "The selected floral proposal could not be found." });
     }
 
-    try {
-      const mailgunResponse = await sendMailgunMessage({
-        to: lead.email,
-        subject: emailSubject,
-        text: emailText,
-        html: emailHtml,
-        replyTo: MG_TO_REPLY,
-      });
+    const resolvedLeadId = leadId ?? (proposal as ProposalRow | null)?.lead_id ?? null;
+    const { data: lead, error: leadError } = resolvedLeadId
+      ? await supabase
+        .from("leads")
+        .select("lead_id, service_type, event_type, first_name, last_name, partner_first_name, partner_last_name, email, phone, event_date, ceremony_venue_name, ceremony_venue_city, ceremony_venue_state, ceremony_venue_address, ceremony_venue_zipcode, reception_venue_name, reception_venue_city, reception_venue_state, reception_venue_address, reception_venue_zipcode, budget_range, guest_count, inquiry_message, status, assigned_user_id, converted_project_id, converted_primary_contact_id")
+        .eq("lead_id", resolvedLeadId)
+        .maybeSingle()
+      : { data: null, error: null };
 
-      const normalizedProviderMessageId = normalizeProviderMessageId(mailgunResponse.id);
-      const emailAcceptedAt = new Date().toISOString();
-      const { error: emailUpdateError } = await supabase
-        .from("email_messages")
-        .update({
-          provider_message_id: normalizedProviderMessageId,
-          status: "accepted",
-          sent_at: emailAcceptedAt,
-          accepted_at: emailAcceptedAt,
-          last_event_at: emailAcceptedAt,
-        })
-        .eq("email_message_id", emailMessage.email_message_id);
-
-      if (emailUpdateError) throw emailUpdateError;
-    } catch (emailError) {
-      const failedAt = new Date().toISOString();
-      await supabase
-        .from("email_messages")
-        .update({
-          status: "failed",
-          failure_reason: emailError instanceof Error ? emailError.message : "Floral proposal email send failed.",
-          failed_at: failedAt,
-          last_event_at: failedAt,
-        })
-        .eq("email_message_id", emailMessage.email_message_id);
-      throw emailError;
+    if (leadError) throw leadError;
+    if (mode === "initial_booking" && !lead) {
+      return jsonResponse(422, { success: false, error: "The selected lead could not be found." });
     }
+
+    const bookedProjectId = await resolveProject(
+      supabase,
+      mode,
+      lead as LeadRow | null,
+      projectId
+    );
+
+    const version = await getNextVersion(supabase, "project_proposal_invoice_snapshots", bookedProjectId);
+    const proposalRow = proposal as ProposalRow | null;
+
+    await supabase
+      .from("project_proposal_invoice_snapshots")
+      .update({ is_active: false })
+      .eq("project_id", bookedProjectId)
+      .eq("is_active", true);
+
+    await supabase
+      .from("project_proposal_document_versions")
+      .update({ is_active: false })
+      .eq("project_id", bookedProjectId)
+      .eq("is_active", true);
 
     const now = new Date().toISOString();
-    const { error: leadUpdateError } = await supabase.from("leads").update({ status: "proposal_submitted", updated_at: now }).eq("lead_id", leadId);
-    if (leadUpdateError) throw leadUpdateError;
+    const snapshotBody = {
+      ...(proposalRow?.snapshot ?? {}),
+      submitted_pdf_file_name: pdfFileName,
+      submitted_pdf_storage_path: pdfStoragePath,
+      submitted_at: now,
+      submission_mode: mode,
+    };
 
-    const { error: activityError } = await supabase.from("lead_activity").insert({
-      lead_id: leadId,
-      activity_type: "status_changed",
-      activity_label: `Floral Proposal v${proposal.version} submitted`,
-      activity_description: "A Floral Proposal was generated, stored, and emailed to the client.",
-      performed_by: user.id,
-      metadata: {
-        floral_proposal_id: proposal.floral_proposal_id,
-        floral_proposal_version: proposal.version,
-        previous_status: lead.status,
-        next_status: "proposal_submitted",
-        customer_email: lead.email,
-        pdf_storage_path: uploadedPdfPath,
-        render_html_supplied: Boolean(body.render_html),
-        pdf_supplied: Boolean(body.pdf_base64),
-      },
-    });
-    if (activityError) throw activityError;
+    const { data: snapshot, error: snapshotError } = await supabase
+      .from("project_proposal_invoice_snapshots")
+      .insert({
+        project_id: bookedProjectId,
+        source_lead_id: (lead as LeadRow | null)?.lead_id ?? null,
+        source_floral_proposal_id: proposalRow?.floral_proposal_id ?? null,
+        version,
+        snapshot: snapshotBody,
+        subtotal: proposalRow?.subtotal ?? 0,
+        tax_rate: proposalRow?.tax_rate ?? 0,
+        tax_amount: proposalRow?.tax_amount ?? 0,
+        total_amount: proposalRow?.total_amount ?? 0,
+        retainer_amount: proposalRow?.retainer_amount ?? 0,
+        final_balance_amount: proposalRow?.final_balance_amount ?? proposalRow?.total_amount ?? 0,
+        retainer_due_date: proposalRow?.retainer_due_date ?? null,
+        final_balance_due_date: proposalRow?.final_balance_due_date ?? null,
+        created_by: userId,
+        is_active: true,
+      })
+      .select("project_proposal_invoice_snapshot_id")
+      .single();
 
-    logInfo("Floral Proposal submission completed", {
-      floral_proposal_id: proposal.floral_proposal_id,
-      lead_id: leadId,
-      version: proposal.version,
-      draft_reused: Boolean(reusableDraft),
-    });
-    return jsonResponse(200, { success: true, floral_proposal_id: proposal.floral_proposal_id, version: proposal.version });
-  } catch (error) {
-    logError("Floral Proposal submission failed", {
-      error: sanitizeError(error),
-      uploaded_pdf_path: uploadedPdfPath,
-      created_floral_proposal_id: createdProposalId,
-      reused_draft_proposal_id: reusedDraftProposalId,
-      deactivated_proposal_ids: deactivatedProposalIds,
-    });
-    try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      if (createdProposalId) await supabase.from("floral_proposals").delete().eq("floral_proposal_id", createdProposalId);
-      if (reusedDraftProposalId) {
-        await supabase
-          .from("floral_proposals")
-          .update({
-            status: "draft",
-            passcode_hash: "draft",
-            pdf_storage_path: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("floral_proposal_id", reusedDraftProposalId);
-      }
-      if (deactivatedProposalIds.length) {
-        await supabase
-          .from("floral_proposals")
-          .update({ is_active: true, updated_at: new Date().toISOString() })
-          .in("floral_proposal_id", deactivatedProposalIds);
-      }
-      if (uploadedPdfPath) await supabase.storage.from(FLORAL_PROPOSAL_BUCKET).remove([uploadedPdfPath]);
-    } catch (rollbackError) {
-      logError("Rollback failed", { error: sanitizeError(rollbackError) });
+    if (snapshotError) throw snapshotError;
+
+    const { data: documentVersion, error: documentError } = await supabase
+      .from("project_proposal_document_versions")
+      .insert({
+        project_id: bookedProjectId,
+        source_lead_id: (lead as LeadRow | null)?.lead_id ?? null,
+        source_floral_proposal_id: proposalRow?.floral_proposal_id ?? null,
+        invoice_snapshot_id: snapshot.project_proposal_invoice_snapshot_id,
+        version,
+        file_name: pdfFileName,
+        storage_bucket: FLORAL_PROPOSAL_BUCKET,
+        storage_path: pdfStoragePath,
+        content_type: pdf.contentType,
+        file_size_bytes: pdf.size,
+        uploaded_by: userId,
+        submitted_at: now,
+        is_active: true,
+      })
+      .select("project_proposal_document_version_id")
+      .single();
+
+    if (documentError) throw documentError;
+
+    const { error: projectUpdateError } = await supabase
+      .from("projects")
+      .update({
+        status: "booked",
+        booked_at: now,
+        active_proposal_invoice_snapshot_id: snapshot.project_proposal_invoice_snapshot_id,
+        active_proposal_document_version_id: documentVersion.project_proposal_document_version_id,
+        updated_at: now,
+      })
+      .eq("project_id", bookedProjectId);
+
+    if (projectUpdateError) throw projectUpdateError;
+
+    if (mode === "initial_booking" && lead) {
+      const { error: leadUpdateError } = await supabase
+        .from("leads")
+        .update({
+          status: "converted",
+          converted_project_id: bookedProjectId,
+          converted_primary_contact_id: lead.converted_primary_contact_id,
+          converted_at: now,
+          updated_at: now,
+        })
+        .eq("lead_id", lead.lead_id);
+
+      if (leadUpdateError) throw leadUpdateError;
     }
 
-    return jsonResponse(500, { success: false, error: error instanceof Error ? error.message : "Floral Proposal submission failed." });
+    if (proposalRow) {
+      await supabase
+        .from("floral_proposals")
+        .update({
+          status: "accepted",
+          submitted_at: now,
+          submitted_by: userId,
+          finalized_snapshot: snapshotBody,
+          updated_at: now,
+        })
+        .eq("floral_proposal_id", proposalRow.floral_proposal_id);
+    }
+
+    return jsonResponse(200, {
+      success: true,
+      project_id: bookedProjectId,
+      lead_id: (lead as LeadRow | null)?.lead_id ?? null,
+      floral_proposal_id: proposalRow?.floral_proposal_id ?? null,
+      proposal_document_version_id: documentVersion.project_proposal_document_version_id,
+      active_invoice_snapshot_id: snapshot.project_proposal_invoice_snapshot_id,
+      signed_pdf_storage_path: pdfStoragePath,
+      submitted_at: now,
+    });
+  } catch (error) {
+    if (error instanceof Response) {
+      return jsonResponse(error.status, { success: false, error: await error.text() });
+    }
+
+    const message = error instanceof Error ? error.message : "Submission failed.";
+    const status = /required|malformed|pdf|document|empty|corrupt|password|storage limit/i.test(message)
+      ? 400
+      : /not found|eligible/i.test(message)
+        ? 422
+        : 500;
+
+    console.error(JSON.stringify({ level: "ERROR", function: "submit-floral-proposal", message }));
+    return jsonResponse(status, { success: false, error: message });
   }
 });

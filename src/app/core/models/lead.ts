@@ -15,9 +15,13 @@ export interface Lead {
   ceremony_venue_name?: string | null;
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
+  ceremony_venue_address?: string | null;
+  ceremony_venue_zipcode?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
+  reception_venue_address?: string | null;
+  reception_venue_zipcode?: string | null;
   ceremony_start_time?: string | null;
   reception_start_time?: string | null;
   event_start_time?: string | null;

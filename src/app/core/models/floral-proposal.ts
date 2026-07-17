@@ -1,5 +1,5 @@
 import { CatalogItemType, CatalogUnitType } from './catalog-item';
-import { ProposalRendererKey } from '../proposal-templates/proposal-renderer-registry';
+import { ProposalRendererKey } from '../proposal-templates/proposal-renderer.types';
 
 export type FloralProposalStatus =
   | 'draft'
@@ -46,6 +46,7 @@ export interface FloralProposalRenderLeadContext {
 }
 
 export interface FloralProposalRenderTemplateContext {
+  // Export-rendering metadata only. The florist no longer selects a proposal template in the CRM.
   template_id?: string | null;
   name?: string | null;
   template_key?: string | null;
@@ -138,6 +139,7 @@ export interface FloralProposalRenderContract {
 }
 
 export interface DocumentTemplate {
+  // Retained for internal export rendering and historical records, not active proposal authoring.
   template_id: string;
   name: string;
   template_key: string;
@@ -168,30 +170,26 @@ export interface GrapesJsStoredTemplateConfig {
 export interface FloralProposal {
   floral_proposal_id: string;
   lead_id: string;
+  // Legacy linkage retained for historical proposal records only.
   template_id?: string | null;
   tax_region_id?: string | null;
   version: number;
   is_active: boolean;
   status: FloralProposalStatus;
   customer_email: string;
-  pdf_storage_path?: string | null;
-  pdf_url?: string | null;
-  signed_url?: string | null;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;
   total_amount: number;
+  final_balance_amount?: number;
+  retainer_amount?: number;
+  final_balance_due_date?: string | null;
+  retainer_due_date?: string | null;
   terms_version: string;
   privacy_policy_version: string;
-  accepted_terms: boolean;
-  accepted_privacy_policy: boolean;
-  accepted_at?: string | null;
-  declined_at?: string | null;
-  signed_at?: string | null;
-  signature_name?: string | null;
-  signature_ip?: string | null;
-  signature_user_agent?: string | null;
-  decline_feedback?: string | null;
+  finalized_at?: string | null;
+  edit_reopened_at?: string | null;
+  submitted_at?: string | null;
   snapshot: Record<string, unknown>;
   created_by?: string | null;
   created_at: string;
@@ -265,21 +263,24 @@ export interface FloralProposalShoppingListItem {
 
 export interface CreateFloralProposalInput {
   lead_id: string;
-  template_id?: string | null;
   tax_region_id?: string | null;
   version: number;
   is_active?: boolean;
   status?: FloralProposalStatus;
   customer_email: string;
-  passcode_hash: string;
-  pdf_storage_path?: string | null;
-  pdf_url?: string | null;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;
   total_amount: number;
+  final_balance_amount?: number;
+  retainer_amount?: number;
+  final_balance_due_date?: string | null;
+  retainer_due_date?: string | null;
   terms_version?: string;
   privacy_policy_version?: string;
+  finalized_at?: string | null;
+  edit_reopened_at?: string | null;
+  submitted_at?: string | null;
   snapshot?: Record<string, unknown>;
   created_by?: string | null;
 }

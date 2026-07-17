@@ -43,7 +43,7 @@
             <p class="mt-1 text-sm text-stone-600">
               {{ lead.service_type | titlecase }}
               <ng-container *ngIf="lead.event_date">
-                • {{ lead.event_date | date: 'MMM d, y' }}
+                • {{ formatEventDate(lead.event_date) }}
               </ng-container>
             </p>
           </div>

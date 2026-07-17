@@ -13,6 +13,8 @@ export class SupabaseService {
     const supabaseUrl = environment.supabaseUrl;
     const supabaseAnonKey = environment.supabaseAnonKey;
     const isBrowser = isPlatformBrowser(platformId);
+    const isSyntheticTestConfig =
+      supabaseUrl === 'https://example.supabase.co' || supabaseAnonKey === 'test-anon-key';
 
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(
@@ -22,9 +24,9 @@ export class SupabaseService {
 
     this.client = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        persistSession: isBrowser,
-        autoRefreshToken: isBrowser,
-        detectSessionInUrl: isBrowser,
+        persistSession: isBrowser && !isSyntheticTestConfig,
+        autoRefreshToken: isBrowser && !isSyntheticTestConfig,
+        detectSessionInUrl: isBrowser && !isSyntheticTestConfig,
       }
     });
   }

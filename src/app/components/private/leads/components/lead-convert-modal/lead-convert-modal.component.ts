@@ -11,6 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Lead } from '../../../../../core/models/lead';
 import { LeadConversionService } from '../../../../../core/supabase/services/lead-conversion.service';
+import { formatDateOnlyForDisplay } from '../../../../../core/utils/date-only';
 
 export interface LeadConvertPayload {
   project_name: string;
@@ -68,6 +69,14 @@ export class LeadConvertModalComponent {
 
   get hasPlannerContact(): boolean {
     return !!this.lead?.planner_name?.trim() || !!this.lead?.planner_email?.trim() || !!this.lead?.planner_phone?.trim();
+  }
+
+  formatEventDate(value: string | null | undefined): string {
+    return formatDateOnlyForDisplay(value, '', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
   private hydrateForm(): void {

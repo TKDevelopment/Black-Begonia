@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { FloralProposal } from '../../../../../core/models/floral-proposal';
 import { FloralProposalResponseSummary } from '../../../../../core/models/floral-proposal';
@@ -13,38 +12,40 @@ import { FloralProposalResponseSummary } from '../../../../../core/models/floral
   styleUrl: './lead-proposal-history-card.component.scss',
 })
 export class LeadProposalHistoryCardComponent {
-  private sanitizer = inject(DomSanitizer);
-
   @Input() proposals: FloralProposal[] = [];
   @Input() selectedProposalId: string | null = null;
   @Input() proposalResponses: Record<string, FloralProposalResponseSummary[]> = {};
   @Input() resending = false;
   @Input() canSubmitProposal = false;
-  @Input() canResendProposal = true;
 
   @Output() selectProposal = new EventEmitter<string>();
-  @Output() openProposal = new EventEmitter<string>();
-  @Output() resendProposal = new EventEmitter<string>();
   @Output() submitProposal = new EventEmitter<void>();
 
+  readonly sortedProposals = computed(() =>
+    [...this.proposals].sort((left, right) => {
+      const rightSubmittedAt = this.toTimestamp(right.submitted_at ?? right.created_at);
+      const leftSubmittedAt = this.toTimestamp(left.submitted_at ?? left.created_at);
+      if (rightSubmittedAt !== leftSubmittedAt) {
+        return rightSubmittedAt - leftSubmittedAt;
+      }
+
+      return right.version - left.version;
+    })
+  );
+
   selectedProposal = computed(() => {
-    if (!this.proposals.length) return null;
+    if (!this.sortedProposals().length) return null;
 
     if (this.selectedProposalId) {
       return (
-        this.proposals.find(
+        this.sortedProposals().find(
           (proposal) => proposal.floral_proposal_id === this.selectedProposalId
-        ) ?? this.proposals[0]
+        ) ?? this.sortedProposals()[0]
       );
     }
 
-    return this.proposals[0];
+    return this.sortedProposals()[0];
   });
-
-  getPreviewUrl(url: string | null | undefined): SafeResourceUrl | null {
-    if (!url) return null;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
-  }
 
   formatDateTime(value: string): string {
     return new Intl.DateTimeFormat('en-US', {
@@ -64,18 +65,14 @@ export class LeadProposalHistoryCardComponent {
     this.selectProposal.emit(proposalId);
   }
 
-  onOpen(url: string | null | undefined): void {
-    if (!url) return;
-    this.openProposal.emit(url);
-  }
-
-  onResend(proposalId: string): void {
-    if (!this.canResendProposal) return;
-    this.resendProposal.emit(proposalId);
-  }
-
   onSubmitProposal(): void {
     this.submitProposal.emit();
+  }
+
+  private toTimestamp(value: string | null | undefined): number {
+    if (!value) return 0;
+    const timestamp = new Date(value).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
   }
 }
 

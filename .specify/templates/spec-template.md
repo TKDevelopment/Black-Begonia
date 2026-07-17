@@ -10,18 +10,8 @@
 
 ## User Scenarios & Testing *(mandatory)*
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
-
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+User stories MUST be prioritized as independently testable journeys. Assign
+priorities as P1, P2, P3, etc., where P1 is the most critical.
 
 ### User Story 1 - [Brief Title] (Priority: P1)
 
@@ -29,7 +19,7 @@
 
 **Why this priority**: [Explain the value and why it has this priority level]
 
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**Independent Test**: [Describe how this can be tested independently]
 
 **Acceptance Scenarios**:
 
@@ -70,33 +60,53 @@
 
 ### Edge Cases
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
-
 - What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- How does the system handle [error scenario]?
 
 ## Requirements *(mandatory)*
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
-
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**: System MUST [specific capability]
+- **FR-002**: System MUST [specific capability]
+- **FR-003**: Users MUST be able to [key interaction]
+- **FR-004**: System MUST [data requirement]
+- **FR-005**: System MUST [behavior]
 
 *Example of marking unclear requirements:*
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
+- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+
+### Constitution Alignment *(mandatory)*
+
+- **Surface**: Feature MUST identify whether it affects the public website,
+  client portal, CRM admin portal, Supabase backend, or cross-cutting code.
+- **Product Owner Approval**: If public website behavior, content, styling,
+  SEO, routing, or forms are affected, approval MUST be recorded before
+  implementation.
+- **Brownfield Preservation**: Feature MUST list existing functionality that is
+  intentionally preserved and any workflows that are explicitly authorized for
+  refactor or removal.
+- **Supabase Security**: Data features MUST define affected tables, RLS policy
+  expectations, storage policy expectations, and edge-function access paths.
+- **Schema Migration**: Every new or modified Supabase table MUST identify the
+  executable SQL migration that updates an existing environment; declarative
+  table definitions alone are not sufficient.
+- **Standalone Edge Functions**: Any affected Supabase Edge Function MUST be
+  independently deployable without an `_shared` directory, local shared
+  function module, or import from another edge function.
+- **Testing Expectations**: Feature MUST state unit-test coverage expectations
+  and whether proposal, lead, inquiry, or authorization integration checks are
+  required.
+- **Sensitive Data**: Feature MUST describe handling for customer data, emails,
+  passcodes, signatures, proposal PDFs, secrets, and payment-related records.
+- **Proposal Workflow**: Proposal features MUST state whether they preserve the
+  invoice/planning workflow, manual Canva PDF upload path, and future payment
+  or reporting data needs.
+- **Git Publication**: AI agents MUST NOT run `git commit`, `git push`, or
+  commit/push-capable automation. Commit and push actions MUST remain human
+  operator responsibilities.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -105,27 +115,16 @@
 
 ## Success Criteria *(mandatory)*
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
-
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: [Measurable metric]
+- **SC-002**: [Measurable metric]
+- **SC-003**: [User or operational success metric]
+- **SC-004**: [Business metric]
 
 ## Assumptions
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right assumptions based on reasonable defaults
-  chosen when the feature description did not specify certain details.
--->
-
-- [Assumption about target users, e.g., "Users have stable internet connectivity"]
-- [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
-- [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
-- [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+- [Assumption about target users]
+- [Assumption about scope boundaries]
+- [Assumption about data/environment]
+- [Dependency on existing system/service]

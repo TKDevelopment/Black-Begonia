@@ -16,17 +16,6 @@ import { SupabaseService } from '../clients/supabase.service';
 export class FloralProposalRepositoryService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  private normalizeProposal(row: any): FloralProposal {
-    const template = Array.isArray(row?.template)
-      ? row.template[0] ?? null
-      : row?.template ?? null;
-
-    return {
-      ...row,
-      template,
-    } as FloralProposal;
-  }
-
   private readonly proposalSelect = `
     floral_proposal_id,
     lead_id,
@@ -36,39 +25,23 @@ export class FloralProposalRepositoryService {
     is_active,
     status,
     customer_email,
-    pdf_storage_path,
-    pdf_url,
     subtotal,
     tax_rate,
     tax_amount,
     total_amount,
+    final_balance_amount,
+    retainer_amount,
+    final_balance_due_date,
+    retainer_due_date,
     terms_version,
     privacy_policy_version,
-    accepted_terms,
-    accepted_privacy_policy,
-    accepted_at,
-    declined_at,
-    signed_at,
-    signature_name,
-    signature_ip,
-    signature_user_agent,
-    decline_feedback,
+    finalized_at,
+    edit_reopened_at,
+    submitted_at,
     snapshot,
     created_by,
     created_at,
-    updated_at,
-    template:document_templates (
-      template_id,
-      name,
-      template_key,
-      template_kind,
-      is_active,
-      logo_storage_path,
-      logo_url,
-      template_config,
-      created_at,
-      updated_at
-    )
+    updated_at
   `;
 
   private readonly lineItemSelect = `
@@ -121,7 +94,7 @@ export class FloralProposalRepositoryService {
       return [];
     }
 
-    return (data ?? []).map((row) => this.normalizeProposal(row));
+    return (data ?? []) as FloralProposal[];
   }
   async getLeadFloralProposals(leadId: string): Promise<FloralProposal[]> {
     const { data, error } = await this.supabaseService
@@ -139,7 +112,7 @@ export class FloralProposalRepositoryService {
       return [];
     }
 
-    return (data ?? []).map((row) => this.normalizeProposal(row));
+    return this.sortLeadProposals((data ?? []) as FloralProposal[]);
   }
 
   async getFloralProposalById(
@@ -160,7 +133,31 @@ export class FloralProposalRepositoryService {
       return null;
     }
 
-    return data ? this.normalizeProposal(data) : null;
+    return (data as FloralProposal | null) ?? null;
+  }
+
+  private sortLeadProposals(proposals: FloralProposal[]): FloralProposal[] {
+    return [...proposals].sort((left, right) => {
+      const rightSubmittedAt = this.toSortableTimestamp(right.submitted_at);
+      const leftSubmittedAt = this.toSortableTimestamp(left.submitted_at);
+      if (rightSubmittedAt !== leftSubmittedAt) {
+        return rightSubmittedAt - leftSubmittedAt;
+      }
+
+      const rightUpdatedAt = this.toSortableTimestamp(right.updated_at);
+      const leftUpdatedAt = this.toSortableTimestamp(left.updated_at);
+      if (rightUpdatedAt !== leftUpdatedAt) {
+        return rightUpdatedAt - leftUpdatedAt;
+      }
+
+      return right.version - left.version;
+    });
+  }
+
+  private toSortableTimestamp(value: string | null | undefined): number {
+    if (!value) return 0;
+    const timestamp = new Date(value).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
   }
 
   async getActiveLeadFloralProposal(leadId: string): Promise<FloralProposal | null> {
@@ -182,7 +179,7 @@ export class FloralProposalRepositoryService {
       return null;
     }
 
-    return data ? this.normalizeProposal(data) : null;
+    return (data as FloralProposal | null) ?? null;
   }
 
   async getFloralProposalLineItems(
@@ -245,21 +242,24 @@ export class FloralProposalRepositoryService {
       .from('floral_proposals')
       .insert({
         lead_id: payload.lead_id,
-        template_id: payload.template_id ?? null,
         tax_region_id: payload.tax_region_id ?? null,
         version: payload.version,
         is_active: payload.is_active ?? true,
         status: payload.status ?? 'draft',
         customer_email: payload.customer_email,
-        passcode_hash: payload.passcode_hash,
-        pdf_storage_path: payload.pdf_storage_path ?? null,
-        pdf_url: payload.pdf_url ?? null,
         subtotal: payload.subtotal,
         tax_rate: payload.tax_rate,
         tax_amount: payload.tax_amount,
         total_amount: payload.total_amount,
+        final_balance_amount: payload.final_balance_amount ?? payload.total_amount,
+        retainer_amount: payload.retainer_amount ?? Number((payload.total_amount * 0.3).toFixed(2)),
+        final_balance_due_date: payload.final_balance_due_date ?? null,
+        retainer_due_date: payload.retainer_due_date ?? null,
         terms_version: payload.terms_version ?? 'v1',
         privacy_policy_version: payload.privacy_policy_version ?? 'v1',
+        finalized_at: payload.finalized_at ?? null,
+        edit_reopened_at: payload.edit_reopened_at ?? null,
+        submitted_at: payload.submitted_at ?? null,
         snapshot: payload.snapshot ?? {},
         created_by: payload.created_by ?? null,
       })
@@ -274,7 +274,7 @@ export class FloralProposalRepositoryService {
       throw error;
     }
 
-    return this.normalizeProposal(data);
+    return data as FloralProposal;
   }
 
   async updateFloralProposal(
@@ -300,7 +300,7 @@ export class FloralProposalRepositoryService {
       throw error;
     }
 
-    return this.normalizeProposal(data);
+    return data as FloralProposal;
   }
 
   async replaceFloralProposalLineItems(

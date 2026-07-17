@@ -1,35 +1,12 @@
 import { Routes } from '@angular/router';
 import { PublicLayoutComponent } from './core/layouts/public-layout/public-layout.component';
 import { PrivateLayoutComponent } from './core/layouts/private-layout/private-layout.component';
-import { ProposalAccessLayoutComponent } from './core/layouts/proposal-access-layout/proposal-access-layout.component';
 import { LandingComponent } from './components/public/landing/landing.component';
 import { authGuard, authChildGuard } from './core/guards/auth.guard';
 import { adminRoleGuard, adminRoleChildGuard } from './core/guards/admin-role.guard';
 import { guestGuard } from './core/guards/guest.guard';
-import { proposalAccessGuard } from './core/guards/proposal-access.guard';
 
 export const routes: Routes = [
-  {
-    path: 'proposal',
-    component: ProposalAccessLayoutComponent,
-    children: [
-      {
-        path: 'auth',
-        loadComponent: () =>
-          import('./components/proposal-access/proposal-auth/proposal-auth.component').then(
-            m => m.ProposalAuthComponent
-          ),
-      },
-      {
-        path: 'review',
-        canActivate: [proposalAccessGuard],
-        loadComponent: () =>
-          import('./components/proposal-access/proposal-review/proposal-review.component').then(
-            m => m.ProposalReviewComponent
-          ),
-      },
-    ],
-  },
   {
     path: '',
     component: PublicLayoutComponent,
@@ -188,20 +165,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'proposal-templates',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/proposal-templates.component').then(
-            m => m.ProposalTemplatesComponent
-          ),
-      },
-      {
-        path: 'proposal-templates/:templateId/studio',
-        loadComponent: () =>
-          import('./components/private/proposal-templates/template-studio/proposal-template-studio.component').then(
-            m => m.ProposalTemplateStudioComponent
-          ),
-      },
-      {
         path: 'leads/:leadId',
         loadComponent: () =>
           import('./components/private/leads/lead-detail/lead-detail.component').then(m => m.LeadDetailComponent),
@@ -277,7 +240,10 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '',
+    loadComponent: () =>
+      import('./components/public/not-found/not-found.component').then(
+        m => m.NotFoundComponent
+      ),
   },
 ];
 

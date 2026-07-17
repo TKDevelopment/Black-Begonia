@@ -16,10 +16,12 @@ export interface Project {
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
   ceremony_venue_address?: string | null;
+  ceremony_venue_zipcode?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
   reception_venue_address?: string | null;
+  reception_venue_zipcode?: string | null;
   budget_range?: string | null;
   guest_count?: number | null;
   style_notes?: string | null;
@@ -28,6 +30,8 @@ export interface Project {
   source_lead_id?: string | null;
   primary_contact_id?: string | null;
   assigned_user_id?: string | null;
+  active_proposal_invoice_snapshot_id?: string | null;
+  active_proposal_document_version_id?: string | null;
   booked_at?: string | null;
   completed_at?: string | null;
   canceled_at?: string | null;
@@ -44,10 +48,12 @@ export interface CreateProjectInput {
   ceremony_venue_city?: string | null;
   ceremony_venue_state?: string | null;
   ceremony_venue_address?: string | null;
+  ceremony_venue_zipcode?: string | null;
   reception_venue_name?: string | null;
   reception_venue_city?: string | null;
   reception_venue_state?: string | null;
   reception_venue_address?: string | null;
+  reception_venue_zipcode?: string | null;
   budget_range?: string | null;
   guest_count?: number | null;
   style_notes?: string | null;
@@ -56,4 +62,6 @@ export interface CreateProjectInput {
   source_lead_id?: string | null;
   primary_contact_id?: string | null;
   assigned_user_id?: string | null;
+  active_proposal_invoice_snapshot_id?: string | null;
+  active_proposal_document_version_id?: string | null;
 }

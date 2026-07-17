@@ -5,7 +5,7 @@
         <h3 class="font-cormorant text-3xl text-stone-900">Floral Proposals</h3>
       </div>
       <p class="mt-2 text-sm leading-6 text-stone-600">
-        Review current and past Floral Proposal versions attached to this lead, including client responses.
+        Review current and past internal Floral Proposal invoice versions attached to this lead.
       </p>
     </div>
 
@@ -19,29 +19,10 @@
         Generate New Floral Proposal
       </button>
 
-      <button
-        *ngIf="selectedProposal()?.is_active && canResendProposal"
-        type="button"
-        (click)="onResend(selectedProposal()!.floral_proposal_id)"
-        [disabled]="resending"
-        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {{ resending ? 'Resending...' : 'Resend Floral Proposal Email' }}
-      </button>
-
-      <button
-        *ngIf="selectedProposal() as proposal"
-        type="button"
-        (click)="onOpen(proposal.signed_url)"
-        [disabled]="!proposal.signed_url"
-        class="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        Open in New Tab
-      </button>
     </div>
   </div>
 
-  <ng-container *ngIf="proposals.length; else emptyState">
+  <ng-container *ngIf="sortedProposals().length; else emptyState">
     <div class="mt-4" *ngIf="selectedProposal() as proposal">
       <p class="text-sm text-stone-500">
         Viewing version {{ proposal.version }}
@@ -57,7 +38,7 @@
     <div class="mt-6 grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
       <div class="space-y-3">
         <button
-          *ngFor="let proposal of proposals"
+        *ngFor="let proposal of sortedProposals()"
           type="button"
           (click)="onSelect(proposal.floral_proposal_id)"
           class="w-full rounded-2xl border p-4 text-left transition"
@@ -118,22 +99,9 @@
           </p>
         </div>
 
-        <div
-          *ngIf="proposal.signed_url && getPreviewUrl(proposal.signed_url) as previewUrl; else unavailablePreview"
-          class="mt-4 h-[900px] overflow-hidden rounded-2xl border border-black/10 bg-white"
-        >
-          <iframe
-            [src]="previewUrl"
-            class="h-full w-full"
-            [title]="'Floral Proposal version ' + proposal.version"
-          ></iframe>
+        <div class="mt-4 rounded-2xl border border-dashed border-black/10 bg-stone-50 px-6 py-8 text-sm leading-6 text-stone-600">
+          Signed proposal PDFs are stored on booked projects after conversion. This lead view retains the proposal invoice version history for source traceability.
         </div>
-
-        <ng-template #unavailablePreview>
-          <div class="mt-4 flex h-[720px] items-center justify-center rounded-2xl border border-dashed border-black/10 bg-stone-50 px-6 text-center text-sm leading-6 text-stone-500">
-            Signed preview URL is unavailable for this Floral Proposal right now.
-          </div>
-        </ng-template>
       </div>
     </div>
   </ng-container>
