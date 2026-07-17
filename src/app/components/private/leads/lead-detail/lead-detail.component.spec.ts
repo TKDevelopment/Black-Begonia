@@ -66,7 +66,7 @@ describe('LeadDetailComponent', () => {
     );
     proposalWorkflow = jasmine.createSpyObj<FloralProposalWorkflowService>(
       'FloralProposalWorkflowService',
-      ['getLeadProposals', 'canSubmitProposal', 'resendProposalAccessEmail']
+      ['getLeadProposals', 'canSubmitProposal']
     );
     inspirationRepository =
       jasmine.createSpyObj<LeadInspirationUrlRepositoryService>(
@@ -112,7 +112,6 @@ describe('LeadDetailComponent', () => {
     leadWorkflow.reopenClosedUnbookedLead.and.resolveTo(testLead);
     proposalWorkflow.getLeadProposals.and.resolveTo([testFloralProposal]);
     proposalWorkflow.canSubmitProposal.and.returnValue(false);
-    proposalWorkflow.resendProposalAccessEmail.and.resolveTo();
     inspirationRepository.getInspirationUrlsByLeadId.and.resolveTo([]);
     internalUserRepository.getInternalUsers.and.resolveTo([
       {
@@ -308,30 +307,6 @@ describe('LeadDetailComponent', () => {
     );
     expect(component.declineModalOpen()).toBeFalse();
     expect(leadWorkflow.updateStatus).toHaveBeenCalledWith(testLead, 'contacted');
-  });
-
-  it('resends proposal access and reports resend failures', async () => {
-    createComponent();
-    await fixture.whenStable();
-
-    await component.resendProposalAccess(testFloralProposal.floral_proposal_id);
-    expect(proposalWorkflow.resendProposalAccessEmail).toHaveBeenCalledWith(
-      testFloralProposal.floral_proposal_id
-    );
-    expect(toast.showToast).toHaveBeenCalledWith(
-      'Proposal access email resent.',
-      'success'
-    );
-
-    const error = new Error('resend failed');
-    proposalWorkflow.resendProposalAccessEmail.and.rejectWith(error);
-    await component.resendProposalAccess(testFloralProposal.floral_proposal_id);
-
-    expect(component.error()).toBe('resend failed');
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[LeadDetailComponent] resendProposalAccess error:',
-      error
-    );
   });
 
   it('saves lead edits with change metadata', async () => {

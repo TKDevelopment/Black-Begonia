@@ -6,8 +6,7 @@
         bypassAuth: false,
         supabaseUrl: 'https://example.supabase.co',
         supabaseAnonKey: 'test-anon-key',
-        proposalPortalUrl: 'https://blackbegoniaflorals.com/proposal/auth',
-        grapesjsStudioLicenseKey: 'default',
-        googleClientId: 'default',
-        googleApiKey: 'default',
+        grapesjsStudioLicenseKey: 'undefined',
+        googleClientId: 'undefined',
+        googleApiKey: 'undefined',
     };

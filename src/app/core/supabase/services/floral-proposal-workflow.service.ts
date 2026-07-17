@@ -5,7 +5,6 @@ import {
   FloralProposal,
   FloralProposalShoppingListItem,
 } from '../../models/floral-proposal';
-import { environment } from '../../../../environments/environment';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
@@ -53,11 +52,23 @@ export interface SubmitFloralProposalPayload {
 }
 
 export interface FinalizeFloralProposalRequest {
-  proposalId: string;
+  mode?: 'initial_booking' | 'project_revision';
+  leadId?: string | null;
+  projectId?: string | null;
+  floralProposalId: string;
   pdfStoragePath: string;
   pdfFileName: string;
   idempotencyKey: string;
-  expectedVersion: number;
+}
+
+export interface FinalizeFloralProposalResult {
+  project_id: string;
+  lead_id: string | null;
+  floral_proposal_id: string | null;
+  proposal_document_version_id: string;
+  active_invoice_snapshot_id: string;
+  signed_pdf_storage_path: string;
+  submitted_at: string;
 }
 
 export interface ProposalSnapshotLifecycle {
@@ -72,8 +83,7 @@ export class FloralProposalWorkflowService {
   private readonly floralProposalBucket = 'floral-proposals';
   private readonly lineItemImageBucket = 'floral-proposal-line-items';
   private readonly signedUrlExpirySeconds = 60 * 60;
-  private readonly proposalPortalUrl =
-    (environment as { proposalPortalUrl?: string }).proposalPortalUrl?.trim() || '/proposal/auth';
+  private readonly maxProposalPdfBytes = 50 * 1024 * 1024;
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -81,37 +91,7 @@ export class FloralProposalWorkflowService {
   ) {}
 
   async getLeadProposals(leadId: string): Promise<FloralProposal[]> {
-    const proposals = await this.floralProposalRepository.getLeadFloralProposals(
-      leadId
-    );
-
-    return Promise.all(
-      proposals.map(async (proposal) => {
-        if (!proposal.pdf_storage_path && !proposal.combined_pdf_storage_path) {
-          return this.withResolvedProposalSignedUrls(proposal);
-        }
-
-        const storagePath =
-          proposal.combined_pdf_storage_path ?? proposal.pdf_storage_path;
-        if (!storagePath) {
-          return this.withResolvedProposalSignedUrls(proposal);
-        }
-
-        const { data, error } = await this.supabaseService.getClient().storage
-          .from(this.floralProposalBucket)
-          .createSignedUrl(storagePath, this.signedUrlExpirySeconds);
-
-        if (error) {
-          console.error(
-            '[FloralProposalWorkflowService] createSignedUrl error:',
-            error
-          );
-          return this.withResolvedProposalSignedUrls(proposal);
-        }
-
-        return this.withResolvedProposalSignedUrls(proposal, data.signedUrl);
-      })
-    );
+    return this.floralProposalRepository.getLeadFloralProposals(leadId);
   }
 
   canSubmitProposal(status: Lead['status']): boolean {
@@ -163,13 +143,19 @@ export class FloralProposalWorkflowService {
     proposalId: string;
     idempotencyKey: string;
     file: File;
+    projectId?: string | null;
   }): Promise<{ storagePath: string }> {
+    this.assertValidProposalPdfFile(args.file);
+
     const fileName = args.file.name
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9._-]+/g, '-')
       .replace(/-+/g, '-');
-    const storagePath = `${args.leadId}/${args.proposalId}/${args.idempotencyKey}-${fileName}`;
+    const ownerSegment = args.projectId
+      ? `projects/${args.projectId}`
+      : `pending-leads/${args.leadId}`;
+    const storagePath = `${ownerSegment}/proposal-documents/${args.proposalId}/${args.idempotencyKey}-${fileName}`;
     const { error } = await this.supabaseService
       .getClient()
       .storage.from(this.floralProposalBucket)
@@ -216,17 +202,19 @@ export class FloralProposalWorkflowService {
     await this.floralProposalRepository.clearLineItemImage(lineItemId);
   }
 
-  async submitProposal(payload: FinalizeFloralProposalRequest): Promise<{
-    floral_proposal_id: string;
-    version: number;
-    signwell_document_id: string;
-    signing_status: string;
-    pdf_storage_path: string;
-  }> {
+  async submitProposal(payload: FinalizeFloralProposalRequest): Promise<FinalizeFloralProposalResult> {
     const { data, error } = await this.supabaseService
       .getClient()
       .functions.invoke('submit-floral-proposal', {
-        body: payload,
+        body: {
+          mode: payload.mode ?? 'initial_booking',
+          lead_id: payload.leadId ?? null,
+          project_id: payload.projectId ?? null,
+          floral_proposal_id: payload.floralProposalId,
+          pdf_storage_path: payload.pdfStoragePath,
+          pdf_file_name: payload.pdfFileName,
+          idempotency_key: payload.idempotencyKey,
+        },
       });
 
     if (error) {
@@ -242,52 +230,22 @@ export class FloralProposalWorkflowService {
       );
     }
 
-    if (data?.success === false || !data?.floral_proposal_id) {
+    if (data?.success === false || !data?.project_id) {
       throw new Error(
         data?.error ||
-          'We could not complete the Floral Proposal submission workflow.'
+          'We could not complete the booked project submission workflow.'
       );
     }
 
     return {
-      floral_proposal_id: data.floral_proposal_id as string,
-      version: Number(data.version ?? 1),
-      signwell_document_id: String(data.signwell_document_id ?? ''),
-      signing_status: String(data.signing_status ?? 'sent'),
-      pdf_storage_path: String(data.pdf_storage_path ?? payload.pdfStoragePath),
+      project_id: String(data.project_id),
+      lead_id: data.lead_id ? String(data.lead_id) : null,
+      floral_proposal_id: data.floral_proposal_id ? String(data.floral_proposal_id) : null,
+      proposal_document_version_id: String(data.proposal_document_version_id),
+      active_invoice_snapshot_id: String(data.active_invoice_snapshot_id),
+      signed_pdf_storage_path: String(data.signed_pdf_storage_path ?? payload.pdfStoragePath),
+      submitted_at: String(data.submitted_at ?? new Date().toISOString()),
     };
-  }
-
-  async resendProposalAccessEmail(floralProposalId: string): Promise<void> {
-    if (!floralProposalId) {
-      throw new Error('A Floral Proposal is required to resend access.');
-    }
-
-    const { data, error } = await this.supabaseService
-      .getClient()
-      .functions.invoke('resend-floral-proposal-email', {
-        body: {
-          floral_proposal_id: floralProposalId,
-          portal_url: this.proposalPortalUrl,
-        },
-      });
-
-    if (error) {
-      console.error(
-        '[FloralProposalWorkflowService] resendProposalAccessEmail invoke error:',
-        error
-      );
-      throw new Error(
-        'We could not resend Floral Proposal access right now.'
-      );
-    }
-
-    if (data?.success === false) {
-      throw new Error(
-        data?.error ||
-          'We could not resend Floral Proposal access right now.'
-      );
-    }
   }
 
   resolveStoredProposalStatus(
@@ -376,7 +334,7 @@ export class FloralProposalWorkflowService {
     }
 
     if (context.status === 546) {
-      return 'The proposal service exceeded its processing limit. Deploy the latest submission function, then retry Finalize and Send.';
+      return 'The proposal service exceeded its processing limit. Deploy the latest submission function, then retry Finalize Proposal.';
     }
 
     try {
@@ -538,17 +496,19 @@ export class FloralProposalWorkflowService {
     return normalizedPath || null;
   }
 
-  private withResolvedProposalSignedUrls(
-    proposal: FloralProposal,
-    signedUrl?: string | null
-  ): FloralProposal {
-    const resolvedSignedUrl = signedUrl ?? proposal.pdf_url ?? null;
+  private assertValidProposalPdfFile(file: File): void {
+    const fileName = file.name.trim().toLowerCase();
+    if (!fileName.endsWith('.pdf') || file.type !== 'application/pdf') {
+      throw new Error('Upload a PDF document before submitting.');
+    }
 
-    return {
-      ...proposal,
-      signed_url: resolvedSignedUrl,
-      combined_pdf_signed_url: resolvedSignedUrl,
-    };
+    if (file.size === 0) {
+      throw new Error('The selected PDF is empty.');
+    }
+
+    if (file.size > this.maxProposalPdfBytes) {
+      throw new Error('The selected PDF must be 50 MB or smaller.');
+    }
   }
 }
 

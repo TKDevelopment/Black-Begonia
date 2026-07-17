@@ -195,7 +195,6 @@ describe('FloralProposalRepositoryService', () => {
     const created = await service.createFloralProposal({
       lead_id: 'lead-test-001',
       customer_email: 'avery@example.test',
-      passcode_hash: 'hashed-passcode',
       version: 1,
       subtotal: 100,
       tax_rate: 0.08,
@@ -214,7 +213,6 @@ describe('FloralProposalRepositoryService', () => {
         is_active: true,
         status: 'draft',
         customer_email: 'avery@example.test',
-        passcode_hash: 'hashed-passcode',
         terms_version: 'v1',
         privacy_policy_version: 'v1',
         finalized_at: null,
@@ -292,7 +290,6 @@ describe('FloralProposalRepositoryService', () => {
       service.createFloralProposal({
         lead_id: 'lead-test-001',
         customer_email: 'avery@example.test',
-        passcode_hash: 'hashed-passcode',
         version: 1,
         subtotal: 100,
         tax_rate: 0.08,

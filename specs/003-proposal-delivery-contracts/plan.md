@@ -66,4 +66,4 @@ The CRM uses one backend-configured SignWell template. Finalize Proposal opens t
 
 ## Constitution check
 
-PASS: public-site stability is preserved; Supabase and secret boundaries are explicit; CRM tests and deployed edge-function smoke checks cover the affected workflows; manual Canva upload remains primary; proposal financial data remains traceable.
+PASS: public-site stability is preserved; Supabase and secret boundaries are explicit; CRM tests and deployed edge-function smoke checks cover the affected workflows; manual Canva upload remains primary; proposal financial data remains traceable; commit and push actions remain human-operated.

@@ -104,6 +104,9 @@ priorities as P1, P2, P3, etc., where P1 is the most critical.
 - **Proposal Workflow**: Proposal features MUST state whether they preserve the
   invoice/planning workflow, manual Canva PDF upload path, and future payment
   or reporting data needs.
+- **Git Publication**: AI agents MUST NOT run `git commit`, `git push`, or
+  commit/push-capable automation. Commit and push actions MUST remain human
+  operator responsibilities.
 
 ### Key Entities *(include if feature involves data)*
 

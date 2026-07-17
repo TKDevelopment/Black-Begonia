@@ -17,7 +17,6 @@ import {
 import { Project } from '../models/project';
 import { TaxRegion } from '../models/tax-region';
 import { Task } from '../models/task';
-import { ProposalAccessSession } from '../proposal-access/proposal-access.models';
 
 const now = '2026-06-02T12:00:00.000Z';
 
@@ -320,6 +319,8 @@ export const testProject: Project = {
   status: 'proposal',
   source_lead_id: testLead.lead_id,
   primary_contact_id: testContact.contact_id,
+  active_proposal_invoice_snapshot_id: null,
+  active_proposal_document_version_id: null,
   assigned_user_id: 'user-test-001',
   booked_at: null,
   completed_at: null,
@@ -380,24 +381,15 @@ export const testFloralProposal: FloralProposal = {
   is_active: true,
   status: 'draft',
   customer_email: testLead.email,
-  pdf_storage_path: 'proposal-pdfs/test-proposal.pdf',
-  pdf_url: 'https://example.test/proposal.pdf',
-  signed_url: null,
   subtotal: 1000,
   tax_rate: 0.0825,
   tax_amount: 82.5,
   total_amount: 1082.5,
   terms_version: 'test-terms',
   privacy_policy_version: 'test-privacy',
-  accepted_terms: false,
-  accepted_privacy_policy: false,
-  accepted_at: null,
-  declined_at: null,
-  signed_at: null,
-  signature_name: null,
-  signature_ip: null,
-  signature_user_agent: null,
-  decline_feedback: null,
+  finalized_at: null,
+  edit_reopened_at: null,
+  submitted_at: null,
   snapshot: {},
   created_by: 'user-test-001',
   created_at: now,
@@ -464,25 +456,6 @@ export const testProposalShoppingListItem: FloralProposalShoppingListItem = {
   estimated_pack_cost: testCatalogItem.base_unit_cost,
   total_estimated_cost: 60,
   notes: 'Buy in packs of 10.',
-};
-
-export const testProposalAccessSession: ProposalAccessSession = {
-  floral_proposal_id: testFloralProposal.floral_proposal_id,
-  lead_id: testLead.lead_id,
-  customer_email: testLead.email,
-  client_name: 'Avery Bloom',
-  service_type: 'wedding',
-  event_type: 'wedding',
-  event_date: '2026-10-24',
-  proposal_version: 1,
-  version: 1,
-  file_name: 'test-proposal.pdf',
-  pdf_url: 'https://example.test/proposal.pdf',
-  access_token: 'test-access-token',
-  expires_at: '2026-06-03T12:00:00.000Z',
-  response_action: null,
-  response_feedback: null,
-  responded_at: null,
 };
 
 export const testAuthState: AuthState = {

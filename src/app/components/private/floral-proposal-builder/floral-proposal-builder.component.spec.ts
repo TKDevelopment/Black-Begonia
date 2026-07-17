@@ -153,7 +153,13 @@ describe('FloralProposalBuilderComponent', () => {
       { ...catalogItem, item_id: 'inactive-catalog', is_active: false },
     ]);
     proposalWorkflow.submitProposal.and.resolveTo({
-      version: 3,
+      project_id: 'project-test-001',
+      lead_id: testLead.lead_id,
+      floral_proposal_id: draftProposal.floral_proposal_id,
+      proposal_document_version_id: 'proposal-document-version-001',
+      active_invoice_snapshot_id: 'invoice-snapshot-001',
+      signed_pdf_storage_path: `${testLead.lead_id}/proposal-draft-001/upload/proposal.pdf`,
+      submitted_at: '2026-06-02T12:00:00.000Z',
     } as any);
     proposalWorkflow.uploadProposalPdf.and.resolveTo({
       storagePath: `${testLead.lead_id}/proposal-draft-001/upload/proposal.pdf`,
@@ -191,6 +197,7 @@ describe('FloralProposalBuilderComponent', () => {
               paramMap: {
                 get: (key: string) => routeParamMap.get(key),
               },
+              queryParamMap: convertToParamMap({}),
             },
           },
         },
@@ -389,6 +396,7 @@ describe('FloralProposalBuilderComponent', () => {
 
   it('persists, uploads, and submits florist-supplied PDF documents atomically', async () => {
     createSubmittableComponent();
+    spyOn(window, 'confirm').and.returnValue(true);
     const pdfFile = new File(['%PDF-test'], 'proposal.pdf', {
       type: 'application/pdf',
     });
@@ -410,46 +418,54 @@ describe('FloralProposalBuilderComponent', () => {
         proposalId: draftProposal.floral_proposal_id,
         file: pdfFile,
         idempotencyKey: jasmine.any(String),
+        projectId: null,
       })
     );
     expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith(
       jasmine.objectContaining({
-        proposalId: draftProposal.floral_proposal_id,
+        mode: 'initial_booking',
+        leadId: testLead.lead_id,
+        projectId: null,
+        floralProposalId: draftProposal.floral_proposal_id,
         pdfFileName: 'proposal.pdf',
-        expectedVersion: draftProposal.version,
       })
     );
     expect(toast.showToast).toHaveBeenCalledWith(
-      'Floral Proposal v3 submitted successfully.',
+      'Signed proposal stored and lead converted to a booked project.',
       'success'
     );
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/projects'], {
+      queryParams: { projectId: 'project-test-001' },
+    });
     expect(component.submissionModalOpen()).toBeFalse();
-    expect(component.submissionFile()).toBeNull();
     expect(component.saving()).toBeFalse();
   });
 
   it('reports observable finalization milestones while the modal remains locked', async () => {
     createSubmittableComponent();
+    spyOn(window, 'confirm').and.returnValue(true);
     const pdfFile = new File(['%PDF-test'], 'proposal.pdf', {
       type: 'application/pdf',
     });
     proposalRepository.createFloralProposal.and.callFake(async () => {
-      expect(component.submissionProgress()).toBe('Saving proposal details…');
+      expect(component.submissionProgress()).toBe('Saving proposal invoice details...');
       expect(component.saving()).toBeTrue();
       return draftProposal;
     });
     proposalWorkflow.uploadProposalPdf.and.callFake(async () => {
-      expect(component.submissionProgress()).toBe('Uploading the proposal PDF securely…');
+      expect(component.submissionProgress()).toBe('Uploading the signed proposal PDF securely...');
       return { storagePath: 'lead/proposal/proposal.pdf' };
     });
     proposalWorkflow.submitProposal.and.callFake(async () => {
-      expect(component.submissionProgress()).toBe('Creating and sending the SignWell signing packet…');
+      expect(component.submissionProgress()).toBe('Storing the signed document and booking the project...');
       return {
+        project_id: 'project-test-001',
+        lead_id: testLead.lead_id,
         floral_proposal_id: draftProposal.floral_proposal_id,
-        version: 3,
-        signwell_document_id: 'document-test-001',
-        signing_status: 'sent',
-        pdf_storage_path: 'lead/proposal/proposal.pdf',
+        proposal_document_version_id: 'proposal-document-version-001',
+        active_invoice_snapshot_id: 'invoice-snapshot-001',
+        signed_pdf_storage_path: 'lead/proposal/proposal.pdf',
+        submitted_at: '2026-06-02T12:00:00.000Z',
       };
     });
 
@@ -487,6 +503,7 @@ describe('FloralProposalBuilderComponent', () => {
     );
 
     proposalWorkflow.submitProposal.and.rejectWith(new Error('submit failed'));
+    spyOn(window, 'confirm').and.returnValue(true);
     component.onSubmissionFileSelected(
       new File(['%PDF-test'], 'replacement.pdf', {
         type: 'application/pdf',
@@ -755,3 +772,4 @@ describe('FloralProposalBuilderComponent', () => {
     return fixture.nativeElement.textContent.replace(/\s+/g, ' ').trim();
   }
 });
+

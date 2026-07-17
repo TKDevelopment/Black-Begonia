@@ -73,6 +73,8 @@ story implementation.
   shared code, and rollback considerations
 - [ ] T012 For proposal work, confirm manual Canva PDF upload remains the
   primary document path unless the approved spec says otherwise
+- [ ] T013 Confirm all commit and push actions remain human-operated; AI agents
+  may provide source-control summaries and suggested commit messages only
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 
@@ -89,18 +91,18 @@ story implementation.
 > Write these tests first where practical, and make sure they fail before the
 > implementation changes satisfy them.
 
-- [ ] T013 [P] [US1] Add Karma/Jasmine unit test for [component/service/guard]
+- [ ] T014 [P] [US1] Add Karma/Jasmine unit test for [component/service/guard]
   in src/app/[path]/[name].spec.ts
-- [ ] T014 [P] [US1] Add focused integration check for
+- [ ] T015 [P] [US1] Add focused integration check for
   [proposal/lead/inquiry/auth flow] in [test path]
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Update Angular model/type in src/app/core/models/[entity].ts
-- [ ] T016 [P] [US1] Update Supabase repository/service in src/app/core/supabase/[path]/[service].ts
-- [ ] T017 [US1] Implement UI/workflow changes in src/app/[surface]/[path]
-- [ ] T018 [US1] Add validation, error handling, and customer-data safeguards
-- [ ] T019 [US1] Verify brownfield behavior listed in plan.md remains unchanged
+- [ ] T016 [P] [US1] Update Angular model/type in src/app/core/models/[entity].ts
+- [ ] T017 [P] [US1] Update Supabase repository/service in src/app/core/supabase/[path]/[service].ts
+- [ ] T018 [US1] Implement UI/workflow changes in src/app/[surface]/[path]
+- [ ] T019 [US1] Add validation, error handling, and customer-data safeguards
+- [ ] T020 [US1] Verify brownfield behavior listed in plan.md remains unchanged
 
 **Checkpoint**: User Story 1 is functional and independently testable.
 
@@ -114,18 +116,18 @@ story implementation.
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Add Karma/Jasmine unit test for [component/service/guard]
+- [ ] T021 [P] [US2] Add Karma/Jasmine unit test for [component/service/guard]
   in src/app/[path]/[name].spec.ts
-- [ ] T021 [P] [US2] Add focused integration check for
+- [ ] T022 [P] [US2] Add focused integration check for
   [proposal/lead/inquiry/auth flow] in [test path]
 
 ### Implementation for User Story 2
 
-- [ ] T022 [P] [US2] Update Angular model/type in src/app/core/models/[entity].ts
-- [ ] T023 [US2] Implement service or edge-function changes in src/app/core or
+- [ ] T023 [P] [US2] Update Angular model/type in src/app/core/models/[entity].ts
+- [ ] T024 [US2] Implement service or edge-function changes in src/app/core or
   supabase/edge_functions
-- [ ] T024 [US2] Implement UI/workflow changes in src/app/[surface]/[path]
-- [ ] T025 [US2] Integrate with User Story 1 components if needed
+- [ ] T025 [US2] Implement UI/workflow changes in src/app/[surface]/[path]
+- [ ] T026 [US2] Integrate with User Story 1 components if needed
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 
@@ -139,17 +141,17 @@ story implementation.
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Add Karma/Jasmine unit test for [component/service/guard]
+- [ ] T027 [P] [US3] Add Karma/Jasmine unit test for [component/service/guard]
   in src/app/[path]/[name].spec.ts
-- [ ] T027 [P] [US3] Add focused integration check for
+- [ ] T028 [P] [US3] Add focused integration check for
   [proposal/lead/inquiry/auth flow] in [test path]
 
 ### Implementation for User Story 3
 
-- [ ] T028 [P] [US3] Update Angular model/type in src/app/core/models/[entity].ts
-- [ ] T029 [US3] Implement service or edge-function changes in src/app/core or
+- [ ] T029 [P] [US3] Update Angular model/type in src/app/core/models/[entity].ts
+- [ ] T030 [US3] Implement service or edge-function changes in src/app/core or
   supabase/edge_functions
-- [ ] T030 [US3] Implement UI/workflow changes in src/app/[surface]/[path]
+- [ ] T031 [US3] Implement UI/workflow changes in src/app/[surface]/[path]
 
 **Checkpoint**: All user stories are independently functional.
 
@@ -190,3 +192,5 @@ story implementation.
   migration in `supabase/migrations/`.
 - Never create or use an `_shared` edge-function directory, local shared
   edge-function module, or import between Supabase Edge Functions.
+- AI agents must never run `git commit`, `git push`, or commit/push-capable
+  automation; include source-control handoff notes for the human operator.

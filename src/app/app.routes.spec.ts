@@ -18,4 +18,14 @@ describe('app routes', () => {
     expect(builderRoute).toBeDefined();
     expect(typeof builderRoute?.loadComponent).toBe('function');
   });
+
+  it('does not expose retired public proposal access routes', () => {
+    const publicPaths = routes.map((route) => route.path);
+    const wildcardRoute = routes.find((route) => route.path === '**');
+
+    expect(publicPaths).not.toContain('proposal');
+    expect(publicPaths).not.toContain('proposal/auth');
+    expect(wildcardRoute).toBeDefined();
+    expect(typeof wildcardRoute?.loadComponent).toBe('function');
+  });
 });

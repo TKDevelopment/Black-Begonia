@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { DomSanitizer } from '@angular/platform-browser';
 
 import { testFloralProposal } from '../../../../../core/testing/workflow-fixtures';
 import { FloralProposalResponseSummary } from '../../../../../core/models/floral-proposal';
@@ -68,7 +67,6 @@ describe('LeadProposalHistoryCardComponent', () => {
         floral_proposal_id: 'proposal-active',
         version: 2,
         is_active: true,
-        signed_url: 'https://example.test/proposal.pdf',
       },
     ];
     component.selectedProposalId = 'proposal-active';
@@ -85,51 +83,23 @@ describe('LeadProposalHistoryCardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Looks perfect.');
   });
 
-  it('emits selection, open, resend, and submit events', () => {
+  it('emits selection and submit events', () => {
     const selected: string[] = [];
-    const opened: string[] = [];
-    const resent: string[] = [];
     const submitted: void[] = [];
     component.selectProposal.subscribe((id) => selected.push(id));
-    component.openProposal.subscribe((url) => opened.push(url));
-    component.resendProposal.subscribe((id) => resent.push(id));
     component.submitProposal.subscribe((value) => submitted.push(value));
 
     component.onSelect('proposal-001');
-    component.onOpen('https://example.test/proposal.pdf');
-    component.onOpen(null);
-    component.onResend('proposal-001');
     component.onSubmitProposal();
 
     expect(selected).toEqual(['proposal-001']);
-    expect(opened).toEqual(['https://example.test/proposal.pdf']);
-    expect(resent).toEqual(['proposal-001']);
     expect(submitted.length).toBe(1);
   });
 
-  it('blocks proposal resend when resending is not allowed', () => {
-    const resent: string[] = [];
-    component.canResendProposal = false;
-    component.resendProposal.subscribe((id) => resent.push(id));
-
-    component.onResend('proposal-001');
-
-    expect(resent).toEqual([]);
-  });
-
-  it('formats dates and sanitizes preview urls', () => {
-    const sanitizer = TestBed.inject(DomSanitizer);
-    const bypassSpy = spyOn(
-      sanitizer,
-      'bypassSecurityTrustResourceUrl'
-    ).and.callThrough();
-
+  it('formats dates for proposal history rows', () => {
     expect(component.formatDateTime('2026-06-02T12:00:00.000Z')).toContain(
       '2026'
     );
-    expect(component.getPreviewUrl(null)).toBeNull();
-    expect(component.getPreviewUrl('https://example.test/proposal.pdf')).toBeTruthy();
-    expect(bypassSpy).toHaveBeenCalledWith('https://example.test/proposal.pdf');
   });
 
   it('returns the latest response for a proposal', () => {

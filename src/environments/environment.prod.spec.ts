@@ -17,10 +17,4 @@ describe('production environment', () => {
     expect(environment.googleClientId).toBe('undefined');
     expect(environment.googleApiKey).toBe('undefined');
   });
-
-  it('uses the production proposal portal URL for client delivery', () => {
-    expect(environment.proposalPortalUrl).toBe(
-      'https://blackbegoniaflorals.com/proposal/auth'
-    );
-  });
 });

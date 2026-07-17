@@ -107,7 +107,6 @@ export class LeadDetailComponent implements OnInit {
   inspirationUrls = signal<LeadInspirationUrl[]>([]);
 
   declineModalOpen = signal(false);
-  proposalResending = signal(false);
   selectedProposalId = signal<string | null>(null);
 
   internalUsers = signal<InternalUser[]>([]);
@@ -216,11 +215,6 @@ export class LeadDetailComponent implements OnInit {
   canReopenClosedUnbookedLead = computed(() => {
     const lead = this.lead();
     return !!lead && lead.status === 'closed_unbooked' && !this.actionLoading();
-  });
-
-  canResendProposalAccess = computed(() => {
-    const lead = this.lead();
-    return !!lead && !this.isLeadReadOnly();
   });
 
   showQuickActionConvertButton = computed(() => {
@@ -572,32 +566,8 @@ export class LeadDetailComponent implements OnInit {
     void this.router.navigate(['/admin/leads', lead.lead_id, 'floral-proposal-builder']);
   }
 
-  async resendProposalAccess(proposalId: string): Promise<void> {
-    if (!proposalId || this.proposalResending() || this.isLeadReadOnly()) return;
-
-    try {
-      this.proposalResending.set(true);
-      await this.proposalWorkflow.resendProposalAccessEmail(proposalId);
-      await this.refreshLeadDetail();
-      this.toast.showToast('Proposal access email resent.', 'success');
-    } catch (error) {
-      console.error('[LeadDetailComponent] resendProposalAccess error:', error);
-      this.error.set(
-        error instanceof Error
-          ? error.message
-          : 'We were unable to resend proposal access right now.'
-      );
-    } finally {
-      this.proposalResending.set(false);
-    }
-  }
-
   selectProposal(proposalId: string): void {
     this.selectedProposalId.set(proposalId);
-  }
-
-  openProposal(url: string): void {
-    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   async markContacted(): Promise<void> {
@@ -1160,7 +1130,7 @@ export class LeadDetailComponent implements OnInit {
       (normalizedMessage.includes('could not find') && normalizedMessage.includes('column')) ||
       (normalizedMessage.includes('column') && normalizedMessage.includes('does not exist'))
     ) {
-      return 'The database lead schema is out of date. Apply the SignWell proposal-delivery migration, refresh the Supabase schema cache, and try again.';
+      return 'The database lead schema is out of date. Apply the latest proposal booking migration, refresh the Supabase schema cache, and try again.';
     }
 
     return message

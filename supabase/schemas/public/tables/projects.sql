@@ -15,6 +15,8 @@ create table public.projects (
   source_lead_id uuid null,
   primary_contact_id uuid null,
   assigned_user_id uuid null,
+  active_proposal_invoice_snapshot_id uuid null,
+  active_proposal_document_version_id uuid null,
   booked_at timestamp with time zone null,
   completed_at timestamp with time zone null,
   canceled_at timestamp with time zone null,
@@ -28,6 +30,8 @@ create table public.projects (
   ceremony_venue_address text null,
   ceremony_venue_zipcode text null,
   constraint projects_pkey primary key (project_id),
+  constraint projects_active_proposal_document_version_id_fkey foreign KEY (active_proposal_document_version_id) references project_proposal_document_versions (project_proposal_document_version_id) on delete set null,
+  constraint projects_active_proposal_invoice_snapshot_id_fkey foreign KEY (active_proposal_invoice_snapshot_id) references project_proposal_invoice_snapshots (project_proposal_invoice_snapshot_id) on delete set null,
   constraint projects_assigned_user_id_fkey foreign KEY (assigned_user_id) references profiles (id) on delete set null,
   constraint projects_primary_contact_id_fkey foreign KEY (primary_contact_id) references contacts (contact_id) on delete set null,
   constraint projects_source_lead_id_fkey foreign KEY (source_lead_id) references leads (lead_id) on delete set null
@@ -42,6 +46,10 @@ create index IF not exists idx_projects_primary_contact_id on public.projects us
 create index IF not exists idx_projects_source_lead_id on public.projects using btree (source_lead_id) TABLESPACE pg_default;
 
 create index IF not exists idx_projects_assigned_user_id on public.projects using btree (assigned_user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_projects_active_proposal_invoice_snapshot_id on public.projects using btree (active_proposal_invoice_snapshot_id) TABLESPACE pg_default;
+
+create index IF not exists idx_projects_active_proposal_document_version_id on public.projects using btree (active_proposal_document_version_id) TABLESPACE pg_default;
 
 create trigger trg_projects_set_updated_at BEFORE
 update on projects for EACH row

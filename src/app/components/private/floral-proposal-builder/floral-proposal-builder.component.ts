@@ -73,6 +73,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly submissionFile = signal<File | null>(null);
   readonly submissionProgress = signal<string | null>(null);
   readonly editModeEnabled = signal(false);
+  readonly activeProjectId = signal<string | null>(null);
   readonly lead = signal<Lead | null>(null);
   readonly proposals = signal<FloralProposal[]>([]);
   readonly activeProposal = signal<FloralProposal | null>(null);
@@ -159,6 +160,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   });
   ngOnInit(): void {
     const leadId = this.route.snapshot.paramMap.get('leadId');
+    this.activeProjectId.set(this.route.snapshot.queryParamMap.get('projectId'));
     if (!leadId) {
       void this.router.navigate(['/admin/leads']);
       return;
@@ -546,8 +548,14 @@ export class FloralProposalBuilderComponent implements OnInit {
       return;
     }
 
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    if (file.type !== 'application/pdf' || !file.name.toLowerCase().endsWith('.pdf')) {
       this.submissionError.set('Upload a valid PDF proposal document.');
+      this.submissionFile.set(null);
+      return;
+    }
+
+    if (file.size === 0) {
+      this.submissionError.set('The proposal PDF cannot be empty.');
       this.submissionFile.set(null);
       return;
     }
@@ -575,32 +583,47 @@ export class FloralProposalBuilderComponent implements OnInit {
       return;
     }
 
+    const confirmed = window.confirm(
+      'Submit this signed proposal and services agreement PDF? This will store the document and convert the lead into a booked project.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       this.saving.set(true);
       this.submissionError.set(null);
-      this.submissionProgress.set('Saving proposal details…');
+      this.submissionProgress.set('Saving proposal invoice details...');
       const proposal = await this.persistProposal('draft');
       this.activeProposal.set(proposal);
       const idempotencyKey = crypto.randomUUID();
-      this.submissionProgress.set('Uploading the proposal PDF securely…');
+      this.submissionProgress.set('Uploading the signed proposal PDF securely...');
       const upload = await this.proposalWorkflow.uploadProposalPdf({
         leadId: lead.lead_id,
         proposalId: proposal.floral_proposal_id,
         idempotencyKey,
         file,
+        projectId: this.activeProjectId(),
       });
-      this.submissionProgress.set('Creating and sending the SignWell signing packet…');
+      this.submissionProgress.set('Storing the signed document and booking the project...');
+      const activeProjectId = this.activeProjectId();
       const result = await this.proposalWorkflow.submitProposal({
-        proposalId: proposal.floral_proposal_id,
+        mode: activeProjectId ? 'project_revision' : 'initial_booking',
+        leadId: lead.lead_id,
+        projectId: activeProjectId,
+        floralProposalId: proposal.floral_proposal_id,
         pdfStoragePath: upload.storagePath,
         pdfFileName: file.name,
         idempotencyKey,
-        expectedVersion: proposal.version,
       });
 
-      this.submissionProgress.set('SignWell accepted the packet. Refreshing proposal history…');
-      this.toast.showToast(`Floral Proposal v${result.version} submitted successfully.`, 'success');
-      await this.loadBuilder(lead.lead_id);
+      this.submissionProgress.set('Booked project created. Opening project workspace...');
+      this.toast.showToast('Signed proposal stored and lead converted to a booked project.', 'success');
+      this.submissionModalOpen.set(false);
+      await this.router.navigate(['/admin/projects'], {
+        queryParams: { projectId: result.project_id },
+      });
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] submitProposalDocument error:', error);
       const message = error instanceof Error
@@ -1163,6 +1186,10 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private isReadOnly(status: Lead['status']): boolean {
+    if (this.activeProjectId()) {
+      return false;
+    }
+
     return status === 'proposal_submitted' || status === 'proposal_accepted' || status === 'converted';
   }
 

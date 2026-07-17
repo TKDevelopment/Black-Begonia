@@ -392,12 +392,8 @@
               [proposals]="proposals()"
               [selectedProposalId]="selectedProposalId()"
               [proposalResponses]="proposalResponses()"
-              [resending]="proposalResending()"
               [canSubmitProposal]="canSubmitProposal()"
-              [canResendProposal]="canResendProposalAccess()"
               (selectProposal)="selectProposal($event)"
-              (openProposal)="openProposal($event)"
-              (resendProposal)="resendProposalAccess($event)"
               (submitProposal)="openProposalBuilder()"
             />
           </div>
