@@ -9,6 +9,10 @@ import {
 } from '../../models/floral-proposal';
 import { Lead } from '../../models/lead';
 import { TaxRegion } from '../../models/tax-region';
+import {
+  EditableProposalSnapshotV2,
+  PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION,
+} from '../../models/project-proposal-revision-workspace';
 
 export interface FloralProposalBuilderComponentRow {
   local_id: string;
@@ -96,10 +100,205 @@ export interface ContractTemplateValidationResult {
   missingFields: string[];
 }
 
+export interface ProjectSnapshotAdaptationResult {
+  valid: boolean;
+  draft?: EditableProposalSnapshotV2;
+  warning?: string | null;
+  repairMessage?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class FloralProposalBuilderService {
+  adaptProjectSnapshot(
+    source: Record<string, unknown>,
+    financials: {
+      subtotal: number;
+      taxRate: number;
+      taxAmount: number;
+      totalAmount: number;
+      retainerAmount: number;
+      finalBalanceAmount: number;
+      retainerDueDate?: string | null;
+      finalBalanceDueDate?: string | null;
+    }
+  ): ProjectSnapshotAdaptationResult {
+    const sourceLines = source['line_items'];
+    if (!Array.isArray(sourceLines) || sourceLines.length === 0) {
+      return {
+        valid: false,
+        repairMessage: 'The active proposal snapshot does not contain editable line-item data.',
+      };
+    }
+
+    const lines = sourceLines.map((rawLine, lineIndex) => {
+      const line = this.asRecord(rawLine);
+      const components = Array.isArray(line['components']) ? line['components'] : [];
+      return {
+        local_id: this.stringValue(line['local_id']) || this.createLocalId('line'),
+        display_order: this.numberValue(line['display_order'], lineIndex),
+        line_item_type: this.lineTypeValue(line['line_item_type']),
+        item_name: this.stringValue(line['item_name']),
+        description: this.nullableString(line['description']),
+        quantity: this.numberValue(line['quantity'], 1),
+        unit_price: this.numberValue(line['unit_price'], 0),
+        subtotal: this.numberValue(line['subtotal'], 0),
+        image_storage_path: this.nullableString(line['image_storage_path']),
+        image_alt_text: this.nullableString(line['image_alt_text']),
+        image_caption: this.nullableString(line['image_caption']),
+        snapshot: this.asRecord(line['snapshot']),
+        components: components.map((rawComponent, componentIndex) => {
+          const component = this.asRecord(rawComponent);
+          const componentSnapshot = this.asRecord(component['snapshot']);
+          return {
+            display_order: this.numberValue(component['display_order'], componentIndex),
+            catalog_item_id: this.nullableString(component['catalog_item_id']),
+            catalog_item_name: this.stringValue(component['catalog_item_name']),
+            quantity_per_unit: this.numberValue(component['quantity_per_unit'], 0),
+            extended_quantity: this.numberValue(component['extended_quantity'], 0),
+            base_unit_cost: this.numberValue(component['base_unit_cost'], 0),
+            applied_markup_percent: this.numberValue(component['applied_markup_percent'], 0),
+            sell_unit_price: this.numberValue(component['sell_unit_price'], 0),
+            subtotal: this.numberValue(component['subtotal'], 0),
+            reserve_percent: this.numberValue(
+              component['reserve_percent'] ?? componentSnapshot['reserve_percent'],
+              0
+            ),
+            pack_quantity: this.nullableNumber(
+              component['pack_quantity'] ?? componentSnapshot['pack_quantity']
+            ),
+            purchase_unit_cost: this.numberValue(
+              component['purchase_unit_cost'] ?? componentSnapshot['purchase_unit_cost'],
+              this.numberValue(component['base_unit_cost'], 0)
+            ),
+            item_type: this.nullableString(component['item_type'] ?? componentSnapshot['item_type']),
+            unit_type: this.nullableString(component['unit_type'] ?? componentSnapshot['unit_type']),
+            color: this.nullableString(component['color'] ?? componentSnapshot['color']),
+            variety: this.nullableString(component['variety'] ?? componentSnapshot['variety']),
+            snapshot: componentSnapshot,
+          };
+        }),
+      };
+    });
+
+    if (lines.some((line) => !line.item_name.trim())) {
+      return {
+        valid: false,
+        repairMessage: 'The active proposal snapshot contains a line item without a name.',
+      };
+    }
+
+    const sourceSchema = this.numberValue(source['schema_version'], 1);
+    const taxRate = this.numberValue(source['tax_rate'], financials.taxRate);
+    const draft: EditableProposalSnapshotV2 = {
+      ...source,
+      schema_version: PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION,
+      proposal_status: 'draft',
+      tax_region: {
+        tax_region_id: this.nullableString(
+          this.asRecord(source['tax_region'])['tax_region_id'] ?? source['tax_region_id']
+        ),
+        name: this.nullableString(
+          this.asRecord(source['tax_region'])['name'] ?? source['tax_region_name']
+        ),
+        tax_rate: taxRate,
+        was_active: this.asRecord(source['tax_region'])['was_active'] !== false,
+      },
+      default_markup_percent: this.numberValue(source['default_markup_percent'], 300),
+      labor_percent: this.numberValue(source['labor_percent'], 0),
+      financial_terms: {
+        retainer_amount: financials.retainerAmount,
+        final_balance_amount: financials.finalBalanceAmount,
+        retainer_due_date: financials.retainerDueDate ?? null,
+        final_balance_due_date: financials.finalBalanceDueDate ?? null,
+      },
+      line_items: lines,
+      shopping_list: Array.isArray(source['shopping_list'])
+        ? (source['shopping_list'] as Record<string, unknown>[])
+        : [],
+      totals: {
+        subtotal: financials.subtotal,
+        taxAmount: financials.taxAmount,
+        totalAmount: financials.totalAmount,
+      },
+      breakdown: this.numericRecord(source['breakdown']),
+    };
+
+    return {
+      valid: true,
+      draft,
+      warning: sourceSchema < PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION
+        ? 'This proposal was created with an older snapshot format. Recorded values were preserved and missing optional fields use neutral defaults.'
+        : null,
+    };
+  }
+
+  buildEditableProjectSnapshot(args: {
+    renderPayload: FloralProposalRenderPayload;
+    lines: FloralProposalBuilderLine[];
+    retainerAmount: number;
+    finalBalanceAmount: number;
+    retainerDueDate?: string | null;
+    finalBalanceDueDate?: string | null;
+    existing?: Record<string, unknown>;
+  }): EditableProposalSnapshotV2 {
+    return {
+      ...(args.existing ?? {}),
+      schema_version: PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION,
+      proposal_status: 'draft',
+      tax_region: {
+        tax_region_id: args.renderPayload.tax_region_id ?? null,
+        name: args.renderPayload.tax_region_name ?? null,
+        tax_rate: args.renderPayload.tax_rate,
+        was_active: true,
+      },
+      default_markup_percent: args.renderPayload.default_markup_percent,
+      labor_percent: args.renderPayload.labor_percent,
+      financial_terms: {
+        retainer_amount: args.retainerAmount,
+        final_balance_amount: args.finalBalanceAmount,
+        retainer_due_date: args.retainerDueDate ?? null,
+        final_balance_due_date: args.finalBalanceDueDate ?? null,
+      },
+      line_items: args.lines.map((line, lineIndex) => ({
+        local_id: line.local_id,
+        display_order: lineIndex,
+        line_item_type: line.line_item_type,
+        item_name: line.item_name,
+        description: line.description ?? null,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        subtotal: line.subtotal,
+        image_storage_path: line.image_storage_path ?? null,
+        image_alt_text: line.image_alt_text ?? null,
+        image_caption: line.image_caption ?? null,
+        snapshot: line.snapshot ?? {},
+        components: line.components.map((component, componentIndex) => ({
+          display_order: componentIndex,
+          catalog_item_id: component.catalog_item_id ?? null,
+          catalog_item_name: component.catalog_item_name,
+          quantity_per_unit: component.quantity_per_unit,
+          extended_quantity: component.extended_quantity,
+          base_unit_cost: component.base_unit_cost,
+          applied_markup_percent: component.applied_markup_percent,
+          sell_unit_price: component.sell_unit_price,
+          subtotal: component.subtotal,
+          reserve_percent: component.reserve_percent,
+          pack_quantity: component.pack_quantity ?? null,
+          purchase_unit_cost: component.purchase_unit_cost,
+          item_type: component.item_type ?? null,
+          unit_type: component.unit_type ?? null,
+          color: component.color ?? null,
+          variety: component.variety ?? null,
+          snapshot: component.snapshot ?? {},
+        })),
+      })),
+      shopping_list: args.renderPayload.shopping_list as unknown as Record<string, unknown>[],
+      totals: args.renderPayload.totals,
+      breakdown: args.renderPayload.breakdown,
+    };
+  }
   validateContractTemplateFieldMap(args: {
     lead: Lead;
     renderPayload: FloralProposalRenderPayload;
@@ -839,6 +1038,42 @@ export class FloralProposalBuilderService {
 
   private createLocalId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  }
+
+  private stringValue(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+  }
+
+  private nullableString(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() ? value : null;
+  }
+
+  private numberValue(value: unknown, fallback: number): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  private nullableNumber(value: unknown): number | null {
+    const numeric = Number(value);
+    return value !== null && value !== undefined && Number.isFinite(numeric) ? numeric : null;
+  }
+
+  private lineTypeValue(value: unknown): FloralProposalLineItemType {
+    return value === 'fee' || value === 'discount' || value === 'labor' ? value : 'product';
+  }
+
+  private numericRecord(value: unknown): Record<string, number> {
+    return Object.entries(this.asRecord(value)).reduce<Record<string, number>>((acc, [key, item]) => {
+      const numeric = Number(item);
+      if (Number.isFinite(numeric)) acc[key] = numeric;
+      return acc;
+    }, {});
   }
 
   private resolveTemplateMappingSource(mapping: unknown): string | null {

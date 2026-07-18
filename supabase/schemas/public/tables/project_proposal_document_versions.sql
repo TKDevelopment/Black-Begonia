@@ -15,6 +15,7 @@ create table public.project_proposal_document_versions (
   is_active boolean not null default true,
   status text not null default 'submitted'::text,
   created_at timestamp with time zone not null default now(),
+  submission_idempotency_key uuid null,
   constraint project_proposal_document_versions_pkey primary key (project_proposal_document_version_id),
   constraint project_proposal_document_versions_project_version_unique unique (project_id, version),
   constraint project_proposal_document_versions_invoice_snapshot_id_fkey foreign KEY (invoice_snapshot_id) references project_proposal_invoice_snapshots (project_proposal_invoice_snapshot_id) on delete set null,
@@ -36,3 +37,17 @@ TABLESPACE pg_default;
 create index IF not exists idx_project_document_versions_project_id
 on public.project_proposal_document_versions using btree (project_id, created_at desc)
 TABLESPACE pg_default;
+
+create unique index IF not exists idx_project_document_versions_submission_key
+on public.project_proposal_document_versions (submission_idempotency_key)
+where submission_idempotency_key is not null;
+
+alter table public.project_proposal_document_versions enable row level security;
+
+create policy "internal crm users select project proposal document versions"
+on public.project_proposal_document_versions for select to authenticated
+using (public.is_internal_crm_user());
+
+create policy "internal crm users insert project proposal document versions"
+on public.project_proposal_document_versions for insert to authenticated
+with check (public.is_internal_crm_user());

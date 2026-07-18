@@ -54,6 +54,21 @@ describe('ActivityRepositoryService', () => {
     expect(query.order).toHaveBeenCalledWith('created_at', { ascending: false });
   });
 
+  it('maps the submitting florist profile for project revision activity', async () => {
+    const row = {
+      activity_log_id: 'activity-1', entity_type: 'project', entity_id: 'project-1',
+      activity_type: 'proposal_revision_submitted', activity_label: 'Revision submitted',
+      performed_by: 'user-1', profiles: { display_name: 'Lead Florist', email: 'owner@example.com' },
+      metadata: { new_version: 2 }, created_at: '2026-01-01T00:00:00Z',
+    };
+    const { client, query } = createSupabaseClientWithQuery(supabaseSuccess([row]));
+    supabaseService.getClient.and.returnValue(client as never);
+    const result = await service.getProjectActivity('project-1');
+    expect(query.eq).toHaveBeenCalledWith('entity_type', 'project');
+    expect(result[0].performed_by_display_name).toBe('Lead Florist');
+    expect(result[0].performed_by_email).toBe('owner@example.com');
+  });
+
   it('returns empty lists and logs when activity queries fail', async () => {
     const response = supabaseFailure('activity failed');
     const { client } = createSupabaseClientWithQuery(response);

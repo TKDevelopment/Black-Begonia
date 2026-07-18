@@ -566,4 +566,60 @@ describe('FloralProposalBuilderService', () => {
     expect(service.formatLineTypeLabel('fee')).toBe('Fee');
     expect(service.formatLineTypeLabel('discount')).toBe('Discount');
   });
+
+  it('adapts legacy snapshots losslessly without repricing retired catalog values', () => {
+    const result = service.adaptProjectSnapshot({
+      tax_region_id: 'inactive-tax', tax_region_name: 'Recorded County', tax_rate: .07,
+      default_markup_percent: 275, labor_percent: 12,
+      line_items: [{
+        display_order: 0, line_item_type: 'product', item_name: 'Retired Rose Arrangement',
+        quantity: 2, unit_price: 155, subtotal: 310,
+        components: [{ catalog_item_id: 'retired-rose', catalog_item_name: 'Legacy Rose', quantity_per_unit: 10,
+          extended_quantity: 20, base_unit_cost: 3.25, applied_markup_percent: 275,
+          sell_unit_price: 12.19, subtotal: 243.8, reserve_percent: 10 }],
+      }],
+    }, { subtotal: 310, taxRate: .07, taxAmount: 21.7, totalAmount: 331.7, retainerAmount: 99.51, finalBalanceAmount: 331.7 });
+
+    expect(result.valid).toBeTrue();
+    expect(result.warning).toContain('older snapshot format');
+    expect(result.draft?.tax_region).toEqual(jasmine.objectContaining({ tax_region_id: 'inactive-tax', tax_rate: .07 }));
+    expect(result.draft?.line_items[0]).toEqual(jasmine.objectContaining({ unit_price: 155, subtotal: 310 }));
+    expect(result.draft?.line_items[0].components[0]).toEqual(jasmine.objectContaining({
+      catalog_item_id: 'retired-rose', base_unit_cost: 3.25, sell_unit_price: 12.19, subtotal: 243.8,
+    }));
+  });
+
+  it('rejects snapshots missing editable core data', () => {
+    const financials = { subtotal: 0, taxRate: 0, taxAmount: 0, totalAmount: 0, retainerAmount: 0, finalBalanceAmount: 0 };
+    expect(service.adaptProjectSnapshot({}, financials).valid).toBeFalse();
+    expect(service.adaptProjectSnapshot({ line_items: [{ item_name: '' }] }, financials).valid).toBeFalse();
+  });
+
+  it('round-trips all supported v2 editable values', () => {
+    const adapted = service.adaptProjectSnapshot({
+      schema_version: 2,
+      tax_region: { tax_region_id: 'tax-1', name: 'County', tax_rate: .06, was_active: false },
+      default_markup_percent: 300, labor_percent: 15,
+      line_items: [{ local_id: 'line-1', display_order: 0, line_item_type: 'fee', item_name: 'Delivery', description: 'Recorded', quantity: 1, unit_price: 50, subtotal: 50, components: [] }],
+      shopping_list: [], breakdown: { feesTotal: 50 },
+    }, { subtotal: 50, taxRate: .06, taxAmount: 3, totalAmount: 53, retainerAmount: 15.9, finalBalanceAmount: 53 });
+    expect(adapted.valid).toBeTrue();
+    expect(adapted.warning).toBeNull();
+    expect(adapted.draft).toEqual(jasmine.objectContaining({ schema_version: 2, default_markup_percent: 300, labor_percent: 15 }));
+    expect(adapted.draft?.tax_region.was_active).toBeFalse();
+    expect(adapted.draft?.line_items[0].description).toBe('Recorded');
+  });
+
+  it('recalculates a representative 100-line proposal within the 200 ms edit budget', () => {
+    const lines = Array.from({ length: 100 }, (_, index) => ({
+      ...service.createEmptyLine(index), item_name: `Arrangement ${index + 1}`, quantity: 2,
+      unit_price: 100, subtotal: 200,
+    }));
+    const samples = Array.from({ length: 20 }, () => {
+      const started = performance.now();
+      service.calculateTotals(lines, { tax_region_id: 'tax', name: 'Tax', tax_rate: .06, applies_to_products: true, applies_to_services: true, applies_to_delivery: true, is_active: true, created_at: '', updated_at: '' }, 10);
+      return performance.now() - started;
+    });
+    expect(samples.filter((elapsed) => elapsed < 200).length).toBeGreaterThanOrEqual(19);
+  });
 });

@@ -41,12 +41,7 @@ export class ProjectProposalDocumentsSectionComponent {
   });
 
   isDisplayActive(document: ProjectProposalDocumentVersion): boolean {
-    if (document.version === this.initialDocuments()[0]?.version) {
-      return !this.hasRevisions();
-    }
-
-    const latestRevised = this.revisedDocuments().at(-1);
-    return latestRevised?.project_proposal_document_version_id === document.project_proposal_document_version_id;
+    return document.is_active && document.status === 'submitted';
   }
 
   formatDateTime(value: string | null | undefined): string {
