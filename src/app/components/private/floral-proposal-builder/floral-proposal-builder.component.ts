@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,11 +7,15 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CatalogItem } from '../../../core/models/catalog-item';
 import {
   FloralProposal,
-  FloralProposalRenderContract,
   FloralProposalLineItemType,
   FloralProposalShoppingListItem,
 } from '../../../core/models/floral-proposal';
 import { Lead } from '../../../core/models/lead';
+import { Project } from '../../../core/models/project';
+import {
+  EditableProposalSnapshotV2,
+  ProjectProposalRevisionWorkspace,
+} from '../../../core/models/project-proposal-revision-workspace';
 import { TaxRegion } from '../../../core/models/tax-region';
 import { ToastService } from '../../../core/services/toast.service';
 import { CrmThemeService } from '../../../core/services/crm-theme.service';
@@ -27,7 +31,7 @@ import {
   FloralProposalBuilderService,
 } from '../../../core/supabase/services/floral-proposal-builder.service';
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
-import { FloralProposalRendererService } from '../../../core/supabase/services/floral-proposal-renderer.service';
+import { ProjectProposalRevisionService } from '../../../core/supabase/services/project-proposal-revision.service';
 import { ProposalDocumentSubmissionModalComponent } from './components/proposal-document-submission-modal/proposal-document-submission-modal.component';
 import { EntityDetailShellComponent } from '../../../shared/components/private/entity-detail-shell/entity-detail-shell.component';
 import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
@@ -60,8 +64,8 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
-  private readonly floralProposalRenderer = inject(FloralProposalRendererService);
   private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
+  readonly projectProposalRevision = inject(ProjectProposalRevisionService);
   private readonly toast = inject(ToastService);
   readonly crmThemeService = inject(CrmThemeService);
 
@@ -74,6 +78,9 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly submissionProgress = signal<string | null>(null);
   readonly editModeEnabled = signal(false);
   readonly activeProjectId = signal<string | null>(null);
+  readonly revisionProject = signal<Project | null>(null);
+  readonly revisionWorkspace = signal<ProjectProposalRevisionWorkspace | null>(null);
+  readonly revisionWarning = signal<string | null>(null);
   readonly lead = signal<Lead | null>(null);
   readonly proposals = signal<FloralProposal[]>([]);
   readonly activeProposal = signal<FloralProposal | null>(null);
@@ -109,6 +116,9 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly totalsBreakdown = computed(() => this.renderPayload().breakdown);
 
   readonly canEdit = computed(() => {
+    if (this.revisionWorkspace()) {
+      return !this.saving();
+    }
     const lead = this.lead();
     const proposal = this.activeProposal();
 
@@ -142,6 +152,8 @@ export class FloralProposalBuilderComponent implements OnInit {
   );
 
   readonly title = computed(() => {
+    const project = this.revisionProject();
+    if (project) return `Revise Proposal: ${project.project_name}`;
     const lead = this.lead();
     return lead
       ? `Floral Proposal Builder: ${lead.first_name} ${lead.last_name}`
@@ -149,6 +161,8 @@ export class FloralProposalBuilderComponent implements OnInit {
   });
 
   readonly subtitle = computed(() => {
+    const project = this.revisionProject();
+    if (project) return `${this.formatStatusLabel(project.status)} project · changes autosave as a private draft`;
     const lead = this.lead();
     if (!lead) {
       return 'Build a client-facing Floral Proposal with internal catalog-item composition and live shopping-list rollups.';
@@ -158,15 +172,68 @@ export class FloralProposalBuilderComponent implements OnInit {
       lead.service_type
     )}`;
   });
+  private readonly revisionAutosave = effect(() => {
+    const workspace = untracked(this.revisionWorkspace);
+    if (!workspace || this.loading()) return;
+    this.projectProposalRevision.queueAutosave(workspace, this.buildRevisionDraft(workspace));
+  });
+
   ngOnInit(): void {
+    const projectId = this.route.snapshot.paramMap.get('projectId');
+    if (projectId) {
+      this.activeProjectId.set(projectId);
+      void this.loadProjectRevision(projectId);
+      return;
+    }
     const leadId = this.route.snapshot.paramMap.get('leadId');
-    this.activeProjectId.set(this.route.snapshot.queryParamMap.get('projectId'));
     if (!leadId) {
       void this.router.navigate(['/admin/leads']);
       return;
     }
 
     void this.loadBuilder(leadId);
+  }
+
+  async loadProjectRevision(projectId: string): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const loaded = await this.projectProposalRevision.loadOrInitialize(projectId);
+      const [sourceLead, taxRegions, catalogItems] = await Promise.all([
+        loaded.workspace.source_lead_id
+          ? this.leadRepository.getLeadById(loaded.workspace.source_lead_id)
+          : Promise.resolve(null),
+        this.taxRegionRepository.getTaxRegions(),
+        this.catalogItemRepository.getCatalogItems(),
+      ]);
+      const draft = loaded.workspace.draft_snapshot;
+      this.revisionProject.set(loaded.project);
+      this.revisionWarning.set(loaded.compatibilityWarning);
+      this.lead.set(sourceLead ?? this.projectLeadContext(loaded.project));
+      this.catalogItems.set(catalogItems);
+      this.taxRegions.set(this.withRecordedTaxRegion(taxRegions, draft));
+      this.selectedTaxRegionId.set(draft.tax_region.tax_region_id ?? '');
+      this.defaultMarkupPercent.set(draft.default_markup_percent);
+      this.laborPercent.set(draft.labor_percent);
+      this.lineItems.set(await this.populateLineItemSignedUrls(draft.line_items.map((line) => ({
+        ...line,
+        expanded: false,
+        image_signed_url: null,
+        components: line.components.map((component) => ({
+          ...component,
+          local_id: this.createLocalId('component'),
+          item_type: component.item_type as CatalogItem['item_type'] | null | undefined,
+          unit_type: component.unit_type as CatalogItem['unit_type'] | null | undefined,
+        })),
+      }))));
+      await this.refreshShoppingList();
+      this.revisionWorkspace.set(loaded.workspace);
+    } catch (error) {
+      console.error('[FloralProposalBuilderComponent] loadProjectRevision error:', error);
+      this.error.set(error instanceof Error ? error.message : 'We could not load this proposal revision.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   async loadBuilder(leadId: string): Promise<void> {
@@ -234,12 +301,27 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   async retry(): Promise<void> {
+    const projectId = this.activeProjectId();
+    if (projectId) {
+      await this.loadProjectRevision(projectId);
+      return;
+    }
     const leadId = this.lead()?.lead_id ?? this.route.snapshot.paramMap.get('leadId');
     if (!leadId) return;
     await this.loadBuilder(leadId);
   }
 
-  goBack(): void {
+  async goBack(): Promise<void> {
+    const projectId = this.activeProjectId();
+    if (projectId) {
+      try {
+        await this.projectProposalRevision.flushAutosave();
+        await this.router.navigate(['/admin/projects', projectId]);
+      } catch (error) {
+        this.toast.showToast(error instanceof Error ? error.message : 'Save the revision before leaving.', 'error');
+      }
+      return;
+    }
     const leadId = this.lead()?.lead_id;
     if (!leadId) {
       void this.router.navigate(['/admin/leads']);
@@ -247,6 +329,33 @@ export class FloralProposalBuilderComponent implements OnInit {
     }
 
     void this.router.navigate(['/admin/leads', leadId]);
+  }
+
+  async discardRevision(): Promise<void> {
+    const workspace = this.revisionWorkspace();
+    if (!workspace || this.saving()) return;
+    if (!window.confirm('Discard this entire proposal revision draft? The active submitted proposal will remain unchanged.')) return;
+    try {
+      this.saving.set(true);
+      await this.projectProposalRevision.discard(workspace);
+      this.revisionWorkspace.set(null);
+      await this.router.navigate(['/admin/projects', workspace.project_id]);
+    } catch (error) {
+      this.toast.showToast(error instanceof Error ? error.message : 'The revision could not be discarded.', 'error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async retryRevisionSave(): Promise<void> {
+    const workspace = this.revisionWorkspace();
+    if (!workspace || this.saving()) return;
+    try {
+      const saved = await this.projectProposalRevision.retryAutosave(workspace, this.buildRevisionDraft(workspace));
+      if (saved) this.revisionWorkspace.set(saved);
+    } catch (error) {
+      this.toast.showToast(error instanceof Error ? error.message : 'The revision still could not be saved.', 'error');
+    }
   }
 
   addLineItem(): void {
@@ -380,32 +489,10 @@ export class FloralProposalBuilderComponent implements OnInit {
         const nextComponents = line.components.map((component) => {
           if (component.local_id !== componentId) return component;
 
-          const matchedItem = this.findCatalogItemForQuery(rawValue);
-          if (!matchedItem) {
-            return {
-              ...component,
-              catalog_item_id: null,
-              catalog_item_name: rawValue,
-              base_unit_cost: 0,
-              reserve_percent: component.reserve_percent ?? this.getDefaultReservePercent(),
-              pack_quantity: null,
-              purchase_unit_cost: 0,
-              item_type: null,
-              unit_type: null,
-              color: null,
-              variety: null,
-            };
-          }
-
           return {
-            ...this.floralProposalBuilderService.applyCatalogItemToComponent(
-              component,
-              matchedItem,
-              line.quantity,
-              this.defaultMarkupPercent(),
-              this.getDefaultReservePercent()
-            ),
-            catalog_item_name: this.formatCatalogItemOptionLabel(matchedItem),
+            ...component,
+            catalog_item_id: null,
+            catalog_item_name: rawValue,
           };
         });
 
@@ -420,7 +507,37 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   commitCatalogItemSelection(lineId: string, componentId: string, rawValue: string): void {
-    this.updateCatalogItemQuery(lineId, componentId, rawValue);
+    const normalizedValue = this.normalizeCatalogItemQuery(rawValue);
+    const selectedItem = this.activeCatalogItems().find(
+      (item) =>
+        this.normalizeCatalogItemQuery(this.formatCatalogItemOptionLabel(item)) === normalizedValue
+    );
+
+    if (selectedItem) {
+      this.replaceCatalogItem(lineId, componentId, selectedItem.item_id);
+      return;
+    }
+
+    this.updateCatalogItemQuery(lineId, componentId, rawValue.trim());
+  }
+
+  replaceCatalogItem(lineId: string, componentId: string, catalogItemId: string): void {
+    if (!this.canEdit() || !catalogItemId) return;
+    const item = this.activeCatalogItems().find((candidate) => candidate.item_id === catalogItemId);
+    if (!item) return;
+    this.lineItems.update((lines) => lines.map((line) => {
+      if (line.local_id !== lineId) return line;
+      return this.floralProposalBuilderService.recalculateLine({
+        ...line,
+        components: line.components.map((component) => component.local_id !== componentId ? component : ({
+          ...this.floralProposalBuilderService.applyCatalogItemToComponent(
+            component, item, line.quantity, this.defaultMarkupPercent(), this.getDefaultReservePercent()
+          ),
+          catalog_item_name: this.formatCatalogItemOptionLabel(item),
+        })),
+      });
+    }));
+    void this.refreshShoppingList();
   }
 
   updateComponentQuantity(lineId: string, componentId: string, rawValue: string): void {
@@ -490,6 +607,20 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   async saveDraft(): Promise<void> {
+    const workspace = this.revisionWorkspace();
+    if (workspace) {
+      try {
+        this.saving.set(true);
+        const saved = await this.projectProposalRevision.flushAutosave();
+        if (saved) this.revisionWorkspace.set(saved);
+        this.toast.showToast('Proposal revision draft saved.', 'success');
+      } catch (error) {
+        this.toast.showToast(error instanceof Error ? error.message : 'The revision draft could not be saved.', 'error');
+      } finally {
+        this.saving.set(false);
+      }
+      return;
+    }
     const lead = this.lead();
     if (!lead || this.saving() || this.isReadOnly(lead.status)) return;
 
@@ -510,7 +641,7 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   async finalizeProposal(): Promise<void> {
     const lead = this.lead();
-    if (!lead || this.saving() || this.isReadOnly(lead.status)) return;
+    if (!lead || this.saving() || (!this.revisionWorkspace() && this.isReadOnly(lead.status))) return;
 
     if (!this.selectedTaxRegionId()) {
       this.toast.showToast('Choose a tax region before finalizing the Floral Proposal.', 'error');
@@ -522,7 +653,7 @@ export class FloralProposalBuilderComponent implements OnInit {
       return;
     }
 
-    if (!lead.event_date) {
+    if (!(this.revisionProject()?.event_date ?? lead.event_date)) {
       this.toast.showToast('Add an event date before finalizing the Floral Proposal.', 'error');
       return;
     }
@@ -583,17 +714,44 @@ export class FloralProposalBuilderComponent implements OnInit {
       return;
     }
 
-    const confirmed = window.confirm(
-      'Submit this signed proposal and services agreement PDF? This will store the document and convert the lead into a booked project.'
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       this.saving.set(true);
       this.submissionError.set(null);
+      const revisionWorkspace = this.revisionWorkspace();
+      if (revisionWorkspace) {
+        this.submissionProgress.set('Saving the latest revision draft...');
+        const saved = await this.projectProposalRevision.flushAutosave();
+        const prepared = await this.projectProposalRevision.prepareSubmission(
+          saved ?? revisionWorkspace,
+          file.name
+        );
+        this.revisionWorkspace.set(prepared);
+        this.submissionProgress.set('Uploading the revised proposal PDF securely...');
+        await this.proposalWorkflow.uploadProposalPdf({
+          leadId: lead.lead_id,
+          proposalId: prepared.project_proposal_revision_workspace_id,
+          idempotencyKey: prepared.pending_submission_key!,
+          file,
+          projectId: prepared.project_id,
+          storagePath: prepared.pending_pdf_storage_path!,
+        });
+        this.submissionProgress.set('Activating the new proposal snapshot and document...');
+        const result = await this.proposalWorkflow.submitProposal({
+          mode: 'project_revision',
+          leadId: prepared.source_lead_id ?? null,
+          projectId: prepared.project_id,
+          floralProposalId: null,
+          revisionWorkspaceId: prepared.project_proposal_revision_workspace_id,
+          baselineSnapshotId: prepared.baseline_invoice_snapshot_id,
+          pdfStoragePath: prepared.pending_pdf_storage_path!,
+          pdfFileName: file.name,
+          idempotencyKey: prepared.pending_submission_key!,
+        });
+        this.toast.showToast('Revised proposal activated.', 'success');
+        this.submissionModalOpen.set(false);
+        await this.router.navigate(['/admin/projects', result.project_id]);
+        return;
+      }
       this.submissionProgress.set('Saving proposal invoice details...');
       const proposal = await this.persistProposal('draft');
       this.activeProposal.set(proposal);
@@ -696,29 +854,6 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   lineHasImage(line: FloralProposalBuilderLine): boolean {
     return Boolean(line.image_storage_path || line.image_signed_url);
-  }
-
-  exportFloralProposalPdf(): void {
-    const lead = this.lead();
-    const renderPayload = this.buildRenderPayload();
-
-    if (!lead || !renderPayload.line_items.length) {
-      this.toast.showToast('Add line items before exporting the Floral Proposal.', 'error');
-      return;
-    }
-
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=900');
-    if (!printWindow) {
-      this.toast.showToast('We were unable to open the Floral Proposal export window.', 'error');
-      return;
-    }
-
-    const html = this.buildProposalPrintHtmlFromRenderPayload(renderPayload);
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 250);
   }
 
   private async uploadLineItemImage(lineId: string, file: File): Promise<void> {
@@ -1098,34 +1233,6 @@ export class FloralProposalBuilderComponent implements OnInit {
     );
   }
 
-  private findCatalogItemForQuery(value: string): CatalogItem | null {
-    const normalized = this.normalizeCatalogItemQuery(value);
-    if (!normalized) return null;
-
-    const exactLabelMatch =
-      this.activeCatalogItems().find(
-        (item) => this.normalizeCatalogItemQuery(this.formatCatalogItemOptionLabel(item)) === normalized
-      ) ?? null;
-
-    if (exactLabelMatch) {
-      return exactLabelMatch;
-    }
-
-    const exactNameMatches = this.activeCatalogItems().filter(
-      (item) => this.normalizeCatalogItemQuery(item.name) === normalized
-    );
-
-    if (exactNameMatches.length === 1) {
-      return exactNameMatches[0];
-    }
-
-    const filteredMatches = this.activeCatalogItems().filter((item) =>
-      this.matchesCatalogItemQuery(item, normalized)
-    );
-
-    return filteredMatches.length === 1 ? filteredMatches[0] : null;
-  }
-
   private matchesCatalogItemQuery(item: CatalogItem, normalizedQuery: string): boolean {
     const queryTokens = normalizedQuery.split(' ').filter((token) => token.length > 0);
     if (!queryTokens.length) {
@@ -1163,6 +1270,76 @@ export class FloralProposalBuilderComponent implements OnInit {
         display_order: index,
       })
     );
+  }
+
+  private buildRevisionDraft(workspace: ProjectProposalRevisionWorkspace): EditableProposalSnapshotV2 {
+    const renderPayload = this.buildRenderPayload();
+    const total = Number(renderPayload.totals.totalAmount.toFixed(2));
+    return this.floralProposalBuilderService.buildEditableProjectSnapshot({
+      renderPayload,
+      lines: this.lineItems(),
+      retainerAmount: Number((total * 0.3).toFixed(2)),
+      finalBalanceAmount: total,
+      retainerDueDate: workspace.retainer_due_date ?? null,
+      finalBalanceDueDate: workspace.final_balance_due_date ?? null,
+      existing: workspace.draft_snapshot,
+    });
+  }
+
+  private withRecordedTaxRegion(
+    regions: TaxRegion[],
+    draft: EditableProposalSnapshotV2
+  ): TaxRegion[] {
+    const recordedId = draft.tax_region.tax_region_id;
+    if (!recordedId || regions.some((region) => region.tax_region_id === recordedId)) {
+      return regions;
+    }
+    const timestamp = new Date(0).toISOString();
+    return [{
+      tax_region_id: recordedId,
+      name: `${draft.tax_region.name ?? 'Recorded tax region'} (inactive)`,
+      tax_rate: draft.tax_region.tax_rate,
+      applies_to_products: true,
+      applies_to_services: true,
+      applies_to_delivery: true,
+      is_active: false,
+      created_at: timestamp,
+      updated_at: timestamp,
+    }, ...regions];
+  }
+
+  private projectLeadContext(project: Project): Lead {
+    const now = new Date().toISOString();
+    return {
+      lead_id: project.source_lead_id ?? `project-${project.project_id}`,
+      service_type: project.service_type,
+      event_type: project.event_type ?? null,
+      first_name: project.project_name,
+      last_name: '',
+      email: '',
+      event_date: project.event_date ?? null,
+      ceremony_venue_name: project.ceremony_venue_name ?? null,
+      ceremony_venue_city: project.ceremony_venue_city ?? null,
+      ceremony_venue_state: project.ceremony_venue_state ?? null,
+      reception_venue_name: project.reception_venue_name ?? null,
+      reception_venue_city: project.reception_venue_city ?? null,
+      reception_venue_state: project.reception_venue_state ?? null,
+      budget_range: project.budget_range ?? null,
+      guest_count: project.guest_count ?? null,
+      source: 'project_revision',
+      status: 'converted',
+      created_at: project.created_at ?? now,
+      updated_at: project.updated_at ?? now,
+      consultation_scheduled_at: null,
+      consultation_completed_at: null,
+      planner_name: null,
+      planner_phone: null,
+      planner_email: null,
+    };
+  }
+
+  private createLocalId(prefix: string): string {
+    return `${prefix}-${crypto.randomUUID()}`;
   }
 
   private buildRenderPayload(): FloralProposalRenderPayload {
@@ -1235,76 +1412,6 @@ export class FloralProposalBuilderComponent implements OnInit {
     return date.toISOString().slice(0, 10);
   }
 
-  private buildProposalPrintHtmlFromRenderPayload(renderPayload: FloralProposalRenderPayload): string {
-    const lead = this.lead();
-    if (!lead) {
-      return '<html><body><p>Floral Proposal unavailable.</p></body></html>';
-    }
-
-    const fallbackContract: FloralProposalRenderContract = {
-      proposal_id: this.activeProposal()?.floral_proposal_id ?? null,
-      proposal_version: this.activeProposal()?.version ?? null,
-      generated_at: new Date().toISOString(),
-      lead: {
-        lead_id: lead.lead_id,
-        first_name: lead.first_name,
-        last_name: lead.last_name,
-        partner_first_name: lead.partner_first_name ?? null,
-        partner_last_name: lead.partner_last_name ?? null,
-        email: lead.email,
-        phone: lead.phone ?? null,
-        service_type: lead.service_type,
-        event_type: lead.event_type ?? null,
-        event_date: lead.event_date ?? null,
-        ceremony_venue_name: lead.ceremony_venue_name ?? null,
-        ceremony_venue_city: lead.ceremony_venue_city ?? null,
-        ceremony_venue_state: lead.ceremony_venue_state ?? null,
-        ceremony_start_time: lead.ceremony_start_time ?? null,
-        reception_venue_name: lead.reception_venue_name ?? null,
-        reception_venue_city: lead.reception_venue_city ?? null,
-        reception_venue_state: lead.reception_venue_state ?? null,
-        reception_start_time: lead.reception_start_time ?? null,
-        event_start_time: lead.event_start_time ?? null,
-        status: lead.status,
-      },
-      template: {
-        template_id: null,
-        name: 'Floral Proposal',
-      },
-      tax_region: {
-        tax_region_id: renderPayload.tax_region_id ?? null,
-        name: renderPayload.tax_region_name ?? null,
-        tax_rate: renderPayload.tax_rate,
-      },
-      pricing: {
-        default_markup_percent: renderPayload.default_markup_percent,
-        labor_percent: renderPayload.labor_percent,
-      },
-      line_items: renderPayload.line_items,
-      shopping_list: renderPayload.shopping_list,
-      totals: {
-        products_total: renderPayload.breakdown.productsTotal,
-        labor_total: renderPayload.breakdown.laborTotal,
-        fees_total: renderPayload.breakdown.feesTotal,
-        discounts_total: renderPayload.breakdown.discountsTotal,
-        subtotal: renderPayload.breakdown.subtotal,
-        tax_amount: renderPayload.totals.taxAmount,
-        total_amount: renderPayload.totals.totalAmount,
-      },
-      renderer_assets: {
-        line_item_images: renderPayload.line_items.map((line) => ({
-          display_order: line.display_order,
-          item_name: line.item_name,
-          storage_path: line.image_storage_path ?? null,
-          signed_url: line.image_signed_url ?? null,
-          alt_text: line.image_alt_text ?? null,
-          caption: line.image_caption ?? null,
-        })),
-      },
-    };
-
-    return this.floralProposalRenderer.renderHtml(fallbackContract);
-  }
 }
 
 

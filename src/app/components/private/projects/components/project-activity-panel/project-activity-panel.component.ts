@@ -17,11 +17,18 @@ export class ProjectActivityPanelComponent {
     const metadata = activity.metadata ?? {};
 
     return Object.entries(metadata)
+      .filter(([key]) => !['submission_idempotency_key', 'new_snapshot_id', 'new_document_id'].includes(key))
       .filter(([, value]) => value !== null && value !== undefined && value !== '')
       .map(([key, value]) => ({
         key: this.formatMetadataKey(key),
         value: this.formatMetadataValue(value),
       }));
+  }
+
+  actorName(activity: ActivityLogEntry): string {
+    return activity.performed_by_display_name?.trim()
+      || activity.performed_by_email?.trim()
+      || 'Unknown user';
   }
 
   formatDateTime(value: string): string {

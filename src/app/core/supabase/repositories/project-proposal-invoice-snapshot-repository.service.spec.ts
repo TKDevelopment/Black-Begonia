@@ -109,19 +109,15 @@ describe('ProjectProposalInvoiceSnapshotRepositoryService', () => {
     expect(created).toEqual(snapshot);
   });
 
-  it('returns empty lists and null active snapshots when reads fail', async () => {
+  it('propagates read failures so financial consumers cannot treat errors as missing data', async () => {
     const error = new Error('read failed');
     client.from.and.returnValues(
       createSelectEqOrderQuery({ data: null, error }),
       createSelectEqMaybeSingleQuery({ data: null, error })
     );
 
-    await expectAsync(
-      service.getProjectSnapshots(testProject.project_id)
-    ).toBeResolvedTo([]);
-    await expectAsync(
-      service.getActiveProjectSnapshot(testProject.project_id)
-    ).toBeResolvedTo(null);
+    await expectAsync(service.getProjectSnapshots(testProject.project_id)).toBeRejected();
+    await expectAsync(service.getActiveProjectSnapshot(testProject.project_id)).toBeRejected();
 
     expect(consoleErrorSpy).toHaveBeenCalled();
   });

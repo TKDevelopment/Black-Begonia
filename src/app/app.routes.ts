@@ -227,6 +227,13 @@ export const routes: Routes = [
           import('./components/private/projects/projects.component').then(m => m.ProjectsComponent),
       },
       {
+        path: 'projects/:projectId/proposal-revision',
+        loadComponent: () =>
+          import('./components/private/floral-proposal-builder/floral-proposal-builder.component').then(
+            m => m.FloralProposalBuilderComponent
+          ),
+      },
+      {
         path: 'projects/:projectId',
         loadComponent: () =>
           import('./components/private/projects/project-details/project-details.component').then(

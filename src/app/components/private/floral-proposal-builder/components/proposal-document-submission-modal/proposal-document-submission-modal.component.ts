@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-proposal-document-submission-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './proposal-document-submission-modal.component.html',
 })
 export class ProposalDocumentSubmissionModalComponent {
@@ -14,6 +15,9 @@ export class ProposalDocumentSubmissionModalComponent {
   @Input() progressMessage: string | null = null;
   @Input() errorMessage: string | null = null;
   @Input() canvaImportAvailable = false;
+  @Input() mode: 'initial_booking' | 'project_revision' = 'initial_booking';
+
+  approvedSignedAcknowledged = false;
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() fileSelected = new EventEmitter<File | null>();
@@ -25,6 +29,7 @@ export class ProposalDocumentSubmissionModalComponent {
     }
 
     this.closeModal.emit();
+    this.approvedSignedAcknowledged = false;
   }
 
   onFileInputChange(event: Event): void {
@@ -49,5 +54,11 @@ export class ProposalDocumentSubmissionModalComponent {
   onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  onSubmit(): void {
+    if (!this.saving && this.fileName && this.approvedSignedAcknowledged) {
+      this.submitDocument.emit();
+    }
   }
 }

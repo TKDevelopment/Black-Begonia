@@ -19,6 +19,9 @@
             <p *ngIf="activity.description" class="text-sm leading-6 text-stone-600">
               {{ activity.description }}
             </p>
+            <p *ngIf="activity.activity_type === 'proposal_revision_submitted'" class="text-xs text-stone-500">
+              Submitted by {{ actorName(activity) }}
+            </p>
             <dl *ngIf="metadataEntries(activity).length" class="metadata-list">
               <div *ngFor="let entry of metadataEntries(activity)" class="metadata-chip">
                 <dt>{{ entry.key }}</dt>

@@ -16,6 +16,7 @@ export interface ProjectProposalInvoiceSnapshot {
   created_by?: string | null;
   created_at: string;
   is_active: boolean;
+  submission_idempotency_key?: string | null;
 }
 
 export interface CreateProjectProposalInvoiceSnapshotInput {
@@ -34,4 +35,5 @@ export interface CreateProjectProposalInvoiceSnapshotInput {
   final_balance_due_date?: string | null;
   created_by?: string | null;
   is_active?: boolean;
+  submission_idempotency_key?: string | null;
 }

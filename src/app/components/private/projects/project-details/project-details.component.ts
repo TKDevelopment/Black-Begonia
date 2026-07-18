@@ -15,6 +15,7 @@ import { ActivityRepositoryService } from '../../../../core/supabase/repositorie
 import { ProjectProposalDocumentVersionRepositoryService } from '../../../../core/supabase/repositories/project-proposal-document-version-repository.service';
 import { ProjectProposalInvoiceSnapshotRepositoryService } from '../../../../core/supabase/repositories/project-proposal-invoice-snapshot-repository.service';
 import { ProjectWorkflowService } from '../../../../core/supabase/services/project-workflow.service';
+import { ProjectProposalRevisionService } from '../../../../core/supabase/services/project-proposal-revision.service';
 import { SupabaseService } from '../../../../core/supabase/clients/supabase.service';
 import { formatDateOnlyForDisplay } from '../../../../core/utils/date-only';
 import { CrmPageHeaderComponent } from '../../../../shared/components/private/crm-page-header/crm-page-header.component';
@@ -58,6 +59,7 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly documentRepository = inject(ProjectProposalDocumentVersionRepositoryService);
   private readonly snapshotRepository = inject(ProjectProposalInvoiceSnapshotRepositoryService);
   private readonly projectWorkflow = inject(ProjectWorkflowService);
+  private readonly proposalRevision = inject(ProjectProposalRevisionService);
   private readonly supabaseService = inject(SupabaseService);
 
   readonly loading = signal(true);
@@ -76,16 +78,40 @@ export class ProjectDetailsComponent implements OnInit {
   readonly documents = signal<ProjectProposalDocumentVersion[]>([]);
   readonly snapshots = signal<ProjectProposalInvoiceSnapshot[]>([]);
 
+  readonly snapshotState = computed(() => {
+    const project = this.project();
+    return project
+      ? this.proposalRevision.resolveSnapshotState(project, this.snapshots())
+      : { state: 'load_error' as const, repairMessage: 'Project details are still loading.' };
+  });
+
   readonly activeSnapshot = computed(() => {
-    return this.snapshots().find((snapshot) => snapshot.is_active) ?? this.snapshots().at(-1) ?? null;
+    const state = this.snapshotState();
+    return state.state === 'valid' ? state.snapshot : null;
+  });
+
+  readonly documentState = computed(() => {
+    const project = this.project();
+    const snapshot = this.activeSnapshot();
+    if (!project || !snapshot) {
+      return { state: 'load_error' as const, repairMessage: 'A valid active snapshot is required before opening the active PDF.' };
+    }
+    return this.proposalRevision.resolveDocumentState(project, snapshot, this.documents());
   });
 
   readonly activeDocument = computed(() => {
-    const activeId = this.project()?.active_proposal_document_version_id;
-    return this.documents().find((document) => document.project_proposal_document_version_id === activeId)
-      ?? this.documents().filter((document) => document.version > 1).at(-1)
-      ?? this.documents().at(-1)
-      ?? null;
+    const state = this.documentState();
+    return state.state === 'valid' ? state.document : null;
+  });
+
+  readonly revisionDisabledReason = computed(() => {
+    const state = this.snapshotState();
+    return state.state === 'valid' ? null : state.repairMessage;
+  });
+
+  readonly documentDisabledReason = computed(() => {
+    const state = this.documentState();
+    return state.state === 'valid' ? null : state.repairMessage;
   });
 
   readonly sortedPayments = computed(() => {
@@ -255,20 +281,12 @@ export class ProjectDetailsComponent implements OnInit {
 
   reviseProposal(): void {
     const project = this.project();
-    if (!project?.source_lead_id) {
-      this.sectionError.set('This project is not linked to a source lead proposal builder.');
+    const disabledReason = this.revisionDisabledReason();
+    if (!project || disabledReason) {
+      this.sectionError.set(disabledReason ?? 'This project cannot start a proposal revision.');
       return;
     }
-
-    void this.router.navigate(
-      ['/admin/leads', project.source_lead_id, 'floral-proposal-builder'],
-      {
-        queryParams: {
-          projectId: project.project_id,
-          mode: 'project_revision',
-        },
-      }
-    );
+    void this.router.navigate(['/admin/projects', project.project_id, 'proposal-revision']);
   }
 
   async openActivePdf(): Promise<void> {

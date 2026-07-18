@@ -96,6 +96,7 @@ export class ActivityRepositoryService {
         activity_label,
         description,
         performed_by,
+        profiles!activity_log_performed_by_fkey(display_name, email),
         metadata,
         created_at
       `)
@@ -108,7 +109,12 @@ export class ActivityRepositoryService {
       return [];
     }
 
-    return (data ?? []) as ActivityLogEntry[];
+    return (data ?? []).map((row: any) => ({
+      ...row,
+      performed_by_display_name: row.profiles?.display_name ?? null,
+      performed_by_email: row.profiles?.email ?? null,
+      profiles: undefined,
+    })) as ActivityLogEntry[];
   }
 
   async createProjectActivity(payload: {

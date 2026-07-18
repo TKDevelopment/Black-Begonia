@@ -26,6 +26,7 @@ describe('ProjectProposalDocumentVersionRepositoryService', () => {
     uploaded_by: 'user-test-001',
     submitted_at: '2026-06-02T12:00:00.000Z',
     is_active: true,
+    status: 'submitted',
     created_at: '2026-06-02T12:00:00.000Z',
   };
 
@@ -105,19 +106,15 @@ describe('ProjectProposalDocumentVersionRepositoryService', () => {
     expect(created).toEqual(documentVersion);
   });
 
-  it('returns empty lists and null active versions when reads fail', async () => {
+  it('propagates read failures so current-state consumers cannot treat errors as missing data', async () => {
     const error = new Error('read failed');
     client.from.and.returnValues(
       createSelectEqOrderQuery({ data: null, error }),
       createSelectEqMaybeSingleQuery({ data: null, error })
     );
 
-    await expectAsync(
-      service.getProjectDocumentVersions(testProject.project_id)
-    ).toBeResolvedTo([]);
-    await expectAsync(
-      service.getActiveProjectDocumentVersion(testProject.project_id)
-    ).toBeResolvedTo(null);
+    await expectAsync(service.getProjectDocumentVersions(testProject.project_id)).toBeRejected();
+    await expectAsync(service.getActiveProjectDocumentVersion(testProject.project_id)).toBeRejected();
 
     expect(consoleErrorSpy).toHaveBeenCalled();
   });

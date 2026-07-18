@@ -11,6 +11,8 @@ type RequestBody = {
   pdf_storage_path?: string | null;
   pdf_file_name?: string | null;
   idempotency_key?: string | null;
+  revision_workspace_id?: string | null;
+  baseline_snapshot_id?: string | null;
 };
 
 type LeadRow = {
@@ -120,22 +122,21 @@ async function authenticateCrmUser(req: Request, supabase: SupabaseAdminClient):
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) throw new Response("Invalid authorization token.", { status: 401 });
 
-  const { data: isInternal, error: roleError } = await supabase.rpc("is_internal_crm_user");
-  if (roleError) {
-    console.warn(JSON.stringify({ level: "WARN", function: "submit-floral-proposal", message: "Unable to evaluate CRM role through RPC.", error: roleError.message }));
-  }
-
-  if (roleError || isInternal !== true) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", data.user.id)
-      .maybeSingle();
-
-    if (!profile) throw new Response("User is not authorized for CRM proposal booking.", { status: 403 });
-  }
+  await assertInternalCrmUser(req);
 
   return data.user.id;
+}
+
+async function assertInternalCrmUser(req: Request): Promise<void> {
+  const authorization = req.headers.get("authorization") ?? "";
+  const userClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: authorization } },
+  });
+  const { data: isInternal, error } = await userClient.rpc("is_internal_crm_user");
+  if (error || isInternal !== true) {
+    throw new Response("User is not authorized for CRM proposal submission.", { status: 403 });
+  }
 }
 
 async function verifyStoredPdf(
@@ -287,7 +288,7 @@ serve(async (req) => {
     const projectId = optionalUuid(body.project_id);
     const pdfStoragePath = requiredString(body.pdf_storage_path, "pdf_storage_path");
     const pdfFileName = sanitizeFileName(requiredString(body.pdf_file_name, "pdf_file_name"));
-    requiredString(body.idempotency_key, "idempotency_key");
+    const idempotencyKey = optionalUuid(requiredString(body.idempotency_key, "idempotency_key"));
 
     if (!pdfFileName.toLowerCase().endsWith(".pdf")) {
       return jsonResponse(400, { success: false, error: "The submitted document must use a .pdf file name." });
@@ -308,6 +309,46 @@ serve(async (req) => {
     }
 
     const pdf = await verifyStoredPdf(supabase, pdfStoragePath);
+
+    if (mode === "project_revision") {
+      const revisionWorkspaceId = optionalUuid(body.revision_workspace_id);
+      const baselineSnapshotId = optionalUuid(body.baseline_snapshot_id);
+      if (!projectId || !revisionWorkspaceId || !baselineSnapshotId || !idempotencyKey) {
+        return jsonResponse(400, { success: false, error: "Project revision identifiers are required." });
+      }
+
+      const { data: workspace, error: workspaceError } = await supabase
+        .from("project_proposal_revision_workspaces")
+        .select("project_id, baseline_invoice_snapshot_id, pending_submission_key, pending_pdf_storage_path, pending_pdf_file_name")
+        .eq("project_proposal_revision_workspace_id", revisionWorkspaceId)
+        .maybeSingle();
+      if (workspaceError) throw workspaceError;
+      if (!workspace
+        || workspace.project_id !== projectId
+        || workspace.baseline_invoice_snapshot_id !== baselineSnapshotId
+        || workspace.pending_submission_key !== idempotencyKey
+        || workspace.pending_pdf_storage_path !== pdfStoragePath
+        || workspace.pending_pdf_file_name !== pdfFileName) {
+        return jsonResponse(409, { success: false, error: "The saved revision submission attempt no longer matches this request. Reload and retry." });
+      }
+
+      // Recheck authorization immediately before the privileged transaction.
+      await assertInternalCrmUser(req);
+      const { data: result, error: rpcError } = await supabase.rpc("finalize_project_proposal_revision", {
+        p_project_id: projectId,
+        p_workspace_id: revisionWorkspaceId,
+        p_baseline_snapshot_id: baselineSnapshotId,
+        p_idempotency_key: idempotencyKey,
+        p_pdf_bucket: FLORAL_PROPOSAL_BUCKET,
+        p_pdf_storage_path: pdfStoragePath,
+        p_pdf_file_name: pdfFileName,
+        p_pdf_content_type: pdf.contentType,
+        p_pdf_file_size_bytes: pdf.size,
+        p_submitted_by: userId,
+      });
+      if (rpcError) throw rpcError;
+      return jsonResponse(200, { ...(result as Record<string, unknown>), lead_id: leadId, floral_proposal_id: null });
+    }
 
     const { data: proposal, error: proposalError } = floralProposalId
       ? await supabase
@@ -472,7 +513,9 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : "Submission failed.";
     const status = /required|malformed|pdf|document|empty|corrupt|password|storage limit/i.test(message)
       ? 400
-      : /not found|eligible/i.test(message)
+      : /changed|conflict|completed|canceled|active snapshot|baseline|saved revision/i.test(message)
+        ? 409
+        : /not found|eligible/i.test(message)
         ? 422
         : 500;
 
