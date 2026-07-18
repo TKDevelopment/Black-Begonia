@@ -97,6 +97,25 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     expect(fixture.nativeElement.querySelector('input[type="file"]')?.disabled).toBeTrue();
   });
 
+  it('requires explicit approved or signed acknowledgement before emitting submission', () => {
+    const submitSpy = spyOn(component.submitDocument, 'emit');
+    component.fileName = 'revision.pdf';
+    component.onSubmit();
+    expect(submitSpy).not.toHaveBeenCalled();
+    component.approvedSignedAcknowledged = true;
+    component.onSubmit();
+    expect(submitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders revision-specific activation copy without initial booking language', () => {
+    component.open = true;
+    component.mode = 'project_revision';
+    fixture.detectChanges();
+    expect(textContent()).toContain('Activate Revised Proposal PDF');
+    expect(textContent()).toContain('keeps the prior version as immutable history');
+    expect(textContent()).not.toContain('books the project');
+  });
+
   function textContent(): string {
     return fixture.nativeElement.textContent.replace(/\s+/g, ' ').trim();
   }

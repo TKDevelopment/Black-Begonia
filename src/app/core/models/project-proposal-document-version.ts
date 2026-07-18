@@ -1,3 +1,5 @@
+export type ProjectProposalDocumentStatus = 'submitted' | 'superseded' | 'archived';
+
 export interface ProjectProposalDocumentVersion {
   project_proposal_document_version_id: string;
   project_id: string;
@@ -13,7 +15,8 @@ export interface ProjectProposalDocumentVersion {
   uploaded_by?: string | null;
   submitted_at: string;
   is_active: boolean;
-  status?: string | null;
+  status: ProjectProposalDocumentStatus;
+  submission_idempotency_key?: string | null;
   created_at: string;
 }
 
@@ -31,5 +34,6 @@ export interface CreateProjectProposalDocumentVersionInput {
   uploaded_by?: string | null;
   submitted_at?: string;
   is_active?: boolean;
-  status?: string | null;
+  status?: ProjectProposalDocumentStatus;
+  submission_idempotency_key?: string | null;
 }

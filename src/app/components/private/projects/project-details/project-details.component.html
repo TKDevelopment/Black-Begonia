@@ -56,13 +56,14 @@
             <button type="button" class="crm-secondary-button secondary-button" (click)="editModalOpen.set(true)">
               Edit
             </button>
-            <button type="button" class="crm-secondary-button secondary-button" (click)="openActivePdf()">
+            <button type="button" class="crm-secondary-button secondary-button" (click)="openActivePdf()" [disabled]="!activeDocument()" [title]="documentDisabledReason() ?? ''">
               Open Active PDF
             </button>
-            <button type="button" class="crm-primary-button primary-button" (click)="reviseProposal()">
+            <button type="button" class="crm-primary-button primary-button" (click)="reviseProposal()" [disabled]="!!revisionDisabledReason()" [title]="revisionDisabledReason() ?? ''">
               Revise Proposal
             </button>
           </div>
+          <p *ngIf="revisionDisabledReason()" class="mt-2 text-sm text-amber-700">{{ revisionDisabledReason() }}</p>
         </div>
       </section>
 

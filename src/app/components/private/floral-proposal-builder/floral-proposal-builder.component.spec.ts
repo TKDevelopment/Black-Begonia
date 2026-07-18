@@ -13,7 +13,6 @@ import { FloralProposalRepositoryService } from '../../../core/supabase/reposito
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
-import { FloralProposalRendererService } from '../../../core/supabase/services/floral-proposal-renderer.service';
 import { testFloralProposal, testLead } from '../../../core/testing/workflow-fixtures';
 import { FloralProposalBuilderComponent } from './floral-proposal-builder.component';
 
@@ -27,7 +26,6 @@ describe('FloralProposalBuilderComponent', () => {
   let catalogRepository: jasmine.SpyObj<CatalogItemRepositoryService>;
   let activityRepository: jasmine.SpyObj<ActivityRepositoryService>;
   let proposalWorkflow: jasmine.SpyObj<FloralProposalWorkflowService>;
-  let proposalRenderer: jasmine.SpyObj<FloralProposalRendererService>;
   let toast: jasmine.SpyObj<ToastService>;
   let router: jasmine.SpyObj<Router>;
   let consoleErrorSpy: jasmine.Spy;
@@ -117,10 +115,6 @@ describe('FloralProposalBuilderComponent', () => {
         'clearMissingLineItemImage',
       ]
     );
-    proposalRenderer = jasmine.createSpyObj<FloralProposalRendererService>(
-      'FloralProposalRendererService',
-      ['renderHtml']
-    );
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['showToast']);
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
@@ -185,8 +179,6 @@ describe('FloralProposalBuilderComponent', () => {
     });
     proposalWorkflow.removeLineItemImage.and.resolveTo(undefined);
     proposalWorkflow.getSignedLineItemImageUrl.and.resolveTo('https://example.test/signed.jpg');
-    proposalRenderer.renderHtml.and.returnValue('<html><body>Proposal</body></html>');
-
     await TestBed.configureTestingModule({
       imports: [FloralProposalBuilderComponent],
       providers: [
@@ -208,7 +200,6 @@ describe('FloralProposalBuilderComponent', () => {
         { provide: CatalogItemRepositoryService, useValue: catalogRepository },
         { provide: ActivityRepositoryService, useValue: activityRepository },
         { provide: FloralProposalWorkflowService, useValue: proposalWorkflow },
-        { provide: FloralProposalRendererService, useValue: proposalRenderer },
         { provide: ToastService, useValue: toast },
         {
           provide: CrmThemeService,
@@ -310,7 +301,7 @@ describe('FloralProposalBuilderComponent', () => {
     component.addComponentRow(lineId);
     const componentId = component.lineItems()[0].components[0].local_id;
 
-    component.updateCatalogItemQuery(lineId, componentId, 'Blush Juliet Garden Rose');
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
     component.updateComponentQuantity(lineId, componentId, '5');
     component.onDefaultMarkupChange('40');
     await fixture.whenStable();
@@ -331,6 +322,84 @@ describe('FloralProposalBuilderComponent', () => {
     await fixture.whenStable();
 
     expect(component.lineItems()[0].components[0].reserve_percent).toBe(25);
+  });
+
+  it('keeps recorded pricing when component text is edited and reprices only through explicit replacement', () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.addComponentRow(lineId);
+    const componentId = component.lineItems()[0].components[0].local_id;
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
+    const recordedCost = component.lineItems()[0].components[0].base_unit_cost;
+
+    component.updateCatalogItemQuery(lineId, componentId, 'Custom legacy rose');
+
+    const edited = component.lineItems()[0].components[0];
+    expect(edited.catalog_item_id).toBeNull();
+    expect(edited.catalog_item_name).toBe('Custom legacy rose');
+    expect(edited.base_unit_cost).toBe(recordedCost);
+  });
+
+  it('uses one dynamic catalog typeahead and applies current pricing only for a selected suggestion', () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.addComponentRow(lineId);
+    const componentId = component.lineItems()[0].components[0].local_id;
+
+    component.updateCatalogItemQuery(lineId, componentId, 'Blush');
+    renderLoadedFixture();
+
+    const catalogInput = fixture.nativeElement.querySelector(
+      `input[list="${component.getCatalogItemDatalistId(componentId)}"]`
+    ) as HTMLInputElement;
+    const options = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        `#${component.getCatalogItemDatalistId(componentId)} option`
+      )
+    ) as HTMLOptionElement[];
+
+    expect(catalogInput).not.toBeNull();
+    expect(options.map((option) => option.value)).toEqual(['Blush Juliet Garden Rose']);
+    expect(fixture.nativeElement.querySelector('select[aria-label="Replace with current catalog item"]')).toBeNull();
+    expect(component.lineItems()[0].components[0].catalog_item_id).toBeNull();
+
+    component.commitCatalogItemSelection(lineId, componentId, 'Blush Juliet Garden Rose');
+
+    expect(component.lineItems()[0].components[0]).toEqual(
+      jasmine.objectContaining({
+        catalog_item_id: catalogItem.item_id,
+        base_unit_cost: catalogItem.base_unit_cost / (catalogItem.pack_quantity ?? 1),
+      })
+    );
+  });
+
+  it('renders the streamlined revision toolbar and line-item composition layout', () => {
+    createLoadedComponent();
+    component.revisionWorkspace.set({} as any);
+    component.revisionWarning.set(
+      'This proposal was created with an older snapshot format.'
+    );
+    component.addLineItem();
+    component.toggleExpanded(component.lineItems()[0].local_id);
+    renderLoadedFixture();
+
+    const actionRow = fixture.nativeElement.querySelector('.builder-action-row') as HTMLElement;
+    const actionLabels = Array.from(actionRow.querySelectorAll('button')).map((button) =>
+      button.textContent?.trim()
+    );
+
+    expect(actionRow.classList).toContain('flex-nowrap');
+    expect(actionLabels).toEqual(['Save Draft', 'Discard Revision', 'Finalize Proposal']);
+    expect(text()).not.toContain('Export PDF');
+    expect(fixture.nativeElement.querySelector('.revision-warning-banner')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.discard-revision-button')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.line-item-type-select')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.line-item-settings-card')).toBeNull();
+    expect(text()).not.toContain('Line Item Image');
+    expect(text()).not.toContain('Line Description');
+    expect(text()).toContain('Internal Catalog Composition');
   });
 
   it('saves drafts through repositories, activity logging, toast feedback, and reload', async () => {
@@ -439,6 +508,63 @@ describe('FloralProposalBuilderComponent', () => {
     });
     expect(component.submissionModalOpen()).toBeFalse();
     expect(component.saving()).toBeFalse();
+  });
+
+  it('flushes and reuses the pending project revision attempt before navigating to project details', async () => {
+    createSubmittableComponent();
+    const workspace = {
+      project_proposal_revision_workspace_id: 'workspace-001', project_id: 'project-test-001',
+      baseline_invoice_snapshot_id: 'snapshot-001', source_lead_id: testLead.lead_id,
+      schema_version: 2, draft_snapshot: {} as any, subtotal: 100, tax_rate: .08, tax_amount: 8,
+      total_amount: 108, retainer_amount: 32.4, final_balance_amount: 108, created_at: '', updated_at: '',
+    } as any;
+    const pending = {
+      ...workspace, pending_submission_key: 'request-001',
+      pending_pdf_storage_path: 'projects/project-test-001/proposal-revisions/request-001-revision.pdf',
+      pending_pdf_file_name: 'revision.pdf',
+    };
+    component.activeProjectId.set('project-test-001');
+    component.revisionProject.set({ project_id: 'project-test-001', project_name: 'Wedding', service_type: 'wedding', status: 'booked', event_date: testLead.event_date, created_at: '', updated_at: '' } as any);
+    component.revisionWorkspace.set(workspace);
+    spyOn(component.projectProposalRevision, 'flushAutosave').and.resolveTo(workspace);
+    spyOn(component.projectProposalRevision, 'prepareSubmission').and.resolveTo(pending);
+    const file = new File(['%PDF-test'], 'revision.pdf', { type: 'application/pdf' });
+    component.onSubmissionFileSelected(file);
+
+    await component.submitProposalDocument();
+
+    expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
+    expect(component.projectProposalRevision.flushAutosave).toHaveBeenCalled();
+    expect(component.projectProposalRevision.prepareSubmission).toHaveBeenCalledWith(workspace, 'revision.pdf');
+    expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith(jasmine.objectContaining({
+      mode: 'project_revision', revisionWorkspaceId: 'workspace-001', baselineSnapshotId: 'snapshot-001',
+      idempotencyKey: 'request-001',
+    }));
+    expect(toast.showToast).toHaveBeenCalledWith('Revised proposal activated.', 'success');
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/projects', 'project-test-001']);
+  });
+
+  it('keeps a revision when discard is canceled and deletes only after explicit confirmation', async () => {
+    createLoadedComponent();
+    const workspace = {
+      project_proposal_revision_workspace_id: 'workspace-001', project_id: 'project-test-001',
+      baseline_invoice_snapshot_id: 'snapshot-001', schema_version: 2, draft_snapshot: {} as any,
+      subtotal: 0, tax_rate: 0, tax_amount: 0, total_amount: 0, retainer_amount: 0,
+      final_balance_amount: 0, created_at: '', updated_at: '',
+    } as any;
+    component.activeProjectId.set('project-test-001');
+    component.revisionWorkspace.set(workspace);
+    const discard = spyOn(component.projectProposalRevision, 'discard').and.resolveTo();
+    spyOn(window, 'confirm').and.returnValues(false, true);
+
+    await component.discardRevision();
+    expect(discard).not.toHaveBeenCalled();
+    expect(component.revisionWorkspace()).toBe(workspace);
+
+    await component.discardRevision();
+    expect(discard).toHaveBeenCalledWith(workspace);
+    expect(component.revisionWorkspace()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/projects', 'project-test-001']);
   });
 
   it('reports observable finalization milestones while the modal remains locked', async () => {
@@ -573,42 +699,6 @@ describe('FloralProposalBuilderComponent', () => {
     expect(proposalWorkflow.uploadLineItemImage).toHaveBeenCalledTimes(1);
   });
 
-  it('exports printable proposal HTML and guards empty exports', () => {
-    const printSpy = jasmine.createSpy('print');
-    const printWindow = {
-      document: {
-        open: jasmine.createSpy('open'),
-        write: jasmine.createSpy('write'),
-        close: jasmine.createSpy('close'),
-      },
-      focus: jasmine.createSpy('focus'),
-      print: printSpy,
-    };
-    spyOn(window, 'open').and.returnValue(printWindow as any);
-    jasmine.clock().install();
-
-    try {
-      createLoadedComponent();
-      component.exportFloralProposalPdf();
-      expect(toast.showToast).toHaveBeenCalledWith(
-        'Add line items before exporting the Floral Proposal.',
-        'error'
-      );
-
-      createSubmittableState();
-      component.exportFloralProposalPdf();
-      jasmine.clock().tick(251);
-
-      expect(window.open).toHaveBeenCalled();
-      expect(printWindow.document.write).toHaveBeenCalledWith(
-        '<html><body>Proposal</body></html>'
-      );
-      expect(printSpy).toHaveBeenCalled();
-    } finally {
-      jasmine.clock().uninstall();
-    }
-  });
-
   it('covers workflow gating, helper formatting, and read-only guard branches', async () => {
     leadRepository.getLeadById.and.resolveTo({
       ...testLead,
@@ -645,16 +735,9 @@ describe('FloralProposalBuilderComponent', () => {
     expect(proposalWorkflow.submitProposal).not.toHaveBeenCalled();
   });
 
-  it('covers export popup failure and line-item image failure paths', async () => {
+  it('covers line-item image failure paths', async () => {
     createSubmittableComponent();
     const lineId = component.lineItems()[0].local_id;
-
-    spyOn(window, 'open').and.returnValue(null);
-    component.exportFloralProposalPdf();
-    expect(toast.showToast).toHaveBeenCalledWith(
-      'We were unable to open the Floral Proposal export window.',
-      'error'
-    );
 
     const input = {
       files: [new File(['image'], 'bouquet.jpg', { type: 'image/jpeg' })],
@@ -726,7 +809,7 @@ describe('FloralProposalBuilderComponent', () => {
     component.updateLineName(lineId, 'Bridal Bouquet');
     component.addComponentRow(lineId);
     const componentId = component.lineItems()[0].components[0].local_id;
-    component.updateCatalogItemQuery(lineId, componentId, 'Blush Juliet Garden Rose');
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
     component.updateComponentQuantity(lineId, componentId, '5');
   }
 
@@ -770,6 +853,14 @@ describe('FloralProposalBuilderComponent', () => {
 
   function text(): string {
     return fixture.nativeElement.textContent.replace(/\s+/g, ' ').trim();
+  }
+
+  function renderLoadedFixture(): void {
+    fixture.detectChanges();
+    component.loading.set(false);
+    component.error.set(null);
+    component.lead.set({ ...testLead, status: 'nurturing' });
+    fixture.detectChanges();
   }
 });
 

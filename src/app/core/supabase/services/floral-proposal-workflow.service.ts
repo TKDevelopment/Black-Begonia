@@ -55,7 +55,9 @@ export interface FinalizeFloralProposalRequest {
   mode?: 'initial_booking' | 'project_revision';
   leadId?: string | null;
   projectId?: string | null;
-  floralProposalId: string;
+  floralProposalId?: string | null;
+  revisionWorkspaceId?: string | null;
+  baselineSnapshotId?: string | null;
   pdfStoragePath: string;
   pdfFileName: string;
   idempotencyKey: string;
@@ -144,6 +146,7 @@ export class FloralProposalWorkflowService {
     idempotencyKey: string;
     file: File;
     projectId?: string | null;
+    storagePath?: string | null;
   }): Promise<{ storagePath: string }> {
     this.assertValidProposalPdfFile(args.file);
 
@@ -155,7 +158,8 @@ export class FloralProposalWorkflowService {
     const ownerSegment = args.projectId
       ? `projects/${args.projectId}`
       : `pending-leads/${args.leadId}`;
-    const storagePath = `${ownerSegment}/proposal-documents/${args.proposalId}/${args.idempotencyKey}-${fileName}`;
+    const storagePath = args.storagePath
+      ?? `${ownerSegment}/proposal-documents/${args.proposalId}/${args.idempotencyKey}-${fileName}`;
     const { error } = await this.supabaseService
       .getClient()
       .storage.from(this.floralProposalBucket)
@@ -166,6 +170,10 @@ export class FloralProposalWorkflowService {
       });
 
     if (error) {
+      const message = String((error as { message?: unknown }).message ?? '').toLowerCase();
+      if (message.includes('duplicate') || message.includes('already exists')) {
+        return { storagePath };
+      }
       console.error('[FloralProposalWorkflowService] uploadProposalPdf error:', error);
       throw new Error('We could not securely upload the proposal PDF.');
     }
@@ -203,18 +211,23 @@ export class FloralProposalWorkflowService {
   }
 
   async submitProposal(payload: FinalizeFloralProposalRequest): Promise<FinalizeFloralProposalResult> {
+    const body: Record<string, unknown> = {
+      mode: payload.mode ?? 'initial_booking',
+      lead_id: payload.leadId ?? null,
+      project_id: payload.projectId ?? null,
+      floral_proposal_id: payload.floralProposalId,
+      pdf_storage_path: payload.pdfStoragePath,
+      pdf_file_name: payload.pdfFileName,
+      idempotency_key: payload.idempotencyKey,
+    };
+    if (payload.mode === 'project_revision') {
+      body['revision_workspace_id'] = payload.revisionWorkspaceId ?? null;
+      body['baseline_snapshot_id'] = payload.baselineSnapshotId ?? null;
+    }
     const { data, error } = await this.supabaseService
       .getClient()
       .functions.invoke('submit-floral-proposal', {
-        body: {
-          mode: payload.mode ?? 'initial_booking',
-          lead_id: payload.leadId ?? null,
-          project_id: payload.projectId ?? null,
-          floral_proposal_id: payload.floralProposalId,
-          pdf_storage_path: payload.pdfStoragePath,
-          pdf_file_name: payload.pdfFileName,
-          idempotency_key: payload.idempotencyKey,
-        },
+        body,
       });
 
     if (error) {

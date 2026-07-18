@@ -30,6 +30,7 @@ export class ProjectProposalInvoiceSnapshotRepositoryService {
     created_by,
     created_at,
     is_active
+    ,submission_idempotency_key
   `;
 
   async getProjectSnapshots(projectId: string): Promise<ProjectProposalInvoiceSnapshot[]> {
@@ -42,7 +43,7 @@ export class ProjectProposalInvoiceSnapshotRepositoryService {
 
     if (error) {
       console.error('[ProjectProposalInvoiceSnapshotRepositoryService] getProjectSnapshots error:', error);
-      return [];
+      throw error;
     }
 
     return (data ?? []) as ProjectProposalInvoiceSnapshot[];
@@ -59,9 +60,24 @@ export class ProjectProposalInvoiceSnapshotRepositoryService {
 
     if (error) {
       console.error('[ProjectProposalInvoiceSnapshotRepositoryService] getActiveProjectSnapshot error:', error);
-      return null;
+      throw error;
     }
 
+    return (data as ProjectProposalInvoiceSnapshot | null) ?? null;
+  }
+
+  async getProjectSnapshotById(
+    projectId: string,
+    snapshotId: string
+  ): Promise<ProjectProposalInvoiceSnapshot | null> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('project_proposal_invoice_snapshots')
+      .select(this.snapshotSelect)
+      .eq('project_id', projectId)
+      .eq('project_proposal_invoice_snapshot_id', snapshotId)
+      .maybeSingle();
+    if (error) throw error;
     return (data as ProjectProposalInvoiceSnapshot | null) ?? null;
   }
 
@@ -87,6 +103,7 @@ export class ProjectProposalInvoiceSnapshotRepositoryService {
         final_balance_due_date: payload.final_balance_due_date ?? null,
         created_by: payload.created_by ?? null,
         is_active: payload.is_active ?? true,
+        submission_idempotency_key: payload.submission_idempotency_key ?? null,
       })
       .select(this.snapshotSelect)
       .single();

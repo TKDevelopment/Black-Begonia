@@ -320,6 +320,27 @@ describe('FloralProposalWorkflowService', () => {
     });
   });
 
+  it('submits the project revision workspace and exact baseline through the revision contract', async () => {
+    functionsInvokeSpy.and.resolveTo({ data: {
+      success: true, project_id: 'project-001', proposal_document_version_id: 'document-002',
+      active_invoice_snapshot_id: 'snapshot-002', signed_pdf_storage_path: 'projects/project-001/revision.pdf',
+      submitted_at: '2026-06-02T12:00:00.000Z',
+    }, error: null });
+
+    await service.submitProposal({
+      mode: 'project_revision', projectId: 'project-001', leadId: null, floralProposalId: null,
+      revisionWorkspaceId: 'workspace-001', baselineSnapshotId: 'snapshot-001',
+      pdfStoragePath: 'projects/project-001/revision.pdf', pdfFileName: 'revision.pdf',
+      idempotencyKey: 'request-002',
+    });
+
+    expect(functionsInvokeSpy).toHaveBeenCalledWith('submit-floral-proposal', { body: {
+      mode: 'project_revision', lead_id: null, project_id: 'project-001', floral_proposal_id: null,
+      revision_workspace_id: 'workspace-001', baseline_snapshot_id: 'snapshot-001',
+      pdf_storage_path: 'projects/project-001/revision.pdf', pdf_file_name: 'revision.pdf', idempotency_key: 'request-002',
+    } });
+  });
+
   it('throws friendly errors when the submit edge function fails', async () => {
     spyOn(console, 'error');
     functionsInvokeSpy.and.resolveTo({

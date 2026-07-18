@@ -28,6 +28,8 @@ export interface ActivityLogEntry {
   activity_label: string;
   description?: string | null;
   performed_by?: string | null;
+  performed_by_display_name?: string | null;
+  performed_by_email?: string | null;
   metadata?: Record<string, unknown> | null;
   created_at: string;
 }

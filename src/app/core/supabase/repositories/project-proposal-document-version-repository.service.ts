@@ -28,6 +28,7 @@ export class ProjectProposalDocumentVersionRepositoryService {
     submitted_at,
     is_active,
     status,
+    submission_idempotency_key,
     created_at
   `;
 
@@ -67,7 +68,7 @@ export class ProjectProposalDocumentVersionRepositoryService {
 
       if (fallback.error) {
         console.error('[ProjectProposalDocumentVersionRepositoryService] getProjectDocumentVersions error:', fallback.error);
-        return [];
+        throw fallback.error;
       }
 
       return (fallback.data ?? []).map((document) => ({
@@ -78,7 +79,7 @@ export class ProjectProposalDocumentVersionRepositoryService {
 
     if (result.error) {
       console.error('[ProjectProposalDocumentVersionRepositoryService] getProjectDocumentVersions error:', result.error);
-      return [];
+      throw result.error;
     }
 
     return (result.data ?? []) as ProjectProposalDocumentVersion[];
@@ -104,7 +105,7 @@ export class ProjectProposalDocumentVersionRepositoryService {
 
       if (fallback.error) {
         console.error('[ProjectProposalDocumentVersionRepositoryService] getActiveProjectDocumentVersion error:', fallback.error);
-        return null;
+        throw fallback.error;
       }
 
       return fallback.data
@@ -114,9 +115,24 @@ export class ProjectProposalDocumentVersionRepositoryService {
 
     if (result.error) {
       console.error('[ProjectProposalDocumentVersionRepositoryService] getActiveProjectDocumentVersion error:', result.error);
-      return null;
+      throw result.error;
     }
 
+    return (result.data as ProjectProposalDocumentVersion | null) ?? null;
+  }
+
+  async getProjectDocumentVersionById(
+    projectId: string,
+    documentId: string
+  ): Promise<ProjectProposalDocumentVersion | null> {
+    const result = await this.supabaseService
+      .getClient()
+      .from('project_proposal_document_versions')
+      .select(this.documentVersionSelect)
+      .eq('project_id', projectId)
+      .eq('project_proposal_document_version_id', documentId)
+      .maybeSingle();
+    if (result.error) throw result.error;
     return (result.data as ProjectProposalDocumentVersion | null) ?? null;
   }
 
@@ -140,8 +156,10 @@ export class ProjectProposalDocumentVersionRepositoryService {
         uploaded_by: payload.uploaded_by ?? null,
         submitted_at: payload.submitted_at ?? new Date().toISOString(),
         is_active: payload.is_active ?? true,
+        status: payload.status ?? 'submitted',
+        submission_idempotency_key: payload.submission_idempotency_key ?? null,
       })
-      .select(this.documentVersionSelectWithoutStatus)
+      .select(this.documentVersionSelect)
       .single();
 
     if (error) {
@@ -151,7 +169,6 @@ export class ProjectProposalDocumentVersionRepositoryService {
 
     return {
       ...data,
-      status: payload.status ?? 'submitted',
     } as ProjectProposalDocumentVersion;
   }
 

@@ -2,6 +2,40 @@
   background: var(--crm-page-bg, #09111a);
 }
 
+.revision-warning-banner {
+  background: #fffbeb;
+  border-color: #f4cf77;
+  color: #854d0e;
+}
+
+.discard-revision-button {
+  background: #fff;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.discard-revision-button:hover:not(:disabled) {
+  background: #fff1f2;
+  border-color: #fda4af;
+}
+
+.floral-proposal-builder-page.crm-dark .revision-warning-banner {
+  background: rgba(180, 83, 9, 0.16);
+  border-color: rgba(251, 191, 36, 0.32);
+  color: #fde68a;
+}
+
+.floral-proposal-builder-page.crm-dark .discard-revision-button {
+  background: rgba(127, 29, 29, 0.14);
+  border-color: rgba(251, 113, 133, 0.34);
+  color: #fecdd3;
+}
+
+.floral-proposal-builder-page.crm-dark .discard-revision-button:hover:not(:disabled) {
+  background: rgba(159, 18, 57, 0.28);
+  border-color: rgba(251, 113, 133, 0.5);
+}
+
 .floral-proposal-builder-page.crm-dark .builder-panel {
   background: var(--crm-surface, #101a26) !important;
   border-color: var(--crm-border, #23364c) !important;
@@ -83,6 +117,14 @@
 .floral-proposal-builder-page.crm-dark .line-item-type-badge {
   background: var(--crm-surface-highlight, #1f3046) !important;
   color: var(--crm-text-strong, #f8fbff) !important;
+}
+
+.line-item-type-select:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.floral-proposal-builder-page.crm-dark .line-item-type-select:hover:not(:disabled) {
+  background: var(--crm-surface-elevated, #172334) !important;
 }
 
 .floral-proposal-builder-page.crm-dark .builder-readonly-field {

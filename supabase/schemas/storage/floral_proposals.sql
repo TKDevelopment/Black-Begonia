@@ -18,21 +18,3 @@ using (
   bucket_id = 'floral-proposals'
   and public.is_internal_crm_user()
 );
-
-create policy "internal crm users update project proposal pdfs"
-on storage.objects for update to authenticated
-using (
-  bucket_id = 'floral-proposals'
-  and public.is_internal_crm_user()
-)
-with check (
-  bucket_id = 'floral-proposals'
-  and public.is_internal_crm_user()
-);
-
-create policy "internal crm users delete project proposal pdfs"
-on storage.objects for delete to authenticated
-using (
-  bucket_id = 'floral-proposals'
-  and public.is_internal_crm_user()
-);
