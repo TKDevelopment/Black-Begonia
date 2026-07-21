@@ -1,0 +1,21 @@
+<main class="status-page">
+    <section class="status-card" aria-live="polite">
+        <p class="eyebrow">Black Begonia Florals</p>
+        <p *ngIf="loading()">Checking the trusted payment record…</p>
+        <ng-container *ngIf="!loading()">
+            <h1>
+                {{ 
+                    state().state === 'confirmed' ? 'Payment confirmed' : 
+                    state().state === 'processing' ? 'Payment processing' : 
+                    state().state === 'still_outstanding' || 
+                    state().state === 'active' ? 'Balance still outstanding' : 'Payment unavailable' 
+                }}
+            </h1>
+            <p *ngIf="state().state === 'confirmed'">Thank you. Your payment has been securely recorded.</p>
+            <p *ngIf="state().state === 'processing'">Your provider is still confirming the payment. This page never treats a browser return as proof.</p>
+            <p *ngIf="state().state === 'still_outstanding' || state().state === 'active'">No confirmed receipt has been recorded yet.</p>
+            <button type="button" (click)="refresh()">Refresh status</button>
+            <a [routerLink]="['/pay',token]">Return to payment options</a>
+        </ng-container>
+    </section>
+</main>

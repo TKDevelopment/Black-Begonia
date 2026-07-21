@@ -6,4 +6,12 @@ export interface AppEnvironment {
     grapesjsStudioLicenseKey: string;
     googleClientId: string;
     googleApiKey: string;
+    paymentPublicOrigin: string;
+    paypalClientId: string;
+    paymentCapabilities: {
+        stripeCard: boolean;
+        venmo: boolean;
+        cash: boolean;
+        check: boolean;
+    };
 }

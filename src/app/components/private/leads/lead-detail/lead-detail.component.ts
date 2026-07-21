@@ -104,6 +104,7 @@ export class LeadDetailComponent implements OnInit {
   lead = signal<Lead | null>(null);
   activities = signal<LeadActivity[]>([]);
   proposals = signal<FloralProposal[]>([]);
+  acceptedProposal = computed(() => this.proposals().find((proposal) => proposal.is_active && proposal.status === 'accepted') ?? null);
   inspirationUrls = signal<LeadInspirationUrl[]>([]);
 
   declineModalOpen = signal(false);
@@ -119,6 +120,7 @@ export class LeadDetailComponent implements OnInit {
 
   convertModalOpen = signal(false);
   convertLoading = signal(false);
+  readonly conversionPaymentNotice = signal<{ state: 'queued' | 'failed' | 'not_requested'; projectId: string; message: string } | null>(null);
 
   editModalOpen = signal(false);
   editSaving = signal(false);
@@ -906,6 +908,15 @@ export class LeadDetailComponent implements OnInit {
       );
 
       this.convertModalOpen.set(false);
+      this.conversionPaymentNotice.set({
+        state: result.requestDelivery,
+        projectId: result.project.project_id,
+        message: result.requestDelivery === 'failed'
+          ? (result.requestError ?? 'The deposit request email needs attention.')
+          : result.requestDelivery === 'queued'
+            ? 'The deposit request was queued for delivery.'
+            : 'No deposit email was requested; the project remains Awaiting Deposit for manual payment logging.',
+      });
       await this.refreshLeadDetail();
       this.toast.showToast(
         `Lead converted to project "${result.project.project_name}".`,
@@ -917,6 +928,10 @@ export class LeadDetailComponent implements OnInit {
     } finally {
       this.convertLoading.set(false);
     }
+  }
+
+  openConvertedProjectPayment(projectId: string): void {
+    void this.router.navigate(['/admin/projects', projectId]);
   }
 
   openDeclineModal(): void {

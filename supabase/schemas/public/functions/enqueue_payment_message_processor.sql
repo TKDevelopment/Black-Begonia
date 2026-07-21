@@ -1,0 +1,22 @@
+create or replace function public.enqueue_payment_message_processor(p_delivery_id uuid default null)
+returns bigint language plpgsql security definer set search_path='' as $$
+declare v_project_url text; v_service_role_key text; v_cron_secret text; v_request_id bigint;
+begin
+  select nullif(decrypted_secret,'') into v_project_url from vault.decrypted_secrets where name='project_url' limit 1;
+  select nullif(decrypted_secret,'') into v_service_role_key from vault.decrypted_secrets where name='service_role_key' limit 1;
+  select nullif(decrypted_secret,'') into v_cron_secret from vault.decrypted_secrets where name='payment_cron_secret' limit 1;
+  if v_project_url is null then raise exception 'Payment processor Vault project_url is missing'; end if;
+  if v_service_role_key is null then raise exception 'Payment processor Vault service_role_key is missing'; end if;
+  if v_cron_secret is null then raise exception 'Payment processor Vault payment_cron_secret is missing'; end if;
+  v_project_url:=regexp_replace(v_project_url,'/+$','');
+  if v_project_url !~ '^https://[a-z0-9-]+\.supabase\.co$' then raise exception 'Payment processor Vault project_url is invalid'; end if;
+  select net.http_post(
+    url:=v_project_url||'/functions/v1/process-payment-messages',
+    headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||v_service_role_key,'x-cron-secret',v_cron_secret),
+    body:=case when p_delivery_id is null then '{}'::jsonb else jsonb_build_object('requestedDeliveryId',p_delivery_id::text) end,
+    timeout_milliseconds:=10000
+  ) into v_request_id;
+  return v_request_id;
+end; $$;
+revoke all on function public.enqueue_payment_message_processor(uuid) from public,anon,authenticated;
+grant execute on function public.enqueue_payment_message_processor(uuid) to service_role;

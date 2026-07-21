@@ -32,6 +32,7 @@ import {
 } from '../../../core/supabase/services/floral-proposal-builder.service';
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
 import { ProjectProposalRevisionService } from '../../../core/supabase/services/project-proposal-revision.service';
+import { LeadConversionService } from '../../../core/supabase/services/lead-conversion.service';
 import { ProposalDocumentSubmissionModalComponent } from './components/proposal-document-submission-modal/proposal-document-submission-modal.component';
 import { EntityDetailShellComponent } from '../../../shared/components/private/entity-detail-shell/entity-detail-shell.component';
 import { ErrorStateBlockComponent } from '../../../shared/components/private/error-state-block/error-state-block.component';
@@ -64,6 +65,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   private readonly catalogItemRepository = inject(CatalogItemRepositoryService);
   private readonly activityRepository = inject(ActivityRepositoryService);
   private readonly proposalWorkflow = inject(FloralProposalWorkflowService);
+  private readonly leadConversionService = inject(LeadConversionService);
   private readonly floralProposalBuilderService = inject(FloralProposalBuilderService);
   readonly projectProposalRevision = inject(ProjectProposalRevisionService);
   private readonly toast = inject(ToastService);
@@ -701,7 +703,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     this.submissionFile.set(file);
   }
 
-  async submitProposalDocument(): Promise<void> {
+  async submitProposalDocument(sendDepositRequest = false): Promise<void> {
     const lead = this.lead();
     const file = this.submissionFile();
 
@@ -774,14 +776,41 @@ export class FloralProposalBuilderComponent implements OnInit {
         pdfStoragePath: upload.storagePath,
         pdfFileName: file.name,
         idempotencyKey,
+        sendDepositRequest,
       });
 
-      this.submissionProgress.set('Booked project created. Opening project workspace...');
-      this.toast.showToast('Signed proposal stored and lead converted to a booked project.', 'success');
+      let depositDelivery: 'not_requested' | 'queued' | 'failed' = 'not_requested';
+      let depositDeliveryError: string | null = null;
+      if (
+        sendDepositRequest &&
+        result.deposit_obligation_id &&
+        result.deposit_principal_cents
+      ) {
+        this.submissionProgress.set('Queueing the secure deposit payment email...');
+        try {
+          depositDelivery = await this.leadConversionService.issueDepositRequest(
+            result.deposit_obligation_id,
+            result.deposit_principal_cents
+          );
+        } catch (error) {
+          depositDelivery = 'failed';
+          depositDeliveryError = error instanceof Error
+            ? error.message
+            : 'The deposit email needs a manual retry.';
+        }
+      }
+
+      this.submissionProgress.set('Awaiting Deposit project created. Opening project workspace...');
+      this.toast.showToast(
+        depositDelivery === 'queued'
+          ? 'Project created as Awaiting Deposit and the deposit email was queued.'
+          : depositDelivery === 'failed'
+            ? `Project created as Awaiting Deposit, but the deposit email failed: ${depositDeliveryError}`
+            : 'Project created as Awaiting Deposit. The deposit email was deferred.',
+        depositDelivery === 'failed' ? 'error' : 'success'
+      );
       this.submissionModalOpen.set(false);
-      await this.router.navigate(['/admin/projects'], {
-        queryParams: { projectId: result.project_id },
-      });
+      await this.router.navigate(['/admin/projects', result.project_id]);
     } catch (error) {
       console.error('[FloralProposalBuilderComponent] submitProposalDocument error:', error);
       const message = error instanceof Error

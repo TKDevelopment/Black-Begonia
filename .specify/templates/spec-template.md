@@ -95,10 +95,12 @@ priorities as P1, P2, P3, etc., where P1 is the most critical.
   table definitions alone are not sufficient.
 - **Standalone Edge Functions**: Any affected Supabase Edge Function MUST be
   independently deployable without an `_shared` directory, local shared
-  function module, or import from another edge function.
-- **Testing Expectations**: Feature MUST state unit-test coverage expectations
-  and whether proposal, lead, inquiry, or authorization integration checks are
-  required.
+  function module, or import from another edge function. Automated tests that
+  target, import, invoke, or simulate an Edge Function MUST NOT be created.
+- **Testing Expectations**: Feature MUST state Angular unit-test and PostgreSQL
+  integration-test expectations. Each affected Edge Function MUST instead have
+  independent type-check and documented provider/customer sandbox smoke
+  validation expectations, with no automated Edge Function tests.
 - **Sensitive Data**: Feature MUST describe handling for customer data, emails,
   passcodes, signatures, proposal PDFs, secrets, and payment-related records.
 - **Proposal Workflow**: Proposal features MUST state whether they preserve the

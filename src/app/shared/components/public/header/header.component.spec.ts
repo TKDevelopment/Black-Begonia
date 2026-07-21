@@ -30,4 +30,20 @@ describe('HeaderComponent', () => {
 
     expect(component.menuOpen).toBeTrue();
   });
+
+  it('shows only the home logo and social links in restricted payment mode', () => {
+    fixture.componentRef.setInput('navigationRestricted', true);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const logo = compiled.querySelector('[data-testid="public-logo"]');
+    const navigation = compiled.querySelector('[data-testid="public-navigation"]');
+    const menuButton = compiled.querySelector('[aria-label="Toggle menu"]');
+    const socialLinks = compiled.querySelectorAll('[data-testid="public-social-link"]');
+
+    expect(logo).toBeTruthy();
+    expect(navigation).toBeNull();
+    expect(menuButton).toBeNull();
+    expect(socialLinks.length).toBe(2);
+  });
 });

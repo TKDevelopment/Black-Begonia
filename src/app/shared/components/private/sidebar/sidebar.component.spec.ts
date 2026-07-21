@@ -54,4 +54,9 @@ describe('SidebarComponent', () => {
     ]);
     expect(component.groupedNav[0].children.some((item) => item.route.includes('proposal-templates'))).toBeFalse();
   });
+
+  it('exposes the guarded Payments table destination', () => {
+    expect(component.navItems).toContain(jasmine.objectContaining({ label: 'Payments', route: '/admin/payments' }));
+    expect(fixture.nativeElement.textContent).toContain('Payments');
+  });
 });

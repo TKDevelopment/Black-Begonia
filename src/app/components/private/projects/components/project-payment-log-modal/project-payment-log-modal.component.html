@@ -11,41 +11,21 @@
     <form class="mt-5 grid gap-4" (ngSubmit)="submit()">
       <label>
         <span>Payment Type</span>
-        <select name="payment_kind" [(ngModel)]="payment_kind">
-          <option value="deposit">Deposit</option>
-          <option value="final_payment">Final Payment</option>
-        </select>
-      </label>
-
-      <label>
-        <span>Status</span>
-        <select name="status" [(ngModel)]="status">
-          <option value="not_due">Not Due</option>
-          <option value="due">Due</option>
-          <option value="paid">Paid</option>
-          <option value="waived">Waived</option>
+        <select name="obligation_id" [ngModel]="obligation_id" (ngModelChange)="selectObligation($event)">
+          <option *ngFor="let obligation of obligations" [value]="obligation.project_payment_record_id">
+            {{ obligation.payment_kind === 'deposit' ? 'Deposit' : 'Final Payment' }} — {{ obligation.outstanding_amount ?? obligation.amount_due | currency }} outstanding
+          </option>
         </select>
       </label>
 
       <div class="grid gap-4 sm:grid-cols-2">
         <label>
-          <span>Amount Due</span>
-          <input name="amount_due" type="number" min="0" step="0.01" [(ngModel)]="amount_due" />
+          <span>Amount Received</span>
+          <input name="amount" type="number" min="0.01" step="0.01" [(ngModel)]="amount" />
         </label>
         <label>
-          <span>Amount Paid</span>
-          <input name="amount_paid" type="number" min="0" step="0.01" [(ngModel)]="amount_paid" />
-        </label>
-      </div>
-
-      <div class="grid gap-4 sm:grid-cols-2">
-        <label>
-          <span>Due Date</span>
-          <input name="due_date" type="date" [(ngModel)]="due_date" />
-        </label>
-        <label>
-          <span>Paid Date</span>
-          <input name="paid_date" type="date" [(ngModel)]="paid_date" />
+          <span>Received Date</span>
+          <input name="received_at" type="date" [(ngModel)]="received_at" />
         </label>
       </div>
 
@@ -63,6 +43,15 @@
         <span>Notes</span>
         <textarea name="notes" rows="3" [(ngModel)]="notes"></textarea>
       </label>
+
+      <details class="rounded-2xl border border-black/10 p-3">
+        <summary class="cursor-pointer text-sm font-medium">Duplicate or overpayment confirmation</summary>
+        <div class="mt-3 grid gap-3">
+          <input name="suspected_reference" [(ngModel)]="suspected_reference" placeholder="Suspected BB payment reference" />
+          <textarea name="duplicate_override_reason" rows="2" [(ngModel)]="duplicate_override_reason" placeholder="Required reason when overriding a duplicate warning"></textarea>
+          <label class="flex items-center gap-2"><input name="confirm_overpayment" type="checkbox" [(ngModel)]="confirm_overpayment" /> Confirm reviewed overpayment</label>
+        </div>
+      </details>
 
       <p *ngIf="error" class="text-sm font-medium text-rose-700">{{ error }}</p>
 

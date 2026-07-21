@@ -16,6 +16,14 @@ export type ActivityLogType =
   | 'task_completed'
   | 'status_change'
   | 'payment_recorded'
+  | 'payment_request_created'
+  | 'payment_request_superseded'
+  | 'payment_intention_recorded'
+  | 'payment_delivery_updated'
+  | 'payment_adjusted'
+  | 'payment_exception_updated'
+  | 'payment_fulfilled'
+  | 'payment_legal_hold_changed'
   | 'proposal_revision_submitted'
   | 'proposal_document_submitted'
   | 'active_invoice_snapshot_changed';
@@ -32,4 +40,6 @@ export interface ActivityLogEntry {
   performed_by_email?: string | null;
   metadata?: Record<string, unknown> | null;
   created_at: string;
+  actor_type?: 'florist' | 'customer' | 'provider' | 'schedule' | 'system';
+  payment_reference?: string | null;
 }

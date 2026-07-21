@@ -1,0 +1,38 @@
+project_id = "black-begonia"
+
+[functions.issue-payment-request]
+# Browser preflight requests do not include a bearer token. The function performs
+# its own user authentication and origin validation before issuing a request.
+verify_jwt = false
+
+[functions.retry-payment-delivery]
+# Browser preflight requests do not include a bearer token. The function
+# validates the caller and CRM role before it queues and dispatches a retry.
+verify_jwt = false
+
+[functions.resolve-payment-request]
+# Public customers authenticate with the opaque, request-scoped payment token.
+# The function enforces origin, rate-limit, token digest, and lifecycle checks.
+verify_jwt = false
+
+[functions.create-payment-checkout]
+# Public customers authenticate with the opaque payment token. The function
+# revalidates the request and reserves checkout state through service-only RPCs.
+verify_jwt = false
+
+[functions.capture-venmo-order]
+# The opaque payment token and stored attempt/order correlation are validated
+# inside the standalone function before server-side provider capture.
+verify_jwt = false
+
+[functions.stripe-payment-webhook]
+# Stripe callbacks authenticate through raw-body signature verification.
+verify_jwt = false
+
+[functions.paypal-payment-webhook]
+# PayPal callbacks authenticate through PayPal transmission verification.
+verify_jwt = false
+
+[functions.mailgun-webhook]
+# Mailgun callbacks authenticate through MG_WEBHOOK_SIGNING_KEY verification.
+verify_jwt = false

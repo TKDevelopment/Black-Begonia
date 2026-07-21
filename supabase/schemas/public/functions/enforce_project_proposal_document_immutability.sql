@@ -5,6 +5,11 @@ set search_path = pg_catalog, public
 as $$
 begin
   if tg_op = 'DELETE' then
+    if current_user = 'postgres'
+       and current_setting('app.project_cascade_delete', true) = 'on' then
+      return old;
+    end if;
+
     raise exception 'Submitted proposal documents cannot be deleted.' using errcode = '55000';
   end if;
 

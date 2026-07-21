@@ -18,7 +18,26 @@ create table public.project_payment_records (
   constraint project_payment_records_project_id_fkey foreign key (project_id) references projects (project_id) on delete cascade,
   constraint project_payment_records_recorded_by_fkey foreign key (recorded_by) references profiles (id) on delete set null,
   constraint project_payment_records_kind_check check (payment_kind in ('deposit', 'final_payment')),
-  constraint project_payment_records_status_check check (status in ('not_due', 'due', 'paid', 'waived', 'canceled')),
+  basis_snapshot_id uuid null references public.project_proposal_invoice_snapshots(project_proposal_invoice_snapshot_id) on delete set null,
+  basis_version integer null,
+  basis_total numeric(12,2) null,
+  target_amount numeric(12,2) not null default 0,
+  credited_principal numeric(12,2) not null default 0,
+  outstanding_amount numeric(12,2) not null default 0,
+  fulfillment_state text not null default 'not_due',
+  deposit_target_frozen_at timestamptz null,
+  reminder_enabled boolean not null default true,
+  reminder_paused_until timestamptz null,
+  reminder_pause_reason text null,
+  reminder_pause_actor uuid null references public.profiles(id) on delete set null,
+  migration_state text not null default 'native',
+  fulfilled_at timestamptz null,
+  waived_at timestamptz null,
+  canceled_at timestamptz null,
+  retention_eligible_at timestamptz null,
+  last_method text null,
+  last_intention_method text null,
+  constraint project_payment_records_status_check check (status in ('not_due', 'due', 'partially_paid', 'paid', 'overpaid', 'waived', 'canceled', 'review_required')),
   constraint project_payment_records_method_check check (payment_method is null or payment_method in ('stripe', 'venmo', 'check', 'cash', 'other')),
   constraint project_payment_records_source_check check (payment_source in ('manual', 'stripe', 'imported')),
   constraint project_payment_records_paid_check check (
@@ -29,6 +48,7 @@ create table public.project_payment_records (
 
 create index if not exists idx_project_payment_records_project_id on public.project_payment_records using btree (project_id) tablespace pg_default;
 create index if not exists idx_project_payment_records_project_kind on public.project_payment_records using btree (project_id, payment_kind) tablespace pg_default;
+create unique index if not exists uq_project_payment_records_active_kind on public.project_payment_records(project_id, payment_kind) where status <> 'canceled';
 
 create trigger trg_project_payment_records_set_updated_at before
 update on project_payment_records for each row

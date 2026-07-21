@@ -25,6 +25,7 @@ create table public.leads (
   converted_project_id uuid null,
   converted_primary_contact_id uuid null,
   converted_at timestamp with time zone null,
+  payment_conversion_command_key uuid null,
   declined_at timestamp with time zone null,
   last_contacted_at timestamp with time zone null,
   created_at timestamp with time zone not null default now(),
@@ -57,6 +58,7 @@ create index IF not exists idx_leads_email on public.leads using btree (email) T
 create index IF not exists idx_leads_event_date on public.leads using btree (event_date) TABLESPACE pg_default;
 
 create index IF not exists idx_leads_assigned_user_id on public.leads using btree (assigned_user_id) TABLESPACE pg_default;
+create unique index if not exists idx_leads_payment_conversion_command_key on public.leads(payment_conversion_command_key) where payment_conversion_command_key is not null;
 
 create trigger trg_leads_log_new_lead_activity
 after INSERT on leads for EACH row
