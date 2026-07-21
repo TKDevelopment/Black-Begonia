@@ -8,6 +8,21 @@ import { guestGuard } from './core/guards/guest.guard';
 
 export const routes: Routes = [
   {
+    path: 'pay',
+    component: PublicLayoutComponent,
+    data: { headerMode: 'payment' },
+    children: [
+      {
+        path: ':token/status',
+        loadComponent: () => import('./components/payment-access/payment-status/payment-status.component').then(m => m.PaymentStatusComponent),
+      },
+      {
+        path: ':token',
+        loadComponent: () => import('./components/payment-access/payment-options/payment-options.component').then(m => m.PaymentOptionsComponent),
+      },
+    ],
+  },
+  {
     path: '',
     component: PublicLayoutComponent,
     children: [
@@ -227,6 +242,11 @@ export const routes: Routes = [
           import('./components/private/projects/projects.component').then(m => m.ProjectsComponent),
       },
       {
+        path: 'payments',
+        loadComponent: () =>
+          import('./components/private/payments/payments.component').then(m => m.PaymentsComponent),
+      },
+      {
         path: 'projects/:projectId/proposal-revision',
         loadComponent: () =>
           import('./components/private/floral-proposal-builder/floral-proposal-builder.component').then(
@@ -249,10 +269,16 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    loadComponent: () =>
-      import('./components/public/not-found/not-found.component').then(
-        m => m.NotFoundComponent
-      ),
+    component: PublicLayoutComponent,
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./components/public/not-found/not-found.component').then(
+            m => m.NotFoundComponent
+          ),
+      },
+    ],
   },
 ];
 

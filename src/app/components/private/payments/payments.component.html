@@ -1,0 +1,15 @@
+<div class="min-h-screen bg-[#f7f4f1]"><div class="mx-auto w-full max-w-[1880px] space-y-5 px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+  <app-crm-page-header title="Payments" [subtitle]="total() + ' payment obligations across projects.'" primaryActionLabel="Collection settings" (primaryAction)="settingsOpen.set(true)" />
+  <app-error-state-block *ngIf="error()" title="Unable to load payments" [description]="error()!" />
+  <app-search-filter-bar searchPlaceholder="Search by project, customer, or email" [searchValue]="search()" [filters]="filters()" (searchChange)="onSearchChange($event)" (filterChange)="onFilterChange($event)" (reset)="reset()" />
+  <app-entity-table-shell [columns]="columns" [rows]="rows()" [loading]="loading()" [clickableRows]="true" trackByField="project_payment_record_id" emptyTitle="No payments found" emptyDescription="Try resetting the payment filters." (rowClick)="selectedObligationId.set($event.project_payment_record_id)">
+    <ng-template appEntityTableCell="project" let-row><div><p class="font-medium text-stone-900">{{row.project_name}}</p><p class="text-xs text-stone-500">{{row.customer_name || 'Customer unavailable'}} · {{row.customer_email || 'Email unavailable'}}</p></div></ng-template>
+    <ng-template appEntityTableCell="kind" let-row>{{label(row.payment_kind)}}</ng-template>
+    <ng-template appEntityTableCell="amount" let-row><div><p class="font-medium">{{money(row.outstanding_amount)}}</p><p class="text-xs text-stone-500">of {{money(row.target_amount)}}</p></div></ng-template>
+    <ng-template appEntityTableCell="due" let-row><div><p>{{date(row.due_date)}}</p><p class="text-xs text-stone-500">Event {{date(row.event_date)}}</p></div></ng-template>
+    <ng-template appEntityTableCell="method" let-row>{{label(row.last_method || row.last_intention_method)}}</ng-template>
+    <ng-template appEntityTableCell="status" let-row><div class="flex items-center gap-2"><app-status-badge [label]="label(row.status)" [tone]="tone(row)"/><span *ngIf="row.has_delivery_issue" class="text-xs text-amber-700">Email issue</span></div></ng-template>
+  </app-entity-table-shell>
+</div></div>
+<app-payment-obligation-modal *ngIf="selectedObligationId() as id" [obligationId]="id" (closed)="selectedObligationId.set(null)" (changed)="load()" />
+<app-payment-settings-modal *ngIf="settingsOpen()" (closed)="settingsOpen.set(false)" (saved)="load()" />

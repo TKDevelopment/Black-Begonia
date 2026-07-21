@@ -7,13 +7,18 @@ import { ProjectRepositoryService } from './project-repository.service';
 describe('ProjectRepositoryService', () => {
   let service: ProjectRepositoryService;
   let supabaseService: jasmine.SpyObj<SupabaseService>;
-  let client: { from: jasmine.Spy; rpc: jasmine.Spy };
+  let client: { from: jasmine.Spy; rpc: jasmine.Spy; storage: { from: jasmine.Spy } };
+  let storageRemove: jasmine.Spy;
   let consoleErrorSpy: jasmine.Spy;
 
   beforeEach(() => {
+    storageRemove = jasmine.createSpy('remove').and.resolveTo({ error: null });
     client = {
       from: jasmine.createSpy('from'),
       rpc: jasmine.createSpy('rpc').and.resolveTo({ error: null }),
+      storage: {
+        from: jasmine.createSpy('storage.from').and.returnValue({ remove: storageRemove }),
+      },
     };
     supabaseService = jasmine.createSpyObj<SupabaseService>('SupabaseService', [
       'getClient',
@@ -128,6 +133,39 @@ describe('ProjectRepositoryService', () => {
     });
     expect(query.eq).toHaveBeenCalledWith('project_id', testProject.project_id);
     expect(project).toEqual(testProject);
+  });
+
+  it('uses the guarded cascade RPC and removes returned proposal files by bucket', async () => {
+    client.rpc.and.resolveTo({
+      data: {
+        projectId: testProject.project_id,
+        projectName: testProject.project_name,
+        deletedSourceLead: true,
+        deletedContacts: 1,
+        deletedOrganizations: 0,
+        storageObjects: [
+          { bucket: 'floral-proposals', path: 'projects/test/one.pdf' },
+          { bucket: 'floral-proposals', path: 'projects/test/two.pdf' },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await service.cascadeDeleteProjectTestData(
+      testProject.project_id,
+      testProject.project_name
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith('cascade_delete_project_test_data', {
+      p_project_id: testProject.project_id,
+      p_confirmation: testProject.project_name,
+    });
+    expect(client.storage.from).toHaveBeenCalledWith('floral-proposals');
+    expect(storageRemove).toHaveBeenCalledWith([
+      'projects/test/one.pdf',
+      'projects/test/two.pdf',
+    ]);
+    expect(result.storageCleanupFailures).toBe(0);
   });
 });
 

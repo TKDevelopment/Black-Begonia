@@ -1,7 +1,7 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { HeaderComponent } from '../../../shared/components/public/header/header.component';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { FooterComponent } from '../../../shared/components/public/footer/footer.component';
 
 @Component({
@@ -11,5 +11,9 @@ import { FooterComponent } from '../../../shared/components/public/footer/footer
   styleUrl: './public-layout.component.scss'
 })
 export class PublicLayoutComponent {
+  private readonly route = inject(ActivatedRoute);
+
   @ViewChild(HeaderComponent) header!: HeaderComponent;
+
+  readonly paymentHeader = this.route.snapshot.data['headerMode'] === 'payment';
 }

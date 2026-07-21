@@ -12,8 +12,11 @@ research.md, data-model.md, contracts/
 
 **Tests**: Black Begonia uses Karma/Jasmine unit tests by default. Include test
 tasks for all changed Angular components, guards, services, repositories, and
-workflow logic. Include focused integration checks when proposal, lead, inquiry,
-authorization, Supabase, or edge-function flows are touched.
+workflow logic. Include focused PostgreSQL integration checks when proposal,
+lead, inquiry, authorization, Supabase migration, RLS, function, or data-contract
+flows are touched. Never create automated test files or harnesses that target,
+import, invoke, or simulate Supabase Edge Functions; use independent type-check
+and documented provider/customer sandbox smoke validation tasks instead.
 
 **Organization**: Tasks are grouped by user story to enable independent
 implementation and testing of each story.
@@ -63,10 +66,12 @@ story implementation.
   or manual steps
 - [ ] T007 Confirm every affected Supabase Edge Function is standalone and does
   not create, use, or import `_shared`, another edge function, or a local shared
-  function module
+  function module, and confirm no automated test targets or simulates it
 - [ ] T008 Confirm no service-role keys or privileged secrets are exposed to
   frontend code
-- [ ] T009 Define Karma/Jasmine unit-test scope and integration-check scope
+- [ ] T009 Define Angular Karma/Jasmine and PostgreSQL integration-test scope;
+  define independent type-check and documented sandbox smoke validation for
+  each affected Edge Function without creating automated Edge Function tests
 - [ ] T010 Define validation/error handling for customer data, emails,
   passcodes, signatures, proposal PDFs, and payment-related records
 - [ ] T011 For frontend split work, define staged routing, auth, deployment,
@@ -192,5 +197,8 @@ story implementation.
   migration in `supabase/migrations/`.
 - Never create or use an `_shared` edge-function directory, local shared
   edge-function module, or import between Supabase Edge Functions.
+- Never create an automated test file or harness that targets, imports, invokes,
+  or simulates a Supabase Edge Function; validate it by independent type-check
+  and documented provider/customer sandbox smoke checks.
 - AI agents must never run `git commit`, `git push`, or commit/push-capable
   automation; include source-control handoff notes for the human operator.

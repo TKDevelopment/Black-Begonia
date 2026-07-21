@@ -9,6 +9,8 @@ const supabaseAnonKey = process.env['SUPABASE_ANON_KEY'] || 'test-anon-key';
 const grapesjsStudioLicenseKey = process.env['GRAPEJS_LICENSE_KEY'] || 'undefined';
 const googleClientId = process.env['GOOGLE_CLIENT_ID'] || 'undefined';
 const googleApiKey = process.env['GOOGLE_API_KEY'] || 'undefined';
+const paymentPublicOrigin = process.env['PAYMENT_PUBLIC_ORIGIN'] || 'https://blackbegoniaflorals.com';
+const paypalClientId = process.env['PAYPAL_CLIENT_ID'] || 'undefined';
 
 const envConfigFile = `
     import type { AppEnvironment } from './environment.model';
@@ -21,6 +23,14 @@ const envConfigFile = `
         grapesjsStudioLicenseKey: '${grapesjsStudioLicenseKey}',
         googleClientId: '${googleClientId}',
         googleApiKey: '${googleApiKey}',
+        paymentPublicOrigin: '${paymentPublicOrigin}',
+        paypalClientId: '${paypalClientId}',
+        paymentCapabilities: {
+            stripeCard: true,
+            venmo: true,
+            cash: true,
+            check: true,
+        },
     };
 `;
 

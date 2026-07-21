@@ -74,8 +74,38 @@ describe('LeadConvertModalComponent', () => {
       {
         project_name: 'Avery Bloom Wedding',
         internal_notes: 'Handoff note',
+        send_deposit_request: false,
       },
     ]);
+  });
+
+  it('shows the rounded 30% deposit and emits the send-email choice', () => {
+    component.open = true;
+    component.lead = { ...testLead, email: 'avery@example.com' };
+    component.proposal = { total_amount: 1234.56 } as any;
+    component.sendDepositRequest.set(true);
+    fixture.detectChanges();
+
+    const emitted: unknown[] = [];
+    component.confirm.subscribe((payload) => emitted.push(payload));
+    component.projectName.set('Avery Event');
+    component.onConfirm();
+
+    expect(component.depositAmount).toBe(370.37);
+    expect(fixture.nativeElement.textContent).toContain('$370.37');
+    expect(emitted).toEqual([jasmine.objectContaining({ send_deposit_request: true })]);
+  });
+
+  it('disables deposit email without a recipient and preserves manual collection', () => {
+    component.open = true;
+    component.lead = { ...testLead, email: '' };
+    component.ngOnChanges({ open: new SimpleChange(false, true, false) });
+    fixture.detectChanges();
+
+    expect(component.sendDepositRequest()).toBeFalse();
+    expect(component.hasEligibleRecipient).toBeFalse();
+    expect((fixture.nativeElement.querySelector('input[type=checkbox]') as HTMLInputElement).disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('logged manually');
   });
 
   it('clears form state on close and blocks close while saving', () => {

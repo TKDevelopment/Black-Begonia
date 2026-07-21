@@ -25,8 +25,11 @@ libraries such as FullCalendar, Canva, GrapesJS, or Mailgun.
 records where applicable; document table, migration SQL, RLS, and storage policy
 impact.
 
-**Testing**: Karma/Jasmine unit tests by default; focused integration checks for
-proposal, lead, inquiry, Supabase, and edge-function flows when touched.
+**Testing**: Karma/Jasmine unit tests for affected Angular code and focused
+PostgreSQL integration tests for affected migrations, RLS, functions, and data
+contracts. Do not create automated tests for Supabase Edge Functions; validate
+each affected function by independent type-checking and documented
+provider/customer sandbox smoke checks.
 
 **Target Platform**: Netlify-hosted Angular web application with SSR/server
 build pieces as needed, plus Supabase backend services.
@@ -41,8 +44,9 @@ frontend service-role secrets; Supabase RLS and storage policies required for
 data changes; every new or modified table schema requires an executable SQL
 migration in `supabase/migrations/`; every Supabase Edge Function must be
 standalone with no `_shared` directory or local cross-function imports; public
-site changes require product owner approval; AI agents must not run git commit
-or push commands.
+site changes require product owner approval; automated tests targeting Supabase
+Edge Functions are prohibited; AI agents must not run git commit or push
+commands.
 
 **Scale/Scope**: [Feature scope, affected routes, affected tables, users, and
 operational workflows or NEEDS CLARIFICATION]
@@ -64,10 +68,13 @@ operational workflows or NEEDS CLARIFICATION]
   describe data preservation, application order, and any manual intervention.
 - **Standalone edge functions**: Confirm every affected Supabase Edge Function
   is independently deployable and contains no `_shared` directory, local shared
-  function module, or import from another edge function.
-- **Testing plan**: Define Karma/Jasmine unit tests and any focused integration
-  checks required for proposal, lead, inquiry, or authorization flows. Explain
-  how the work contributes toward the 80% coverage target.
+  function module, or import from another edge function. Confirm no automated
+  test file or harness targets, imports, invokes, or simulates an Edge Function.
+- **Testing plan**: Define Karma/Jasmine unit tests for Angular code and focused
+  PostgreSQL integration tests for affected database workflows. Explain how the
+  Angular work contributes toward the 80% coverage target. For each affected
+  Edge Function, define independent type-check and documented provider/customer
+  sandbox smoke validation without automated Edge Function tests.
 - **Frontend boundary plan**: State whether the work affects the future public
   website, client portal, or CRM admin separation. For migration work, include
   staged routing, auth, deployment, shared code, and rollback considerations.

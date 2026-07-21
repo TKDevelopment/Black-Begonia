@@ -7,5 +7,13 @@ export const environment: AppEnvironment = {
     supabaseAnonKey: 'test-anon-key',
     grapesjsStudioLicenseKey: 'default',
     googleClientId: 'default',
-    googleApiKey: 'default'
+    googleApiKey: 'default',
+    paymentPublicOrigin: 'http://localhost:4200',
+    paypalClientId: 'default',
+    paymentCapabilities: {
+        stripeCard: true,
+        venmo: true,
+        cash: true,
+        check: true,
+    },
 };

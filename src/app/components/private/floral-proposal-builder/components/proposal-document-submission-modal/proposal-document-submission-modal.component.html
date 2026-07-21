@@ -1,49 +1,45 @@
-<div *ngIf="open" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-  <div class="flex w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fcfaf8] shadow-2xl">
-    <div class="flex items-center justify-between gap-4 border-b border-black/10 px-6 py-5">
-      <div>
+<div *ngIf="open" class="proposal-modal-overlay fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-3 py-3 backdrop-blur-sm" [class.crm-dark]="darkMode">
+  <div class="proposal-modal-shell flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fcfaf8] shadow-2xl">
+    <div class="proposal-modal-header flex shrink-0 items-start justify-between gap-4 border-b border-black/10 px-5 py-4 sm:px-6">
+      <div class="min-w-0">
         <p class="font-oswald text-[11px] uppercase tracking-[0.3em] text-[#ea938c]">Proposal Document</p>
         <h2 class="mt-2 font-cormorant text-3xl text-stone-900">{{ mode === 'project_revision' ? 'Activate Revised Proposal PDF' : 'Submit Signed Proposal PDF' }}</h2>
         <p class="mt-2 text-sm leading-6 text-stone-600">
           {{ mode === 'project_revision'
             ? 'Upload the externally approved or signed revision. Submitting creates a new active snapshot and keeps the prior version as immutable history.'
-            : 'Upload the completed floral proposal and signed services agreement PDF. Submitting it stores the record and books the project.' }}
+            : 'Upload the completed floral proposal and signed services agreement PDF. Submitting it stores the record and creates the project as Awaiting Deposit.' }}
         </p>
       </div>
 
-      <label class="flex items-start gap-3 rounded-2xl border border-[#d9c7b8] bg-white px-4 py-4 text-sm leading-6 text-stone-700">
-        <input type="checkbox" class="mt-1 h-4 w-4" [(ngModel)]="approvedSignedAcknowledged" [disabled]="saving" />
-        <span>I confirm this PDF is the externally approved or signed proposal document that should become the active version.</span>
-      </label>
-      <button type="button" (click)="onOverlayClose()" [disabled]="saving" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-stone-500 transition hover:border-black/15 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="button" (click)="onOverlayClose()" [disabled]="saving" class="proposal-modal-close inline-flex h-10 min-h-10 w-10 min-w-10 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white p-0 text-stone-500 transition hover:border-black/15 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
 
-    <div class="space-y-5 px-6 py-6">
+    <div class="proposal-modal-body min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 sm:px-6">
       <div
-        class="rounded-3xl border border-dashed border-[#bc9f8a] bg-[#f8f0e9] px-6 py-10 text-center transition"
+        class="proposal-upload-zone rounded-3xl border border-dashed border-[#bc9f8a] bg-[#f8f0e9] px-5 py-5 text-center transition"
         [class.opacity-60]="saving"
         (dragover)="onDragOver($event)"
         (drop)="onFileDrop($event)"
       >
-        <p class="font-cormorant text-3xl text-stone-900">Drag and drop your PDF here</p>
+        <p class="font-cormorant text-2xl text-stone-900">Drag and drop your PDF here</p>
         <p class="mt-2 text-sm leading-6 text-stone-600">
           Manual PDF upload is the required submission path for this release.
         </p>
-        <label class="mt-5 inline-flex cursor-pointer items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90" [class.pointer-events-none]="saving">
+        <label class="mt-3 inline-flex cursor-pointer items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90" [class.pointer-events-none]="saving">
           Choose PDF
           <input type="file" accept="application/pdf,.pdf" class="hidden" [disabled]="saving" (change)="onFileInputChange($event)" />
         </label>
-        <p class="mt-4 text-sm text-stone-700" *ngIf="fileName; else noFile">{{ fileName }}</p>
+        <p class="mt-2 text-sm text-stone-700" *ngIf="fileName; else noFile">{{ fileName }}</p>
         <ng-template #noFile>
-          <p class="mt-4 text-sm text-stone-500">No proposal PDF selected yet.</p>
+          <p class="mt-2 text-sm text-stone-500">No proposal PDF selected yet.</p>
         </ng-template>
       </div>
 
-      <div class="rounded-2xl border border-[#d9c7b8] bg-white px-4 py-3 text-sm leading-6 text-stone-600">
+      <div class="proposal-info-card rounded-2xl border border-[#d9c7b8] bg-white px-4 py-2.5 text-sm leading-5 text-stone-600">
         <p class="font-semibold text-stone-900">Canva Import</p>
         <p *ngIf="canvaImportAvailable; else canvaUnavailable" class="mt-1">
           Canva PDF import is available as an optional shortcut for completed designs.
@@ -54,6 +50,24 @@
           </p>
         </ng-template>
       </div>
+
+      <fieldset *ngIf="mode === 'initial_booking'" class="deposit-collection-card rounded-2xl border border-[#e4c1bd] bg-[#fff5f3] px-4 py-3">
+        <legend class="px-1 font-oswald text-[11px] uppercase tracking-[0.24em] text-[#c46f67]">Deposit Collection</legend>
+        <p class="mt-1 text-sm leading-5 text-stone-700">
+          The project will remain <strong>Awaiting Deposit</strong> until the 30% deposit<span *ngIf="depositAmount !== null"> of {{ depositAmount | currency }}</span> is recorded as paid.
+        </p>
+        <p class="mt-2 text-sm font-semibold text-stone-900">Would you like to email the secure deposit payment link now?</p>
+        <div class="mt-2 grid gap-2 sm:grid-cols-2">
+          <label class="deposit-choice flex cursor-pointer items-start gap-3 rounded-2xl border bg-white px-3 py-2.5" [ngClass]="depositEmailChoice === 'send' ? 'border-[#ea938c]' : 'border-black/10'">
+            <input type="radio" name="deposit-email-choice" value="send" class="mt-1" [(ngModel)]="depositEmailChoice" [disabled]="saving || !recipientEmail" />
+            <span><strong>Send deposit email</strong><br><small class="text-stone-500">{{ recipientEmail || 'Unavailable because the lead has no customer email.' }}</small></span>
+          </label>
+          <label class="deposit-choice flex cursor-pointer items-start gap-3 rounded-2xl border bg-white px-3 py-2.5" [ngClass]="depositEmailChoice === 'defer' ? 'border-[#ea938c]' : 'border-black/10'">
+            <input type="radio" name="deposit-email-choice" value="defer" class="mt-1" [(ngModel)]="depositEmailChoice" [disabled]="saving" />
+            <span><strong>Defer deposit email</strong><br><small class="text-stone-500">Create the obligation now and record or request payment later from the project.</small></span>
+          </label>
+        </div>
+      </fieldset>
 
       <p *ngIf="errorMessage" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
         {{ errorMessage }}
@@ -68,11 +82,11 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-end gap-3 border-t border-black/10 px-6 py-5">
+    <div class="proposal-modal-footer flex shrink-0 items-center justify-end gap-3 border-t border-black/10 px-5 py-3 sm:px-6">
       <button type="button" (click)="onOverlayClose()" [disabled]="saving" class="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
         Cancel
       </button>
-      <button type="button" (click)="onSubmit()" [disabled]="saving || !fileName || !approvedSignedAcknowledged" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="button" (click)="onSubmit()" [disabled]="saving || !fileName || (mode === 'initial_booking' && depositEmailChoice === null)" class="inline-flex items-center justify-center rounded-2xl bg-[#ea938c] px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
         <span *ngIf="saving" class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
         {{ saving ? 'Submitting...' : (mode === 'project_revision' ? 'Activate Revision' : 'Submit Signed PDF') }}
       </button>

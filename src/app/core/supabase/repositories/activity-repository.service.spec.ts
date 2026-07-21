@@ -69,6 +69,17 @@ describe('ActivityRepositoryService', () => {
     expect(result[0].performed_by_email).toBe('owner@example.com');
   });
 
+  it('maps redacted payment actor and reference metadata without secrets', async () => {
+    const row = { activity_log_id: 'activity-payment', entity_type: 'project', entity_id: 'project-1', activity_type: 'payment_recorded', activity_label: 'Deposit recorded', performed_by: null, profiles: null, metadata: { actor_type: 'provider', payment_reference: 'BBP-2026-00000001' }, created_at: '2026-01-01T00:00:00Z' };
+    const { client } = createSupabaseClientWithQuery(supabaseSuccess([row]));
+    supabaseService.getClient.and.returnValue(client as never);
+    const [activity] = await service.getProjectActivity('project-1');
+    expect(activity.actor_type).toBe('provider');
+    expect(activity.payment_reference).toBe('BBP-2026-00000001');
+    expect(JSON.stringify(activity)).not.toContain('token');
+    expect(JSON.stringify(activity)).not.toContain('provider_payload');
+  });
+
   it('returns empty lists and logs when activity queries fail', async () => {
     const response = supabaseFailure('activity failed');
     const { client } = createSupabaseClientWithQuery(response);

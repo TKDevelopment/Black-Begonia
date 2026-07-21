@@ -1,5 +1,8 @@
 <div class="relative min-h-screen">
-  <app-header class="relative z-20"></app-header>
+  <app-header
+    class="relative z-20"
+    [navigationRestricted]="paymentHeader"
+  ></app-header>
 
   <router-outlet></router-outlet>
 

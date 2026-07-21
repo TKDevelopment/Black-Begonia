@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { RouterLink } from "@angular/router";
 import { NgIf } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
@@ -12,6 +12,8 @@ import { ToastService } from '../../../../core/services/toast.service';
   styleUrls: ['./header.component.scss']
 })
 export class HeaderComponent {
+  @Input() navigationRestricted = false;
+
   menuOpen = false;
 
   constructor(

@@ -4,5 +4,13 @@ export const environment = {
     supabaseUrl: 'https://qwugnvrizgslbcplakvf.supabase.co',
     supabaseAnonKey: 'sb_publishable_4HtvV9J_bCQvZROxVr63Ng_CgyBePw2',
     googleClientId: 'default',
-    googleApiKey: 'default'
+    googleApiKey: 'default',
+    paymentPublicOrigin: 'http://localhost:4200',
+    paypalClientId: 'default',
+    paymentCapabilities: {
+        stripeCard: true,
+        venmo: true,
+        cash: true,
+        check: true,
+    },
 };

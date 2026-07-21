@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './proposal-document-submission-modal.component.html',
+  styleUrl: './proposal-document-submission-modal.component.scss',
 })
 export class ProposalDocumentSubmissionModalComponent {
   @Input() open = false;
@@ -16,12 +17,15 @@ export class ProposalDocumentSubmissionModalComponent {
   @Input() errorMessage: string | null = null;
   @Input() canvaImportAvailable = false;
   @Input() mode: 'initial_booking' | 'project_revision' = 'initial_booking';
+  @Input() depositAmount: number | null = null;
+  @Input() recipientEmail: string | null = null;
+  @Input() darkMode = false;
 
-  approvedSignedAcknowledged = false;
+  depositEmailChoice: 'send' | 'defer' | null = null;
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() fileSelected = new EventEmitter<File | null>();
-  @Output() submitDocument = new EventEmitter<void>();
+  @Output() submitDocument = new EventEmitter<boolean>();
 
   onOverlayClose(): void {
     if (this.saving) {
@@ -29,7 +33,7 @@ export class ProposalDocumentSubmissionModalComponent {
     }
 
     this.closeModal.emit();
-    this.approvedSignedAcknowledged = false;
+    this.depositEmailChoice = null;
   }
 
   onFileInputChange(event: Event): void {
@@ -57,8 +61,14 @@ export class ProposalDocumentSubmissionModalComponent {
   }
 
   onSubmit(): void {
-    if (!this.saving && this.fileName && this.approvedSignedAcknowledged) {
-      this.submitDocument.emit();
+    const hasDepositDecision =
+      this.mode === 'project_revision' || this.depositEmailChoice !== null;
+    if (
+      !this.saving &&
+      this.fileName &&
+      hasDepositDecision
+    ) {
+      this.submitDocument.emit(this.depositEmailChoice === 'send');
     }
   }
 }

@@ -15,6 +15,7 @@ import {
   FloralProposalShoppingListItem,
 } from '../models/floral-proposal';
 import { Project } from '../models/project';
+import type { ProjectPaymentRecord } from '../models/project-payment-record';
 import { TaxRegion } from '../models/tax-region';
 import { Task } from '../models/task';
 
@@ -554,3 +555,20 @@ export const testRenderContract: FloralProposalRenderContract = {
     line_item_images: [],
   },
 };
+
+
+export const LEGACY_PAYMENT_WORKFLOW_FIXTURE = {
+  conversion: { leadStatus: 'proposal_accepted', projectStatus: 'awaiting_deposit', createsPrimaryContact: true },
+  manualPayment: { depositMethod: 'venmo', finalMethod: 'check' },
+  legacyFinalCollectionDays: 45,
+  proposalRevisionPreservesActiveSnapshot: true,
+  projectRoute: '/admin/projects/project-fixture',
+} as const;
+
+export const LEGACY_PAYMENT_RECORDS: ProjectPaymentRecord[] = [{
+  project_payment_record_id: '00000000-0000-4000-8000-000000000101',
+  project_id: '00000000-0000-4000-8000-000000000001',
+  payment_kind: 'deposit', status: 'paid', amount_due: 300, amount_paid: 300,
+  due_date: '2026-01-01', paid_date: '2026-01-01T15:00:00Z', payment_method: 'venmo',
+  payment_source: 'manual', created_at: '2026-01-01T15:00:00Z', updated_at: '2026-01-01T15:00:00Z',
+}];

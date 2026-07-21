@@ -1,10 +1,10 @@
 <!--
 Sync Impact Report
-Version change: 1.2.0 -> 1.3.0
+Version change: 1.3.0 -> 2.0.0
 Modified principles:
-- None
+- III. Tested CRM and Proposal Workflows -> Automated Coverage and Edge Function Validation
 Added sections:
-- VI. Human-Owned Git Publication
+- None
 Removed sections:
 - None
 Templates requiring updates:
@@ -13,9 +13,8 @@ Templates requiring updates:
 - ✅ updated: .specify/templates/tasks-template.md
 - ✅ verified not present: .specify/templates/commands/*.md
 Runtime guidance updates:
-- updated: AGENTS.md
-- updated: .specify/extensions.yml to disable commit-capable Spec Kit hooks
-- updated: specs/003-proposal-delivery-contracts/plan.md
+- verified unchanged: AGENTS.md
+- verified disabled: constitution commit-capable hooks in .specify/extensions.yml
 - ✅ updated: README.md
 Follow-up TODOs:
 - None
@@ -67,19 +66,31 @@ and directly applicable to existing Supabase environments. Standalone functions
 preserve independent deployment, make each function's security boundary
 explicit, and prevent hidden runtime coupling between backend workflows.
 
-### III. Tested CRM and Proposal Workflows
+### III. Automated Coverage and Edge Function Validation
 Karma/Jasmine unit testing is the default testing stack for Angular code. New
 features MUST include focused unit tests for components, guards, services,
 repositories, and workflow logic touched by the change. The project target is
 at least 80% meaningful unit-test coverage, built incrementally from the current
-brownfield baseline. Proposal, lead, and inquiry flows MUST also receive focused
-integration checks when their behavior, data contracts, or edge-function
-interactions change. Tests MUST cover success paths, important validation
-failures, authorization boundaries, and state transitions.
+brownfield baseline. PostgreSQL functions, migrations, RLS policies, and data
+contracts that implement proposal, lead, inquiry, payment, or authorization
+workflows MUST receive focused database integration tests covering success
+paths, important validation failures, authorization boundaries, replay, and
+state transitions.
+
+Supabase Edge Functions are expressly excluded from automated test creation.
+Agents and implementation work MUST NOT create unit, integration, end-to-end,
+or other automated test files or harnesses that target, import, invoke, or
+simulate a Supabase Edge Function, including tests stored outside the function's
+directory. Each affected Edge Function MUST instead be validated as an
+independent deployment unit through standalone type-checking and documented
+provider/customer sandbox smoke checks. Database tests MAY validate the SQL
+commands and persisted contracts consumed by an Edge Function, but MUST NOT
+invoke or test the Edge Function endpoint or runtime itself.
 
 Rationale: The CRM and proposal flows affect real business operations and client
-trust. A growing system needs regression protection before larger architectural
-changes are attempted.
+trust. Angular and database regression protection remains mandatory, while Edge
+Function assurance is provided by independent compilation and real integration
+environment validation without maintaining prohibited Edge-specific test code.
 
 ### IV. Purpose-Built Frontend Boundaries
 The target frontend architecture is three distinct experiences: public website,
@@ -164,6 +175,10 @@ Black Begonia's approved technology baseline is:
   business need.
 - Mailgun/email workflows for inquiry, proposal, and notification flows.
 - Karma/Jasmine for Angular unit tests.
+- PostgreSQL integration tests for migrations, RLS, functions, and durable
+  workflow contracts. Supabase Edge Functions have no automated tests and are
+  validated only by independent type-checking and documented sandbox smoke
+  checks.
 - SEO route metadata and sitemap generation for public website discoverability.
 
 Architecture decisions MUST favor explicit contracts, typed models, repository
@@ -187,8 +202,10 @@ Plans MUST document:
   edge function remains standalone and has no local shared-function dependency.
 - The executable SQL migration path for every new or modified Supabase table,
   including data-preservation and deployment-order considerations.
-- Unit-test and integration-check scope, including the path toward 80% coverage
-  where relevant.
+- Angular unit-test and PostgreSQL integration-test scope, including the path
+  toward 80% Angular coverage where relevant. For every affected Edge Function,
+  plans MUST explicitly prohibit automated test creation and document its
+  independent type-check and provider/customer sandbox smoke validation.
 - Security considerations for secrets, customer data, emails, passcodes,
   signatures, proposal PDFs, and payment-related data.
 - Deployment and environment impact for Netlify, SSR, and future separated
@@ -225,4 +242,4 @@ review. Plans that violate a principle MUST document the violation, explain why
 it is necessary, and name the simpler or safer alternative that was rejected.
 No violation may authorize an AI agent to commit or push repository changes.
 
-**Version**: 1.3.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-07-17
+**Version**: 2.0.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-07-20
