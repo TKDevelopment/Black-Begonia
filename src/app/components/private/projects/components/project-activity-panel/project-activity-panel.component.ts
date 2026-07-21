@@ -17,7 +17,11 @@ export class ProjectActivityPanelComponent {
     const metadata = activity.metadata ?? {};
 
     return Object.entries(metadata)
-      .filter(([key]) => !['submission_idempotency_key', 'new_snapshot_id', 'new_document_id'].includes(key))
+      .filter(([key]) => ![
+        'submission_idempotency_key', 'new_snapshot_id', 'new_document_id',
+        'token', 'token_digest', 'token_ciphertext', 'token_iv', 'payload',
+        'raw_payload', 'normalized_facts', 'provider_client_token',
+      ].includes(key.toLowerCase()))
       .filter(([, value]) => value !== null && value !== undefined && value !== '')
       .map(([key, value]) => ({
         key: this.formatMetadataKey(key),
@@ -28,7 +32,7 @@ export class ProjectActivityPanelComponent {
   actorName(activity: ActivityLogEntry): string {
     return activity.performed_by_display_name?.trim()
       || activity.performed_by_email?.trim()
-      || 'Unknown user';
+      || (activity.actor_type ? this.formatMetadataValue(activity.actor_type) : 'System');
   }
 
   formatDateTime(value: string): string {
@@ -54,6 +58,6 @@ export class ProjectActivityPanelComponent {
       return JSON.stringify(value);
     }
 
-    return String(value).replace(/_/g, ' ');
+    return String(value).replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   }
 }

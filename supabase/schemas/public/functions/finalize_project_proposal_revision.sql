@@ -209,6 +209,8 @@ begin
       updated_at = p_submitted_at
   where project_id = p_project_id;
 
+  perform public.recalculate_project_obligations_for_snapshot(p_project_id, v_new_snapshot_id);
+
   insert into public.activity_log (
     entity_type, entity_id, activity_type, activity_label, description,
     performed_by, metadata, created_at

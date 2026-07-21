@@ -61,6 +61,7 @@ export interface FinalizeFloralProposalRequest {
   pdfStoragePath: string;
   pdfFileName: string;
   idempotencyKey: string;
+  sendDepositRequest?: boolean;
 }
 
 export interface FinalizeFloralProposalResult {
@@ -71,6 +72,9 @@ export interface FinalizeFloralProposalResult {
   active_invoice_snapshot_id: string;
   signed_pdf_storage_path: string;
   submitted_at: string;
+  project_status?: string;
+  deposit_obligation_id?: string | null;
+  deposit_principal_cents?: number | null;
 }
 
 export interface ProposalSnapshotLifecycle {
@@ -219,6 +223,7 @@ export class FloralProposalWorkflowService {
       pdf_storage_path: payload.pdfStoragePath,
       pdf_file_name: payload.pdfFileName,
       idempotency_key: payload.idempotencyKey,
+      send_deposit_request: payload.sendDepositRequest ?? false,
     };
     if (payload.mode === 'project_revision') {
       body['revision_workspace_id'] = payload.revisionWorkspaceId ?? null;
@@ -258,6 +263,14 @@ export class FloralProposalWorkflowService {
       active_invoice_snapshot_id: String(data.active_invoice_snapshot_id),
       signed_pdf_storage_path: String(data.signed_pdf_storage_path ?? payload.pdfStoragePath),
       submitted_at: String(data.submitted_at ?? new Date().toISOString()),
+      project_status: data.project_status ? String(data.project_status) : undefined,
+      deposit_obligation_id: data.deposit_obligation_id
+        ? String(data.deposit_obligation_id)
+        : null,
+      deposit_principal_cents:
+        typeof data.deposit_principal_cents === 'number'
+          ? data.deposit_principal_cents
+          : null,
     };
   }
 

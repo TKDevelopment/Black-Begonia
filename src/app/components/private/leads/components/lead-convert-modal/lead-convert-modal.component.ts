@@ -10,12 +10,14 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Lead } from '../../../../../core/models/lead';
+import { FloralProposal } from '../../../../../core/models/floral-proposal';
 import { LeadConversionService } from '../../../../../core/supabase/services/lead-conversion.service';
 import { formatDateOnlyForDisplay } from '../../../../../core/utils/date-only';
 
 export interface LeadConvertPayload {
   project_name: string;
   internal_notes?: string | null;
+  send_deposit_request: boolean;
 }
 
 @Component({
@@ -31,12 +33,14 @@ export class LeadConvertModalComponent {
   @Input() open = false;
   @Input() saving = false;
   @Input() lead: Lead | null = null;
+  @Input() proposal: FloralProposal | null = null;
 
   @Output() close = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<LeadConvertPayload>();
 
   projectName = signal('');
   internalNotes = signal('');
+  sendDepositRequest = signal(true);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open']?.currentValue) {
@@ -60,6 +64,7 @@ export class LeadConvertModalComponent {
     this.confirm.emit({
       project_name: this.projectName().trim(),
       internal_notes: this.internalNotes().trim() || null,
+      send_deposit_request: this.sendDepositRequest() && this.hasEligibleRecipient,
     });
   }
 
@@ -69,6 +74,14 @@ export class LeadConvertModalComponent {
 
   get hasPlannerContact(): boolean {
     return !!this.lead?.planner_name?.trim() || !!this.lead?.planner_email?.trim() || !!this.lead?.planner_phone?.trim();
+  }
+
+  get depositAmount(): number | null {
+    return this.proposal ? Math.round(Number(this.proposal.total_amount) * 30) / 100 : null;
+  }
+
+  get hasEligibleRecipient(): boolean {
+    return !!this.lead?.email?.trim();
   }
 
   formatEventDate(value: string | null | undefined): string {
@@ -84,5 +97,6 @@ export class LeadConvertModalComponent {
       this.lead ? this.leadConversionService.buildDefaultProjectName(this.lead) : ''
     );
     this.internalNotes.set('');
+    this.sendDepositRequest.set(this.hasEligibleRecipient);
   }
 }

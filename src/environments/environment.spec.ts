@@ -13,4 +13,13 @@ describe('default environment', () => {
     expect(environment.googleClientId).toBe('default');
     expect(environment.googleApiKey).toBe('default');
   });
+
+  it('exposes only public payment capabilities and origins', () => {
+    expect(environment.paymentPublicOrigin).toBe('http://localhost:4200');
+    expect(environment.paymentCapabilities).toEqual({ stripeCard: true, venmo: true, cash: true, check: true });
+    expect(environment.paypalClientId).toBe('default');
+    for (const forbidden of ['stripeSecretKey', 'stripeWebhookSecret', 'paypalClientSecret', 'mailgunApiKey', 'mailgunSigningKey', 'paymentTokenEncryptionKey', 'supabaseServiceRoleKey', 'paymentAutomationKey']) {
+      expect(forbidden in environment).toBeFalse();
+    }
+  });
 });

@@ -1,0 +1,134 @@
+<main class="payment-page">
+  <img
+    src="assets/images/website/E-T-849.webp"
+    alt="Black Begonia floral arrangement"
+    class="payment-background absolute inset-0 h-full w-full object-cover"
+  />
+  <div class="payment-background-veil" aria-hidden="true"></div>
+
+  <section class="payment-card" [class.confirmation-card]="confirmationMethod()" [class.check-card]="confirmationMethod() === 'check'" aria-live="polite">
+    <div *ngIf="!confirmationMethod(); else confirmationHeading" class="card-heading">
+      <p class="eyebrow">Black Begonia Florals</p>
+      <h1>Payment Methods</h1>
+      <p class="heading-copy">Select the payment option that works best for you.</p>
+    </div>
+
+    <ng-template #confirmationHeading>
+      <div class="card-heading confirmation-heading">
+        <span class="confirmation-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 12 4 4 8-8"/></svg>
+        </span>
+        <p class="eyebrow">Preference received</p>
+        <h1>You're all set</h1>
+        <p class="heading-copy">Your preferred payment method of paying by <strong>{{ confirmationMethod() }}</strong> has been recorded.</p>
+      </div>
+    </ng-template>
+
+    <p *ngIf="loading()">Loading secure payment options…</p>
+
+    <ng-container *ngIf="!loading() && projection().state !== 'unavailable'; else unavailable">
+      <ng-container *ngIf="confirmationMethod() as selectedMethod; else paymentChooser">
+        <p class="project">
+          {{ projection().projectLabel }}
+          <span *ngIf="projection().eventDate">• {{ projection().eventDate | date }}</span>
+        </p>
+
+        <section *ngIf="selectedMethod === 'check'" class="check-confirmation">
+          <div class="payee-callout">
+            <span>Most important</span>
+            Make the check payable to <strong>Black Begonia Floral Designs, LLC</strong>
+          </div>
+
+          <div class="demo-check" role="img" aria-label="Example completed check showing the payee, amount, date, memo, and signature fields">
+            <div class="check-topline">
+              <div class="demo-bank"><strong>Your Bank</strong><span>123 Main Street</span></div>
+              <div class="check-number">0101</div>
+            </div>
+
+            <div class="check-date"><span>Date</span><strong>{{ demoCheckDate | date:'MM/dd/yyyy' }}</strong></div>
+
+            <div class="check-payee">
+              <span>Pay to the<br>order of</span>
+              <strong>Black Begonia Floral Designs, LLC</strong>
+              <b>{{ money(projection().principalCents) }}</b>
+            </div>
+
+            <div class="check-words">
+              <strong>{{ amountInWords(projection().principalCents) }}</strong>
+            </div>
+
+            <div class="check-bottomline">
+              <div class="check-memo"><span>Memo</span><strong>{{ checkMemo() }}</strong></div>
+              <div class="check-signature"><strong>Your signature</strong></div>
+            </div>
+
+            <div class="routing-numbers">⑆ 012345678 ⑆ 0001234567 ⑈ 0101</div>
+          </div>
+
+          <p class="demo-disclaimer">Demo only. Complete and sign a real check from your bank using the example above.</p>
+          <div *ngIf="intentionInstructions()" class="next-step"><strong>Florist instructions</strong><span>{{ intentionInstructions() }}</span></div>
+          <p class="pending-note">Your preference is recorded, but the payment has not yet been marked as paid. Black Begonia will confirm it after receiving your check.</p>
+        </section>
+
+        <section *ngIf="selectedMethod === 'cash'" class="cash-confirmation">
+          <span class="cash-confirmation-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 9.5A2.5 2.5 0 0 1 5.5 11M17 14.5a2.5 2.5 0 0 1 1.5-1.5"/></svg>
+          </span>
+          <h2>Cash payment requested</h2>
+          <p>The florist will reach out to arrange a preferred date, time, and location to meet and collect your deposit in cash.</p>
+          <div class="cash-amount"><span>Amount due</span><strong>{{ money(projection().principalCents) }}</strong></div>
+          <p class="pending-note">Your preference is recorded, but the deposit has not yet been marked as paid. It will be confirmed after the florist receives the cash.</p>
+        </section>
+      </ng-container>
+
+      <ng-template #paymentChooser>
+        <p class="project">
+          {{ projection().projectLabel }}
+          <span *ngIf="projection().eventDate">• {{ projection().eventDate | date }}</span>
+        </p>
+
+        <div class="amount">
+          <span>Amount Due</span>
+          <strong>{{ money(projection().principalCents) }}</strong>
+          <small>Card processing fees are absorbed by Black Begonia.</small>
+        </div>
+
+        <div *ngIf="projection().purpose === 'consolidated'" class="breakdown">
+          <span>Deposit {{ money(projection().depositCents) }}</span>
+          <span>Final payment {{ money(projection().finalCents) }}</span>
+        </div>
+
+        <p *ngIf="projection().activeAttempt" class="notice">A payment is processing. Other methods are locked until it resolves.</p>
+        <p *ngIf="projection().intention" class="notice">Your plan to pay by {{ projection().intention?.method?.replace('_',' ') }} was recorded. Reminders are paused for seven days.</p>
+        <p *ngIf="intentionInstructions()" class="notice"><strong>Payment instructions:</strong> {{ intentionInstructions() }}</p>
+
+        <div class="methods">
+          <button class="method-button" (click)="choose('venmo')" [disabled]="busy() || !enabled('venmo')">
+            <span class="method-icon venmo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 6h4M11 18h2"/></svg></span>
+            <span class="method-label">Pay with Venmo</span><span class="method-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="method-button" (click)="choose('stripe_card')" [disabled]="busy() || !enabled('stripe_card')">
+            <span class="method-icon stripe-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg></span>
+            <span class="method-label">Debit or credit card</span><span class="method-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="method-button" (click)="choose('check')" [disabled]="busy() || !enabled('check')">
+            <span class="method-icon check-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 13l2 2 4-4"/></svg></span>
+            <span class="method-label">I plan to pay by check</span><span class="method-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="method-button" (click)="choose('cash')" [disabled]="busy() || !enabled('cash')">
+            <span class="method-icon cash-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 9.5A2.5 2.5 0 0 1 5.5 11M17 14.5a2.5 2.5 0 0 1 1.5-1.5"/></svg></span>
+            <span class="method-label">I plan to pay with cash</span><span class="method-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <div id="venmo-buttons"></div>
+        <p *ngIf="error()" class="error" role="alert">{{ error() }}</p>
+      </ng-template>
+    </ng-container>
+
+    <ng-template #unavailable>
+      <h2>This payment link is unavailable</h2>
+      <p>It may have been fulfilled, replaced, revoked, or canceled. Contact Black Begonia for help.</p>
+    </ng-template>
+  </section>
+</main>

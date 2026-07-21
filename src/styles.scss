@@ -541,3 +541,61 @@ select,
 .crm-shell.crm-theme-dark .crm-detail-card {
   box-shadow: 0 20px 48px rgba(2, 8, 16, 0.34) !important;
 }
+
+// Public payment confirmation and instructional check illustration. Kept globally
+// scoped so this richer public-page artwork does not inflate the component budget.
+app-payment-options {
+  .confirmation-card { width: min(100%, 36rem); }
+  .check-card { width: min(100%, 47rem); }
+  .confirmation-heading { display: grid; justify-items: center; gap: .25rem; }
+  .confirmation-heading h1 { font-size: clamp(2.5rem, 6vw, 3.4rem); }
+  .confirmation-heading .heading-copy { max-width: 31rem; line-height: 1.55; }
+  .confirmation-heading strong { color: #9c5d57; text-transform: capitalize; }
+  .confirmation-mark { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; margin-bottom: .35rem; border-radius: 50%; background: #e7f1e9; color: #4f805d; }
+  .confirmation-mark svg { width: 1.5rem; height: 1.5rem; }
+  .payee-callout { display: grid; gap: .2rem; margin: 1rem 0; padding: .8rem 1rem; border: 1px solid #e6c5bc; border-radius: 1rem; background: #fff1ed; color: #5a4039; font-size: .84rem; text-align: center; }
+  .payee-callout span { color: #a84f48; font-size: .64rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  .payee-callout strong { color: #7f302b; font-size: 1rem; }
+  .demo-check { position: relative; display: grid; gap: .8rem; padding: 1.2rem 1.35rem .9rem; border: 1px solid #9aa9a6; border-radius: .45rem; background: linear-gradient(135deg, #fbfdf7, #f1f5e9); box-shadow: 0 12px 30px rgba(42, 54, 49, .16); color: #263632; font-family: Georgia, serif; }
+  .demo-check::after { content: 'DEMO'; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%) rotate(-12deg); color: rgba(157, 75, 68, .08); font: 700 5rem/1 Arial, sans-serif; letter-spacing: .08em; pointer-events: none; }
+  .check-topline, .check-bottomline { display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
+  .demo-bank { display: grid; font-size: .62rem; text-transform: uppercase; }
+  .demo-bank strong { font-size: .9rem; letter-spacing: .08em; }
+  .check-number { align-self: start; font-size: .78rem; font-weight: 700; }
+  .check-date { display: flex; align-items: end; gap: .5rem; margin-left: auto; width: 13rem; border-bottom: 1px solid #52645f; font-size: .65rem; }
+  .check-date strong { flex: 1; padding-bottom: .12rem; font-size: .83rem; text-align: center; }
+  .check-payee { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: .55rem; }
+  .check-payee > span { font-size: .55rem; line-height: 1.05; text-transform: uppercase; }
+  .check-payee > strong { overflow: hidden; padding: 0 .2rem .16rem; border-bottom: 1px solid #52645f; font-size: .92rem; white-space: nowrap; }
+  .check-payee > b { min-width: 7rem; padding: .3rem .55rem; border: 1px solid #52645f; border-radius: .2rem; background: #fff; font-size: .9rem; text-align: right; }
+  .check-words { min-height: 1.8rem; padding: .15rem .4rem; border-bottom: 1px solid #52645f; font-size: .82rem; }
+  .check-memo { display: flex; align-items: end; gap: .4rem; width: 52%; border-bottom: 1px solid #52645f; font-size: .6rem; }
+  .check-memo strong { overflow: hidden; padding-bottom: .12rem; font-size: .76rem; white-space: nowrap; }
+  .check-signature { width: 38%; border-bottom: 1px solid #52645f; text-align: center; }
+  .check-signature strong { font-family: 'Great Vibes', cursive; font-size: 1.25rem; font-weight: 400; }
+  .routing-numbers { color: #354a45; font: .78rem/1 monospace; letter-spacing: .12em; }
+  .demo-disclaimer { margin: .65rem 0; color: #766965; font-size: .7rem; text-align: center; }
+  .next-step, .pending-note { margin-top: .7rem; padding: .7rem .85rem; border-radius: .85rem; font-size: .76rem; line-height: 1.5; }
+  .next-step { display: grid; gap: .15rem; border: 1px solid #ead7d0; background: rgba(255,255,255,.68); }
+  .pending-note { background: #f8eee9; color: #6d554f; text-align: center; }
+  .cash-confirmation { display: grid; justify-items: center; margin-top: 1rem; padding: 1.4rem; border: 1px solid #d6e4d9; border-radius: 1.4rem; background: linear-gradient(145deg, #fbfdfb, #edf5ef); text-align: center; }
+  .cash-confirmation-icon { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; border-radius: 1.1rem; background: #dceee1; color: #40845b; }
+  .cash-confirmation-icon svg { width: 1.8rem; height: 1.8rem; }
+  .cash-confirmation h2 { margin: .8rem 0 .35rem; color: #304d39; font: 600 1.75rem/1.1 'Cormorant Garamond', serif; }
+  .cash-confirmation > p:not(.pending-note) { max-width: 28rem; margin: 0; color: #5f6d63; font-size: .86rem; line-height: 1.6; }
+  .cash-amount { display: grid; gap: .1rem; margin: 1rem 0 .2rem; color: #31583e; }
+  .cash-amount span { font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+  .cash-amount strong { font: 600 2.25rem/1 'Cormorant Garamond', serif; }
+}
+
+@media (max-width: 480px) {
+  app-payment-options {
+    .demo-check { padding: .85rem; gap: .55rem; }
+    .check-payee { grid-template-columns: auto minmax(0, 1fr); }
+    .check-payee > strong { font-size: .68rem; }
+    .check-payee > b { grid-column: 2; width: 6rem; min-width: 0; justify-self: end; }
+    .check-date { width: 9rem; }
+    .demo-check::after { font-size: 3rem; }
+    .routing-numbers { font-size: .58rem; letter-spacing: .04em; }
+  }
+}

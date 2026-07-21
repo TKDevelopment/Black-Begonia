@@ -13,6 +13,7 @@ import { FloralProposalRepositoryService } from '../../../core/supabase/reposito
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { TaxRegionRepositoryService } from '../../../core/supabase/repositories/tax-region-repository.service';
 import { FloralProposalWorkflowService } from '../../../core/supabase/services/floral-proposal-workflow.service';
+import { LeadConversionService } from '../../../core/supabase/services/lead-conversion.service';
 import { testFloralProposal, testLead } from '../../../core/testing/workflow-fixtures';
 import { FloralProposalBuilderComponent } from './floral-proposal-builder.component';
 
@@ -26,6 +27,7 @@ describe('FloralProposalBuilderComponent', () => {
   let catalogRepository: jasmine.SpyObj<CatalogItemRepositoryService>;
   let activityRepository: jasmine.SpyObj<ActivityRepositoryService>;
   let proposalWorkflow: jasmine.SpyObj<FloralProposalWorkflowService>;
+  let leadConversionService: jasmine.SpyObj<LeadConversionService>;
   let toast: jasmine.SpyObj<ToastService>;
   let router: jasmine.SpyObj<Router>;
   let consoleErrorSpy: jasmine.Spy;
@@ -115,6 +117,11 @@ describe('FloralProposalBuilderComponent', () => {
         'clearMissingLineItemImage',
       ]
     );
+    leadConversionService = jasmine.createSpyObj<LeadConversionService>(
+      'LeadConversionService',
+      ['issueDepositRequest']
+    );
+    leadConversionService.issueDepositRequest.and.resolveTo('queued');
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['showToast']);
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
@@ -200,6 +207,7 @@ describe('FloralProposalBuilderComponent', () => {
         { provide: CatalogItemRepositoryService, useValue: catalogRepository },
         { provide: ActivityRepositoryService, useValue: activityRepository },
         { provide: FloralProposalWorkflowService, useValue: proposalWorkflow },
+        { provide: LeadConversionService, useValue: leadConversionService },
         { provide: ToastService, useValue: toast },
         {
           provide: CrmThemeService,
@@ -472,7 +480,7 @@ describe('FloralProposalBuilderComponent', () => {
 
     await component.finalizeProposal();
     component.onSubmissionFileSelected(pdfFile);
-    await component.submitProposalDocument();
+    await component.submitProposalDocument(false);
 
     expect(proposalRepository.createFloralProposal).toHaveBeenCalledWith(
       jasmine.objectContaining({
@@ -497,15 +505,17 @@ describe('FloralProposalBuilderComponent', () => {
         projectId: null,
         floralProposalId: draftProposal.floral_proposal_id,
         pdfFileName: 'proposal.pdf',
+        sendDepositRequest: false,
       })
     );
     expect(toast.showToast).toHaveBeenCalledWith(
-      'Signed proposal stored and lead converted to a booked project.',
+      'Project created as Awaiting Deposit. The deposit email was deferred.',
       'success'
     );
-    expect(router.navigate).toHaveBeenCalledWith(['/admin/projects'], {
-      queryParams: { projectId: 'project-test-001' },
-    });
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/admin/projects',
+      'project-test-001',
+    ]);
     expect(component.submissionModalOpen()).toBeFalse();
     expect(component.saving()).toBeFalse();
   });

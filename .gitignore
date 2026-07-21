@@ -43,6 +43,8 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+*.tmp
+*.swp
 
 /src/environments/environment.dev.ts
 /codex_ready_proposal_template_editor_implementation_plan.md

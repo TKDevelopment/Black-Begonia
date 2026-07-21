@@ -97,6 +97,15 @@
           </div>
         </div>
       </div>
+
+      <div class="rounded-[24px] border border-[#ead7d0] bg-[#fffaf8] p-5 shadow-sm md:p-6">
+        <p class="font-oswald text-[11px] uppercase tracking-[0.24em] text-[#c46f67]">Deposit Collection</p>
+        <p class="mt-2 text-sm text-stone-700">The project is immediately created as <strong>Awaiting Deposit</strong> with a 30% deposit obligation<span *ngIf="depositAmount !== null"> of {{ depositAmount | currency }}</span>.</p>
+        <label class="mt-4 flex items-start gap-3">
+          <input type="checkbox" class="mt-1" [ngModel]="sendDepositRequest()" (ngModelChange)="sendDepositRequest.set($event)" [disabled]="!hasEligibleRecipient" />
+          <span><strong>Email the secure deposit payment link</strong><br><small class="text-stone-500">{{ hasEligibleRecipient ? lead?.email : 'No eligible email recipient is available; the deposit can be logged manually from the project.' }}</small></span>
+        </label>
+      </div>
     </div>
 
     <div class="border-t border-black/10 bg-white/95 px-6 py-4 md:px-8">

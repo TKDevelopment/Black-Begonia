@@ -477,9 +477,12 @@
   [progressMessage]="submissionProgress()"
   [canvaImportAvailable]="false"
   [mode]="revisionWorkspace() ? 'project_revision' : 'initial_booking'"
+  [depositAmount]="totalsBreakdown().totalAmount * 0.3"
+  [recipientEmail]="lead()?.email || null"
+  [darkMode]="isDarkMode()"
   (closeModal)="closeDocumentSubmission()"
   (fileSelected)="onSubmissionFileSelected($event)"
-  (submitDocument)="submitProposalDocument()"
+  (submitDocument)="submitProposalDocument($event)"
 />
 
 

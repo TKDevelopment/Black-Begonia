@@ -1,0 +1,11 @@
+create or replace function public.resolve_payment_exception(p_exception_id uuid,p_resolution text,p_reference_or_note text)
+returns jsonb language plpgsql security definer set search_path='' as $$ declare e public.payment_exceptions;t public.payment_transactions;begin
+ if not public.is_internal_crm_user() then raise exception 'not authorized'; end if;
+ if p_resolution not in ('external_refund','retained_credit','correction','matched','dismissed','status_reviewed') or nullif(btrim(p_reference_or_note),'') is null then raise exception 'Resolution and reference or note are required'; end if;
+ select * into e from public.payment_exceptions where payment_exception_id=p_exception_id and state<>'resolved' for update;if not found then raise exception 'Exception is not open';end if;
+ update public.payment_exceptions set state='resolved',resolution=p_resolution,resolution_reference=p_reference_or_note,retained_unapplied_credit=case when p_resolution='retained_credit' then coalesce(amount,0) else 0 end,resolved_by=auth.uid(),resolved_at=now() where payment_exception_id=p_exception_id returning * into e;
+ if p_resolution in ('external_refund','correction') then insert into public.payment_transactions(payment_reference,project_id,kind,status,principal_amount,method,source,occurred_at,actor_type,actor_id,customer_notice_policy,customer_notice_state,note) values(public.generate_payment_reference(),e.project_id,case when p_resolution='external_refund' then 'external_refund' else 'correction' end,'resolved',-coalesce(e.amount,0),'other','manual',now(),'florist',auth.uid(),case when p_resolution='external_refund' then 'required' else 'optional' end,'queued',p_reference_or_note) returning * into t;end if;
+ perform public.create_payment_activity(e.project_id,'Payment exception resolved','A florist resolved '||replace(e.exception_type,'_',' ')||'.','florist',jsonb_build_object('payment_exception_id',e.payment_exception_id,'resolution',p_resolution,'reference',p_reference_or_note),auth.uid());return to_jsonb(e);
+end; $$;
+revoke all on function public.resolve_payment_exception(uuid,text,text) from public,anon;
+grant execute on function public.resolve_payment_exception(uuid,text,text) to authenticated;

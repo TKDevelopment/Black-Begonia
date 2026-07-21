@@ -1,0 +1,43 @@
+.proposal-modal-overlay.crm-dark .proposal-modal-shell,
+.proposal-modal-overlay.crm-dark .proposal-modal-header,
+.proposal-modal-overlay.crm-dark .proposal-modal-footer {
+  background: var(--crm-surface, #101a26) !important;
+  border-color: var(--crm-border, #23364c) !important;
+}
+
+.proposal-modal-overlay.crm-dark .proposal-modal-body {
+  background: var(--crm-surface-muted, #0d1621);
+}
+
+.proposal-modal-overlay.crm-dark .proposal-upload-zone,
+.proposal-modal-overlay.crm-dark .deposit-collection-card {
+  background: var(--crm-surface-subtle, #142031) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+}
+
+.proposal-modal-overlay.crm-dark .proposal-info-card,
+.proposal-modal-overlay.crm-dark .deposit-choice,
+.proposal-modal-overlay.crm-dark .proposal-modal-close,
+.proposal-modal-overlay.crm-dark .proposal-modal-footer button:first-child {
+  background: var(--crm-surface-elevated, #172334) !important;
+  border-color: var(--crm-border-strong, #375471) !important;
+}
+
+.proposal-modal-overlay.crm-dark .text-stone-900,
+.proposal-modal-overlay.crm-dark .text-stone-800 {
+  color: var(--crm-text, #ecf3fb) !important;
+}
+
+.proposal-modal-overlay.crm-dark .text-stone-700,
+.proposal-modal-overlay.crm-dark .text-stone-600 {
+  color: var(--crm-text-muted, #c0cfe0) !important;
+}
+
+.proposal-modal-overlay.crm-dark .text-stone-500 {
+  color: var(--crm-text-soft, #8ea3ba) !important;
+}
+
+.proposal-modal-overlay.crm-dark .deposit-choice:has(input:checked) {
+  border-color: var(--crm-accent, #f0a69d) !important;
+  box-shadow: 0 0 0 1px var(--crm-accent, #f0a69d);
+}

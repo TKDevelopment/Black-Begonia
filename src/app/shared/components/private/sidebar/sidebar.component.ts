@@ -39,6 +39,7 @@ export class SidebarComponent {
     { label: 'Contacts', route: '/admin/contacts' },
     { label: 'Organizations', route: '/admin/organizations' },
     { label: 'Projects', route: '/admin/projects' },
+    { label: 'Payments', route: '/admin/payments' },
     { label: 'Tasks', route: '/admin/tasks' },
   ];
 

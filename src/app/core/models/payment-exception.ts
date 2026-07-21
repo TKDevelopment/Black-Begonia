@@ -1,0 +1,2 @@
+export interface PaymentException { payment_exception_id: string; project_id: string; exception_type: string; urgency: 'normal' | 'urgent'; state: 'open' | 'acknowledged' | 'resolved'; amount?: number | null; summary: string; redacted_detail?: string | null; resolution?: string | null; resolution_reference?: string | null; created_at: string; }
+export interface PaymentLegalHold { payment_legal_hold_id: string; project_id: string; action: 'placed' | 'released'; hold_type: 'legal' | 'dispute'; reason: string; actor_id: string; created_at: string; }

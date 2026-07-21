@@ -113,6 +113,8 @@ export class ActivityRepositoryService {
       ...row,
       performed_by_display_name: row.profiles?.display_name ?? null,
       performed_by_email: row.profiles?.email ?? null,
+      actor_type: row.metadata?.actor_type ?? (row.performed_by ? 'florist' : 'system'),
+      payment_reference: row.metadata?.payment_reference ?? null,
       profiles: undefined,
     })) as ActivityLogEntry[];
   }

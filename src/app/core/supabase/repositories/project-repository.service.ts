@@ -2,11 +2,25 @@ import { Injectable } from '@angular/core';
 import { CreateProjectInput, Project, UpdateProjectInput } from '../../models/project';
 import { SupabaseService } from '../clients/supabase.service';
 
+export interface ProjectCascadeDeleteResult {
+  projectId: string;
+  projectName: string;
+  deletedSourceLead: boolean;
+  deletedContacts: number;
+  deletedOrganizations: number;
+  storageObjects: Array<{ bucket: string; path: string }>;
+  storageCleanupFailures: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class ProjectRepositoryService {
   constructor(private supabaseService: SupabaseService) {}
+
+  get client() {
+    return this.supabaseService.getClient();
+  }
 
   private readonly projectSelect = `
     project_id,
@@ -152,6 +166,42 @@ export class ProjectRepositoryService {
     if (error) {
       console.error('[ProjectRepositoryService] refreshProjectPaymentStatuses error:', error);
     }
+  }
+
+  async cascadeDeleteProjectTestData(
+    projectId: string,
+    confirmation: string
+  ): Promise<ProjectCascadeDeleteResult> {
+    const client = this.supabaseService.getClient();
+    const { data, error } = await client.rpc('cascade_delete_project_test_data', {
+      p_project_id: projectId,
+      p_confirmation: confirmation,
+    });
+
+    if (error) {
+      console.error('[ProjectRepositoryService] cascadeDeleteProjectTestData error:', error);
+      throw new Error(error.message || 'The project could not be deleted.');
+    }
+
+    const result = data as Omit<ProjectCascadeDeleteResult, 'storageCleanupFailures'>;
+    const pathsByBucket = new Map<string, string[]>();
+    for (const storageObject of result.storageObjects ?? []) {
+      if (!storageObject.bucket || !storageObject.path) continue;
+      const paths = pathsByBucket.get(storageObject.bucket) ?? [];
+      paths.push(storageObject.path);
+      pathsByBucket.set(storageObject.bucket, paths);
+    }
+
+    let storageCleanupFailures = 0;
+    for (const [bucket, paths] of pathsByBucket) {
+      const { error: storageError } = await client.storage.from(bucket).remove(paths);
+      if (storageError) {
+        console.error('[ProjectRepositoryService] project storage cleanup error:', storageError);
+        storageCleanupFailures += paths.length;
+      }
+    }
+
+    return { ...result, storageCleanupFailures };
   }
 
   private toSafeUpdatePayload(updates: UpdateProjectInput): UpdateProjectInput {

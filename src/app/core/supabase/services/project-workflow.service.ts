@@ -2,11 +2,9 @@ import { Injectable } from '@angular/core';
 
 import { Project, UpdateProjectInput } from '../../models/project';
 import {
-  ProjectPaymentRecord,
-  UpsertProjectPaymentRecordInput,
+  ManualPaymentInput,
 } from '../../models/project-payment-record';
 import { ActivityRepositoryService } from '../repositories/activity-repository.service';
-import { ProjectPaymentRecordRepositoryService } from '../repositories/project-payment-record-repository.service';
 import { ProjectRepositoryService } from '../repositories/project-repository.service';
 
 @Injectable({
@@ -15,7 +13,6 @@ import { ProjectRepositoryService } from '../repositories/project-repository.ser
 export class ProjectWorkflowService {
   constructor(
     private readonly projectRepository: ProjectRepositoryService,
-    private readonly paymentRecordRepository: ProjectPaymentRecordRepositoryService,
     private readonly activityRepository: ActivityRepositoryService
   ) {}
 
@@ -52,68 +49,30 @@ export class ProjectWorkflowService {
 
   async recordPayment(
     project: Project,
-    payload: Omit<UpsertProjectPaymentRecordInput, 'project_id'>
-  ): Promise<{ payment: ProjectPaymentRecord; project: Project | null }> {
+    payload: Omit<ManualPaymentInput, 'project_id' | 'command_key'> & { command_key?: string; confirm_overpayment?: boolean }
+  ): Promise<{ result: { state: 'recorded' | 'duplicate_warning' | 'overpayment_warning'; transaction?: unknown; suspectedReference?: string; overpaymentAmount?: number }; project: Project | null }> {
     this.assertValidPayment(payload);
-
-    const payment = await this.paymentRecordRepository.upsertPaymentRecord({
-      ...payload,
-      project_id: project.project_id,
+    const { data, error } = await this.projectRepository.client.rpc('record_manual_payment', {
+      p_project_id: project.project_id, p_obligation_id: payload.obligation_id,
+      p_amount_cents: Math.round(payload.amount * 100), p_method: payload.payment_method,
+      p_received_at: payload.received_at, p_note: payload.notes?.trim() || null,
+      p_suspected_reference: payload.suspected_reference || null,
+      p_override_reason: payload.duplicate_override_reason?.trim() || null,
+      p_command_key: payload.command_key || crypto.randomUUID(), p_confirm_overpayment: payload.confirm_overpayment ?? false,
     });
-
-    await this.activityRepository.createProjectActivity({
-      project_id: project.project_id,
-      activity_type: 'payment_recorded',
-      activity_label:
-        payload.payment_kind === 'deposit'
-          ? 'Deposit payment recorded'
-          : 'Final payment recorded',
-      description: `${this.formatPaymentKind(payload.payment_kind)} payment was recorded.`,
-      metadata: {
-        payment_kind: payload.payment_kind,
-        payment_status: payload.status,
-        payment_method: payload.payment_method ?? null,
-        amount_due: payload.amount_due,
-        amount_paid: payload.amount_paid ?? 0,
-      },
-    });
-
-    if (payment.status === 'paid') {
-      const nextStatus =
-        payment.payment_kind === 'deposit' ? 'booked' : 'final_prep';
-      if (project.status !== 'completed' && project.status !== 'canceled') {
-        await this.projectRepository.updateProject(project.project_id, {
-          status: nextStatus,
-          booked_at:
-            nextStatus === 'booked' && !project.booked_at
-              ? new Date().toISOString()
-              : project.booked_at ?? null,
-        });
-      }
-    }
-
-    await this.refreshProjectPaymentStatuses(project.project_id);
+    if (error) throw error;
     return {
-      payment,
+      result: data as { state: 'recorded' | 'duplicate_warning' | 'overpayment_warning'; transaction?: unknown; suspectedReference?: string; overpaymentAmount?: number },
       project: await this.projectRepository.getProjectById(project.project_id),
     };
   }
 
   private assertValidPayment(
-    payload: Omit<UpsertProjectPaymentRecordInput, 'project_id'>
+    payload: Omit<ManualPaymentInput, 'project_id' | 'command_key'>
   ): void {
-    if (payload.status === 'paid') {
-      if (!payload.payment_method) {
-        throw new Error('Choose a payment method for paid records.');
-      }
-
-      if ((payload.amount_paid ?? 0) <= 0) {
-        throw new Error('Enter an amount paid greater than zero.');
-      }
-    }
-  }
-
-  private formatPaymentKind(kind: string): string {
-    return kind.replace(/_/g, ' ');
+    if (!payload.obligation_id) throw new Error('Choose a payment obligation.');
+    if (!payload.payment_method) throw new Error('Choose a payment method.');
+    if (payload.amount <= 0) throw new Error('Enter an amount paid greater than zero.');
+    if (!payload.received_at) throw new Error('Choose the date payment was received.');
   }
 }

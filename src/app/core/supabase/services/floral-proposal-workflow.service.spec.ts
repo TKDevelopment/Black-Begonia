@@ -307,6 +307,7 @@ describe('FloralProposalWorkflowService', () => {
         pdf_storage_path: 'pending-leads/lead-001/proposal-documents/proposal-001/proposal.pdf',
         pdf_file_name: 'proposal.pdf',
         idempotency_key: 'request-001',
+        send_deposit_request: false,
       },
     });
     expect(result).toEqual({
@@ -317,6 +318,9 @@ describe('FloralProposalWorkflowService', () => {
       active_invoice_snapshot_id: 'snapshot-001',
       signed_pdf_storage_path: 'pending-leads/lead-001/proposal-documents/proposal-001/proposal.pdf',
       submitted_at: '2026-06-02T12:00:00.000Z',
+      project_status: undefined,
+      deposit_obligation_id: null,
+      deposit_principal_cents: null,
     });
   });
 
@@ -338,6 +342,7 @@ describe('FloralProposalWorkflowService', () => {
       mode: 'project_revision', lead_id: null, project_id: 'project-001', floral_proposal_id: null,
       revision_workspace_id: 'workspace-001', baseline_snapshot_id: 'snapshot-001',
       pdf_storage_path: 'projects/project-001/revision.pdf', pdf_file_name: 'revision.pdf', idempotency_key: 'request-002',
+      send_deposit_request: false,
     } });
   });
 

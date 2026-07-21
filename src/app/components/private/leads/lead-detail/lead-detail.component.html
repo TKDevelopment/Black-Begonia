@@ -26,6 +26,11 @@
     >
       <div detail-main>
         <ng-container *ngIf="lead() as lead">
+          <aside *ngIf="conversionPaymentNotice() as notice" class="mb-3 rounded-2xl border p-4" [ngClass]="notice.state === 'failed' ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900'" role="status">
+            <p class="font-semibold">Payment setup {{ notice.state === 'failed' ? 'needs attention' : 'recorded' }}</p>
+            <p class="mt-1 text-sm">{{ notice.message }}</p>
+            <button type="button" class="mt-3 rounded-xl border border-current px-3 py-1.5 text-xs font-semibold" (click)="openConvertedProjectPayment(notice.projectId)">Open converted project</button>
+          </aside>
           <app-lead-summary-card
             [lead]="lead"
             [actionLoading]="actionLoading()"
@@ -600,6 +605,7 @@
       [open]="convertModalOpen()"
       [saving]="convertLoading()"
       [lead]="lead()"
+      [proposal]="acceptedProposal()"
       (close)="closeConvertModal()"
       (confirm)="confirmConvert($event)"
     />

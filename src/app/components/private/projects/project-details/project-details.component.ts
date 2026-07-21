@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Project, ProjectStatus } from '../../../../core/models/project';
 import { Lead } from '../../../../core/models/lead';
 import { ActivityLogEntry } from '../../../../core/models/activity-log';
-import { ProjectPaymentRecord } from '../../../../core/models/project-payment-record';
+import { ProjectFinancialSummary, ProjectPaymentRecord } from '../../../../core/models/project-payment-record';
 import { ProjectProposalDocumentVersion } from '../../../../core/models/project-proposal-document-version';
 import { ProjectProposalInvoiceSnapshot } from '../../../../core/models/project-proposal-invoice-snapshot';
 import { ProjectRepositoryService } from '../../../../core/supabase/repositories/project-repository.service';
@@ -15,8 +15,12 @@ import { ActivityRepositoryService } from '../../../../core/supabase/repositorie
 import { ProjectProposalDocumentVersionRepositoryService } from '../../../../core/supabase/repositories/project-proposal-document-version-repository.service';
 import { ProjectProposalInvoiceSnapshotRepositoryService } from '../../../../core/supabase/repositories/project-proposal-invoice-snapshot-repository.service';
 import { ProjectWorkflowService } from '../../../../core/supabase/services/project-workflow.service';
+import { PaymentDeliveryService } from '../../../../core/supabase/services/payment-delivery.service';
+import { PaymentDelivery } from '../../../../core/models/payment-delivery';
 import { ProjectProposalRevisionService } from '../../../../core/supabase/services/project-proposal-revision.service';
+import { LeadConversionService } from '../../../../core/supabase/services/lead-conversion.service';
 import { SupabaseService } from '../../../../core/supabase/clients/supabase.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { formatDateOnlyForDisplay } from '../../../../core/utils/date-only';
 import { CrmPageHeaderComponent } from '../../../../shared/components/private/crm-page-header/crm-page-header.component';
 import { ErrorStateBlockComponent } from '../../../../shared/components/private/error-state-block/error-state-block.component';
@@ -59,22 +63,33 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly documentRepository = inject(ProjectProposalDocumentVersionRepositoryService);
   private readonly snapshotRepository = inject(ProjectProposalInvoiceSnapshotRepositoryService);
   private readonly projectWorkflow = inject(ProjectWorkflowService);
+  private readonly paymentDelivery = inject(PaymentDeliveryService);
   private readonly proposalRevision = inject(ProjectProposalRevisionService);
+  private readonly leadConversion = inject(LeadConversionService);
   private readonly supabaseService = inject(SupabaseService);
+  private readonly toast = inject(ToastService);
 
   readonly loading = signal(true);
   readonly documentsLoading = signal(false);
   readonly savingPayment = signal(false);
   readonly savingProject = signal(false);
+  readonly sendingDepositRequest = signal(false);
   readonly error = signal<string | null>(null);
   readonly sectionError = signal<string | null>(null);
   readonly editModalOpen = signal(false);
   readonly paymentModalOpen = signal(false);
+  readonly deleteModalOpen = signal(false);
+  readonly deletingProject = signal(false);
+  readonly deleteAcknowledged = signal(false);
+  readonly deleteConfirmation = signal('');
+  readonly deleteError = signal<string | null>(null);
 
   readonly project = signal<Project | null>(null);
   readonly sourceLead = signal<Lead | null>(null);
   readonly payments = signal<ProjectPaymentRecord[]>([]);
+  readonly financialSummary = signal<ProjectFinancialSummary | null>(null);
   readonly activities = signal<ActivityLogEntry[]>([]);
+  readonly paymentDeliveries = signal<PaymentDelivery[]>([]);
   readonly documents = signal<ProjectProposalDocumentVersion[]>([]);
   readonly snapshots = signal<ProjectProposalInvoiceSnapshot[]>([]);
 
@@ -120,6 +135,28 @@ export class ProjectDetailsComponent implements OnInit {
       const right = this.paymentSortDate(b);
       return right - left;
     });
+  });
+
+  readonly depositRequestCandidate = computed(() => {
+    const hasInitialDelivery = this.paymentDeliveries().some(
+      (delivery) => delivery.delivery_kind === 'initial_request'
+        && delivery.status !== 'canceled'
+    );
+    if (hasInitialDelivery) return null;
+
+    return this.payments().find(
+      (payment) => payment.payment_kind === 'deposit'
+        && !['paid', 'waived', 'canceled'].includes(payment.status)
+        && Number(payment.outstanding_amount ?? 0) > 0
+    ) ?? null;
+  });
+
+  readonly canDeleteProject = computed(() => {
+    const project = this.project();
+    return !!project
+      && this.deleteAcknowledged()
+      && this.deleteConfirmation() === project.project_name
+      && !this.deletingProject();
   });
 
   async ngOnInit(): Promise<void> {
@@ -173,17 +210,23 @@ export class ProjectDetailsComponent implements OnInit {
   async loadSections(projectId: string): Promise<void> {
     this.documentsLoading.set(true);
 
-    const [payments, activities, documents, snapshots] = await Promise.all([
+    const [payments, financialSummary, activities, paymentDeliveries, documents, snapshots] = await Promise.all([
       this.paymentRepository.getProjectPaymentRecords(projectId).catch((error) => {
         console.error('[ProjectDetailsComponent] payments error:', error);
         this.sectionError.set('Some financial records could not be loaded.');
         return [];
+      }),
+      this.paymentRepository.getProjectFinancialSummary(projectId).catch((error) => {
+        console.error('[ProjectDetailsComponent] financial summary error:', error);
+        this.sectionError.set('The authoritative financial summary could not be loaded.');
+        return null;
       }),
       this.activityRepository.getProjectActivity(projectId).catch((error) => {
         console.error('[ProjectDetailsComponent] activity error:', error);
         this.sectionError.set('Some project activity could not be loaded.');
         return [];
       }),
+      this.paymentDelivery.getProjectDeliveries(projectId).catch(() => []),
       this.documentRepository.getProjectDocumentVersions(projectId).catch((error) => {
         console.error('[ProjectDetailsComponent] documents error:', error);
         this.sectionError.set('Some proposal documents could not be loaded.');
@@ -197,10 +240,54 @@ export class ProjectDetailsComponent implements OnInit {
     ]);
 
     this.payments.set(payments);
+    this.financialSummary.set(financialSummary);
     this.activities.set(activities);
+    this.paymentDeliveries.set(paymentDeliveries);
     this.documents.set(documents);
     this.snapshots.set(snapshots);
     this.documentsLoading.set(false);
+  }
+
+  async toggleReminder(payment: ProjectPaymentRecord): Promise<void> {
+    const project=this.project();if(!project)return;
+    const enabling=payment.reminder_enabled===false;
+    const reason=window.prompt(enabling?'Reason for resuming reminders':'Reason for pausing reminders');
+    if(!reason?.trim())return;
+    try{await this.paymentDelivery.setReminderControl(project.project_id,payment.project_payment_record_id,enabling,null,reason);await this.loadSections(project.project_id);}catch(error){this.sectionError.set(error instanceof Error?error.message:'Reminder control could not be saved.');}
+  }
+
+  async retryDelivery(delivery: PaymentDelivery): Promise<void> {
+    const project=this.project();if(!project)return;const reason=window.prompt('Reason for retrying this payment email');if(!reason?.trim())return;
+    try{await this.paymentDelivery.retry(delivery.payment_message_delivery_id,reason);await this.loadSections(project.project_id);}catch(error){this.sectionError.set(error instanceof Error?error.message:'The payment email could not be retried.');}
+  }
+
+  async sendDepositRequest(): Promise<void> {
+    const project = this.project();
+    const obligation = this.depositRequestCandidate();
+    if (!project || !obligation || this.sendingDepositRequest()) return;
+
+    this.sendingDepositRequest.set(true);
+    this.sectionError.set(null);
+    try {
+      const result = await this.leadConversion.issueDepositRequest(
+        obligation.project_payment_record_id,
+        Math.round(Number(obligation.outstanding_amount) * 100)
+      );
+      if (result === 'failed') {
+        this.sectionError.set('The deposit request was created, but email delivery failed. Use Retry email after reviewing the delivery record.');
+        this.toast.showToast('The deposit email could not be delivered.', 'error');
+      } else {
+        this.toast.showToast('The secure deposit payment email was queued.');
+      }
+      await this.loadSections(project.project_id);
+    } catch (error) {
+      console.error('[ProjectDetailsComponent] sendDepositRequest error:', error);
+      this.sectionError.set(
+        error instanceof Error ? error.message : 'The deposit email could not be sent.'
+      );
+    } finally {
+      this.sendingDepositRequest.set(false);
+    }
   }
 
   async savePayment(payload: ProjectPaymentLogPayload): Promise<void> {
@@ -212,6 +299,14 @@ export class ProjectDetailsComponent implements OnInit {
 
     try {
       const result = await this.projectWorkflow.recordPayment(project, payload);
+      if (result.result.state === 'duplicate_warning') {
+        this.sectionError.set(`Possible duplicate payment ${result.result.suspectedReference ?? ''}. Confirm it in the payment form with an override reason.`.trim());
+        return;
+      }
+      if (result.result.state === 'overpayment_warning') {
+        this.sectionError.set(`This would exceed the project balance by ${this.formatCurrency(result.result.overpaymentAmount)}. Confirm the reviewed overpayment in the payment form.`);
+        return;
+      }
       if (result.project) {
         this.project.set(result.project);
       }
@@ -316,6 +411,58 @@ export class ProjectDetailsComponent implements OnInit {
 
   backToProjects(): void {
     void this.router.navigate(['/admin/projects']);
+  }
+
+  openDeleteConfirmation(): void {
+    this.deleteAcknowledged.set(false);
+    this.deleteConfirmation.set('');
+    this.deleteError.set(null);
+    this.deleteModalOpen.set(true);
+  }
+
+  closeDeleteConfirmation(): void {
+    if (this.deletingProject()) return;
+    this.deleteModalOpen.set(false);
+    this.deleteError.set(null);
+  }
+
+  updateDeleteAcknowledgement(event: Event): void {
+    this.deleteAcknowledged.set((event.target as HTMLInputElement).checked);
+  }
+
+  updateDeleteConfirmation(event: Event): void {
+    this.deleteConfirmation.set((event.target as HTMLInputElement).value);
+  }
+
+  async deleteProject(): Promise<void> {
+    const project = this.project();
+    if (!project || !this.canDeleteProject()) return;
+
+    this.deletingProject.set(true);
+    this.deleteError.set(null);
+    try {
+      const result = await this.projectRepository.cascadeDeleteProjectTestData(
+        project.project_id,
+        this.deleteConfirmation()
+      );
+      this.deleteModalOpen.set(false);
+      if (result.storageCleanupFailures > 0) {
+        this.toast.showToast(
+          `Project deleted, but ${result.storageCleanupFailures} proposal file(s) still need storage cleanup.`,
+          'error'
+        );
+      } else {
+        this.toast.showToast(`Project "${project.project_name}" and its test data were deleted.`);
+      }
+      await this.router.navigate(['/admin/projects']);
+    } catch (error) {
+      console.error('[ProjectDetailsComponent] deleteProject error:', error);
+      this.deleteError.set(
+        error instanceof Error ? error.message : 'The project could not be deleted.'
+      );
+    } finally {
+      this.deletingProject.set(false);
+    }
   }
 
   formatDate(value: string | null | undefined): string {

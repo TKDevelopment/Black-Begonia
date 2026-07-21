@@ -1,16 +1,22 @@
 <section class="bg-[#fefcfa] shadow-[0_25px_50px_rgba(0,0,0,0.25)]">
   <div class="max-w-screen-4xl mx-auto
       px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10
-      flex flex-col md:flex-row items-center justify-between"
+      flex md:flex-row items-center justify-between"
+      [class.flex-row]="navigationRestricted"
+      [class.flex-col]="!navigationRestricted"
     >
-    <div class="w-full md:w-auto flex items-center justify-between">
-      <div routerLink="/" class="text-center  cursor-pointer font-cormorant -translate-y-[-4px]">
+    <div
+      class="md:w-auto flex items-center justify-between"
+      [class.w-full]="!navigationRestricted"
+    >
+      <div routerLink="/" data-testid="public-logo" class="text-center cursor-pointer font-cormorant -translate-y-[-4px]">
         <h1 class="text-2xl md:text-xl lg:text-2xl 2xl:text-3xl font-semibold">BLACK <span class="text-[#f89b95]">BEGONIA</span></h1>
         <h2 class="text-sm md:text-xs lg:text-sm 2xl:text-base -translate-y-[9px] tracking-[0.2em]">FLORAL &nbsp;DESIGNS</h2>
       </div>
       
       <!-- Mobile hamburger -->
       <button
+        *ngIf="!navigationRestricted"
         class="md:hidden text-gray-600 p-2"
         type="button"
         (click)="toggleMenu()"
@@ -29,7 +35,7 @@
       </button>
     </div>
 
-    <div class="hidden md:flex items-center space-x-4 lg:space-x-5 xl:space-x-10 2xl:space-x-14 xl:-translate-x-[40px]
+    <div *ngIf="!navigationRestricted" data-testid="public-navigation" class="hidden md:flex items-center space-x-4 lg:space-x-5 xl:space-x-10 2xl:space-x-14 xl:-translate-x-[40px]
       text-sm lg:text-base 2xl:text-xl font-forum text-gray-600 tracking-wider"
     >
       <div routerLink="/" class="hover:text-[#f89b95] hover:cursor-pointer">HOME</div>
@@ -67,10 +73,17 @@
       <div routerLink="/inquiries" class="hover:text-[#f89b95] hover:cursor-pointer">INQUIRY</div>
     </div>
 
-    <div class="hidden md:flex items-center space-x-3 lg:space-x-4">
+    <div
+      class="items-center space-x-3 lg:space-x-4 md:flex"
+      [class.flex]="navigationRestricted"
+      [class.hidden]="!navigationRestricted"
+    >
       <a
         href="https://www.facebook.com/blackbegoniaflorist/"
         aria-label="Facebook"
+        data-testid="public-social-link"
+        target="_blank"
+        rel="noopener noreferrer"
         class="inline-flex items-center justify-center w-5 h-5 2xl:w-6 2xl:h-6 text-current hover:text-[#f89b95] shrink-0"
       >
         <svg
@@ -90,6 +103,9 @@
       <a
         href="https://www.instagram.com/blackbegoniaflorist/"
         aria-label="Instagram"
+        data-testid="public-social-link"
+        target="_blank"
+        rel="noopener noreferrer"
         class="inline-flex items-center justify-center w-5 h-5 2xl:w-6 2xl:h-6 text-current hover:text-[#f89b95] shrink-0"
       >
         <svg
@@ -109,7 +125,7 @@
   </div>
 
   <!-- Mobile menu -->
-  <div *ngIf="menuOpen" class="md:hidden font-cormorant tracking-widest">
+  <div *ngIf="menuOpen && !navigationRestricted" class="md:hidden font-cormorant tracking-widest">
     <div class="mobile-menu bg-[#fefcf] text-gray-600 text-base space-y-2 px-4 py-3">
       <a routerLink="/" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">HOME</a>
       <a routerLink="/about" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">ABOUT</a>

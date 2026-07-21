@@ -13,6 +13,7 @@ type RequestBody = {
   idempotency_key?: string | null;
   revision_workspace_id?: string | null;
   baseline_snapshot_id?: string | null;
+  send_deposit_request?: boolean;
 };
 
 type LeadRow = {
@@ -201,71 +202,6 @@ async function findExistingDocumentByPath(
   return data;
 }
 
-async function resolveProject(
-  supabase: SupabaseAdminClient,
-  mode: SubmissionMode,
-  lead: LeadRow | null,
-  projectId: string | null
-): Promise<string> {
-  if (mode === "project_revision") {
-    if (!projectId) throw new Error("project_id is required for project revisions.");
-    const { data, error } = await supabase
-      .from("projects")
-      .select("project_id")
-      .eq("project_id", projectId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) throw new Error("The selected project could not be found.");
-    return projectId;
-  }
-
-  if (!lead) throw new Error("lead_id is required for initial booking.");
-  if (lead.converted_project_id) return lead.converted_project_id;
-
-  const { data: existingProject, error: existingError } = await supabase
-    .from("projects")
-    .select("project_id")
-    .eq("source_lead_id", lead.lead_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existingError) throw existingError;
-  if (existingProject?.project_id) return String(existingProject.project_id);
-
-  const { data, error } = await supabase
-    .from("projects")
-    .insert({
-      project_name: projectNameFromLead(lead),
-      service_type: lead.service_type,
-      event_type: lead.event_type,
-      event_date: lead.event_date,
-      ceremony_venue_name: lead.ceremony_venue_name,
-      ceremony_venue_city: lead.ceremony_venue_city,
-      ceremony_venue_state: lead.ceremony_venue_state,
-      ceremony_venue_address: lead.ceremony_venue_address,
-      ceremony_venue_zipcode: lead.ceremony_venue_zipcode,
-      reception_venue_name: lead.reception_venue_name,
-      reception_venue_city: lead.reception_venue_city,
-      reception_venue_state: lead.reception_venue_state,
-      reception_venue_address: lead.reception_venue_address,
-      reception_venue_zipcode: lead.reception_venue_zipcode,
-      budget_range: lead.budget_range,
-      guest_count: lead.guest_count,
-      style_notes: lead.inquiry_message,
-      status: "booked",
-      source_lead_id: lead.lead_id,
-      primary_contact_id: lead.converted_primary_contact_id,
-      assigned_user_id: lead.assigned_user_id,
-      booked_at: new Date().toISOString(),
-    })
-    .select("project_id")
-    .single();
-
-  if (error) throw error;
-  return String(data.project_id);
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse(405, { success: false, error: "Method not allowed." });
@@ -277,6 +213,7 @@ serve(async (req) => {
     });
     const userId = await authenticateCrmUser(req, supabase);
     const body = (await req.json()) as RequestBody;
+    const sendDepositRequest = body.send_deposit_request === true;
 
     const mode = body.mode ?? "initial_booking";
     if (mode !== "initial_booking" && mode !== "project_revision") {
@@ -296,6 +233,18 @@ serve(async (req) => {
 
     const existingDocument = await findExistingDocumentByPath(supabase, pdfStoragePath);
     if (existingDocument) {
+      const { data: existingProject } = await supabase
+        .from("projects")
+        .select("status")
+        .eq("project_id", existingDocument.project_id)
+        .maybeSingle();
+      const { data: existingDeposit } = await supabase
+        .from("project_payment_records")
+        .select("project_payment_record_id, outstanding_amount")
+        .eq("project_id", existingDocument.project_id)
+        .eq("payment_kind", "deposit")
+        .neq("status", "canceled")
+        .maybeSingle();
       return jsonResponse(200, {
         success: true,
         project_id: existingDocument.project_id,
@@ -305,6 +254,11 @@ serve(async (req) => {
         active_invoice_snapshot_id: existingDocument.invoice_snapshot_id,
         signed_pdf_storage_path: existingDocument.storage_path,
         submitted_at: existingDocument.submitted_at,
+        project_status: existingProject?.status ?? null,
+        deposit_obligation_id: existingDeposit?.project_payment_record_id ?? null,
+        deposit_principal_cents: existingDeposit
+          ? Math.round(Number(existingDeposit.outstanding_amount) * 100)
+          : null,
       });
     }
 
@@ -377,113 +331,25 @@ serve(async (req) => {
       return jsonResponse(422, { success: false, error: "The selected lead could not be found." });
     }
 
-    const bookedProjectId = await resolveProject(
-      supabase,
-      mode,
-      lead as LeadRow | null,
-      projectId
-    );
-
-    const version = await getNextVersion(supabase, "project_proposal_invoice_snapshots", bookedProjectId);
     const proposalRow = proposal as ProposalRow | null;
+    if (mode === "initial_booking") {
+      if (!lead || !proposalRow || !idempotencyKey) {
+        return jsonResponse(422, {
+          success: false,
+          error: "An active proposal, lead, and idempotency key are required for conversion.",
+        });
+      }
 
-    await supabase
-      .from("project_proposal_invoice_snapshots")
-      .update({ is_active: false })
-      .eq("project_id", bookedProjectId)
-      .eq("is_active", true);
-
-    await supabase
-      .from("project_proposal_document_versions")
-      .update({ is_active: false })
-      .eq("project_id", bookedProjectId)
-      .eq("is_active", true);
-
-    const now = new Date().toISOString();
-    const snapshotBody = {
-      ...(proposalRow?.snapshot ?? {}),
-      submitted_pdf_file_name: pdfFileName,
-      submitted_pdf_storage_path: pdfStoragePath,
-      submitted_at: now,
-      submission_mode: mode,
-    };
-
-    const { data: snapshot, error: snapshotError } = await supabase
-      .from("project_proposal_invoice_snapshots")
-      .insert({
-        project_id: bookedProjectId,
-        source_lead_id: (lead as LeadRow | null)?.lead_id ?? null,
-        source_floral_proposal_id: proposalRow?.floral_proposal_id ?? null,
-        version,
-        snapshot: snapshotBody,
-        subtotal: proposalRow?.subtotal ?? 0,
-        tax_rate: proposalRow?.tax_rate ?? 0,
-        tax_amount: proposalRow?.tax_amount ?? 0,
-        total_amount: proposalRow?.total_amount ?? 0,
-        retainer_amount: proposalRow?.retainer_amount ?? 0,
-        final_balance_amount: proposalRow?.final_balance_amount ?? proposalRow?.total_amount ?? 0,
-        retainer_due_date: proposalRow?.retainer_due_date ?? null,
-        final_balance_due_date: proposalRow?.final_balance_due_date ?? null,
-        created_by: userId,
-        is_active: true,
-      })
-      .select("project_proposal_invoice_snapshot_id")
-      .single();
-
-    if (snapshotError) throw snapshotError;
-
-    const { data: documentVersion, error: documentError } = await supabase
-      .from("project_proposal_document_versions")
-      .insert({
-        project_id: bookedProjectId,
-        source_lead_id: (lead as LeadRow | null)?.lead_id ?? null,
-        source_floral_proposal_id: proposalRow?.floral_proposal_id ?? null,
-        invoice_snapshot_id: snapshot.project_proposal_invoice_snapshot_id,
-        version,
-        file_name: pdfFileName,
-        storage_bucket: FLORAL_PROPOSAL_BUCKET,
-        storage_path: pdfStoragePath,
-        content_type: pdf.contentType,
-        file_size_bytes: pdf.size,
-        uploaded_by: userId,
+      const now = new Date().toISOString();
+      const snapshotBody = {
+        ...(proposalRow.snapshot ?? {}),
+        submitted_pdf_file_name: pdfFileName,
+        submitted_pdf_storage_path: pdfStoragePath,
         submitted_at: now,
-        is_active: true,
-      })
-      .select("project_proposal_document_version_id")
-      .single();
+        submission_mode: mode,
+      };
 
-    if (documentError) throw documentError;
-
-    const { error: projectUpdateError } = await supabase
-      .from("projects")
-      .update({
-        status: "booked",
-        booked_at: now,
-        active_proposal_invoice_snapshot_id: snapshot.project_proposal_invoice_snapshot_id,
-        active_proposal_document_version_id: documentVersion.project_proposal_document_version_id,
-        updated_at: now,
-      })
-      .eq("project_id", bookedProjectId);
-
-    if (projectUpdateError) throw projectUpdateError;
-
-    if (mode === "initial_booking" && lead) {
-      const { error: leadUpdateError } = await supabase
-        .from("leads")
-        .update({
-          status: "converted",
-          converted_project_id: bookedProjectId,
-          converted_primary_contact_id: lead.converted_primary_contact_id,
-          converted_at: now,
-          updated_at: now,
-        })
-        .eq("lead_id", lead.lead_id);
-
-      if (leadUpdateError) throw leadUpdateError;
-    }
-
-    if (proposalRow) {
-      await supabase
+      const { error: proposalAcceptError } = await supabase
         .from("floral_proposals")
         .update({
           status: "accepted",
@@ -493,18 +359,138 @@ serve(async (req) => {
           updated_at: now,
         })
         .eq("floral_proposal_id", proposalRow.floral_proposal_id);
+      if (proposalAcceptError) throw proposalAcceptError;
+
+      if (lead.status !== "proposal_accepted" && lead.status !== "converted") {
+        const { error: leadAcceptError } = await supabase
+          .from("leads")
+          .update({ status: "proposal_accepted", updated_at: now })
+          .eq("lead_id", lead.lead_id);
+        if (leadAcceptError) throw leadAcceptError;
+      }
+
+      const authorization = req.headers.get("authorization") ?? "";
+      const crmClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: authorization } },
+      });
+      const { data: conversionData, error: conversionError } = await crmClient.rpc(
+        "convert_lead_to_project_with_payments",
+        {
+          p_lead_id: lead.lead_id,
+          p_project_fields: {
+            project_name: projectNameFromLead(lead),
+            internal_notes: null,
+          },
+          p_contact_fields: {},
+          p_command_key: idempotencyKey,
+          p_test_fail_after_stage: null,
+        }
+      );
+      if (conversionError) throw conversionError;
+
+      const conversion = conversionData as {
+        project: {
+          project_id: string;
+          active_proposal_invoice_snapshot_id: string;
+          status: string;
+        };
+        depositObligationId: string;
+      };
+      const bookedProjectId = conversion.project.project_id;
+      const snapshotId = conversion.project.active_proposal_invoice_snapshot_id;
+      const version = await getNextVersion(
+        supabase,
+        "project_proposal_document_versions",
+        bookedProjectId
+      );
+      const { data: documentVersion, error: documentError } = await supabase
+        .from("project_proposal_document_versions")
+        .insert({
+          project_id: bookedProjectId,
+          source_lead_id: lead.lead_id,
+          source_floral_proposal_id: proposalRow.floral_proposal_id,
+          invoice_snapshot_id: snapshotId,
+          version,
+          file_name: pdfFileName,
+          storage_bucket: FLORAL_PROPOSAL_BUCKET,
+          storage_path: pdfStoragePath,
+          content_type: pdf.contentType,
+          file_size_bytes: pdf.size,
+          uploaded_by: userId,
+          submitted_at: now,
+          is_active: true,
+        })
+        .select("project_proposal_document_version_id")
+        .single();
+      if (documentError) throw documentError;
+
+      const { error: projectUpdateError } = await supabase
+        .from("projects")
+        .update({
+          status: "awaiting_deposit",
+          booked_at: null,
+          active_proposal_document_version_id:
+            documentVersion.project_proposal_document_version_id,
+          updated_at: now,
+        })
+        .eq("project_id", bookedProjectId);
+      if (projectUpdateError) throw projectUpdateError;
+
+      const depositPrincipalCents = Math.round(proposalRow.total_amount * 0.3 * 100);
+      const decisionDescription = sendDepositRequest
+        ? "The florist selected immediate delivery of the secure deposit payment link."
+        : "The florist deferred the deposit payment email for later manual follow-up.";
+      const { error: activityError } = await supabase.rpc("create_payment_activity", {
+        p_project_id: bookedProjectId,
+        p_label: "Deposit email decision recorded",
+        p_description: decisionDescription,
+        p_actor_type: "florist",
+        p_metadata: {
+          deposit_email_requested: sendDepositRequest,
+          deposit_amount: depositPrincipalCents / 100,
+          proposal_version: proposalRow.version,
+          project_status: "awaiting_deposit",
+        },
+        p_actor_id: userId,
+      });
+      if (activityError) throw activityError;
+
+      const { error: leadActivityError } = await supabase
+        .from("lead_activity")
+        .insert({
+          lead_id: lead.lead_id,
+          activity_type: "converted",
+          activity_label: "Deposit collection configured",
+          activity_description: decisionDescription,
+          performed_by: userId,
+          metadata: {
+            project_id: bookedProjectId,
+            deposit_email_requested: sendDepositRequest,
+            deposit_amount: depositPrincipalCents / 100,
+            project_status: "awaiting_deposit",
+          },
+        });
+      if (leadActivityError) throw leadActivityError;
+
+      return jsonResponse(200, {
+        success: true,
+        project_id: bookedProjectId,
+        project_status: "awaiting_deposit",
+        lead_id: lead.lead_id,
+        floral_proposal_id: proposalRow.floral_proposal_id,
+        proposal_document_version_id:
+          documentVersion.project_proposal_document_version_id,
+        active_invoice_snapshot_id: snapshotId,
+        signed_pdf_storage_path: pdfStoragePath,
+        submitted_at: now,
+        deposit_obligation_id: conversion.depositObligationId,
+        deposit_principal_cents: depositPrincipalCents,
+        deposit_email_requested: sendDepositRequest,
+      });
     }
 
-    return jsonResponse(200, {
-      success: true,
-      project_id: bookedProjectId,
-      lead_id: (lead as LeadRow | null)?.lead_id ?? null,
-      floral_proposal_id: proposalRow?.floral_proposal_id ?? null,
-      proposal_document_version_id: documentVersion.project_proposal_document_version_id,
-      active_invoice_snapshot_id: snapshot.project_proposal_invoice_snapshot_id,
-      signed_pdf_storage_path: pdfStoragePath,
-      submitted_at: now,
-    });
+    throw new Error("Unsupported proposal submission state.");
   } catch (error) {
     if (error instanceof Response) {
       return jsonResponse(error.status, { success: false, error: await error.text() });
