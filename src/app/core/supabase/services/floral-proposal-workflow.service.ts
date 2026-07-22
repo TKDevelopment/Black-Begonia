@@ -36,6 +36,8 @@ export interface SubmitFloralProposalPayload {
       sell_unit_price: number;
       subtotal: number;
       reserve_percent?: number;
+      pack_quantity?: number | null;
+      effective_pack_cost?: number | null;
       snapshot?: Record<string, unknown>;
     }[];
   }[];
@@ -327,10 +329,19 @@ export class FloralProposalWorkflowService {
           catalog_item_name: component.catalog_item_name,
           quantity_per_unit: component.quantity_per_unit,
           extended_quantity: component.extended_quantity,
-          base_unit_cost: component.base_unit_cost,
+           base_unit_cost: component.base_unit_cost,
           applied_markup_percent: component.applied_markup_percent,
           sell_unit_price: component.sell_unit_price,
-          subtotal: component.subtotal,
+           subtotal: component.subtotal,
+          reserve_percent: component.reserve_percent,
+          pack_quantity: component.pack_quantity ?? null,
+          effective_pack_cost: component.effective_pack_cost ?? null,
+          snapshot: {
+            ...(component.snapshot ?? {}),
+            pack_quantity: component.pack_quantity ?? null,
+            effective_pack_cost: component.effective_pack_cost ?? null,
+            purchase_unit_cost: component.purchase_unit_cost,
+          },
         })),
       })),
       shopping_list: renderPayload.shopping_list,
@@ -423,7 +434,14 @@ export class FloralProposalWorkflowService {
                 sell_unit_price: component.sell_unit_price,
                 subtotal: component.subtotal,
                 reserve_percent: component.reserve_percent ?? 0,
-                snapshot: component.snapshot ?? {},
+                pack_quantity: component.pack_quantity ?? null,
+                effective_pack_cost: component.effective_pack_cost ?? null,
+                snapshot: {
+                  ...(component.snapshot ?? {}),
+                  pack_quantity: component.pack_quantity ?? null,
+                  effective_pack_cost: component.effective_pack_cost ?? null,
+                  purchase_unit_cost: component.purchase_unit_cost,
+                },
               }))
             : [],
       })),

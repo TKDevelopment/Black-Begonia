@@ -31,6 +31,7 @@ describe('FloralProposalBuilderComponent', () => {
   let toast: jasmine.SpyObj<ToastService>;
   let router: jasmine.SpyObj<Router>;
   let consoleErrorSpy: jasmine.Spy;
+  let themeMode: ReturnType<typeof signal<'light' | 'dark'>>;
 
   const taxRegion: TaxRegion = {
     tax_region_id: 'tax-region-test-001',
@@ -125,6 +126,7 @@ describe('FloralProposalBuilderComponent', () => {
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['showToast']);
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
+    themeMode = signal<'light' | 'dark'>('light');
 
     leadRepository.getLeadById.and.resolveTo({
       ...testLead,
@@ -212,7 +214,7 @@ describe('FloralProposalBuilderComponent', () => {
         {
           provide: CrmThemeService,
           useValue: {
-            mode: signal<'light' | 'dark'>('light'),
+            mode: themeMode,
             isDarkMode: false,
           },
         },
@@ -347,6 +349,242 @@ describe('FloralProposalBuilderComponent', () => {
     expect(edited.catalog_item_id).toBeNull();
     expect(edited.catalog_item_name).toBe('Custom legacy rose');
     expect(edited.base_unit_cost).toBe(recordedCost);
+  });
+
+  it('edits four-decimal row prices, preserves invalid input, and resets price plus pack from catalog', async () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.updateLineName(lineId, 'Centerpiece');
+    component.addComponentRow(lineId);
+    const componentId = component.lineItems()[0].components[0].local_id;
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
+
+    component.updateComponentUnitPrice(lineId, componentId, '4.1255');
+    let row = component.lineItems()[0].components[0];
+    expect(row.base_unit_cost).toBe(4.1255);
+    expect(row.effective_pack_cost).toBe(41.26);
+    expect(component.hasComponentPriceErrors()).toBeFalse();
+
+    component.updateComponentUnitPrice(lineId, componentId, '4.12555');
+    row = component.lineItems()[0].components[0];
+    expect(row.base_unit_cost).toBe(4.1255);
+    expect(row.unit_price_input).toBe('4.12555');
+    expect(row.unit_price_error).toContain('four decimal');
+    expect(component.hasComponentPriceErrors()).toBeTrue();
+
+    component.updateComponentUnitPrice(lineId, componentId, '4');
+    component.resetComponentToCatalogPrice(lineId, componentId);
+    row = component.lineItems()[0].components[0];
+    expect(row.base_unit_cost).toBe(3);
+    expect(row.pack_quantity).toBe(10);
+    expect(row.effective_pack_cost).toBe(30);
+    renderLoadedFixture();
+    const priceInput = fixture.nativeElement.querySelector(
+      'input[aria-label="Row unit price for Blush Juliet Garden Rose"]'
+    ) as HTMLInputElement;
+    const resetButton = fixture.nativeElement.querySelector(
+      'button[aria-label="Reset row unit price for Blush Juliet Garden Rose to current catalog price"]'
+    ) as HTMLButtonElement;
+    expect(priceInput.type).toBe('number');
+    expect(priceInput.step).toBe('0.0001');
+    expect(priceInput.getAttribute('aria-invalid')).toBe('false');
+    expect(resetButton).not.toBeNull();
+    await fixture.whenStable();
+  });
+
+  it('keeps a cleared native number input blank so a catalog row price can be replaced', () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.addComponentRow(lineId);
+    const componentId = component.lineItems()[0].components[0].local_id;
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
+    renderLoadedFixture();
+
+    const priceInput = fixture.nativeElement.querySelector(
+      '.component-price-input'
+    ) as HTMLInputElement;
+    expect(priceInput.value).toBe('3');
+
+    priceInput.value = '';
+    priceInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(priceInput.value).toBe('');
+    expect(component.lineItems()[0].components[0].unit_price_input).toBe('');
+    expect(component.lineItems()[0].components[0].unit_price_error).toBe(
+      'Enter a row unit price.'
+    );
+
+    priceInput.value = '4.1255';
+    priceInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(priceInput.value).toBe('4.1255');
+    expect(component.lineItems()[0].components[0]).toEqual(jasmine.objectContaining({
+      base_unit_cost: 4.1255,
+      unit_price_input: '4.1255',
+      unit_price_error: null,
+      effective_pack_cost: 41.26,
+    }));
+  });
+
+  it('refreshes one conservative shopping row for compatible mixed prices and splits incompatible packs', async () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.addComponentRow(lineId);
+    component.addComponentRow(lineId);
+    const [firstId, secondId] = component.lineItems()[0].components.map((row) => row.local_id);
+
+    component.replaceCatalogItem(lineId, firstId, catalogItem.item_id);
+    component.replaceCatalogItem(lineId, secondId, catalogItem.item_id);
+    component.updateComponentQuantity(lineId, firstId, '6');
+    component.updateComponentQuantity(lineId, secondId, '6');
+    component.updateComponentUnitPrice(lineId, firstId, '3');
+    component.updateComponentUnitPrice(lineId, secondId, '4');
+    await fixture.whenStable();
+
+    expect(component.shoppingList().length).toBe(1);
+    expect(component.shoppingList()[0]).toEqual(jasmine.objectContaining({
+      required_units: 12,
+      units_per_pack: 10,
+      required_pack_count: 2,
+      estimated_pack_cost: 40,
+      total_estimated_cost: 80,
+    }));
+
+    component.lineItems.update((lines) => lines.map((line) => ({
+      ...line,
+      components: line.components.map((row) =>
+        row.local_id === secondId ? { ...row, pack_quantity: 12 } : row
+      ),
+    })));
+    component.updateComponentQuantity(lineId, secondId, '6');
+    await fixture.whenStable();
+
+    expect(component.shoppingList().length).toBe(2);
+    expect(component.shoppingList().every((item) => item.notes?.includes('Separate entry')))
+      .toBeTrue();
+  });
+
+  it('keeps at least 95 percent of row-price edits under 200 ms for a 100-line proposal without network calls', () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const sourceLineId = component.lineItems()[0].local_id;
+    component.addComponentRow(sourceLineId);
+    const sourceComponentId = component.lineItems()[0].components[0].local_id;
+    component.replaceCatalogItem(sourceLineId, sourceComponentId, catalogItem.item_id);
+    const sourceLine = component.lineItems()[0];
+
+    component.lineItems.set(Array.from({ length: 100 }, (_, index) => ({
+      ...sourceLine,
+      local_id: `performance-line-${index}`,
+      display_order: index,
+      components: sourceLine.components.map((row) => ({
+        ...row,
+        local_id: `performance-component-${index}`,
+      })),
+    })));
+
+    const durations = Array.from({ length: 20 }, (_, index) => {
+      const startedAt = performance.now();
+      component.updateComponentUnitPrice(
+        `performance-line-${index}`,
+        `performance-component-${index}`,
+        `${3 + index / 100}`
+      );
+      return performance.now() - startedAt;
+    });
+
+    expect(durations.filter((duration) => duration < 200).length).toBeGreaterThanOrEqual(19);
+    expect(proposalRepository.updateFloralProposal).not.toHaveBeenCalled();
+    expect(proposalRepository.replaceFloralProposalComponents).not.toHaveBeenCalled();
+    expect(catalogRepository.getCatalogItems).not.toHaveBeenCalled();
+  });
+
+  it('preserves a deliberate override when the same catalog suggestion is reselected', () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.addComponentRow(lineId);
+    const componentId = component.lineItems()[0].components[0].local_id;
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
+    component.updateComponentUnitPrice(lineId, componentId, '4.25');
+
+    component.updateCatalogItemQuery(lineId, componentId, 'Blush Juliet Garden Rose');
+    component.commitCatalogItemSelection(lineId, componentId, 'Blush Juliet Garden Rose');
+
+    expect(component.lineItems()[0].components[0].base_unit_cost).toBe(4.25);
+  });
+
+  it('replaces different items, supports keyboard reset, and explains unavailable reset in both themes', () => {
+    createLoadedComponent();
+    const currentCatalogItem: CatalogItem = {
+      ...catalogItem,
+      item_id: 'catalog-current-rose',
+      name: 'Current Rose',
+      pack_quantity: 12,
+      base_unit_cost: 36,
+    };
+    component.catalogItems.set([catalogItem, currentCatalogItem]);
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.addComponentRow(lineId);
+    const componentId = component.lineItems()[0].components[0].local_id;
+
+    component.replaceCatalogItem(lineId, componentId, catalogItem.item_id);
+    component.updateComponentUnitPrice(lineId, componentId, '4');
+    component.replaceCatalogItem(lineId, componentId, currentCatalogItem.item_id);
+    expect(component.lineItems()[0].components[0]).toEqual(jasmine.objectContaining({
+      catalog_item_id: currentCatalogItem.item_id,
+      base_unit_cost: 3,
+      pack_quantity: 12,
+      effective_pack_cost: 36,
+    }));
+
+    component.updateComponentUnitPrice(lineId, componentId, '5');
+    renderLoadedFixture();
+    let resetButton = fixture.nativeElement.querySelector('.component-price-reset') as HTMLButtonElement;
+    const rowActions = resetButton.closest('.component-row-actions') as HTMLElement;
+    const resetTooltip = resetButton.closest('.component-row-action-tooltip') as HTMLElement;
+    const removeButton = fixture.nativeElement.querySelector(
+      'button[aria-label="Remove catalog row"]'
+    ) as HTMLButtonElement;
+    const removeTooltip = removeButton.closest('.component-row-action-tooltip') as HTMLElement;
+    expect(rowActions).not.toBeNull();
+    expect(rowActions.contains(removeButton)).toBeTrue();
+    expect(resetTooltip.dataset['tooltip']).toBe('Reset to Catalog Price');
+    expect(removeTooltip.dataset['tooltip']).toBe('Remove Catalog Row');
+    expect(resetButton.textContent?.trim()).toBe('');
+    expect(resetButton.disabled).toBeFalse();
+    expect(resetButton.classList).toContain('component-price-reset--available');
+    const resetTooltipStyle = getComputedStyle(resetTooltip, '::after');
+    expect(resetTooltipStyle.right).toBe('0px');
+    resetButton.focus();
+    expect(document.activeElement).toBe(resetButton);
+    resetButton.click();
+    fixture.detectChanges();
+    resetButton = fixture.nativeElement.querySelector('.component-price-reset') as HTMLButtonElement;
+    expect(component.lineItems()[0].components[0].base_unit_cost).toBe(3);
+    expect(resetButton.disabled).toBeTrue();
+    expect(resetButton.classList).not.toContain('component-price-reset--available');
+    expect(resetButton.closest<HTMLElement>('.component-row-action-tooltip')?.dataset['tooltip'])
+      .toBe('Catalog price is already applied.');
+
+    themeMode.set('dark');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.floral-proposal-builder-page').classList)
+      .toContain('crm-dark');
+    resetButton = fixture.nativeElement.querySelector('.component-price-reset') as HTMLButtonElement;
+    expect(resetButton).not.toBeNull();
+
+    component.catalogItems.set([]);
+    fixture.detectChanges();
+    resetButton = fixture.nativeElement.querySelector('.component-price-reset') as HTMLButtonElement;
+    expect(resetButton.disabled).toBeTrue();
+    expect(text()).toContain('Current catalog pricing is unavailable for this retired or inactive item.');
   });
 
   it('uses one dynamic catalog typeahead and applies current pricing only for a selected suggestion', () => {

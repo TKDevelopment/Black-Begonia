@@ -32,6 +32,29 @@ describe('ProjectProposalRevisionService', () => {
     schema_version: 2, draft_snapshot: draft, subtotal: 100, tax_rate: .06, tax_amount: 6, total_amount: 106,
     retainer_amount: 30, final_balance_amount: 106, created_at: '', updated_at: '',
   };
+  const pricingDraft: EditableProposalSnapshotV2 = {
+    ...draft,
+    line_items: [{
+      ...draft.line_items[0],
+      components: [{
+        display_order: 0,
+        catalog_item_id: 'catalog-rose-1',
+        catalog_item_name: 'Red Freedom Rose',
+        quantity_per_unit: 10,
+        extended_quantity: 10,
+        base_unit_cost: 2.9167,
+        applied_markup_percent: 300,
+        sell_unit_price: 11.67,
+        subtotal: 116.70,
+        reserve_percent: 10,
+        pack_quantity: 12,
+        effective_pack_cost: 35,
+        purchase_unit_cost: 35,
+        unit_type: 'bunch',
+        snapshot: { pack_quantity: 12, effective_pack_cost: 35 },
+      }],
+    }],
+  };
 
   function createService(overrides: Record<string, unknown> = {}) {
     const deps = {
@@ -106,6 +129,33 @@ describe('ProjectProposalRevisionService', () => {
     }
   });
 
+  it('preserves four-decimal row pricing and additive pack facts through autosave and resume', async () => {
+    jasmine.clock().install();
+    try {
+      const { service, deps } = createService();
+      service.queueAutosave(workspace, pricingDraft);
+      jasmine.clock().tick(750);
+
+      const saved = await service.flushAutosave();
+      const persistedDraft = deps.workspaceRepository.update.calls.mostRecent().args[2]
+        .draft_snapshot as EditableProposalSnapshotV2;
+      const persistedComponent = persistedDraft.line_items[0].components[0];
+
+      expect(saved).not.toBeNull();
+      expect(saved!.draft_snapshot.schema_version).toBe(2);
+      expect(persistedDraft.schema_version).toBe(2);
+      expect(persistedComponent.base_unit_cost).toBe(2.9167);
+      expect(persistedComponent.pack_quantity).toBe(12);
+      expect(persistedComponent.effective_pack_cost).toBe(35);
+      expect(persistedComponent.snapshot).toEqual(jasmine.objectContaining({
+        pack_quantity: 12,
+        effective_pack_cost: 35,
+      }));
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
   it('reuses a matching pending submission attempt and discards project-scoped workspaces', async () => {
     const { service, deps } = createService();
     const pending = { ...workspace, pending_submission_key: 'key-1', pending_pdf_storage_path: 'path.pdf', pending_pdf_file_name: 'proposal.pdf' };
@@ -118,11 +168,17 @@ describe('ProjectProposalRevisionService', () => {
     const update = jasmine.createSpy().and.rejectWith(new Error('offline'));
     const repo = { getForProject: jasmine.createSpy(), createOrGet: jasmine.createSpy(), update, discard: jasmine.createSpy() };
     const { service } = createService({ workspaceRepository: repo });
-    service.queueAutosave(workspace, draft);
+    service.queueAutosave(workspace, pricingDraft);
     await expectAsync(service.flushAutosave()).toBeRejected();
     expect(service.saveState()).toBe('error');
     update.and.resolveTo(workspace);
-    await expectAsync(service.retryAutosave(workspace, draft)).toBeResolvedTo(workspace);
+    await expectAsync(service.retryAutosave(workspace, pricingDraft)).toBeResolvedTo(workspace);
     expect(service.saveState()).toBe('saved');
+    expect(update.calls.mostRecent().args[2].draft_snapshot.line_items[0].components[0])
+      .toEqual(jasmine.objectContaining({
+        base_unit_cost: 2.9167,
+        pack_quantity: 12,
+        effective_pack_cost: 35,
+      }));
   });
 });

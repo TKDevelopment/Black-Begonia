@@ -6,7 +6,7 @@ create table public.floral_proposal_components (
   catalog_item_name text not null,
   quantity_per_unit numeric(12, 2) not null default 0,
   extended_quantity numeric(12, 2) not null default 0,
-  base_unit_cost numeric(12, 2) not null default 0,
+  base_unit_cost numeric(14, 4) not null default 0,
   applied_markup_percent numeric(8, 2) not null default 0,
   sell_unit_price numeric(12, 2) not null default 0,
   subtotal numeric(12, 2) not null default 0,

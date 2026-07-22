@@ -30,12 +30,12 @@ describe('FloralProposalRepositoryService', () => {
     catalog_item_name: 'Garden Rose',
     quantity_per_unit: 10,
     extended_quantity: 20,
-    base_unit_cost: 3,
+    base_unit_cost: 2.9167,
     applied_markup_percent: 50,
     sell_unit_price: 4.5,
     subtotal: 45,
     reserve_percent: 10,
-    snapshot: {},
+    snapshot: { pack_quantity: 12, effective_pack_cost: 35, purchase_unit_cost: 35 },
     created_at: '2026-06-02T12:00:00.000Z',
     updated_at: '2026-06-02T12:00:00.000Z',
   };
@@ -383,8 +383,13 @@ describe('FloralProposalRepositoryService', () => {
       jasmine.objectContaining({
         floral_proposal_line_item_id:
           testProposalLineItem.floral_proposal_line_item_id,
-        catalog_item_name: 'Garden Rose',
+         catalog_item_name: 'Garden Rose',
+        base_unit_cost: 2.9167,
         reserve_percent: 10,
+        snapshot: jasmine.objectContaining({
+          pack_quantity: 12,
+          effective_pack_cost: 35,
+        }),
       }),
     ]);
   });
@@ -435,15 +440,16 @@ describe('FloralProposalRepositoryService', () => {
       item_name: 'Garden Rose',
       item_type: 'flower',
       unit_type: 'bunch',
-      required_units: 20,
+      required_units: 12,
       reserve_percent: 10,
-      reserve_units: 10,
-      total_units_to_buy: 30,
+      reserve_units: 8,
+      total_units_to_buy: 20,
       units_per_pack: 10,
-      required_pack_count: 3,
-      estimated_pack_cost: 30,
-      total_estimated_cost: 90,
-      notes: 'Buy in packs of 10.',
+      required_pack_count: 2,
+      estimated_pack_cost: 40,
+      total_estimated_cost: 80,
+      pricing_unit_cost: 4,
+      notes: 'Buy 2 packs of 10 using the highest compatible row price.',
     };
 
     const list = await service.upsertShoppingList(
@@ -460,8 +466,13 @@ describe('FloralProposalRepositoryService', () => {
         floral_proposal_shopping_list_id: 'shopping-list-001',
         catalog_item_id: 'catalog-rose-001',
         item_name: 'Garden Rose',
-        required_units: 20,
-        notes: 'Buy in packs of 10.',
+        required_units: 12,
+        reserve_units: 8,
+        total_units_to_buy: 20,
+        required_pack_count: 2,
+        estimated_pack_cost: 40,
+        total_estimated_cost: 80,
+        notes: 'Buy 2 packs of 10 using the highest compatible row price.',
       }),
     ]);
     expect(list?.floral_proposal_shopping_list_id).toBe('shopping-list-001');

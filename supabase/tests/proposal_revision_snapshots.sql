@@ -1,5 +1,80 @@
--- Run after 20260718000002_proposal_revision_snapshots.sql in an isolated database.
+-- Run after 20260721010000_proposal_catalog_row_pricing.sql in an isolated database.
 begin;
+
+do $$
+declare
+  v_precision integer;
+  v_scale integer;
+  v_rls_enabled boolean;
+  v_trigger_count integer;
+  v_cent_column_count integer;
+  v_component_grants text[];
+  v_line_item_grants text[];
+begin
+  select numeric_precision, numeric_scale
+  into v_precision, v_scale
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'floral_proposal_components'
+    and column_name = 'base_unit_cost';
+
+  if v_precision <> 14 or v_scale <> 4 then
+    raise exception 'Component base_unit_cost precision mismatch: numeric(%,%)', v_precision, v_scale;
+  end if;
+
+  select relrowsecurity
+  into v_rls_enabled
+  from pg_class
+  where oid = 'public.floral_proposal_components'::regclass;
+
+  if v_rls_enabled then
+    raise exception 'Component RLS state changed unexpectedly.';
+  end if;
+
+  select count(*)
+  into v_trigger_count
+  from pg_trigger
+  where tgrelid = 'public.floral_proposal_components'::regclass
+    and not tgisinternal
+    and tgname = 'trg_floral_proposal_components_set_updated_at';
+
+  if v_trigger_count <> 1 then
+    raise exception 'Component updated_at trigger contract changed unexpectedly.';
+  end if;
+
+  select array_agg(grantee || ':' || privilege_type order by grantee, privilege_type)
+  into v_component_grants
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name = 'floral_proposal_components';
+
+  select array_agg(grantee || ':' || privilege_type order by grantee, privilege_type)
+  into v_line_item_grants
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name = 'floral_proposal_line_items';
+
+  if v_component_grants is distinct from v_line_item_grants then
+    raise exception 'Component grants no longer match the adjacent proposal line-item contract.';
+  end if;
+
+  select count(*)
+  into v_cent_column_count
+  from information_schema.columns
+  where table_schema = 'public'
+    and (
+      (table_name = 'floral_proposal_components' and column_name in ('sell_unit_price', 'subtotal'))
+      or (table_name = 'floral_proposal_line_items' and column_name in ('unit_price', 'subtotal'))
+      or (table_name = 'floral_proposals' and column_name in ('subtotal', 'tax_amount', 'total_amount'))
+      or (table_name = 'floral_proposal_shopping_list_items' and column_name in ('estimated_pack_cost', 'total_estimated_cost'))
+    )
+    and numeric_scale = 2;
+
+  if v_cent_column_count <> 9 then
+    raise exception 'One or more proposal/shopping currency columns no longer retain cent precision.';
+  end if;
+end;
+$$;
 
 do $$
 declare

@@ -76,11 +76,15 @@ export interface FloralProposalRenderLineComponent {
   catalog_item_name: string;
   quantity_per_unit: number;
   extended_quantity: number;
+  /** Proposal-owned pre-markup cost per stem/unit, retained to four decimals. */
   base_unit_cost: number;
   applied_markup_percent: number;
   sell_unit_price: number;
   subtotal: number;
   reserve_percent?: number;
+  pack_quantity?: number | null;
+  /** Derived cent-valued cost for the row's snapshotted pack quantity. */
+  effective_pack_cost?: number | null;
   snapshot?: Record<string, unknown>;
 }
 
@@ -222,6 +226,7 @@ export interface FloralProposalComponent {
   catalog_item_name: string;
   quantity_per_unit: number;
   extended_quantity: number;
+  /** Proposal-owned pre-markup cost per stem/unit, retained to four decimals. */
   base_unit_cost: number;
   applied_markup_percent: number;
   sell_unit_price: number;
@@ -256,6 +261,8 @@ export interface FloralProposalShoppingListItem {
   total_units_to_buy: number;
   units_per_pack?: number | null;
   required_pack_count?: number | null;
+  /** Highest contributing proposal-row unit cost used for conservative purchasing. */
+  pricing_unit_cost?: number | null;
   estimated_pack_cost?: number | null;
   total_estimated_cost?: number | null;
   notes?: string | null;
