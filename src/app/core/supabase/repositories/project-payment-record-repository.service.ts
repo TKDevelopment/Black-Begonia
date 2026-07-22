@@ -74,6 +74,41 @@ export class ProjectPaymentRecordRepositoryService {
       console.error('[ProjectPaymentRecordRepositoryService] getProjectFinancialSummary error:', error);
       throw error;
     }
-    return data as ProjectFinancialSummary;
+    const raw = (data ?? {}) as Partial<ProjectFinancialSummary>;
+    return {
+      available: raw.available === true,
+      proposalTotal: raw.proposalTotal ?? null,
+      depositTarget: Number(raw.depositTarget ?? 0),
+      finalTarget: Number(raw.finalTarget ?? 0),
+      creditedPrincipal: Number(raw.creditedPrincipal ?? 0),
+      outstanding: Number(raw.outstanding ?? 0),
+      customerFees: Number(raw.customerFees ?? 0),
+      merchantFees: raw.merchantFees == null ? null : Number(raw.merchantFees),
+      overpayment: Number(raw.overpayment ?? 0),
+      obligations: Array.isArray(raw.obligations)
+        ? this.redactProjection(raw.obligations) as ProjectPaymentRecord[]
+        : [],
+      needsAttention: Array.isArray(raw.needsAttention)
+        ? this.redactProjection(raw.needsAttention)
+        : [],
+    };
+  }
+
+  private redactProjection<T>(value: T): T {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.redactProjection(item)) as T;
+    }
+    if (value && typeof value === 'object') {
+      const blocked = new Set([
+        'tokenCiphertext', 'token_ciphertext', 'tokenIv', 'token_iv',
+        'tokenDigest', 'token_digest', 'normalizedFacts', 'normalized_facts',
+        'providerPayload', 'provider_payload',
+      ]);
+      return Object.fromEntries(
+        Object.entries(value).filter(([key]) => !blocked.has(key))
+          .map(([key, item]) => [key, this.redactProjection(item)])
+      ) as T;
+    }
+    return value;
   }
 }

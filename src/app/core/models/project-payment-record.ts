@@ -1,3 +1,5 @@
+import { InstallmentReceiptProjection } from './payment-transaction';
+
 export type ProjectPaymentKind = 'deposit' | 'final_payment';
 
 export type ProjectPaymentStatus =
@@ -18,6 +20,24 @@ export type ProjectPaymentMethod =
   | 'other';
 
 export type ProjectPaymentSource = 'manual' | 'stripe' | 'imported';
+
+export type ProjectPaymentDisplayStatus = ProjectPaymentStatus | 'not_required';
+export type ProjectPaymentMethodSummaryState = 'none' | 'planned' | 'received' | 'multiple';
+
+export interface ProjectPaymentMethodSummary {
+  state: ProjectPaymentMethodSummaryState;
+  label: string;
+}
+
+export interface ProjectPaymentAttentionItem {
+  paymentExceptionId: string;
+  type: string;
+  urgency: 'normal' | 'urgent';
+  amount?: number | null;
+  summary: string;
+  state: 'open' | 'acknowledged';
+  createdAt: string;
+}
 
 export interface ProjectPaymentRecord {
   project_payment_record_id: string;
@@ -51,6 +71,10 @@ export interface ProjectPaymentRecord {
   retention_eligible_at?: string | null;
   last_method?: string | null;
   last_intention_method?: string | null;
+  displayStatus?: ProjectPaymentDisplayStatus;
+  methodSummary?: ProjectPaymentMethodSummary;
+  plannedMethod?: 'cash' | 'check' | 'venmo_business_profile' | null;
+  receipts?: InstallmentReceiptProjection[];
 }
 
 export interface ManualPaymentInput {
@@ -64,6 +88,8 @@ export interface ManualPaymentInput {
   suspected_reference?: string | null;
   duplicate_override_reason?: string | null;
   command_key: string;
+  confirm_overpayment?: boolean;
+  confirm_spillover?: boolean;
 }
 
 export interface ProjectFinancialSummary {
@@ -77,4 +103,5 @@ export interface ProjectFinancialSummary {
   merchantFees: number | null;
   overpayment: number;
   obligations: ProjectPaymentRecord[];
+  needsAttention: ProjectPaymentAttentionItem[];
 }

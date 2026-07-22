@@ -26,6 +26,7 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
   const router = jasmine.createSpyObj('Router', ['navigate']);
   const toast = jasmine.createSpyObj('ToastService', ['showToast']);
   const leadConversion = jasmine.createSpyObj('LeadConversionService', ['issueDepositRequest']);
+  const workflowService = jasmine.createSpyObj('ProjectWorkflowService', ['recordPayment']);
   const project = {
     project_id: 'project-1', project_name: 'Wedding', service_type: 'wedding', status: 'booked',
     active_proposal_invoice_snapshot_id: 'snapshot-2', active_proposal_document_version_id: 'document-2',
@@ -44,7 +45,7 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
 
   beforeEach(async () => {
     paymentRepository.getProjectPaymentRecords.and.resolveTo([]);
-    paymentRepository.getProjectFinancialSummary.and.resolveTo({available:true,proposalTotal:106,depositTarget:31.8,finalTarget:74.2,creditedPrincipal:0,outstanding:106,customerFees:0,merchantFees:0,overpayment:0,obligations:[]});
+    paymentRepository.getProjectFinancialSummary.and.resolveTo({available:true,proposalTotal:106,depositTarget:31.8,finalTarget:74.2,creditedPrincipal:0,outstanding:106,customerFees:0,merchantFees:0,overpayment:0,obligations:[],needsAttention:[]});
     activityRepository.getProjectActivity.and.resolveTo([]);deliveryService.getProjectDeliveries.and.resolveTo([]);deliveryService.setReminderControl.and.resolveTo();deliveryService.retry.and.resolveTo({} as any);documentRepository.getProjectDocumentVersions.and.resolveTo([]);snapshotRepository.getProjectSnapshots.and.resolveTo([]);
     projectRepository.cascadeDeleteProjectTestData.and.resolveTo({
       projectId: 'project-1', projectName: 'Wedding', deletedSourceLead: true,
@@ -61,7 +62,7 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
         { provide: ProjectPaymentRecordRepositoryService, useValue: paymentRepository }, { provide: ActivityRepositoryService, useValue: activityRepository },
         { provide: ProjectProposalDocumentVersionRepositoryService, useValue: documentRepository },
         { provide: ProjectProposalInvoiceSnapshotRepositoryService, useValue: snapshotRepository },
-        { provide: ProjectWorkflowService, useValue: {} }, { provide: SupabaseService, useValue: {} },
+        { provide: ProjectWorkflowService, useValue: workflowService }, { provide: SupabaseService, useValue: {} },
         { provide: PaymentDeliveryService, useValue: deliveryService },
         { provide: ProjectProposalRevisionService, useValue: resolver },
         { provide: ToastService, useValue: toast },
@@ -97,13 +98,58 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
     expect(component.activeDocument()).toBe(document);
   });
 
-  it('loads summary, obligation history, delivery history, and activity from their shared payment read models', async () => {
+  it('loads installments and summary from one shared financial RPC', async () => {
+    paymentRepository.getProjectFinancialSummary.and.resolveTo({
+      available:true,proposalTotal:106,depositTarget:31.8,finalTarget:74.2,creditedPrincipal:0,outstanding:106,
+      customerFees:0,merchantFees:0,overpayment:0,needsAttention:[],
+      obligations:[{project_payment_record_id:'deposit',project_id:'project-1',payment_kind:'deposit',status:'due',amount_due:31.8,amount_paid:0,target_amount:31.8,outstanding_amount:31.8,payment_source:'manual',created_at:'',updated_at:''}],
+    });
     await component.loadSections('project-1');
-    expect(paymentRepository.getProjectPaymentRecords).toHaveBeenCalledWith('project-1');
     expect(paymentRepository.getProjectFinancialSummary).toHaveBeenCalledWith('project-1');
     expect(activityRepository.getProjectActivity).toHaveBeenCalledWith('project-1');
     expect(deliveryService.getProjectDeliveries).toHaveBeenCalledWith('project-1');
     expect(component.financialSummary()?.outstanding).toBe(106);
+    expect(component.payments()[0].project_payment_record_id).toBe('deposit');
+  });
+
+  it('loads installment disclosures collapsed and toggles them accessibly', () => {
+    expect(component.isInstallmentExpanded('deposit')).toBeFalse();
+    component.toggleInstallment('deposit');
+    expect(component.isInstallmentExpanded('deposit')).toBeTrue();
+    component.toggleInstallment('deposit');
+    expect(component.isInstallmentExpanded('deposit')).toBeFalse();
+  });
+
+  it('keeps Record Payment open when the command returns a spillover warning', async () => {
+    component.paymentModalOpen.set(true);
+    workflowService.recordPayment.and.resolveTo({ result: { state:'spillover_warning', spilloverAmount:10, proposedAllocations:[] }, project });
+    await component.savePayment({ obligation_id:'deposit', payment_kind:'deposit', amount:100, received_at:'2026-01-01', payment_method:'cash', command_key:'command' });
+    expect(component.paymentModalOpen()).toBeTrue();
+    expect(component.paymentWarning()?.state).toBe('spillover_warning');
+  });
+
+  it('expands every affected installment after a recorded payment refresh', async () => {
+    component.paymentModalOpen.set(true);
+    workflowService.recordPayment.and.resolveTo({ result: {
+      state:'recorded', replayed:false, transactionId:'receipt', paymentReference:'BBP-1', allocations:[],
+      affectedObligationIds:['deposit','final'], overpaymentAmount:0,
+    }, project });
+    await component.savePayment({ obligation_id:'deposit', payment_kind:'deposit', amount:100, received_at:'2026-01-01', payment_method:'cash', command_key:'command' });
+    expect(component.isInstallmentExpanded('deposit')).toBeTrue();
+    expect(component.isInstallmentExpanded('final')).toBeTrue();
+    expect(component.paymentModalOpen()).toBeFalse();
+  });
+
+  it('shows planned methods without treating them as received', () => {
+    const payment:any={methodSummary:{state:'planned',label:'Cash (planned)'},credited_principal:0,status:'due'};
+    expect(component.paymentMethodSummary(payment)).toBe('Cash (planned)');
+    expect(payment.credited_principal).toBe(0);
+  });
+
+  it('keeps zero-dollar installments visible as Not Required and ineligible', () => {
+    const payment:any={status:'not_due',displayStatus:'not_required',target_amount:0,outstanding_amount:0};
+    expect(component.paymentStatus(payment)).toBe('Not Required');
+    expect(component.canRecordPayment(payment)).toBeFalse();
   });
 
   it('uses an audited obligation reminder command without changing financial state locally', async () => {

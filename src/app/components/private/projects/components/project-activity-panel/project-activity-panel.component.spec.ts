@@ -11,10 +11,10 @@ describe('ProjectActivityPanelComponent', () => {
     expect(component.actorName(activity)).toBe('System');
   });
 
-  it('renders safe payment references and redacts token/provider payload metadata', () => {
+  it('renders only concise florist-useful metadata and formats payment amounts', () => {
     const component = new ProjectActivityPanelComponent();
-    const entries = component.metadataEntries({ ...activity, actor_type:'schedule', payment_reference:'BBP-2026-1', metadata:{payment_reference:'BBP-2026-1',method:'stripe',token_digest:'secret',raw_payload:{secret:true},provider_client_token:'secret'} });
-    expect(entries).toEqual([{key:'Payment Reference',value:'BBP-2026-1'},{key:'Method',value:'Stripe'}]);
+    const entries = component.metadataEntries({ ...activity, actor_type:'schedule', payment_reference:'BBP-2026-1', metadata:{payment_reference:'BBP-2026-1',method:'stripe',principal_amount:125.5,token_digest:'secret',raw_payload:{secret:true},provider_client_token:'secret'} });
+    expect(entries).toEqual([{key:'Method',value:'Stripe'},{key:'Principal Amount',value:'$125.50'}]);
   });
 
   it('does not expose submission keys or internal record ids in visible metadata', () => {
@@ -23,5 +23,13 @@ describe('ProjectActivityPanelComponent', () => {
       new_version: 3, submission_idempotency_key: 'secret-key', new_snapshot_id: 'snapshot-id', new_document_id: 'document-id',
     } });
     expect(entries).toEqual([{ key: 'New Version', value: '3' }]);
+  });
+
+  it('uses readable singular and plural activity counts', () => {
+    const component = new ProjectActivityPanelComponent();
+    component.activities = [activity];
+    expect(component.activityCountLabel()).toBe('1 update');
+    component.activities = [activity, { ...activity, activity_log_id: 'a2' }];
+    expect(component.activityCountLabel()).toBe('2 updates');
   });
 });

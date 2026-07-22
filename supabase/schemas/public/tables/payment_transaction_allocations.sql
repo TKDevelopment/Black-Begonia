@@ -7,5 +7,6 @@ create table public.payment_transaction_allocations (
   created_at timestamptz not null default now(),
   unique (payment_transaction_id, obligation_id, sequence)
 );
+create index if not exists idx_payment_transaction_allocations_obligation on public.payment_transaction_allocations(obligation_id, payment_transaction_id);
 alter table public.payment_transaction_allocations enable row level security;
 create policy payment_transaction_allocations_internal_select on public.payment_transaction_allocations for select to authenticated using (public.is_internal_crm_user());

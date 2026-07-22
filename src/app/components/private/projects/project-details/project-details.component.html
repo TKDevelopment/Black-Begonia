@@ -177,10 +177,15 @@
           />
 
           <div class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+            <aside *ngIf="financialSummary()?.needsAttention?.length" class="payment-attention mb-4" role="alert" aria-labelledby="payment-attention-title">
+              <strong id="payment-attention-title">Payment balance needs attention</strong>
+              <p>{{ financialSummary()!.needsAttention[0].summary }}</p>
+              <span *ngIf="financialSummary()!.needsAttention.length > 1">{{ financialSummary()!.needsAttention.length }} related payment exceptions remain open.</span>
+            </aside>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 class="font-cormorant text-2xl text-stone-900">Payments</h2>
-                <p class="text-sm text-stone-600">Deposit and final-payment records for this project.</p>
+                <h2 class="font-cormorant text-2xl text-stone-900">Payments / Installments</h2>
+                <p class="text-sm text-stone-600">Deposit and Final Payment fulfill the active invoice. Expand an installment to review its received payments.</p>
               </div>
               <div class="flex flex-wrap gap-2">
                 <button
@@ -192,8 +197,8 @@
                 >
                   {{ sendingDepositRequest() ? 'Sending...' : 'Send deposit email' }}
                 </button>
-                <button type="button" class="crm-secondary-button secondary-button" (click)="paymentModalOpen.set(true)">
-                  Log Payment
+                <button *ngIf="hasRecordablePayment()" type="button" class="crm-secondary-button secondary-button" (click)="openRecordPayment()">
+                  Record Payment
                 </button>
               </div>
             </div>
@@ -202,22 +207,36 @@
               <table class="crm-table min-w-full divide-y divide-black/10 text-sm">
                 <thead class="crm-table-head bg-stone-50 text-left text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
                   <tr>
-                    <th class="px-4 py-3">Payment</th>
+                    <th class="px-4 py-3"><span class="sr-only">Details</span></th>
+                    <th class="px-4 py-3">Installment</th>
                     <th class="px-4 py-3">Status</th>
                     <th class="px-4 py-3">Due</th>
-                    <th class="px-4 py-3">Paid</th>
+                    <th class="px-4 py-3">Fulfilled</th>
                     <th class="px-4 py-3">Amount</th>
                     <th class="px-4 py-3">Method</th>
-                    <th class="px-4 py-3">Reminders</th>
+                    <th class="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="crm-table-body divide-y divide-black/10">
-                  <tr *ngFor="let payment of sortedPayments()" class="crm-table-row">
+                  <ng-container *ngFor="let payment of sortedPayments()">
+                  <tr class="crm-table-row installment-row">
+                    <td class="crm-table-cell px-3 py-3">
+                      <button
+                        type="button"
+                        class="installment-toggle"
+                        [attr.aria-expanded]="isInstallmentExpanded(payment.project_payment_record_id)"
+                        [attr.aria-controls]="'installment-history-' + payment.project_payment_record_id"
+                        (click)="toggleInstallment(payment.project_payment_record_id)"
+                      >
+                        <span aria-hidden="true">{{ isInstallmentExpanded(payment.project_payment_record_id) ? '−' : '+' }}</span>
+                        <span class="sr-only">Toggle {{ formatPaymentKind(payment.payment_kind) }} payment history</span>
+                      </button>
+                    </td>
                     <td class="crm-table-cell px-4 py-3 font-medium text-stone-900">
                       {{ formatPaymentKind(payment.payment_kind) }}
                     </td>
                     <td class="crm-table-cell px-4 py-3 text-stone-700">
-                      {{ formatDisplayValue(payment.status) }}
+                      {{ paymentStatus(payment) }}
                     </td>
                     <td class="crm-table-cell px-4 py-3 text-stone-600">
                       {{ formatDate(payment.due_date) }}
@@ -230,17 +249,49 @@
                       <span class="text-xs text-stone-500">{{ formatCurrency(payment.outstanding_amount) }} outstanding of {{ formatCurrency(payment.target_amount) }}</span>
                     </td>
                     <td class="crm-table-cell px-4 py-3 text-stone-700">
-                      {{ formatPaymentMethod(payment.last_method || payment.last_intention_method || payment.payment_method) }}
+                      {{ paymentMethodSummary(payment) }}
                     </td>
-                    <td class="crm-table-cell px-4 py-3"><button type="button" class="crm-secondary-button secondary-button" (click)="toggleReminder(payment)">{{payment.reminder_enabled === false ? 'Resume' : 'Pause'}}</button></td>
+                    <td class="crm-table-cell px-4 py-3">
+                      <div class="flex flex-wrap gap-2">
+                        <button *ngIf="canRecordPayment(payment)" type="button" class="crm-secondary-button secondary-button" (click)="openRecordPayment(payment)">Record Payment</button>
+                        <button type="button" class="crm-secondary-button secondary-button" (click)="toggleReminder(payment)">{{payment.reminder_enabled === false ? 'Resume' : 'Pause'}}</button>
+                      </div>
+                    </td>
                   </tr>
+                  <tr *ngIf="isInstallmentExpanded(payment.project_payment_record_id)" [id]="'installment-history-' + payment.project_payment_record_id" class="installment-history-row">
+                    <td colspan="8">
+                      <div class="installment-history">
+                        <p *ngIf="!payment.receipts?.length" class="history-empty">No received payments have been applied to this installment.</p>
+                        <article *ngFor="let receipt of payment.receipts" class="receipt-row" [attr.aria-label]="'Payment ' + receipt.paymentReference">
+                          <div class="receipt-main">
+                            <div><span class="history-label">Applied</span><strong>{{ receipt.allocatedPrincipal | currency }}</strong></div>
+                            <div><span class="history-label">Method</span><strong>{{ formatPaymentMethod(receipt.method) }}</strong></div>
+                            <div><span class="history-label">Received</span><strong>{{ formatDateTime(receipt.occurredAt) }}</strong></div>
+                            <div><span class="history-label">Reference</span><strong>{{ receipt.paymentReference }}</strong></div>
+                            <div><span class="history-label">Status</span><strong>{{ formatDisplayValue(receipt.status) }}</strong></div>
+                          </div>
+                          <p *ngIf="receipt.note" class="receipt-note">{{ receipt.note }}</p>
+                          <div *ngIf="receipt.adjustments.length" class="adjustment-list">
+                            <article *ngFor="let adjustment of receipt.adjustments" class="adjustment-row">
+                              <span>{{ formatDisplayValue(adjustment.kind) }}</span>
+                              <strong>{{ adjustment.amount | currency }}</strong>
+                              <span>{{ formatDateTime(adjustment.occurredAt) }}</span>
+                              <span>{{ adjustment.paymentReference }}</span>
+                              <span>{{ formatDisplayValue(adjustment.status) }}</span>
+                            </article>
+                          </div>
+                        </article>
+                      </div>
+                    </td>
+                  </tr>
+                  </ng-container>
                 </tbody>
               </table>
             </div>
 
             <ng-template #emptyPayments>
               <p class="crm-empty-dashed mt-5 rounded-xl border border-dashed border-black/10 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
-                No payments have been logged for this project yet.
+                Payment installments are not available for this project's active invoice.
               </p>
             </ng-template>
             <div *ngIf="paymentDeliveries().length" class="mt-4 space-y-2"><article *ngFor="let delivery of paymentDeliveries()" class="flex items-center justify-between gap-3 rounded-xl border border-black/10 px-3 py-2 text-xs"><span><span class="block">{{formatDisplayValue(delivery.delivery_kind)}} · {{formatDisplayValue(delivery.status)}}</span><span *ngIf="delivery.redacted_error" class="mt-1 block text-rose-700">{{delivery.redacted_error}} <span *ngIf="delivery.failure_class">({{delivery.failure_class}})</span></span></span><button *ngIf="delivery.status === 'temporary_failed' || delivery.status === 'permanent_failed' || delivery.status === 'delivery_unknown'" type="button" class="crm-secondary-button secondary-button shrink-0" (click)="retryDelivery(delivery)">Retry email</button></article></div>
@@ -275,7 +326,10 @@
         [open]="paymentModalOpen()"
         [saving]="savingPayment()"
         [obligations]="payments()"
-        (close)="paymentModalOpen.set(false)"
+        [selectedObligationId]="selectedPaymentId()"
+        [warning]="paymentWarning()"
+        [externalError]="paymentModalError()"
+        (close)="closeRecordPayment()"
         (confirm)="savePayment($event)"
       />
 

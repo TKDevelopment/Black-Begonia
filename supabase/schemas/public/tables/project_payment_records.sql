@@ -41,8 +41,14 @@ create table public.project_payment_records (
   constraint project_payment_records_method_check check (payment_method is null or payment_method in ('stripe', 'venmo', 'check', 'cash', 'other')),
   constraint project_payment_records_source_check check (payment_source in ('manual', 'stripe', 'imported')),
   constraint project_payment_records_paid_check check (
-    status <> 'paid'
-    or (paid_date is not null and amount_paid > 0 and payment_method is not null)
+    status not in ('paid', 'overpaid')
+    or (
+      target_amount > 0
+      and credited_principal >= target_amount
+      and outstanding_amount = 0
+      and fulfilled_at is not null
+      and amount_paid = credited_principal
+    )
   )
 ) tablespace pg_default;
 

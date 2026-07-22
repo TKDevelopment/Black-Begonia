@@ -39,6 +39,10 @@
             Make the check payable to <strong>Black Begonia Floral Designs, LLC</strong>
           </div>
 
+          <p class="check-deadline">
+            Please plan to mail or drop off your check within one week of signing your agreement so your event date can continue to be held.
+          </p>
+
           <div class="demo-check" role="img" aria-label="Example completed check showing the payee, amount, date, memo, and signature fields">
             <div class="check-topline">
               <div class="demo-bank"><strong>Your Bank</strong><span>123 Main Street</span></div>
@@ -66,6 +70,9 @@
           </div>
 
           <p class="demo-disclaimer">Demo only. Complete and sign a real check from your bank using the example above.</p>
+          <p class="memo-reminder">
+            In the memo line, write your event date<span *ngIf="formattedEventDate() as eventDate">: <strong>{{ eventDate }}</strong></span>.
+          </p>
           <div *ngIf="intentionInstructions()" class="next-step"><strong>Florist instructions</strong><span>{{ intentionInstructions() }}</span></div>
           <p class="pending-note">Your preference is recorded, but the payment has not yet been marked as paid. Black Begonia will confirm it after receiving your check.</p>
         </section>

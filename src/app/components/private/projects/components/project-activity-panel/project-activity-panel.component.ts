@@ -15,18 +15,27 @@ export class ProjectActivityPanelComponent {
 
   metadataEntries(activity: ActivityLogEntry): Array<{ key: string; value: string }> {
     const metadata = activity.metadata ?? {};
+    const visibleKeys = new Set([
+      'amount',
+      'delivery_kind',
+      'method',
+      'new_version',
+      'next_status',
+      'outcome',
+      'payment_kind',
+      'principal_amount',
+      'reason',
+      'status',
+    ]);
 
     return Object.entries(metadata)
-      .filter(([key]) => ![
-        'submission_idempotency_key', 'new_snapshot_id', 'new_document_id',
-        'token', 'token_digest', 'token_ciphertext', 'token_iv', 'payload',
-        'raw_payload', 'normalized_facts', 'provider_client_token',
-      ].includes(key.toLowerCase()))
+      .filter(([key]) => visibleKeys.has(key.toLowerCase()))
       .filter(([, value]) => value !== null && value !== undefined && value !== '')
       .map(([key, value]) => ({
         key: this.formatMetadataKey(key),
-        value: this.formatMetadataValue(value),
-      }));
+        value: this.formatActivityValue(key, value),
+      }))
+      .slice(0, 4);
   }
 
   actorName(activity: ActivityLogEntry): string {
@@ -45,6 +54,10 @@ export class ProjectActivityPanelComponent {
     }).format(new Date(value));
   }
 
+  activityCountLabel(): string {
+    return `${this.activities.length} ${this.activities.length === 1 ? 'update' : 'updates'}`;
+  }
+
   private formatMetadataKey(key: string): string {
     return key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   }
@@ -59,5 +72,15 @@ export class ProjectActivityPanelComponent {
     }
 
     return String(value).replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  private formatActivityValue(key: string, value: unknown): string {
+    if (['amount', 'principal_amount'].includes(key.toLowerCase()) && typeof value === 'number') {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(value);
+    }
+    return this.formatMetadataValue(value);
   }
 }
