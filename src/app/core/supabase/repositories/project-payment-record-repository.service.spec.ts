@@ -13,12 +13,33 @@ describe('ProjectPaymentRecordRepositoryService', () => {
   });
 
   it('keeps zero distinct from unavailable in financial summary mapping', async () => {
-    const rpc = jasmine.createSpy('rpc').and.resolveTo({ data: { available: true, proposalTotal: 0, depositTarget: 0, finalTarget: 0, creditedPrincipal: 0, outstanding: 0, customerFees: 0, merchantFees: null, overpayment: 0, obligations: [] }, error: null });
+    const rpc = jasmine.createSpy('rpc').and.resolveTo({ data: { available: true, proposalTotal: 0, depositTarget: 0, finalTarget: 0, creditedPrincipal: 0, outstanding: 0, customerFees: 0, merchantFees: null, overpayment: 0, obligations: [], needsAttention: [] }, error: null });
     supabase.getClient.and.returnValue({ rpc } as never);
     const summary = await service.getProjectFinancialSummary('project-1');
     expect(summary.available).toBeTrue();
     expect(summary.proposalTotal).toBe(0);
     expect(summary.merchantFees).toBeNull();
+  });
+
+  it('maps nested installment evidence and defaults missing alert arrays safely', async () => {
+    const receipt = { paymentTransactionId: 'receipt-1', paymentReference: 'BBP-1', receiptPrincipal: 600, allocatedPrincipal: 300, method: 'cash', source: 'manual', occurredAt: '2026-01-01', status: 'confirmed', adjustments: [] };
+    const rpc = jasmine.createSpy('rpc').and.resolveTo({ data: {
+      available: true, proposalTotal: 1000, depositTarget: 300, finalTarget: 700,
+      creditedPrincipal: 300, outstanding: 700, customerFees: 0, merchantFees: null, overpayment: 0,
+      obligations: [{
+        project_payment_record_id: 'deposit',
+        methodSummary: { state: 'received', label: 'Cash' },
+        receipts: [{ ...receipt, normalizedFacts: { secret: true }, token_ciphertext: 'never expose' }],
+      }],
+    }, error: null });
+    supabase.getClient.and.returnValue({ rpc } as never);
+    const summary = await service.getProjectFinancialSummary('project-1');
+    expect(summary.obligations[0].receipts?.[0].allocatedPrincipal).toBe(300);
+    expect(summary.obligations[0].receipts?.[0] as object).not.toEqual(jasmine.objectContaining({
+      normalizedFacts: jasmine.anything(),
+      token_ciphertext: jasmine.anything(),
+    }));
+    expect(summary.needsAttention).toEqual([]);
   });
 
   it('maps obligation aggregate fields without cents loss', async () => {

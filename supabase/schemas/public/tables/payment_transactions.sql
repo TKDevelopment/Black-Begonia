@@ -30,5 +30,6 @@ create table public.payment_transactions (
   constraint payment_transactions_duplicate_override_check check (not duplicate_override or (nullif(btrim(duplicate_override_reason),'') is not null and nullif(btrim(suspected_reference),'') is not null))
 );
 create unique index uq_payment_transactions_provider_reference on public.payment_transactions(source, provider_reference) where provider_reference is not null;
+create index if not exists idx_payment_transactions_project_occurred on public.payment_transactions(project_id, occurred_at desc, payment_transaction_id);
 alter table public.payment_transactions enable row level security;
 create policy payment_transactions_internal_select on public.payment_transactions for select to authenticated using (public.is_internal_crm_user());

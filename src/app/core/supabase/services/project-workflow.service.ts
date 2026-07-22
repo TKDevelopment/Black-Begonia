@@ -4,6 +4,7 @@ import { Project, UpdateProjectInput } from '../../models/project';
 import {
   ManualPaymentInput,
 } from '../../models/project-payment-record';
+import { ManualPaymentResult } from '../../models/payment-transaction';
 import { ActivityRepositoryService } from '../repositories/activity-repository.service';
 import { ProjectRepositoryService } from '../repositories/project-repository.service';
 
@@ -49,8 +50,8 @@ export class ProjectWorkflowService {
 
   async recordPayment(
     project: Project,
-    payload: Omit<ManualPaymentInput, 'project_id' | 'command_key'> & { command_key?: string; confirm_overpayment?: boolean }
-  ): Promise<{ result: { state: 'recorded' | 'duplicate_warning' | 'overpayment_warning'; transaction?: unknown; suspectedReference?: string; overpaymentAmount?: number }; project: Project | null }> {
+    payload: Omit<ManualPaymentInput, 'project_id' | 'command_key'> & { command_key?: string }
+  ): Promise<{ result: ManualPaymentResult; project: Project | null }> {
     this.assertValidPayment(payload);
     const { data, error } = await this.projectRepository.client.rpc('record_manual_payment', {
       p_project_id: project.project_id, p_obligation_id: payload.obligation_id,
@@ -58,11 +59,26 @@ export class ProjectWorkflowService {
       p_received_at: payload.received_at, p_note: payload.notes?.trim() || null,
       p_suspected_reference: payload.suspected_reference || null,
       p_override_reason: payload.duplicate_override_reason?.trim() || null,
-      p_command_key: payload.command_key || crypto.randomUUID(), p_confirm_overpayment: payload.confirm_overpayment ?? false,
+      p_command_key: payload.command_key || crypto.randomUUID(),
+      p_confirm_overpayment: payload.confirm_overpayment ?? false,
+      p_confirm_spillover: payload.confirm_spillover ?? false,
     });
-    if (error) throw error;
+    if (error) {
+      const message = typeof error.message === 'string' ? error.message : '';
+      const safeMessage = [
+        'Amount must be greater than zero',
+        'Receipt date is invalid',
+        'Unsupported payment method',
+        'Payment installment is unavailable',
+      ].find((candidate) => message.includes(candidate));
+      throw new Error(safeMessage ?? 'The payment could not be recorded. No financial changes were saved.');
+    }
+    const result = data as ManualPaymentResult | null;
+    if (!result || !['duplicate_warning', 'spillover_warning', 'overpayment_warning', 'recorded'].includes(result.state)) {
+      throw new Error('The payment service returned an unexpected response. No payment was confirmed.');
+    }
     return {
-      result: data as { state: 'recorded' | 'duplicate_warning' | 'overpayment_warning'; transaction?: unknown; suspectedReference?: string; overpaymentAmount?: number },
+      result,
       project: await this.projectRepository.getProjectById(project.project_id),
     };
   }

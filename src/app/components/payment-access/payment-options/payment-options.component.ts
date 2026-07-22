@@ -88,14 +88,26 @@ export class PaymentOptionsComponent implements OnInit, AfterViewInit {
   }
 
   checkMemo(): string {
-    switch (this.projection().purpose) {
-      case 'deposit':
-        return 'Project deposit';
-      case 'final_payment':
-        return 'Final project payment';
-      default:
-        return 'Project payment';
-    }
+    const purpose = this.projection().purpose === 'deposit'
+      ? 'Project deposit'
+      : this.projection().purpose === 'final_payment'
+        ? 'Final project payment'
+        : 'Project payment';
+    const eventDate = this.formattedEventDate();
+    return eventDate ? `${purpose} - Event ${eventDate}` : `${purpose} - Event date`;
+  }
+
+  formattedEventDate(): string | null {
+    const value = this.projection().eventDate;
+    if (!value) return null;
+    const date = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date);
   }
 
   enabled(method: PaymentMethodChoice) {

@@ -1,19 +1,22 @@
 <div *ngIf="open" class="modal-backdrop">
-  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="payment-log-title">
+  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="record-payment-title">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <h2 id="payment-log-title" class="font-cormorant text-2xl text-stone-900">Log Payment</h2>
-        <p class="mt-1 text-sm text-stone-600">Record a deposit or final payment received outside Stripe.</p>
+        <p class="eyebrow">Received funds</p>
+        <h2 id="record-payment-title" class="font-cormorant text-2xl">Record Payment</h2>
+        <p class="mt-1 text-sm text-muted">Apply a received payment to one of this project's invoice installments.</p>
       </div>
-      <button type="button" class="crm-secondary-button icon-button" (click)="close.emit()" aria-label="Close">X</button>
+      <button type="button" class="icon-button" (click)="close.emit()" aria-label="Close Record Payment">&times;</button>
     </div>
 
     <form class="mt-5 grid gap-4" (ngSubmit)="submit()">
       <label>
-        <span>Payment Type</span>
+        <span>Installment</span>
         <select name="obligation_id" [ngModel]="obligation_id" (ngModelChange)="selectObligation($event)">
-          <option *ngFor="let obligation of obligations" [value]="obligation.project_payment_record_id">
-            {{ obligation.payment_kind === 'deposit' ? 'Deposit' : 'Final Payment' }} — {{ obligation.outstanding_amount ?? obligation.amount_due | currency }} outstanding
+          <option value="" disabled>Choose an installment</option>
+          <option *ngFor="let obligation of obligations" [value]="obligation.project_payment_record_id" [disabled]="!canRecord(obligation)">
+            {{ formatPaymentKind(obligation.payment_kind) }} —
+            {{ obligation.target_amount === 0 ? 'Not Required' : ((obligation.outstanding_amount ?? obligation.amount_due) | currency) + ' outstanding' }}
           </option>
         </select>
       </label>
@@ -30,35 +33,52 @@
       </div>
 
       <label>
-        <span>Payment Method</span>
+        <span>Actual Payment Method</span>
         <select name="payment_method" [(ngModel)]="payment_method">
           <option value="venmo">Venmo</option>
+          <option value="stripe">Stripe</option>
           <option value="check">Check</option>
           <option value="cash">Cash</option>
           <option value="other">Other</option>
         </select>
+        <small>The customer's planned method is preselected when available, but you can record what was actually received.</small>
       </label>
 
       <label>
-        <span>Notes</span>
+        <span>Internal Notes</span>
         <textarea name="notes" rows="3" [(ngModel)]="notes"></textarea>
       </label>
 
-      <details class="rounded-2xl border border-black/10 p-3">
-        <summary class="cursor-pointer text-sm font-medium">Duplicate or overpayment confirmation</summary>
-        <div class="mt-3 grid gap-3">
-          <input name="suspected_reference" [(ngModel)]="suspected_reference" placeholder="Suspected BB payment reference" />
-          <textarea name="duplicate_override_reason" rows="2" [(ngModel)]="duplicate_override_reason" placeholder="Required reason when overriding a duplicate warning"></textarea>
-          <label class="flex items-center gap-2"><input name="confirm_overpayment" type="checkbox" [(ngModel)]="confirm_overpayment" /> Confirm reviewed overpayment</label>
-        </div>
-      </details>
+      <section *ngIf="warning" class="warning-card" aria-live="polite">
+        <ng-container [ngSwitch]="warning.state">
+          <div *ngSwitchCase="'duplicate_warning'">
+            <strong>Possible duplicate receipt</strong>
+            <p>Payment {{ $any(warning).suspectedReference }} has similar evidence. Explain why this is a separate receipt.</p>
+            <input name="suspected_reference" [(ngModel)]="suspected_reference" placeholder="Suspected BB payment reference" />
+            <textarea name="duplicate_override_reason" rows="2" [(ngModel)]="duplicate_override_reason" placeholder="Required reason for recording separately"></textarea>
+          </div>
+          <div *ngSwitchCase="'spillover_warning'">
+            <strong>Confirm installment spillover</strong>
+            <p>{{ $any(warning).spilloverAmount | currency }} will continue into the next installment.</p>
+            <ul>
+              <li *ngFor="let allocation of $any(warning).proposedAllocations">{{ formatPaymentKind(allocation.paymentKind) }}: {{ allocation.amount | currency }}</li>
+            </ul>
+            <label class="check-label"><input name="confirm_spillover" type="checkbox" [(ngModel)]="confirm_spillover" /> I confirm this allocation plan.</label>
+          </div>
+          <div *ngSwitchCase="'overpayment_warning'">
+            <strong>Confirm project overpayment</strong>
+            <p>This receipt exceeds the complete project balance by {{ $any(warning).overpaymentAmount | currency }}.</p>
+            <label class="check-label"><input name="confirm_overpayment" type="checkbox" [(ngModel)]="confirm_overpayment" /> I reviewed and confirm this overpayment.</label>
+          </div>
+        </ng-container>
+      </section>
 
-      <p *ngIf="error" class="text-sm font-medium text-rose-700">{{ error }}</p>
+      <p *ngIf="error || externalError" class="error-message" aria-live="assertive">{{ error || externalError }}</p>
 
       <div class="flex justify-end gap-3">
-        <button type="button" class="crm-secondary-button secondary-button" (click)="close.emit()">Cancel</button>
-        <button type="submit" class="crm-primary-button primary-button" [disabled]="saving">
-          {{ saving ? 'Saving...' : 'Save Payment' }}
+        <button type="button" class="secondary-button" (click)="close.emit()">Cancel</button>
+        <button type="submit" class="primary-button" [disabled]="saving || !obligation_id">
+          {{ saving ? 'Recording...' : 'Record Payment' }}
         </button>
       </div>
     </form>

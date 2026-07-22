@@ -1,76 +1,24 @@
-:host {
-  display: contents;
-}
-
-.modal-backdrop {
-  align-items: center;
-  background: rgba(28, 25, 23, 0.42);
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  padding: 1rem;
-  position: fixed;
-  z-index: 60;
-}
-
-.modal-panel {
-  background: var(--crm-surface, #fff);
-  border: 1px solid var(--crm-border, rgba(0, 0, 0, 0.1));
-  border-radius: 0.75rem;
-  max-height: calc(100vh - 2rem);
-  max-width: 640px;
-  overflow: auto;
-  padding: 1rem;
-  width: 100%;
-}
-
-label span {
-  color: var(--crm-text-muted, #57534e);
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-input,
-select,
-textarea {
-  background: var(--crm-surface-elevated, #fff);
-  border: 1px solid var(--crm-border-strong, rgba(0, 0, 0, 0.1));
-  border-radius: 0.6rem;
-  color: var(--crm-text, #292524);
-  font-size: 0.84rem;
-  line-height: 1.25rem;
-  min-height: 2.35rem;
-  padding: 0.45rem 0.6rem;
-  width: 100%;
-}
-
-.primary-button,
-.secondary-button,
-.icon-button {
-  border-radius: 0.65rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.5rem 0.8rem;
-}
-
-.primary-button {
-  background: var(--crm-accent, #ea938c);
-  color: #fff;
-}
-
-.secondary-button,
-.icon-button {
-  background: var(--crm-surface-elevated, #fff);
-  border: 1px solid var(--crm-border-strong, rgba(0, 0, 0, 0.1));
-  color: var(--crm-text-strong, #44403c);
-}
-
-:host-context(.crm-shell.crm-theme-dark) .modal-backdrop {
-  background: rgba(2, 8, 16, 0.62);
-}
-
-:host-context(.crm-shell.crm-theme-dark) .primary-button {
-  color: #0b0f14;
-}
+:host { display: contents; }
+.modal-backdrop { align-items:center; background:rgba(28,25,23,.52); display:flex; inset:0; justify-content:center; padding:1rem; position:fixed; z-index:60; }
+.modal-panel { background:var(--crm-surface,#fff); border:1px solid var(--crm-border,rgba(0,0,0,.1)); border-radius:1rem; color:var(--crm-text,#292524); max-height:calc(100vh - 2rem); max-width:640px; overflow:auto; padding:1.25rem; width:100%; }
+.eyebrow { color:var(--crm-accent,#c96f68); font-size:.68rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+.text-muted, small { color:var(--crm-text-muted,#57534e); }
+label > span { color:var(--crm-text-muted,#57534e); display:block; font-size:.72rem; font-weight:700; margin-bottom:.3rem; }
+small { display:block; font-size:.7rem; margin-top:.3rem; }
+input, select, textarea { background:var(--crm-surface-elevated,#fff); border:1px solid var(--crm-border-strong,rgba(0,0,0,.14)); border-radius:.65rem; color:var(--crm-text,#292524); font-size:.84rem; line-height:1.25rem; min-height:2.4rem; padding:.5rem .65rem; width:100%; }
+input:focus, select:focus, textarea:focus { border-color:var(--crm-accent,#ea938c); outline:2px solid color-mix(in srgb,var(--crm-accent,#ea938c) 25%,transparent); outline-offset:1px; }
+.primary-button, .secondary-button, .icon-button { border-radius:.7rem; font-size:.8rem; font-weight:700; padding:.55rem .85rem; }
+.primary-button { background:var(--crm-accent,#ea938c); color:#fff; }
+.primary-button:disabled { cursor:not-allowed; opacity:.55; }
+.secondary-button, .icon-button { background:var(--crm-surface-elevated,#fff); border:1px solid var(--crm-border-strong,rgba(0,0,0,.12)); color:var(--crm-text-strong,#44403c); }
+.icon-button { align-items:center; border-radius:9999px; display:inline-flex; font-size:1.35rem; height:2.25rem; justify-content:center; line-height:1; padding:0; width:2.25rem; }
+.warning-card { background:color-mix(in srgb,#f59e0b 12%,var(--crm-surface,#fff)); border:1px solid color-mix(in srgb,#f59e0b 42%,transparent); border-radius:.8rem; color:var(--crm-text,#292524); display:grid; gap:.65rem; padding:.85rem; }
+.warning-card p, .warning-card ul { font-size:.78rem; margin-top:.35rem; }
+.warning-card ul { list-style:disc; padding-left:1.25rem; }
+.warning-card input, .warning-card textarea { margin-top:.55rem; }
+.check-label { align-items:center; display:flex; font-size:.78rem; gap:.5rem; margin-top:.6rem; }
+.check-label input { min-height:auto; width:auto; }
+.error-message { background:color-mix(in srgb,#dc2626 10%,transparent); border-radius:.65rem; color:#b91c1c; font-size:.8rem; font-weight:650; padding:.65rem .75rem; }
+:host-context(.crm-shell.crm-theme-dark) .modal-backdrop { background:rgba(2,8,16,.7); }
+:host-context(.crm-shell.crm-theme-dark) .primary-button { color:#0b0f14; }
+:host-context(.crm-shell.crm-theme-dark) .error-message { color:#fca5a5; }

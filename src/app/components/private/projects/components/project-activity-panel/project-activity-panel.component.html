@@ -1,9 +1,7 @@
 <section class="crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-  <div class="flex items-end justify-between gap-3">
-    <div>
-      <h2 class="font-cormorant text-2xl text-stone-900">Activity</h2>
-      <p class="mt-1 text-xs text-stone-500">{{ activities.length }} records</p>
-    </div>
+  <div>
+    <h2 class="font-cormorant text-2xl text-stone-900">Project Activity</h2>
+    <p class="mt-1 text-xs text-stone-500">{{ activityCountLabel() }}</p>
   </div>
 
   <div *ngIf="activities.length; else emptyActivity" class="activity-scroll mt-4">
@@ -12,16 +10,9 @@
         <div class="activity-marker" aria-hidden="true"></div>
         <article class="crm-detail-list-item activity-card rounded-xl border border-black/10 bg-[#fcfaf8]">
           <div class="flex flex-col gap-2">
-            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-              <h3 class="text-sm font-semibold text-stone-900">{{ activity.activity_label }}</h3>
-              <time class="shrink-0 text-xs text-stone-500">{{ formatDateTime(activity.created_at) }}</time>
-            </div>
+            <h3 class="text-sm font-semibold text-stone-900">{{ activity.activity_label }}</h3>
             <p *ngIf="activity.description" class="text-sm leading-6 text-stone-600">
               {{ activity.description }}
-            </p>
-            <p class="text-xs text-stone-500">
-              {{ activity.activity_type === 'proposal_revision_submitted' ? 'Submitted by' : 'Recorded by' }} {{ actorName(activity) }}
-              <span *ngIf="activity.payment_reference"> · {{ activity.payment_reference }}</span>
             </p>
             <dl *ngIf="metadataEntries(activity).length" class="metadata-list">
               <div *ngFor="let entry of metadataEntries(activity)" class="metadata-chip">
@@ -29,6 +20,15 @@
                 <dd>{{ entry.value }}</dd>
               </div>
             </dl>
+            <p class="activity-byline">
+              <span>{{ actorName(activity) }}</span>
+              <span aria-hidden="true">·</span>
+              <time>{{ formatDateTime(activity.created_at) }}</time>
+              <ng-container *ngIf="activity.payment_reference">
+                <span aria-hidden="true">·</span>
+                <span>{{ activity.payment_reference }}</span>
+              </ng-container>
+            </p>
           </div>
         </article>
       </li>
