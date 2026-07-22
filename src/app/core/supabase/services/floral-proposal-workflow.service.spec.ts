@@ -64,6 +64,7 @@ describe('FloralProposalWorkflowService', () => {
             subtotal: 45,
             reserve_percent: 10,
             pack_quantity: 10,
+            effective_pack_cost: 30,
             purchase_unit_cost: 30,
             item_type: 'flower',
             unit_type: 'bunch',
@@ -424,6 +425,12 @@ describe('FloralProposalWorkflowService', () => {
       })
     );
     expect(payload.line_items[0].components?.length).toBe(1);
+    expect(payload.line_items[0].components?.[0]).toEqual(jasmine.objectContaining({
+      base_unit_cost: 3,
+      pack_quantity: 10,
+      effective_pack_cost: 30,
+      snapshot: jasmine.objectContaining({ effective_pack_cost: 30 }),
+    }));
     expect(payload.line_items[1].components).toEqual([]);
     expect(payload.snapshot).toEqual(
       jasmine.objectContaining({

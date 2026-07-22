@@ -170,6 +170,117 @@
   color: var(--crm-text, #ecf3fb) !important;
 }
 
+.component-price-editor {
+  min-width: 11rem;
+}
+
+.component-price-reset {
+  border: 1px solid #d0c4bb;
+  background: #f4ede6;
+  color: #756b64;
+  cursor: pointer;
+}
+
+.component-price-reset--available {
+  border-color: #b8a397;
+  background: #fffdfa;
+  color: #9a4f43;
+}
+
+.component-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.component-row-action-tooltip {
+  display: inline-flex;
+  position: relative;
+}
+
+.component-row-action-tooltip::after {
+  background: #292524;
+  border-radius: 0.4rem;
+  bottom: calc(100% + 0.45rem);
+  color: #fff;
+  content: attr(data-tooltip);
+  font-size: 0.68rem;
+  font-weight: 600;
+  left: auto;
+  line-height: 1.25;
+  max-width: 14rem;
+  opacity: 0;
+  padding: 0.35rem 0.5rem;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  right: 0;
+  transform: translateY(0.2rem);
+  transition: opacity 120ms ease, transform 120ms ease;
+  visibility: hidden;
+  width: max-content;
+  white-space: normal;
+  z-index: 20;
+}
+
+.component-row-action-tooltip:hover::after,
+.component-row-action-tooltip:focus-within::after {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.component-price-reset:focus-visible {
+  outline: 2px solid #d08a78;
+  outline-offset: 2px;
+}
+
+.component-price-reset:disabled {
+  color: #8a817a;
+  cursor: not-allowed;
+}
+
+.component-price-error {
+  font-size: 0.68rem;
+  line-height: 1.3;
+  margin: 0.35rem 0 0;
+}
+
+.component-price-error {
+  color: #a62424;
+}
+
+.component-price-input[aria-invalid='true'] {
+  border-color: #b42318 !important;
+  box-shadow: 0 0 0 1px rgba(180, 35, 24, 0.2);
+}
+
+.floral-proposal-builder-page.crm-dark .component-price-reset {
+  background: var(--crm-surface-muted, #0d1621);
+  border-color: var(--crm-border, #23364c);
+  color: #a9b4c0;
+}
+
+.floral-proposal-builder-page.crm-dark .component-price-reset--available {
+  background: var(--crm-surface-elevated, #172334);
+  border-color: var(--crm-border-strong, #375471);
+  color: #f0aaa2;
+}
+
+.floral-proposal-builder-page.crm-dark .component-price-reset:disabled {
+  color: #a9b4c0;
+}
+
+.floral-proposal-builder-page.crm-dark .component-row-action-tooltip::after {
+  background: #ecf3fb;
+  color: #142031;
+}
+
+.floral-proposal-builder-page.crm-dark .component-price-error {
+  color: #fda4af;
+}
+
 .floral-proposal-builder-page.crm-dark .labor-breakdown-box {
   background: var(--crm-surface-elevated, #172334) !important;
   border-color: var(--crm-border-strong, #375471) !important;

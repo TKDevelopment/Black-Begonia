@@ -18,6 +18,8 @@ export interface FloralProposalBuilderComponentRow {
   local_id: string;
   display_order: number;
   catalog_item_id?: string | null;
+  /** Last resolved catalog identity used to preserve same-item re-selection in the editor. */
+  last_catalog_item_id?: string | null;
   catalog_item_name: string;
   quantity_per_unit: number;
   extended_quantity: number;
@@ -27,12 +29,24 @@ export interface FloralProposalBuilderComponentRow {
   subtotal: number;
   reserve_percent: number;
   pack_quantity?: number | null;
+  /** Derived cent-valued cost for this row's recorded pack definition. */
+  effective_pack_cost?: number | null;
+  /** Legacy compatibility metadata. Editable calculations never trust this value. */
   purchase_unit_cost: number;
   item_type?: CatalogItem['item_type'] | null;
   unit_type?: CatalogItem['unit_type'] | null;
   color?: string | null;
   variety?: string | null;
+  /** Ephemeral editor state; never persisted in normalized or snapshot payloads. */
+  unit_price_input?: string | null;
+  unit_price_error?: string | null;
   snapshot?: Record<string, unknown>;
+}
+
+export interface ProposalRowUnitCostValidation {
+  valid: boolean;
+  value: number | null;
+  error: string | null;
 }
 
 export interface FloralProposalBuilderLine {
@@ -151,13 +165,24 @@ export class FloralProposalBuilderService {
         components: components.map((rawComponent, componentIndex) => {
           const component = this.asRecord(rawComponent);
           const componentSnapshot = this.asRecord(component['snapshot']);
+          const baseUnitCost = this.roundUnitCost(
+            this.numberValue(component['base_unit_cost'], 0)
+          );
+          const unitType = this.nullableString(
+            component['unit_type'] ?? componentSnapshot['unit_type']
+          ) as CatalogItem['unit_type'] | null;
+          const packQuantity = this.normalizePackQuantity(
+            this.nullableNumber(component['pack_quantity'] ?? componentSnapshot['pack_quantity']),
+            unitType
+          );
           return {
             display_order: this.numberValue(component['display_order'], componentIndex),
             catalog_item_id: this.nullableString(component['catalog_item_id']),
+            last_catalog_item_id: this.nullableString(component['catalog_item_id']),
             catalog_item_name: this.stringValue(component['catalog_item_name']),
             quantity_per_unit: this.numberValue(component['quantity_per_unit'], 0),
             extended_quantity: this.numberValue(component['extended_quantity'], 0),
-            base_unit_cost: this.numberValue(component['base_unit_cost'], 0),
+            base_unit_cost: baseUnitCost,
             applied_markup_percent: this.numberValue(component['applied_markup_percent'], 0),
             sell_unit_price: this.numberValue(component['sell_unit_price'], 0),
             subtotal: this.numberValue(component['subtotal'], 0),
@@ -165,15 +190,14 @@ export class FloralProposalBuilderService {
               component['reserve_percent'] ?? componentSnapshot['reserve_percent'],
               0
             ),
-            pack_quantity: this.nullableNumber(
-              component['pack_quantity'] ?? componentSnapshot['pack_quantity']
-            ),
+            pack_quantity: packQuantity,
+            effective_pack_cost: this.deriveEffectivePackCost(baseUnitCost, packQuantity),
             purchase_unit_cost: this.numberValue(
               component['purchase_unit_cost'] ?? componentSnapshot['purchase_unit_cost'],
               this.numberValue(component['base_unit_cost'], 0)
             ),
             item_type: this.nullableString(component['item_type'] ?? componentSnapshot['item_type']),
-            unit_type: this.nullableString(component['unit_type'] ?? componentSnapshot['unit_type']),
+            unit_type: unitType,
             color: this.nullableString(component['color'] ?? componentSnapshot['color']),
             variety: this.nullableString(component['variety'] ?? componentSnapshot['variety']),
             snapshot: componentSnapshot,
@@ -285,13 +309,19 @@ export class FloralProposalBuilderService {
           sell_unit_price: component.sell_unit_price,
           subtotal: component.subtotal,
           reserve_percent: component.reserve_percent,
-          pack_quantity: component.pack_quantity ?? null,
+           pack_quantity: component.pack_quantity ?? null,
+          effective_pack_cost: component.effective_pack_cost ?? null,
           purchase_unit_cost: component.purchase_unit_cost,
           item_type: component.item_type ?? null,
           unit_type: component.unit_type ?? null,
           color: component.color ?? null,
           variety: component.variety ?? null,
-          snapshot: component.snapshot ?? {},
+          snapshot: {
+            ...(component.snapshot ?? {}),
+            pack_quantity: component.pack_quantity ?? null,
+            effective_pack_cost: component.effective_pack_cost ?? null,
+            purchase_unit_cost: component.purchase_unit_cost,
+          },
         })),
       })),
       shopping_list: args.renderPayload.shopping_list as unknown as Record<string, unknown>[],
@@ -403,6 +433,7 @@ export class FloralProposalBuilderService {
       local_id: this.createLocalId('component'),
       display_order: displayOrder,
       catalog_item_id: null,
+      last_catalog_item_id: null,
       catalog_item_name: '',
       quantity_per_unit: 0,
       extended_quantity: 0,
@@ -412,11 +443,14 @@ export class FloralProposalBuilderService {
       subtotal: 0,
       reserve_percent: 0,
       pack_quantity: null,
+      effective_pack_cost: null,
       purchase_unit_cost: 0,
       item_type: null,
       unit_type: null,
       color: null,
       variety: null,
+      unit_price_input: null,
+      unit_price_error: null,
       snapshot: {},
     };
   }
@@ -431,28 +465,41 @@ export class FloralProposalBuilderService {
     const appliedMarkupPercent = component.applied_markup_percent ?? defaultMarkupPercent;
     const packQuantity = this.getPackQuantity(item);
     const purchaseUnitCost = this.roundCurrency(item.base_unit_cost);
-    const compositionBaseUnitCost = packQuantity && this.isPackPricedUnit(item.unit_type)
-      ? this.roundCurrency(purchaseUnitCost / packQuantity)
-      : purchaseUnitCost;
+    const compositionBaseUnitCost = packQuantity
+      ? this.roundUnitCost(purchaseUnitCost / packQuantity)
+      : this.roundUnitCost(purchaseUnitCost);
 
     return this.recalculateComponent(
       {
         ...component,
         catalog_item_id: item.item_id,
+        last_catalog_item_id: item.item_id,
         catalog_item_name: item.name,
         base_unit_cost: compositionBaseUnitCost,
         applied_markup_percent: appliedMarkupPercent,
         reserve_percent: component.reserve_percent || defaultReservePercent,
         pack_quantity: packQuantity,
+        effective_pack_cost: this.deriveEffectivePackCost(
+          compositionBaseUnitCost,
+          packQuantity
+        ),
         purchase_unit_cost: purchaseUnitCost,
         item_type: item.item_type,
         unit_type: item.unit_type,
         color: item.color ?? null,
         variety: item.variety ?? null,
+        unit_price_input: String(compositionBaseUnitCost),
+        unit_price_error: null,
         snapshot: {
           color: item.color ?? null,
           variety: item.variety ?? null,
           sku: item.sku ?? null,
+          pack_quantity: packQuantity,
+          effective_pack_cost: this.deriveEffectivePackCost(
+            compositionBaseUnitCost,
+            packQuantity
+          ),
+          purchase_unit_cost: purchaseUnitCost,
         },
       },
       lineQuantity
@@ -463,7 +510,7 @@ export class FloralProposalBuilderService {
     component: FloralProposalBuilderComponentRow,
     lineQuantity: number
   ): FloralProposalBuilderComponentRow {
-    const baseUnitCost = this.roundCurrency(component.base_unit_cost);
+    const baseUnitCost = this.roundUnitCost(component.base_unit_cost);
     const purchaseUnitCost = this.roundCurrency(component.purchase_unit_cost);
     const appliedMarkupPercent = this.roundNumber(
       component.applied_markup_percent,
@@ -480,6 +527,12 @@ export class FloralProposalBuilderService {
     );
     const subtotal = this.roundCurrency(sellUnitPrice * quantityPerUnit);
 
+    const packQuantity = this.normalizePackQuantity(
+      component.pack_quantity,
+      component.unit_type
+    );
+    const effectivePackCost = this.deriveEffectivePackCost(baseUnitCost, packQuantity);
+
     return {
       ...component,
       quantity_per_unit: quantityPerUnit,
@@ -489,9 +542,32 @@ export class FloralProposalBuilderService {
       sell_unit_price: sellUnitPrice,
       subtotal,
       reserve_percent: this.roundNumber(component.reserve_percent, 2),
-      pack_quantity: this.normalizePackQuantity(component.pack_quantity, component.unit_type),
-      purchase_unit_cost: purchaseUnitCost || baseUnitCost,
+      pack_quantity: packQuantity,
+      effective_pack_cost: effectivePackCost,
+      purchase_unit_cost: purchaseUnitCost,
     };
+  }
+
+  validateRowUnitCost(value: unknown): ProposalRowUnitCostValidation {
+    const raw = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
+    if (!raw) {
+      return { valid: false, value: null, error: 'Enter a row unit price.' };
+    }
+
+    if (!/^\d+(?:\.\d{0,4})?$/.test(raw)) {
+      return {
+        valid: false,
+        value: null,
+        error: 'Use a nonnegative price with no more than four decimal places.',
+      };
+    }
+
+    const numeric = Number(raw);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      return { valid: false, value: null, error: 'Enter a valid nonnegative price.' };
+    }
+
+    return { valid: true, value: this.roundUnitCost(numeric), error: null };
   }
 
   recalculateLine(
@@ -646,8 +722,25 @@ export class FloralProposalBuilderService {
           components: line.components
             .filter((component) => component.catalog_item_name.trim().length > 0)
             .map((component, componentIndex) => ({
-              ...component,
+              local_id: component.local_id,
               display_order: componentIndex,
+              catalog_item_id: component.catalog_item_id ?? null,
+              catalog_item_name: component.catalog_item_name,
+              quantity_per_unit: component.quantity_per_unit,
+              extended_quantity: component.extended_quantity,
+              base_unit_cost: component.base_unit_cost,
+              applied_markup_percent: component.applied_markup_percent,
+              sell_unit_price: component.sell_unit_price,
+              subtotal: component.subtotal,
+              reserve_percent: component.reserve_percent,
+              pack_quantity: component.pack_quantity ?? null,
+              effective_pack_cost: component.effective_pack_cost ?? null,
+              purchase_unit_cost: component.purchase_unit_cost,
+              item_type: component.item_type ?? null,
+              unit_type: component.unit_type ?? null,
+              color: component.color ?? null,
+              variety: component.variety ?? null,
+              snapshot: component.snapshot ?? {},
             })),
         })),
       shopping_list: args.shoppingList,
@@ -761,6 +854,7 @@ export class FloralProposalBuilderService {
             snapshot: {
               ...(component.snapshot ?? {}),
               pack_quantity: component.pack_quantity ?? null,
+              effective_pack_cost: component.effective_pack_cost ?? null,
               purchase_unit_cost: component.purchase_unit_cost,
               item_type: component.item_type ?? null,
               unit_type: component.unit_type ?? null,
@@ -778,16 +872,16 @@ export class FloralProposalBuilderService {
   }
 
   buildShoppingList(lines: FloralProposalBuilderLine[]): FloralProposalShoppingListItem[] {
-    const itemMap = new Map<string, FloralProposalShoppingListItem>();
+    type ShoppingGroup = FloralProposalShoppingListItem & { identity_key: string };
+    const itemMap = new Map<string, ShoppingGroup>();
 
     lines
       .filter((line) => line.line_item_type === 'product')
       .flatMap((line) => line.components)
       .filter((component) => component.catalog_item_name.trim().length > 0)
       .forEach((component) => {
-        const key =
-          component.catalog_item_id ??
-          `${component.catalog_item_name}:${component.unit_type ?? 'other'}`;
+        const identityKey = component.catalog_item_id ??
+          `${component.catalog_item_name.trim().toLowerCase()}:${component.item_type ?? 'other'}`;
         const requiredUnits = this.roundNumber(component.extended_quantity, 2);
         const reservePercent = this.roundNumber(component.reserve_percent, 2);
         const reserveTargetUnits = Math.ceil(
@@ -798,24 +892,9 @@ export class FloralProposalBuilderService {
           component.pack_quantity,
           component.unit_type
         );
-        const requiredPackCount = packQuantity
-          ? Math.max(Math.ceil(totalPlusReserve / packQuantity), 1)
-          : null;
-        const totalUnitsToBuy = packQuantity
-          ? this.roundNumber((requiredPackCount ?? 0) * packQuantity, 2)
-          : totalPlusReserve;
-        const reserveUnits = this.roundNumber(totalUnitsToBuy - totalPlusReserve, 2);
-        const purchaseUnitCost = this.roundCurrency(
-          component.purchase_unit_cost || component.base_unit_cost
-        );
-        const estimatedPackCost = this.getEstimatedPackCost(
-          purchaseUnitCost,
-          packQuantity,
-          component.unit_type
-        );
-        const totalEstimatedCost = packQuantity
-          ? this.roundCurrency((estimatedPackCost ?? 0) * (requiredPackCount ?? 0))
-          : this.roundCurrency(purchaseUnitCost * totalUnitsToBuy);
+        const unitType = component.unit_type ?? 'other';
+        const key = `${identityKey}|${unitType}|${packQuantity ?? 'individual'}`;
+        const pricingUnitCost = this.roundUnitCost(component.base_unit_cost);
         const existing = itemMap.get(key);
 
         if (existing) {
@@ -827,32 +906,19 @@ export class FloralProposalBuilderService {
             (existing.total_plus_reserve ?? 0) + totalPlusReserve,
             2
           );
-          existing.reserve_units = this.roundNumber(
-            existing.reserve_units + reserveUnits,
-            2
+          existing.pricing_unit_cost = Math.max(
+            existing.pricing_unit_cost ?? 0,
+            pricingUnitCost
           );
-          existing.total_units_to_buy = this.roundNumber(
-            existing.total_units_to_buy + totalUnitsToBuy,
-            2
-          );
-          existing.required_pack_count = packQuantity
-            ? (existing.required_pack_count ?? 0) + (requiredPackCount ?? 0)
-            : null;
-          existing.total_estimated_cost = this.roundCurrency(
-            (existing.total_estimated_cost ?? 0) + totalEstimatedCost
-          );
-          existing.estimated_pack_cost = packQuantity
-            ? estimatedPackCost
-            : existing.estimated_pack_cost ?? null;
           existing.reserve_percent = Math.max(
             existing.reserve_percent,
             reservePercent
           );
-          existing.units_per_pack = packQuantity;
           return;
         }
 
         itemMap.set(key, {
+          identity_key: identityKey,
           catalog_item_id: component.catalog_item_id ?? null,
           item_name: component.catalog_item_name,
           item_type: component.item_type ?? 'other',
@@ -860,34 +926,64 @@ export class FloralProposalBuilderService {
           required_units: requiredUnits,
           reserve_percent: reservePercent,
           total_plus_reserve: totalPlusReserve,
-          reserve_units: reserveUnits,
-          total_units_to_buy: totalUnitsToBuy,
+          reserve_units: 0,
+          total_units_to_buy: 0,
           units_per_pack: packQuantity,
-          required_pack_count: requiredPackCount,
-          estimated_pack_cost: packQuantity ? estimatedPackCost : null,
-          total_estimated_cost: totalEstimatedCost,
+          required_pack_count: null,
+          pricing_unit_cost: pricingUnitCost,
+          estimated_pack_cost: null,
+          total_estimated_cost: 0,
           notes: null,
         });
       });
 
+    const identityCounts = Array.from(itemMap.values()).reduce<Record<string, number>>(
+      (counts, item) => ({
+        ...counts,
+        [item.identity_key]: (counts[item.identity_key] ?? 0) + 1,
+      }),
+      {}
+    );
+
     return Array.from(itemMap.values())
       .map((item) => {
         const unitsPerPack = item.units_per_pack ?? null;
-        const requiredPackCount = unitsPerPack ? item.required_pack_count ?? null : null;
-        const estimatedPackCost = unitsPerPack
-          ? this.roundCurrency(item.estimated_pack_cost ?? item.total_estimated_cost ?? 0)
+        const totalPlusReserve = this.roundNumber(item.total_plus_reserve ?? 0, 2);
+        const pricingUnitCost = this.roundUnitCost(item.pricing_unit_cost ?? 0);
+        const requiredPackCount = unitsPerPack
+          ? Math.ceil(totalPlusReserve / unitsPerPack)
           : null;
-        const totalEstimatedCost = this.roundCurrency(item.total_estimated_cost ?? 0);
+        const totalUnitsToBuy = unitsPerPack
+          ? this.roundNumber((requiredPackCount ?? 0) * unitsPerPack, 2)
+          : totalPlusReserve;
+        const reserveUnits = this.roundNumber(
+          Math.max(totalUnitsToBuy - item.required_units, 0),
+          2
+        );
+        const estimatedPackCost = unitsPerPack
+          ? this.roundCurrency(pricingUnitCost * unitsPerPack)
+          : null;
+        const totalEstimatedCost = unitsPerPack
+          ? this.roundCurrency((estimatedPackCost ?? 0) * (requiredPackCount ?? 0))
+          : this.roundCurrency(pricingUnitCost * totalUnitsToBuy);
+        const compatibilityNote = identityCounts[item.identity_key] > 1
+          ? ' Separate entry because the recorded pack quantity or unit type differs.'
+          : '';
+        const { identity_key: _identityKey, ...persistedItem } = item;
 
         return {
-          ...item,
+          ...persistedItem,
+          total_plus_reserve: totalPlusReserve,
+          reserve_units: reserveUnits,
+          total_units_to_buy: totalUnitsToBuy,
           units_per_pack: unitsPerPack,
           required_pack_count: requiredPackCount,
+          pricing_unit_cost: pricingUnitCost,
           estimated_pack_cost: estimatedPackCost,
           total_estimated_cost: totalEstimatedCost,
           notes: unitsPerPack
-            ? `Buy in packs of ${unitsPerPack}.`
-            : 'Buy by the individual unit.',
+            ? `Buy in packs of ${unitsPerPack}.${compatibilityNote}`
+            : `Buy by the individual unit.${compatibilityNote}`,
         };
       })
       .sort((left, right) => left.item_name.localeCompare(right.item_name));
@@ -904,6 +1000,7 @@ export class FloralProposalBuilderService {
         local_id: this.createLocalId('component'),
         display_order: component.display_order,
         catalog_item_id: component.catalog_item_id ?? null,
+        last_catalog_item_id: component.catalog_item_id ?? null,
         catalog_item_name: component.catalog_item_name,
         quantity_per_unit: component.quantity_per_unit,
         extended_quantity: component.extended_quantity,
@@ -916,6 +1013,7 @@ export class FloralProposalBuilderService {
           typeof component.snapshot?.['pack_quantity'] === 'number'
             ? (component.snapshot['pack_quantity'] as number)
             : null,
+        effective_pack_cost: null,
         purchase_unit_cost:
           typeof component.snapshot?.['purchase_unit_cost'] === 'number'
             ? (component.snapshot['purchase_unit_cost'] as number)
@@ -928,6 +1026,12 @@ export class FloralProposalBuilderService {
         variety: (component.snapshot?.['variety'] as string | null) ?? null,
         snapshot: component.snapshot ?? {},
       };
+      row.pack_quantity = this.normalizePackQuantity(row.pack_quantity, row.unit_type);
+      row.base_unit_cost = this.roundUnitCost(row.base_unit_cost);
+      row.effective_pack_cost = this.deriveEffectivePackCost(
+        row.base_unit_cost,
+        row.pack_quantity
+      );
 
       acc[component.floral_proposal_line_item_id] = [
         ...(acc[component.floral_proposal_line_item_id] ?? []),
@@ -975,7 +1079,19 @@ export class FloralProposalBuilderService {
 
   private roundCurrency(value: number | null | undefined): number {
     const normalized = Number.isFinite(value) ? Number(value) : 0;
-    return Number(normalized.toFixed(2));
+    return Math.round((normalized + Number.EPSILON) * 100) / 100;
+  }
+
+  private roundUnitCost(value: number | null | undefined): number {
+    const normalized = Number.isFinite(value) ? Math.max(Number(value), 0) : 0;
+    return Math.round((normalized + Number.EPSILON) * 10_000) / 10_000;
+  }
+
+  private deriveEffectivePackCost(
+    rowUnitCost: number,
+    packQuantity: number | null
+  ): number | null {
+    return packQuantity ? this.roundCurrency(rowUnitCost * packQuantity) : null;
   }
 
   private roundNumber(value: number | null | undefined, digits: number): number {
@@ -998,7 +1114,7 @@ export class FloralProposalBuilderService {
       return null;
     }
 
-    return this.roundNumber(normalized, 2);
+    return Number.isInteger(normalized) ? normalized : null;
   }
 
   private isPackTrackedUnit(
@@ -1012,28 +1128,6 @@ export class FloralProposalBuilderService {
       unitType === 'block' ||
       unitType === 'piece'
     );
-  }
-
-  private isPackPricedUnit(
-    unitType: CatalogItem['unit_type'] | null | undefined
-  ): boolean {
-    return unitType === 'bunch' || unitType === 'bundle' || unitType === 'box';
-  }
-
-  private getEstimatedPackCost(
-    purchaseUnitCost: number,
-    packQuantity: number | null,
-    unitType: CatalogItem['unit_type'] | null | undefined
-  ): number | null {
-    if (!packQuantity) {
-      return null;
-    }
-
-    if (this.isPackPricedUnit(unitType)) {
-      return this.roundCurrency(purchaseUnitCost);
-    }
-
-    return this.roundCurrency(purchaseUnitCost * packQuantity);
   }
 
   private createLocalId(prefix: string): string {
