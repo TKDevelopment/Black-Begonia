@@ -27,7 +27,7 @@ import { ErrorStateBlockComponent } from '../../../../shared/components/private/
 import { LoadingStateBlockComponent } from '../../../../shared/components/private/loading-state-block/loading-state-block.component';
 import { StatusBadgeComponent } from '../../../../shared/components/private/status-badge/status-badge.component';
 import { ProjectFinancialSummaryCardComponent } from '../components/project-financial-summary-card/project-financial-summary-card.component';
-import { ProjectPaymentLogModalComponent, ProjectPaymentLogPayload } from '../components/project-payment-log-modal/project-payment-log-modal.component';
+import { ManualPaymentWarning, ProjectPaymentLogModalComponent, ProjectPaymentLogPayload } from '../components/project-payment-log-modal/project-payment-log-modal.component';
 import { ProjectActivityPanelComponent } from '../components/project-activity-panel/project-activity-panel.component';
 import { ProjectProposalDocumentsSectionComponent } from '../components/project-proposal-documents-section/project-proposal-documents-section.component';
 import {
@@ -78,6 +78,10 @@ export class ProjectDetailsComponent implements OnInit {
   readonly sectionError = signal<string | null>(null);
   readonly editModalOpen = signal(false);
   readonly paymentModalOpen = signal(false);
+  readonly selectedPaymentId = signal<string | null>(null);
+  readonly paymentWarning = signal<ManualPaymentWarning | null>(null);
+  readonly paymentModalError = signal<string | null>(null);
+  readonly expandedInstallmentIds = signal<ReadonlySet<string>>(new Set<string>());
   readonly deleteModalOpen = signal(false);
   readonly deletingProject = signal(false);
   readonly deleteAcknowledged = signal(false);
@@ -130,11 +134,9 @@ export class ProjectDetailsComponent implements OnInit {
   });
 
   readonly sortedPayments = computed(() => {
-    return [...this.payments()].sort((a, b) => {
-      const left = this.paymentSortDate(a);
-      const right = this.paymentSortDate(b);
-      return right - left;
-    });
+    return [...this.payments()].sort((a, b) =>
+      (a.payment_kind === 'deposit' ? 0 : 1) - (b.payment_kind === 'deposit' ? 0 : 1)
+    );
   });
 
   readonly depositRequestCandidate = computed(() => {
@@ -150,6 +152,8 @@ export class ProjectDetailsComponent implements OnInit {
         && Number(payment.outstanding_amount ?? 0) > 0
     ) ?? null;
   });
+
+  readonly hasRecordablePayment = computed(() => this.payments().some((payment) => this.canRecordPayment(payment)));
 
   readonly canDeleteProject = computed(() => {
     const project = this.project();
@@ -210,12 +214,7 @@ export class ProjectDetailsComponent implements OnInit {
   async loadSections(projectId: string): Promise<void> {
     this.documentsLoading.set(true);
 
-    const [payments, financialSummary, activities, paymentDeliveries, documents, snapshots] = await Promise.all([
-      this.paymentRepository.getProjectPaymentRecords(projectId).catch((error) => {
-        console.error('[ProjectDetailsComponent] payments error:', error);
-        this.sectionError.set('Some financial records could not be loaded.');
-        return [];
-      }),
+    const [financialSummary, activities, paymentDeliveries, documents, snapshots] = await Promise.all([
       this.paymentRepository.getProjectFinancialSummary(projectId).catch((error) => {
         console.error('[ProjectDetailsComponent] financial summary error:', error);
         this.sectionError.set('The authoritative financial summary could not be loaded.');
@@ -239,7 +238,7 @@ export class ProjectDetailsComponent implements OnInit {
       }),
     ]);
 
-    this.payments.set(payments);
+    this.payments.set(financialSummary?.obligations ?? []);
     this.financialSummary.set(financialSummary);
     this.activities.set(activities);
     this.paymentDeliveries.set(paymentDeliveries);
@@ -296,28 +295,78 @@ export class ProjectDetailsComponent implements OnInit {
 
     this.savingPayment.set(true);
     this.sectionError.set(null);
+    this.paymentModalError.set(null);
 
     try {
       const result = await this.projectWorkflow.recordPayment(project, payload);
       if (result.result.state === 'duplicate_warning') {
-        this.sectionError.set(`Possible duplicate payment ${result.result.suspectedReference ?? ''}. Confirm it in the payment form with an override reason.`.trim());
+        this.paymentWarning.set(result.result);
+        return;
+      }
+      if (result.result.state === 'spillover_warning') {
+        this.paymentWarning.set(result.result);
         return;
       }
       if (result.result.state === 'overpayment_warning') {
-        this.sectionError.set(`This would exceed the project balance by ${this.formatCurrency(result.result.overpaymentAmount)}. Confirm the reviewed overpayment in the payment form.`);
+        this.paymentWarning.set(result.result);
         return;
       }
+      const affectedIds = result.result.affectedObligationIds;
       if (result.project) {
         this.project.set(result.project);
       }
-      this.paymentModalOpen.set(false);
       await this.loadSections(project.project_id);
+      this.expandedInstallmentIds.set(new Set(affectedIds));
+      this.closeRecordPayment();
     } catch (error) {
       console.error('[ProjectDetailsComponent] savePayment error:', error);
-      this.sectionError.set(error instanceof Error ? error.message : 'We could not save the payment.');
+      this.paymentModalError.set(error instanceof Error ? error.message : 'We could not save the payment.');
     } finally {
       this.savingPayment.set(false);
     }
+  }
+
+  openRecordPayment(payment?: ProjectPaymentRecord): void {
+    const selected = payment ?? this.sortedPayments().find((item) => this.canRecordPayment(item));
+    if (!selected || !this.canRecordPayment(selected)) return;
+    this.selectedPaymentId.set(selected.project_payment_record_id);
+    this.paymentWarning.set(null);
+    this.paymentModalError.set(null);
+    this.paymentModalOpen.set(true);
+  }
+
+  closeRecordPayment(): void {
+    this.paymentModalOpen.set(false);
+    this.selectedPaymentId.set(null);
+    this.paymentWarning.set(null);
+    this.paymentModalError.set(null);
+  }
+
+  toggleInstallment(paymentId: string): void {
+    const next = new Set(this.expandedInstallmentIds());
+    next.has(paymentId) ? next.delete(paymentId) : next.add(paymentId);
+    this.expandedInstallmentIds.set(next);
+  }
+
+  isInstallmentExpanded(paymentId: string): boolean {
+    return this.expandedInstallmentIds().has(paymentId);
+  }
+
+  canRecordPayment(payment: ProjectPaymentRecord): boolean {
+    return !['paid', 'overpaid', 'waived', 'canceled'].includes(payment.status)
+      && Number(payment.target_amount ?? payment.amount_due ?? 0) > 0
+      && Number(payment.outstanding_amount ?? payment.amount_due ?? 0) > 0;
+  }
+
+  paymentStatus(payment: ProjectPaymentRecord): string {
+    return payment.displayStatus === 'not_required' || Number(payment.target_amount ?? payment.amount_due ?? 0) === 0
+      ? 'Not Required'
+      : this.formatDisplayValue(payment.displayStatus ?? payment.status);
+  }
+
+  paymentMethodSummary(payment: ProjectPaymentRecord): string {
+    return payment.methodSummary?.label
+      ?? this.formatPaymentMethod(payment.last_method || payment.last_intention_method || payment.payment_method);
   }
 
   async saveProject(updates: ProjectEditPayload): Promise<void> {

@@ -39,6 +39,7 @@ describe('ProjectFinancialSummaryCardComponent', () => {
       customerFees: 0,
       merchantFees: 3.25,
       overpayment: 0,
+      needsAttention: [],
       obligations: [
         obligation('deposit', 'paid'),
         obligation('final_payment', 'due'),
@@ -71,6 +72,7 @@ describe('ProjectFinancialSummaryCardComponent', () => {
       customerFees: 0,
       merchantFees: 0,
       overpayment: 10,
+      needsAttention: [],
       obligations: [obligation('deposit', 'overpaid')],
     };
 

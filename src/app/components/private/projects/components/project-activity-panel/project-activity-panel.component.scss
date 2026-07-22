@@ -57,6 +57,15 @@
   padding: 0.85rem 0.95rem;
 }
 
+.activity-byline {
+  align-items: center;
+  color: var(--crm-text-soft, #78716c);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  gap: 0.35rem;
+}
+
 .metadata-list {
   display: flex;
   flex-wrap: wrap;
