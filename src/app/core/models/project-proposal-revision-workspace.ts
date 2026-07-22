@@ -17,12 +17,16 @@ export interface EditableProposalComponentSnapshot {
   catalog_item_name: string;
   quantity_per_unit: number;
   extended_quantity: number;
+  /** Proposal-owned pre-markup unit cost, retained to four decimals. */
   base_unit_cost: number;
   applied_markup_percent: number;
   sell_unit_price: number;
   subtotal: number;
   reserve_percent: number;
   pack_quantity?: number | null;
+  /** Derived cent-valued cost for the recorded pack quantity. */
+  effective_pack_cost?: number | null;
+  /** Legacy compatibility metadata; never authoritative for editable calculations. */
   purchase_unit_cost: number;
   item_type?: string | null;
   unit_type?: string | null;

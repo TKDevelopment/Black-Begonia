@@ -138,10 +138,17 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly canFinalize = computed(() => {
     return (
       this.canEdit() &&
+      !this.hasComponentPriceErrors() &&
       !!this.selectedTaxRegionId() &&
       this.lineItems().some((line) => line.item_name.trim().length > 0)
     );
   });
+
+  readonly hasComponentPriceErrors = computed(() =>
+    this.lineItems().some((line) =>
+      line.components.some((component) => !!component.unit_price_error)
+    )
+  );
 
   readonly submissionFileName = computed(() => this.submissionFile()?.name ?? '');
 
@@ -176,7 +183,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   });
   private readonly revisionAutosave = effect(() => {
     const workspace = untracked(this.revisionWorkspace);
-    if (!workspace || this.loading()) return;
+    if (!workspace || this.loading() || this.hasComponentPriceErrors()) return;
     this.projectProposalRevision.queueAutosave(workspace, this.buildRevisionDraft(workspace));
   });
 
@@ -351,7 +358,7 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   async retryRevisionSave(): Promise<void> {
     const workspace = this.revisionWorkspace();
-    if (!workspace || this.saving()) return;
+    if (!workspace || this.saving() || this.hasComponentPriceErrors()) return;
     try {
       const saved = await this.projectProposalRevision.retryAutosave(workspace, this.buildRevisionDraft(workspace));
       if (saved) this.revisionWorkspace.set(saved);
@@ -493,6 +500,8 @@ export class FloralProposalBuilderComponent implements OnInit {
 
           return {
             ...component,
+            last_catalog_item_id:
+              component.catalog_item_id ?? component.last_catalog_item_id ?? null,
             catalog_item_id: null,
             catalog_item_name: rawValue,
           };
@@ -531,12 +540,26 @@ export class FloralProposalBuilderComponent implements OnInit {
       if (line.local_id !== lineId) return line;
       return this.floralProposalBuilderService.recalculateLine({
         ...line,
-        components: line.components.map((component) => component.local_id !== componentId ? component : ({
-          ...this.floralProposalBuilderService.applyCatalogItemToComponent(
-            component, item, line.quantity, this.defaultMarkupPercent(), this.getDefaultReservePercent()
-          ),
-          catalog_item_name: this.formatCatalogItemOptionLabel(item),
-        })),
+        components: line.components.map((component) => {
+          if (component.local_id !== componentId) return component;
+          const isSameItem =
+            component.catalog_item_id === item.item_id ||
+            component.last_catalog_item_id === item.item_id;
+          if (isSameItem) {
+            return {
+              ...component,
+              catalog_item_id: item.item_id,
+              last_catalog_item_id: item.item_id,
+              catalog_item_name: this.formatCatalogItemOptionLabel(item),
+            };
+          }
+          return {
+            ...this.floralProposalBuilderService.applyCatalogItemToComponent(
+              component, item, line.quantity, this.defaultMarkupPercent(), this.getDefaultReservePercent()
+            ),
+            catalog_item_name: this.formatCatalogItemOptionLabel(item),
+          };
+        }),
       });
     }));
     void this.refreshShoppingList();
@@ -550,6 +573,93 @@ export class FloralProposalBuilderComponent implements OnInit {
   updateComponentMarkup(lineId: string, componentId: string, rawValue: string): void {
     const appliedMarkupPercent = Math.max(Number(rawValue || 0), 0);
     this.patchComponent(lineId, componentId, { applied_markup_percent: appliedMarkupPercent });
+  }
+
+  updateComponentUnitPrice(
+    lineId: string,
+    componentId: string,
+    rawValue: string | number | null | undefined
+  ): void {
+    const inputValue = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+    const validation = this.floralProposalBuilderService.validateRowUnitCost(inputValue);
+    this.patchComponent(lineId, componentId, {
+      ...(validation.valid && validation.value !== null
+        ? { base_unit_cost: validation.value }
+        : {}),
+      unit_price_input: inputValue,
+      unit_price_error: validation.error,
+    });
+  }
+
+  resetComponentToCatalogPrice(lineId: string, componentId: string): void {
+    if (!this.canEdit()) return;
+    const line = this.lineItems().find((candidate) => candidate.local_id === lineId);
+    const component = line?.components.find((candidate) => candidate.local_id === componentId);
+    const catalogItemId = component?.catalog_item_id ?? component?.last_catalog_item_id;
+    const item = this.activeCatalogItems().find((candidate) => candidate.item_id === catalogItemId);
+    if (!line || !component || !item) return;
+
+    this.lineItems.update((lines) => lines.map((candidateLine) => {
+      if (candidateLine.local_id !== lineId) return candidateLine;
+      return this.floralProposalBuilderService.recalculateLine({
+        ...candidateLine,
+        components: candidateLine.components.map((candidateComponent) =>
+          candidateComponent.local_id === componentId
+            ? {
+                ...this.floralProposalBuilderService.applyCatalogItemToComponent(
+                  candidateComponent,
+                  item,
+                  candidateLine.quantity,
+                  this.defaultMarkupPercent(),
+                  this.getDefaultReservePercent()
+                ),
+                catalog_item_name: this.formatCatalogItemOptionLabel(item),
+              }
+            : candidateComponent
+        ),
+      });
+    }));
+    void this.refreshShoppingList();
+  }
+
+  canResetCatalogPrice(component: FloralProposalBuilderComponentRow): boolean {
+    const catalogItemId = component.catalog_item_id ?? component.last_catalog_item_id;
+    return !!catalogItemId && this.activeCatalogItems().some((item) => item.item_id === catalogItemId);
+  }
+
+  needsCatalogPriceReset(component: FloralProposalBuilderComponentRow): boolean {
+    const catalogItemId = component.catalog_item_id ?? component.last_catalog_item_id;
+    const item = this.activeCatalogItems().find((candidate) => candidate.item_id === catalogItemId);
+    if (!item) return false;
+    if (component.unit_price_error) return true;
+
+    const catalogDefaults = this.floralProposalBuilderService.applyCatalogItemToComponent(
+      component,
+      item,
+      1,
+      this.defaultMarkupPercent(),
+      this.getDefaultReservePercent()
+    );
+
+    return component.base_unit_cost !== catalogDefaults.base_unit_cost ||
+      component.pack_quantity !== catalogDefaults.pack_quantity ||
+      component.purchase_unit_cost !== catalogDefaults.purchase_unit_cost;
+  }
+
+  getCatalogPriceResetTooltip(component: FloralProposalBuilderComponentRow): string {
+    if (!this.canResetCatalogPrice(component)) {
+      return this.getResetUnavailableReason(component);
+    }
+    return this.needsCatalogPriceReset(component)
+      ? 'Reset to Catalog Price'
+      : 'Catalog price is already applied.';
+  }
+
+  getResetUnavailableReason(component: FloralProposalBuilderComponentRow): string {
+    if (!component.catalog_item_id && !component.last_catalog_item_id) {
+      return 'Select a current catalog item before resetting its price.';
+    }
+    return 'Current catalog pricing is unavailable for this retired or inactive item.';
   }
 
   handleComponentQuantityAdvance(event: Event, lineId: string, componentId: string): void {
@@ -609,6 +719,10 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   async saveDraft(): Promise<void> {
+    if (this.hasComponentPriceErrors()) {
+      this.toast.showToast('Correct the highlighted row unit prices before saving.', 'error');
+      return;
+    }
     const workspace = this.revisionWorkspace();
     if (workspace) {
       try {
@@ -1424,14 +1538,15 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   private getComponentShoppingKey(component: FloralProposalBuilderComponentRow): string {
-    return (
-      component.catalog_item_id ??
-      `${component.catalog_item_name}:${component.unit_type ?? 'other'}`
-    );
+    const identity = component.catalog_item_id ??
+      `${component.catalog_item_name.trim().toLowerCase()}:${component.item_type ?? 'other'}`;
+    return `${identity}|${component.unit_type ?? 'other'}|${component.pack_quantity ?? 'individual'}`;
   }
 
   private getShoppingListItemKey(item: FloralProposalShoppingListItem): string {
-    return item.catalog_item_id ?? `${item.item_name}:${item.unit_type ?? 'other'}`;
+    const identity = item.catalog_item_id ??
+      `${item.item_name.trim().toLowerCase()}:${item.item_type ?? 'other'}`;
+    return `${identity}|${item.unit_type ?? 'other'}|${item.units_per_pack ?? 'individual'}`;
   }
 
   private subtractCalendarDays(dateValue: string, days: number): string {

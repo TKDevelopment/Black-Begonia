@@ -88,17 +88,20 @@ describe('FloralProposalBuilderService', () => {
     expect(result.base_unit_cost).toBe(3);
     expect(result.purchase_unit_cost).toBe(30);
     expect(result.pack_quantity).toBe(10);
+    expect(result.effective_pack_cost).toBe(30);
     expect(result.applied_markup_percent).toBe(25);
     expect(result.sell_unit_price).toBe(3.75);
     expect(result.quantity_per_unit).toBe(2);
     expect(result.extended_quantity).toBe(6);
     expect(result.subtotal).toBe(7.5);
     expect(result.reserve_percent).toBe(12);
-    expect(result.snapshot).toEqual({
+    expect(result.snapshot).toEqual(jasmine.objectContaining({
       color: 'Blush',
       variety: 'Juliet',
       sku: 'ROSE-JULIET',
-    });
+      pack_quantity: 10,
+      effective_pack_cost: 30,
+    }));
   });
 
   it('recalculates product, fee, and discount line subtotals', () => {
@@ -319,6 +322,7 @@ describe('FloralProposalBuilderService', () => {
     expect(componentMap['saved-line-001'][0].snapshot).toEqual(
       jasmine.objectContaining({
         purchase_unit_cost: 4,
+        effective_pack_cost: null,
         item_type: 'flower',
         unit_type: 'stem',
         color: 'Blush',
@@ -471,12 +475,13 @@ describe('FloralProposalBuilderService', () => {
         required_units: 17,
         reserve_percent: 10,
         total_plus_reserve: 20,
-        reserve_units: 10,
-        total_units_to_buy: 30,
+        reserve_units: 3,
+        total_units_to_buy: 20,
         units_per_pack: 10,
-        required_pack_count: 3,
+        required_pack_count: 2,
+        pricing_unit_cost: 3,
         estimated_pack_cost: 30,
-        total_estimated_cost: 90,
+        total_estimated_cost: 60,
         notes: 'Buy in packs of 10.',
       })
     );
@@ -518,6 +523,7 @@ describe('FloralProposalBuilderService', () => {
       snapshot: {
         pack_quantity: 5,
         purchase_unit_cost: 40,
+        effective_pack_cost: 40,
         item_type: 'greenery',
         unit_type: 'bundle',
         color: 'Green',
@@ -565,6 +571,82 @@ describe('FloralProposalBuilderService', () => {
     expect(service.formatLineTypeLabel('labor')).toBe('Labor');
     expect(service.formatLineTypeLabel('fee')).toBe('Fee');
     expect(service.formatLineTypeLabel('discount')).toBe('Discount');
+  });
+
+  it('validates row costs independently from cent-rounded financial outputs', () => {
+    expect(service.validateRowUnitCost('2.9167')).toEqual({
+      valid: true,
+      value: 2.9167,
+      error: null,
+    });
+    expect(service.validateRowUnitCost('0').value).toBe(0);
+    for (const invalid of ['', '-1', '1.23456', 'Infinity', 'not-a-number']) {
+      expect(service.validateRowUnitCost(invalid).valid).withContext(invalid).toBeFalse();
+    }
+
+    const row = service.recalculateComponent({
+      ...service.createEmptyComponentRow(0, 25),
+      catalog_item_name: 'Precision Rose',
+      base_unit_cost: 2.9167,
+      quantity_per_unit: 3,
+      pack_quantity: 12,
+      unit_type: 'stem',
+    }, 2);
+    expect(row.base_unit_cost).toBe(2.9167);
+    expect(row.effective_pack_cost).toBe(35);
+    expect(row.sell_unit_price).toBe(3.65);
+    expect(row.subtotal).toBe(10.95);
+  });
+
+  it('aggregates compatible mixed-price rows once at the highest price and separates incompatible packs', () => {
+    const line = (price: number, pack: number, order: number) => service.recalculateLine({
+      ...service.createEmptyLine(order),
+      item_name: `Arrangement ${order}`,
+      quantity: 1,
+      components: [{
+        ...service.createEmptyComponentRow(0, 20),
+        catalog_item_id: 'catalog-mixed',
+        catalog_item_name: 'Mixed Rose',
+        quantity_per_unit: 6,
+        base_unit_cost: price,
+        pack_quantity: pack,
+        unit_type: 'stem',
+        item_type: 'flower',
+      }],
+    });
+
+    const items = service.buildShoppingList([line(3, 10, 0), line(4, 10, 1), line(5, 12, 2)]);
+    expect(items.length).toBe(2);
+    const compatible = items.find((item) => item.units_per_pack === 10)!;
+    expect(compatible.required_units).toBe(12);
+    expect(compatible.required_pack_count).toBe(2);
+    expect(compatible.pricing_unit_cost).toBe(4);
+    expect(compatible.estimated_pack_cost).toBe(40);
+    expect(compatible.total_estimated_cost).toBe(80);
+    expect(compatible.notes).toContain('Separate entry');
+  });
+
+  it('derives editable legacy effective pack cost instead of trusting stale purchase metadata', () => {
+    const result = service.adaptProjectSnapshot({
+      schema_version: 2,
+      line_items: [{
+        item_name: 'Legacy arrangement',
+        line_item_type: 'product',
+        quantity: 1,
+        components: [{
+          catalog_item_name: 'Legacy Rose',
+          base_unit_cost: 4.1255,
+          pack_quantity: 10,
+          purchase_unit_cost: 30,
+          unit_type: 'stem',
+        }],
+      }],
+    }, { subtotal: 0, taxRate: 0, taxAmount: 0, totalAmount: 0, retainerAmount: 0, finalBalanceAmount: 0 });
+
+    const component = result.draft!.line_items[0].components[0];
+    expect(component.base_unit_cost).toBe(4.1255);
+    expect(component.purchase_unit_cost).toBe(30);
+    expect(component.effective_pack_cost).toBe(41.26);
   });
 
   it('adapts legacy snapshots losslessly without repricing retired catalog values', () => {
