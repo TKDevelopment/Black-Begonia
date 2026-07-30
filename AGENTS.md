@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/009-proposal-row-pricing/plan.md
+specs/010-website-analytics/plan.md
 
 AI agents MUST NOT run git commit or git push commands, or any hook/script/tool
 workflow whose primary effect is to create commits or push changes to origin.

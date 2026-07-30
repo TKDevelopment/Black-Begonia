@@ -113,7 +113,7 @@
           <p>I'll deliver up to , I will always be there on your wedding day, and I'm in contact throughout the entire process so that you feel like your vision is being implemented.</p>
 
           <div class="pt-2">
-            <button class="px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300" routerLink="/inquiries">
+        <button class="px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300" routerLink="/inquiries" [appAnalyticsAction]="{ event: 'cta_select', location: 'about_story' }">
               INQUIRE NOW
             </button>
           </div>
@@ -148,7 +148,7 @@
       <div class="w-full lg:w-[40%] flex flex-col justify-center items-center text-center">
         <p class="text-3xl sm:text-4xl md:text-5xl xl:text-6xl text-[#ea938c]">Ready to get started?</p>
         <p class="text-base sm:text-lg md:text-xl mt-2 text-gray-700">We'd love to hear from you!</p>
-        <button routerLink="/inquiries" class="px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-4 uppercase text-xs sm:text-sm md:text-base transition-all duration-300">
+          <button routerLink="/inquiries" [appAnalyticsAction]="{ event: 'cta_select', location: 'about_bottom' }" class="px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest mt-4 uppercase text-xs sm:text-sm md:text-base transition-all duration-300">
           INQUIRE
         </button>
       </div>

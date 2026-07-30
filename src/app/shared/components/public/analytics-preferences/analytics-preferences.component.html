@@ -1,0 +1,109 @@
+<aside
+  *ngIf="showInitialNotice"
+  class="analytics-notice"
+  aria-labelledby="analytics-notice-title"
+>
+  <div>
+    <p id="analytics-notice-title" class="font-semibold text-stone-900">
+      {{ requiresOptIn ? 'Your analytics choice' : 'Privacy-restricted analytics' }}
+    </p>
+    <p class="mt-1 text-sm leading-6 text-stone-700">
+      <ng-container *ngIf="requiresOptIn; else usNotice">
+        Analytics is off. You can optionally enable it to help Black Begonia understand which
+        public pages lead to inquiries.
+      </ng-container>
+      <ng-template #usNotice>
+        We use limited analytics on public pages to improve the website. Advertising features are
+        disabled, and you can opt out at any time.
+      </ng-template>
+    </p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="choice choice-primary" (click)="enable()">
+      {{ requiresOptIn ? 'Enable analytics' : 'Keep enabled' }}
+    </button>
+    <button type="button" class="choice" (click)="disable()">
+      {{ requiresOptIn ? 'Keep analytics off' : 'Disable analytics' }}
+    </button>
+  </div>
+</aside>
+
+<div
+  *ngIf="open"
+  class="analytics-backdrop"
+  role="presentation"
+  (click)="onBackdrop($event)"
+  (keydown.escape)="close()"
+>
+  <section
+    #dialogPanel
+    class="analytics-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="analytics-preferences-title"
+    tabindex="-1"
+  >
+    <button
+      type="button"
+      class="close-button"
+      aria-label="Close analytics preferences"
+      (click)="close()"
+    >
+      <svg
+        class="close-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+    <p class="eyebrow">Privacy choices</p>
+    <h2 id="analytics-preferences-title" class="text-3xl font-cormorant text-stone-900">
+      Analytics Preferences
+    </h2>
+    <p class="mt-3 text-sm leading-6 text-stone-700">
+      Black Begonia uses analytics only on approved public pages to understand website engagement
+      and confirmed inquiries. CRM, payment, login, and password pages are never measured.
+    </p>
+
+    <div *ngIf="gpcEnabled" class="status-card mt-5" role="status">
+      Global Privacy Control is active in this browser, so analytics remains disabled regardless
+      of the selection below.
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+      <button type="button" class="choice choice-primary" (click)="enable()" [attr.aria-pressed]="choice === 'enabled'">
+        Enable analytics
+      </button>
+      <button type="button" class="choice" (click)="disable()" [attr.aria-pressed]="choice === 'disabled'">
+        Disable analytics
+      </button>
+    </div>
+
+    <div class="staff-card mt-6">
+      <p class="font-semibold text-stone-900">Black Begonia staff browser</p>
+      <p class="mt-1 text-sm leading-6 text-stone-700">
+        Mark this browser to keep florist testing out of reports. This setting identifies only this
+        browser and does not verify staff identity.
+      </p>
+      <button type="button" class="choice mt-3" (click)="setInternalBrowser(!internalBrowser)">
+        {{ internalBrowser ? 'Include this browser again' : 'Exclude this browser from analytics' }}
+      </button>
+    </div>
+
+    <p *ngIf="storageError" class="mt-4 text-sm text-red-700" role="alert">
+      This browser could not save the preference. Analytics remains off when a required choice
+      cannot be safely retained.
+    </p>
+    <p class="mt-5 text-xs leading-5 text-stone-600">
+      Advertising storage, Google Signals, remarketing, and advertising personalization are
+      permanently disabled. Read the
+      <a routerLink="/privacy-policy" class="privacy-link" (click)="close()">Privacy Policy</a>
+      for more information.
+    </p>
+  </section>
+</div>

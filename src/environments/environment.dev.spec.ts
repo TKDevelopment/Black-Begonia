@@ -16,4 +16,8 @@ describe('development environment', () => {
     expect(environment.googleClientId).toBe('default');
     expect(environment.googleApiKey).toBe('default');
   });
+
+  it('keeps production analytics disabled', () => {
+    expect(environment.ga4MeasurementId).toBe('');
+  });
 });

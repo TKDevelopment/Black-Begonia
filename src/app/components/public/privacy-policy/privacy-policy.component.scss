@@ -1,0 +1,47 @@
+:host {
+  display: block;
+}
+
+.privacy-page {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+  background-image:
+    linear-gradient(rgb(41 37 36 / .24), rgb(41 37 36 / .34)),
+    url('/assets/images/website/E-T-1269.webp');
+  background-position: center;
+  background-size: cover;
+}
+
+.privacy-page::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(254 252 250 / .12);
+  content: '';
+}
+
+.policy-panel {
+  border: 1px solid rgb(255 255 255 / .72);
+  border-radius: 1.25rem;
+  background: rgb(254 252 250 / .9);
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  box-shadow: 0 24px 70px rgb(41 37 36 / .24);
+  backdrop-filter: blur(12px);
+}
+
+section {
+  margin-top: 2.25rem;
+}
+
+h2 {
+  color: rgb(41 37 36);
+  font-family: Cormorant Garamond, serif;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+section p {
+  margin-top: .75rem;
+  line-height: 1.75;
+}

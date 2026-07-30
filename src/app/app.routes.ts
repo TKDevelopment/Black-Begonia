@@ -26,20 +26,27 @@ export const routes: Routes = [
     path: '',
     component: PublicLayoutComponent,
     children: [
-      { path: '', component: LandingComponent },
+      {
+        path: '',
+        component: LandingComponent,
+        data: { analytics: { eligible: true, pageCategory: 'home' } },
+      },
 
       {
         path: 'about',
+        data: { analytics: { eligible: true, pageCategory: 'about' } },
         loadComponent: () =>
           import('./components/public/about/about.component').then(m => m.AboutComponent),
       },
       {
         path: 'portfolio',
+        data: { analytics: { eligible: true, pageCategory: 'portfolio' } },
         loadComponent: () =>
           import('./components/public/portfolio/portfolio.component').then(m => m.PortfolioComponent),
       },
       {
         path: 'portfolio/:slug',
+        data: { analytics: { eligible: true, pageCategory: 'portfolio_detail' } },
         loadComponent: () =>
           import('./components/public/portfolio-detail/portfolio-detail.component').then(
             m => m.PortfolioDetailComponent
@@ -47,6 +54,7 @@ export const routes: Routes = [
       },
       {
         path: 'locations',
+        data: { analytics: { eligible: true, pageCategory: 'locations' } },
         loadComponent: () =>
           import('./components/public/locations-hub/locations-hub.component').then(
             (m) => m.LocationsHubComponent
@@ -54,6 +62,7 @@ export const routes: Routes = [
       },
       {
         path: 'locations/:slug',
+        data: { analytics: { eligible: true, pageCategory: 'location_detail' } },
         loadComponent: () =>
           import('./components/public/locations/locations.component').then(
             (m) => m.LocationsComponent
@@ -61,11 +70,13 @@ export const routes: Routes = [
       },
       {
         path: 'inquiries',
+        data: { analytics: { eligible: true, pageCategory: 'inquiry' } },
         loadComponent: () =>
           import('./components/public/inquiries/inquiries.component').then(m => m.InquiriesComponent),
       },
       {
         path: 'inquiries/success',
+        data: { analytics: { eligible: true, pageCategory: 'inquiry_success' } },
         loadComponent: () =>
           import('./components/public/inquiries/inquiry-success/inquiry-success.component').then(
             m => m.InquirySuccessComponent
@@ -73,6 +84,7 @@ export const routes: Routes = [
       },
       {
         path: 'inquiries/general',
+        data: { analytics: { eligible: true, pageCategory: 'inquiry' } },
         loadComponent: () =>
           import('./components/public/general-inquiries/general-inquiries.component').then(
             m => m.GeneralInquiriesComponent
@@ -80,6 +92,7 @@ export const routes: Routes = [
       },
       {
         path: 'inquiries/weddings',
+        data: { analytics: { eligible: true, pageCategory: 'inquiry' } },
         loadComponent: () =>
           import('./components/public/wedding-inquiries/wedding-inquiries.component').then(
             m => m.WeddingInquiriesComponent
@@ -87,6 +100,7 @@ export const routes: Routes = [
       },
       {
         path: 'services/weddings',
+        data: { analytics: { eligible: true, pageCategory: 'service' } },
         loadComponent: () =>
           import('./components/public/wedding-services/wedding-services.component').then(
             m => m.WeddingServicesComponent
@@ -94,6 +108,7 @@ export const routes: Routes = [
       },
       {
         path: 'services/general',
+        data: { analytics: { eligible: true, pageCategory: 'service' } },
         loadComponent: () =>
           import('./components/public/general-services/general-services.component').then(
             m => m.GeneralServicesComponent
@@ -101,11 +116,13 @@ export const routes: Routes = [
       },
       {
         path: 'workshops',
+        data: { analytics: { eligible: true, pageCategory: 'workshop' } },
         loadComponent: () =>
           import('./components/public/workshops/workshops.component').then(m => m.WorkshopsComponent),
       },
       {
         path: 'testimonials',
+        data: { analytics: { eligible: true, pageCategory: 'testimonials' } },
         loadComponent: () =>
           import('./components/public/testimonials/testimonials.component').then(
             m => m.TestimonialsComponent
@@ -113,6 +130,7 @@ export const routes: Routes = [
       },
       {
         path: 'privacy-policy',
+        data: { analytics: { eligible: true, pageCategory: 'privacy' } },
         loadComponent: () =>
           import('./components/public/privacy-policy/privacy-policy.component').then(
             m => m.PrivacyPolicyComponent
@@ -120,6 +138,7 @@ export const routes: Routes = [
       },
       {
         path: 'terms-and-conditions',
+        data: { analytics: { eligible: true, pageCategory: 'terms' } },
         loadComponent: () =>
           import('./components/public/terms-and-conditions/terms-and-conditions.component').then(
             m => m.TermsAndConditionsComponent
@@ -273,6 +292,7 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        data: { analytics: { eligible: true, pageCategory: 'not_found' } },
         loadComponent: () =>
           import('./components/public/not-found/not-found.component').then(
             m => m.NotFoundComponent

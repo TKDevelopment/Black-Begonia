@@ -6,6 +6,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { GeneralInquiriesComponent } from './general-inquiries.component';
+import { WebsiteAnalyticsService } from '../../../core/analytics/website-analytics.service';
 
 describe('GeneralInquiriesComponent', () => {
   let component: GeneralInquiriesComponent;
@@ -17,6 +18,7 @@ describe('GeneralInquiriesComponent', () => {
   let seo: jasmine.SpyObj<SeoService>;
   let invoke: jasmine.Spy;
   let insert: jasmine.Spy;
+  let analytics: jasmine.SpyObj<WebsiteAnalyticsService>;
 
   beforeEach(async () => {
     leadRepository = jasmine.createSpyObj<LeadRepositoryService>(
@@ -34,6 +36,10 @@ describe('GeneralInquiriesComponent', () => {
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
     seo = jasmine.createSpyObj<SeoService>('SeoService', ['setPageMeta']);
+    analytics = jasmine.createSpyObj<WebsiteAnalyticsService>('WebsiteAnalyticsService', [
+      'trackInquiryStart',
+      'trackConfirmedLead',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [GeneralInquiriesComponent],
@@ -43,6 +49,7 @@ describe('GeneralInquiriesComponent', () => {
         { provide: ToastService, useValue: toast },
         { provide: Router, useValue: router },
         { provide: SeoService, useValue: seo },
+        { provide: WebsiteAnalyticsService, useValue: analytics },
       ],
     })
     .compileComponents();
@@ -72,6 +79,15 @@ describe('GeneralInquiriesComponent', () => {
     expect(component.invalidTooltips['firstName']).toBe('visible');
     expect(leadRepository.createGeneralLead).not.toHaveBeenCalled();
     expect(component.submitting).toBeFalse();
+  });
+
+  it('records one start from a meaningful user edit without reading the value', () => {
+    const input = document.createElement('input');
+    input.setAttribute('formcontrolname', 'firstName');
+    input.value = 'Private name';
+    component.onMeaningfulInteraction({ target: input } as unknown as Event);
+    component.onMeaningfulInteraction({ target: input } as unknown as Event);
+    expect(analytics.trackInquiryStart).toHaveBeenCalledOnceWith('general', undefined);
   });
 
   it('should create a general lead, save unique inspiration URLs, send emails, and navigate', async () => {
@@ -115,6 +131,7 @@ describe('GeneralInquiriesComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/inquiries/success']);
     expect(component.submitted).toBeTrue();
     expect(component.submitting).toBeFalse();
+    expect(analytics.trackConfirmedLead).toHaveBeenCalledOnceWith('general', undefined);
   });
 
   it('should show an error toast when lead creation fails', async () => {
@@ -135,6 +152,7 @@ describe('GeneralInquiriesComponent', () => {
       'error',
     );
     expect(router.navigate).not.toHaveBeenCalled();
+    expect(analytics.trackConfirmedLead).not.toHaveBeenCalled();
     expect(component.submitting).toBeFalse();
   });
 });

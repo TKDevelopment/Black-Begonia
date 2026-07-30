@@ -3,10 +3,11 @@ import { Component, OnInit } from '@angular/core';
 import { RouterLink } from "@angular/router";
 import { SeoService } from '../../../core/seo/seo.service';
 import { JsonLdService } from '../../../core/seo/jsonld.service';
+import { AnalyticsActionDirective } from '../../../shared/directives/analytics-action.directive';
 
 @Component({
   selector: 'app-landing',
-  imports: [CommonModule, RouterLink, NgOptimizedImage],
+  imports: [CommonModule, RouterLink, NgOptimizedImage, AnalyticsActionDirective],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss'
 })

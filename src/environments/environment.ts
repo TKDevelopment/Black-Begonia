@@ -8,6 +8,7 @@ export const environment: AppEnvironment = {
     grapesjsStudioLicenseKey: 'default',
     googleClientId: 'default',
     googleApiKey: 'default',
+    ga4MeasurementId: '',
     paymentPublicOrigin: 'http://localhost:4200',
     paypalClientId: 'default',
     paymentCapabilities: {

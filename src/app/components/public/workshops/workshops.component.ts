@@ -1,6 +1,7 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { AnalyticsActionDirective } from '../../../shared/directives/analytics-action.directive';
 
 interface WorkshopSection {
   key: string;
@@ -18,7 +19,7 @@ interface WorkshopSection {
 @Component({
   selector: 'app-workshops',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgOptimizedImage],
+  imports: [CommonModule, RouterModule, NgOptimizedImage, AnalyticsActionDirective],
   templateUrl: './workshops.component.html',
   styleUrl: './workshops.component.scss'
 })

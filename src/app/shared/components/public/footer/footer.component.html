@@ -37,13 +37,18 @@
       <div routerLink="/portfolio" class="hover:text-[#f89b95] hover:cursor-pointer">PORTFOLIO</div>
       <div routerLink="/locations" class="hover:text-[#f89b95] hover:cursor-pointer">LOCATIONS</div>
       <div routerLink="/workshops" class="hover:text-[#f89b95] hover:cursor-pointer">WORKSHOPS</div>
-      <div routerLink="/inquiries" class="hover:text-[#f89b95] hover:cursor-pointer">INQUIRY</div>
+      <div
+        routerLink="/inquiries"
+        [appAnalyticsAction]="{ event: 'cta_select', location: 'footer' }"
+        class="hover:text-[#f89b95] hover:cursor-pointer"
+      >INQUIRY</div>
     </div>
 
     <div class="hidden md:flex items-center space-x-3 lg:space-x-4">
       <a
         href="https://www.facebook.com/blackbegoniaflorist/"
         class="hover:text-[#f89b95]"
+        [appAnalyticsAction]="{ event: 'social_click', location: 'footer', platform: 'facebook' }"
       >
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -53,7 +58,11 @@
           />
         </svg>
       </a>
-      <a href="https://www.instagram.com/blackbegoniaflorist/" class="hover:text-[#f89b95]">
+      <a
+        href="https://www.instagram.com/blackbegoniaflorals/"
+        class="hover:text-[#f89b95]"
+        [appAnalyticsAction]="{ event: 'social_click', location: 'footer', platform: 'instagram' }"
+      >
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path
           fill-rule="evenodd"
@@ -76,19 +85,28 @@
   <div class="overflow-hidden whitespace-nowrap font-noto text-sm md:text-lg 2xl:text-xl">
     <div class="inline-block animate-marquee tracking-wider">
       <h2 class="inline-block">
-        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorist/" target="_blank">FOLLOW ON INSTAGRAM</a>
+        <a
+          class="hover:text-gray-500"
+          href="https://www.instagram.com/blackbegoniaflorals/"
+          target="_blank"
+          [appAnalyticsAction]="{ event: 'social_click', location: 'footer_marquee', platform: 'instagram' }"
+        >FOLLOW ON INSTAGRAM</a>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <a
+          class="hover:text-gray-500"
+          routerLink="/inquiries"
+          [appAnalyticsAction]="{ event: 'cta_select', location: 'footer_marquee' }"
+        >BOOK YOUR DATE</a>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorals/">BRIDAL BOUQUET HIGHLIGHTS</a>
         &nbsp;&nbsp;|&nbsp;&nbsp;
         <a class="hover:text-gray-500" href="/inquiries">BOOK YOUR DATE</a>
         &nbsp;&nbsp;|&nbsp;&nbsp;
-        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorist/">BRIDAL BOUQUET HIGHLIGHTS</a>
+        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorals/">FOLLOW ALONG ON INSTAGRAM</a>
         &nbsp;&nbsp;|&nbsp;&nbsp;
         <a class="hover:text-gray-500" href="/inquiries">BOOK YOUR DATE</a>
         &nbsp;&nbsp;|&nbsp;&nbsp;
-        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorist/">FOLLOW ALONG ON INSTAGRAM</a>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <a class="hover:text-gray-500" href="/inquiries">BOOK YOUR DATE</a>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorist/">BRIDAL BOUQUET HIGHLIGHTS</a>
+        <a class="hover:text-gray-500" href="https://www.instagram.com/blackbegoniaflorals/">BRIDAL BOUQUET HIGHLIGHTS</a>
       </h2>
     </div>
   </div>
@@ -158,5 +176,33 @@
     </div>
   </div>
 
-  <div class="text-center md:text-right font-oswald font-thin text-xs md:text-sm 2xl:text-lg md:px-8 2xl:px-16 mt-1">BLACK BEGONIA FLORALS 2026 | SITE DESIGN BY TK DEVWORKS</div>
+  <div class="flex flex-col items-center justify-between gap-2 px-4 text-center font-oswald text-xs font-thin md:flex-row md:px-8 md:text-sm 2xl:px-16 2xl:text-lg">
+    <span>
+      BLACK BEGONIA FLORALS 2026 | SITE DESIGN BY
+      <a
+        href="https://tkdevworks.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="transition-colors hover:text-[#b8615d]"
+      >
+        TK DEVWORKS
+      </a>
+    </span>
+    <nav
+      aria-label="Privacy and analytics"
+      class="flex items-center justify-center gap-2"
+    >
+      <a routerLink="/privacy-policy" class="transition-colors hover:text-[#b8615d]">
+        Privacy Policy
+      </a>
+      <span aria-hidden="true" class="text-stone-400">|</span>
+      <button
+        type="button"
+        class="transition-colors hover:text-[#b8615d]"
+        (click)="analyticsPreferences.emit()"
+      >
+        Analytics Preferences
+      </button>
+    </nav>
+  </div>
 </section>
