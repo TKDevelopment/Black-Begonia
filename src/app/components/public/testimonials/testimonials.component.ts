@@ -1,6 +1,7 @@
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AnalyticsActionDirective } from '../../../shared/directives/analytics-action.directive';
 
 interface Testimonial {
   title: string;
@@ -22,7 +23,7 @@ interface CtaBlock {
 
 @Component({
   selector: 'app-testimonials',
-  imports: [CommonModule, RouterLink, NgOptimizedImage],
+  imports: [CommonModule, RouterLink, NgOptimizedImage, AnalyticsActionDirective],
   templateUrl: './testimonials.component.html',
   styleUrl: './testimonials.component.scss'
 })

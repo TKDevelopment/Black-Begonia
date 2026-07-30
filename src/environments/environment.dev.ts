@@ -5,6 +5,7 @@ export const environment = {
     supabaseAnonKey: 'sb_publishable_4HtvV9J_bCQvZROxVr63Ng_CgyBePw2',
     googleClientId: 'default',
     googleApiKey: 'default',
+    ga4MeasurementId: '',
     paymentPublicOrigin: 'http://localhost:4200',
     paypalClientId: 'default',
     paymentCapabilities: {

@@ -83,7 +83,8 @@
             </div>
 
             <button
-              routerLink="/inquiries"
+          routerLink="/inquiries"
+          [appAnalyticsAction]="{ event: 'cta_select', location: 'general_services' }"
               class="mt-6 sm:mt-8 px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-widest uppercase text-xs sm:text-sm md:text-base transition-all duration-300"
             >
               INQUIRE

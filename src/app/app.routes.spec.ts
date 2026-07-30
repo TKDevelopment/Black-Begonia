@@ -62,4 +62,28 @@ describe('app routes', () => {
     expect(wildcardRoute?.component).toBeDefined();
     expect(typeof notFoundPage?.loadComponent).toBe('function');
   });
+
+  it('annotates only approved public routes and the sanitized wildcard for analytics', () => {
+    const publicRoutes = routes.find((route) => route.path === '')?.children ?? [];
+    const approved = [
+      '', 'about', 'portfolio', 'portfolio/:slug', 'locations', 'locations/:slug',
+      'inquiries', 'inquiries/success', 'inquiries/general', 'inquiries/weddings',
+      'services/weddings', 'services/general', 'workshops', 'testimonials',
+      'privacy-policy', 'terms-and-conditions',
+    ];
+    for (const path of approved) {
+      expect(publicRoutes.find((route) => route.path === path)?.data?.['analytics']?.eligible)
+        .withContext(path)
+        .toBeTrue();
+    }
+    for (const path of ['login', 'password-recovery', 'change-password']) {
+      expect(publicRoutes.find((route) => route.path === path)?.data?.['analytics'])
+        .withContext(path)
+        .toBeUndefined();
+    }
+    expect(routes.find((route) => route.path === 'pay')?.data?.['analytics']).toBeUndefined();
+    expect(routes.find((route) => route.path === 'admin')?.data?.['analytics']).toBeUndefined();
+    expect(routes.find((route) => route.path === '**')?.children?.[0]?.data?.['analytics'])
+      .toEqual({ eligible: true, pageCategory: 'not_found' });
+  });
 });

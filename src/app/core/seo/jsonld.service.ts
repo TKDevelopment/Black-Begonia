@@ -85,7 +85,7 @@ export class JsonLdService {
         'New England'
       ],
       sameAs: [
-        'https://www.instagram.com/blackbegoniaflorist/',
+        'https://www.instagram.com/blackbegoniaflorals/',
         'https://www.facebook.com/blackbegoniaflorist'
       ],
       hasOfferCatalog: {

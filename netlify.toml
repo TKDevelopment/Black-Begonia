@@ -19,6 +19,7 @@
         https://*.supabase.co
         https://apis.google.com
         https://accounts.google.com
+        https://www.googletagmanager.com
         https://static.cloudflareinsights.com;
       connect-src 'self'
         https://*.supabase.co
@@ -27,7 +28,10 @@
         https://www.googleapis.com
         https://content.googleapis.com
         https://accounts.google.com
-        https://oauth2.googleapis.com;
+        https://oauth2.googleapis.com
+        https://www.google-analytics.com
+        https://*.google-analytics.com
+        https://region1.google-analytics.com;
       img-src * blob: data:;
       style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com data:;

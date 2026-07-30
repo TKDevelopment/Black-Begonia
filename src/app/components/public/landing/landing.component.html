@@ -50,7 +50,7 @@
       <div class="-translate-x-[-150px] lg:-translate-x-[-200px]">
         <p>ARRANGEMENTS USING UNIQUE LUXURY BLOOMS FOR</p>
         <p>WEDDINGS + EVENTS THROUGHOUT SOUTHERN NEW ENGLAND</p>
-        <button routerLink="/inquiries" class="mt-4 text-lg border border-white bg-gray-100 hover:border hover:border-gray-400 hover:bg-[#fefcfa] py-1 px-8">START THE PROCESS</button>
+          <button routerLink="/inquiries" [appAnalyticsAction]="{ event: 'cta_select', location: 'landing_hero' }" class="mt-4 text-lg border border-white bg-gray-100 hover:border hover:border-gray-400 hover:bg-[#fefcfa] py-1 px-8">START THE PROCESS</button>
       </div>
     </div>
   </div>
@@ -85,7 +85,7 @@
     <div class="flex justify-center">
       <h2 routerLink="/portfolio" class="hidden md:block md:-translate-x-[200px] lg:-translate-x-[260px] 2x:-translate-x-[310px] md:-translate-y-[-90px] lg:-translate-y-[-80px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">1. PORTFOLIO</h2>
       <h2 routerLink="/services/weddings" class="hidden md:block md:-translate-y-[10px] lg:-translate-y-[20px] md:-translate-x-[-100px] lg:-translate-x-[-150px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">2. SERVICES</h2>
-      <h2 routerLink="/inquiries" class="hidden md:block md:-translate-y-[-500px] lg:-translate-y-[-550px] 2xl:-translate-y-[-650px] md:-translate-x-[-200px] lg:-translate-x-[-240px] 2xl:-translate-x-[-420px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">3. INQUIRIES</h2>
+        <h2 routerLink="/inquiries" [appAnalyticsAction]="{ event: 'cta_select', location: 'landing_process' }" class="hidden md:block md:-translate-y-[-500px] lg:-translate-y-[-550px] 2xl:-translate-y-[-650px] md:-translate-x-[-200px] lg:-translate-x-[-240px] 2xl:-translate-x-[-420px] transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">3. INQUIRIES</h2>
     </div>
     <div class="md:flex md:justify-center text-center md:text-left">
       <img 
@@ -105,7 +105,7 @@
         src="assets/images/website/1000005148.jpg" 
         alt="Wedding floral centerpiece"
       >
-      <h2 routerLink="/inquiries" class="md:hidden py-6 transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">3. INQUIRIES</h2>
+      <h2 routerLink="/inquiries" [appAnalyticsAction]="{ event: 'cta_select', location: 'landing_process' }" class="md:hidden py-6 transition-colors duration-500 hover:text-[#fba59f] cursor-pointer">3. INQUIRIES</h2>
     </div>
     <img 
       class="block md:h-[340px] lg:h-[380px] 2xl:h-[500px] mx-auto border-[20px] md:border-white z-30 relative md:translate-y-[-100px]" 
@@ -114,87 +114,94 @@
     >
   </div>
 
-  <div class="bg-[#fefcfa] px-4 md:px-8 2xl:px-16 py-10 md:py-14 2xl:py-20">
-    <div class="mx-auto max-w-7xl rounded-[32px] border border-black/5 bg-white/80 backdrop-blur-sm shadow-[0_16px_50px_rgba(0,0,0,0.06)] px-6 py-8 md:px-10 md:py-12 2xl:px-14 2xl:py-16">
-      <div class="grid gap-8 lg:grid-cols-[1fr_.95fr] items-center">
-        <div>
-          <p class="font-oswald uppercase tracking-[0.3em] text-xs md:text-sm text-[#b36c67] mb-3">
-            Locations We Serve
-          </p>
+  <section class="bg-[#fefcfa] px-5 py-14 md:px-8 md:py-20 2xl:px-16 2xl:py-24" aria-labelledby="service-areas-heading">
+    <div class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] lg:gap-16 2xl:gap-24">
+      <figure class="relative mx-auto w-full max-w-[540px] lg:max-w-none">
+        <div class="aspect-[4/5] overflow-hidden bg-[#eee8e3]">
+          <img
+            src="assets/images/website/1000005134.webp"
+            alt="A colorful bridal bouquet designed by Black Begonia Florals"
+            class="h-full w-full object-cover object-center"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+        <figcaption class="mt-3 border-l border-[#d8aaa6] pl-4 font-cormorant text-base italic text-gray-500 md:text-lg">
+          Based in Watch Hill, Rhode Island &mdash; flowering celebrations across New England.
+        </figcaption>
+      </figure>
 
-          <h2 class="font-cormorant text-3xl md:text-5xl 2xl:text-6xl text-gray-700 leading-tight">
-            Floral design throughout Rhode Island & <br> New England
-          </h2>
+      <div>
+        <p class="mb-3 font-oswald text-xs uppercase tracking-[0.28em] text-[#b36c67] md:text-sm">
+          Locations We Serve
+        </p>
 
-          <p class="mt-5 font-noto text-sm md:text-base 2xl:text-lg text-gray-600 leading-relaxed">
-            Black Begonia Florals creates wedding flowers for couples celebrating in
-            <a routerLink="/locations/newport-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Newport</a>,
-            <a routerLink="/locations/watch-hill-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Watch Hill</a>,
-            <a routerLink="/locations/providence-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Providence</a>,
-            <a routerLink="/locations/bristol-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Bristol</a>,
-            <a routerLink="/locations/narragansett-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Narragansett</a>,
-            <a routerLink="/locations/south-kingstown-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">South Kingstown</a>,
-            <a routerLink="/locations/westerly-ri-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Westerly</a>,
-            <a routerLink="/locations/north-kingstown-ri-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">North Kingstown</a>,
-            <a routerLink="/locations/mystic-ct-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Mystic</a>,
-            <a routerLink="/locations/stonington-ct-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Stonington</a>,
-            and
-            <a routerLink="/locations/boston-ma-wedding-florist" class="underline underline-offset-4 hover:text-[#ea938c] transition-colors">Boston</a>.
-          </p>
+        <h2 id="service-areas-heading" class="max-w-3xl font-cormorant text-4xl leading-[1.05] text-gray-700 md:text-5xl 2xl:text-6xl">
+          Wedding flowers, wherever your celebration takes you.
+        </h2>
 
-          <div class="mt-6 flex flex-wrap gap-3">
-            <a
-              routerLink="/locations"
-              class="inline-flex items-center justify-center border border-gray-300 bg-[#fefcfa] px-6 py-2 text-sm md:text-base font-oswald tracking-[0.15em] text-gray-700 transition-all duration-300 hover:border-[#ea938c] hover:text-[#ea938c]"
-            >
-              VIEW ALL LOCATIONS
-            </a>
+        <p class="mt-5 max-w-2xl font-noto text-sm leading-relaxed text-gray-600 md:text-base 2xl:text-lg">
+          From coastal Rhode Island to city celebrations farther north, we create
+          thoughtful floral designs that feel at home in their setting.
+        </p>
 
-            <a
-              routerLink="/inquiries"
-              class="inline-flex items-center justify-center border border-[#ea938c] bg-[#ea938c] px-6 py-2 text-sm md:text-base font-oswald tracking-[0.15em] text-white transition-all duration-300 hover:opacity-90"
-            >
-              START YOUR INQUIRY
-            </a>
+        <div data-testid="service-area-directory" class="mt-8 border-y border-gray-300/80">
+          <div class="grid gap-3 border-b border-gray-300/80 py-5 sm:grid-cols-[140px_1fr] md:grid-cols-[160px_1fr]">
+            <h3 data-testid="service-area-state" class="font-oswald text-xs uppercase tracking-[0.22em] text-[#9e5f5b]">
+              Rhode Island
+            </h3>
+            <div class="flex flex-wrap gap-x-5 gap-y-2 font-cormorant text-xl text-gray-700 md:text-2xl">
+              <a routerLink="/locations/newport-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Newport</a>
+              <a routerLink="/locations/watch-hill-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Watch Hill</a>
+              <a routerLink="/locations/providence-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Providence</a>
+              <a routerLink="/locations/bristol-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Bristol</a>
+              <a routerLink="/locations/narragansett-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Narragansett</a>
+              <a routerLink="/locations/south-kingstown-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">South Kingstown</a>
+              <a routerLink="/locations/westerly-ri-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Westerly</a>
+              <a routerLink="/locations/north-kingstown-ri-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">North Kingstown</a>
+            </div>
+          </div>
+
+          <div class="grid gap-3 border-b border-gray-300/80 py-5 sm:grid-cols-[140px_1fr] md:grid-cols-[160px_1fr]">
+            <h3 data-testid="service-area-state" class="font-oswald text-xs uppercase tracking-[0.22em] text-[#9e5f5b]">
+              Connecticut
+            </h3>
+            <div class="flex flex-wrap gap-x-5 gap-y-2 font-cormorant text-xl text-gray-700 md:text-2xl">
+              <a routerLink="/locations/mystic-ct-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Mystic</a>
+              <a routerLink="/locations/stonington-ct-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Stonington</a>
+            </div>
+          </div>
+
+          <div class="grid gap-3 py-5 sm:grid-cols-[140px_1fr] md:grid-cols-[160px_1fr]">
+            <h3 data-testid="service-area-state" class="font-oswald text-xs uppercase tracking-[0.22em] text-[#9e5f5b]">
+              Massachusetts
+            </h3>
+            <div class="flex flex-wrap gap-x-5 gap-y-2 font-cormorant text-xl text-gray-700 md:text-2xl">
+              <a routerLink="/locations/boston-ma-wedding-florist" class="border-b border-transparent transition-colors hover:border-[#ea938c] hover:text-[#b36c67]">Boston</a>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 md:gap-4">
+        <div class="mt-7 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-8">
           <a
-            routerLink="/locations/newport-ri-wedding-florist"
-            class="rounded-2xl bg-[#f7f4f1] border border-black/5 px-4 py-4 text-center text-gray-700 hover:text-[#ea938c] transition-colors"
+            routerLink="/locations"
+            class="group inline-flex items-center gap-3 font-oswald text-sm tracking-[0.14em] text-gray-700 transition-colors hover:text-[#b36c67] md:text-base"
           >
-            <p class="font-oswald text-xs tracking-[0.25em] uppercase text-[#b36c67]">Rhode Island</p>
-            <p class="font-cormorant text-2xl md:text-3xl mt-1">Newport</p>
+            EXPLORE ALL LOCATIONS
+            <span aria-hidden="true" class="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span>
           </a>
 
           <a
-            routerLink="/locations/watch-hill-ri-wedding-florist"
-            class="rounded-2xl bg-[#f7f4f1] border border-black/5 px-4 py-4 text-center text-gray-700 hover:text-[#ea938c] transition-colors"
+            routerLink="/inquiries"
+            [appAnalyticsAction]="{ event: 'cta_select', location: 'landing_locations' }"
+            class="inline-flex items-center justify-center bg-[#ea938c] px-6 py-2.5 font-oswald text-sm tracking-[0.14em] text-white transition-colors hover:bg-[#d77f78] md:text-base"
           >
-            <p class="font-oswald text-xs tracking-[0.25em] uppercase text-[#b36c67]">Rhode Island</p>
-            <p class="font-cormorant text-2xl md:text-3xl mt-1">Watch Hill</p>
-          </a>
-
-          <a
-            routerLink="/locations/providence-ri-wedding-florist"
-            class="rounded-2xl bg-[#f7f4f1] border border-black/5 px-4 py-4 text-center text-gray-700 hover:text-[#ea938c] transition-colors"
-          >
-            <p class="font-oswald text-xs tracking-[0.25em] uppercase text-[#b36c67]">Rhode Island</p>
-            <p class="font-cormorant text-2xl md:text-3xl mt-1">Providence</p>
-          </a>
-
-          <a
-            routerLink="/locations/mystic-ct-wedding-florist"
-            class="rounded-2xl bg-[#f7f4f1] border border-black/5 px-4 py-4 text-center text-gray-700 hover:text-[#ea938c] transition-colors"
-          >
-            <p class="font-oswald text-xs tracking-[0.25em] uppercase text-[#b36c67]">Connecticut</p>
-            <p class="font-cormorant text-2xl md:text-3xl mt-1">Mystic</p>
+            START YOUR INQUIRY
           </a>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
   <div class="bg-[#fefcfa] font-cormorant font-thin text-gray-600 text-sm md:text-base lg:text-xl text-center pt-8 md:pt-10 2xl:pt-16 pb-5 md:pb-5 2xl:pb-8">
     <p>CRAFTING BESPOKE INTENTIONAL <br> DETAILS WITH FLOWERS FOR</p>
@@ -258,6 +265,7 @@
 
         <button
           routerLink="/inquiries"
+          [appAnalyticsAction]="{ event: 'cta_select', location: 'landing_bottom' }"
           class="mt-2 sm:mt-3 md:mt-4 uppercase border border-gray-500 text-gray-700 transition-all duration-300
                 px-5 py-2.5 text-xs tracking-[0.18em]
                 sm:px-6 sm:py-3 sm:text-sm

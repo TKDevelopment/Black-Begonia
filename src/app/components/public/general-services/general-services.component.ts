@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { JsonLdService } from '../../../core/seo/jsonld.service';
 import { SeoService } from '../../../core/seo/seo.service';
+import { AnalyticsActionDirective } from '../../../shared/directives/analytics-action.directive';
 
 type FloralOffering = {
   title: string;
@@ -25,7 +26,7 @@ type FaqItem = {
 @Component({
   selector: 'app-general-services',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgOptimizedImage],
+  imports: [CommonModule, RouterLink, NgOptimizedImage, AnalyticsActionDirective],
   templateUrl: './general-services.component.html',
   styleUrl: './general-services.component.scss'
 })

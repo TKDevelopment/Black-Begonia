@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../../core/supabase/clients/supabase.service';
 import { SeoService } from '../../../core/seo/seo.service';
 import { JsonLdService } from '../../../core/seo/jsonld.service';
+import { WebsiteAnalyticsService } from '../../../core/analytics/website-analytics.service';
 
 interface PortfolioImage {
   image_id: string;
@@ -67,6 +68,7 @@ export class PortfolioDetailComponent implements OnInit {
     private supabase: SupabaseService,
     private seo: SeoService,
     private jsonLd: JsonLdService,
+    private analytics: WebsiteAnalyticsService,
     @Inject(PLATFORM_ID) platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -219,6 +221,7 @@ export class PortfolioDetailComponent implements OnInit {
         (images ?? []) as PortfolioImage[]
       );
       this.applyGallerySeo(this.gallery);
+      this.analytics.trackContent('portfolio');
     } catch (error) {
       console.error('Unexpected gallery load error:', error);
       this.errorMessage = 'Failed to load gallery.';

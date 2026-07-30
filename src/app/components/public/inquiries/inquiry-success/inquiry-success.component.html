@@ -36,7 +36,7 @@
       </div>
 
       <div class="success-card__actions">
-        <a routerLink="/" class="success-card__button cursor-pointer">
+      <a routerLink="/" [appAnalyticsAction]="{ event: 'cta_select', location: 'inquiry_success' }" class="success-card__button cursor-pointer">
           Return to Home
         </a>
       </div>

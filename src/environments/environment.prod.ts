@@ -9,6 +9,7 @@
         grapesjsStudioLicenseKey: 'undefined',
         googleClientId: 'undefined',
         googleApiKey: 'undefined',
+        ga4MeasurementId: '',
         paymentPublicOrigin: 'https://blackbegoniaflorals.com',
         paypalClientId: 'undefined',
         paymentCapabilities: {

@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { LOCATION_PAGES } from '../locations/locations.data';
 import { SeoService } from '../../../core/seo/seo.service';
 import { JsonLdService } from '../../../core/seo/jsonld.service';
+import { AnalyticsActionDirective } from '../../../shared/directives/analytics-action.directive';
 
 type LocationHubCard = {
   slug: string;
@@ -18,7 +19,7 @@ type LocationHubCard = {
 @Component({
   selector: 'app-locations-hub',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgOptimizedImage],
+  imports: [CommonModule, RouterModule, NgOptimizedImage, AnalyticsActionDirective],
   templateUrl: './locations-hub.component.html',
   styleUrl: './locations-hub.component.scss'
 })

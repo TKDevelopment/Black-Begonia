@@ -141,7 +141,8 @@
         </p>
 
         <a
-          [routerLink]="getCtaForGroup((i + 1) / 4 - 1).buttonLink"
+            [routerLink]="getCtaForGroup((i + 1) / 4 - 1).buttonLink"
+            [appAnalyticsAction]="{ event: 'cta_select', location: 'testimonials' }"
           class="inline-flex items-center justify-center border border-white px-6 sm:px-8 py-2.5 sm:py-3 tracking-[0.18em] sm:tracking-[0.25em] uppercase text-xs sm:text-sm hover:bg-white hover:text-gray-900 transition-all duration-300"
         >
           {{ getCtaForGroup((i + 1) / 4 - 1).buttonText }}
@@ -170,7 +171,8 @@
         </p>
 
         <a
-          routerLink="/contact"
+      routerLink="/contact"
+      [appAnalyticsAction]="{ event: 'cta_select', location: 'testimonials_bottom' }"
           class="inline-flex items-center justify-center border border-gray-900 px-6 sm:px-8 py-2.5 sm:py-3 tracking-[0.18em] sm:tracking-[0.25em] uppercase text-xs sm:text-sm text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300"
         >
           Start Your Inquiry

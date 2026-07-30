@@ -1,0 +1,136 @@
+.analytics-notice {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  display: grid;
+  width: min(34rem, calc(100vw - 2rem));
+  gap: 1rem;
+  border: 1px solid rgb(231 229 228);
+  border-radius: 1rem;
+  background: rgb(254 252 250 / 0.98);
+  padding: 1rem;
+  box-shadow: 0 20px 50px rgb(41 37 36 / 0.18);
+}
+
+.analytics-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  background: rgb(68 64 60 / 0.42);
+  backdrop-filter: blur(3px);
+  padding: 1rem;
+}
+
+.analytics-dialog {
+  position: relative;
+  width: min(42rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  border: 1px solid rgb(231 229 228);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(145deg, rgb(254 252 250) 0%, rgb(250 247 244) 100%);
+  color: rgb(68 64 60);
+  padding: 1.5rem;
+  box-shadow: 0 24px 80px rgb(41 37 36 / 0.22);
+  outline: none;
+}
+
+.close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid rgb(214 211 209);
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.9);
+  color: rgb(68 64 60);
+  padding: 0;
+}
+
+.close-icon {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.close-button:hover,
+.close-button:focus-visible {
+  border-color: #c67670;
+  color: #b8615d;
+  outline: 3px solid rgb(234 147 140 / .25);
+}
+
+.eyebrow {
+  color: #b8615d;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.choice {
+  border: 1px solid rgb(168 162 158);
+  border-radius: .75rem;
+  background: white;
+  padding: .7rem 1rem;
+  color: rgb(41 37 36);
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.choice:hover,
+.choice:focus-visible {
+  border-color: #c67670;
+  outline: 3px solid rgb(234 147 140 / .25);
+}
+
+.choice-primary {
+  border-color: #b8615d;
+  background: #b8615d;
+  color: white;
+}
+
+.privacy-link {
+  color: #9f4f4b;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgb(184 97 93 / .45);
+  text-underline-offset: .2rem;
+}
+
+.privacy-link:hover,
+.privacy-link:focus-visible {
+  color: #7f3f3b;
+  outline: 2px solid rgb(234 147 140 / .28);
+  outline-offset: 2px;
+}
+
+.status-card,
+.staff-card {
+  border: 1px solid rgb(231 229 228);
+  border-radius: .875rem;
+  background: rgb(255 255 255 / 0.72);
+  padding: 1rem;
+  color: rgb(68 64 60);
+  font-size: .875rem;
+  line-height: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .analytics-notice {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .analytics-dialog {
+    padding: 2rem;
+  }
+}

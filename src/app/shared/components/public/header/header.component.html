@@ -70,7 +70,11 @@
       <div routerLink="/testimonials" class="hover:text-[#f89b95] hover:cursor-pointer">TESTIMONIALS</div>
       <div routerLink="/portfolio" class="hover:text-[#f89b95] hover:cursor-pointer">PORTFOLIO</div>
       <div routerLink="/workshops" class="hover:text-[#f89b95] hover:cursor-pointer">WORKSHOPS</div>
-      <div routerLink="/inquiries" class="hover:text-[#f89b95] hover:cursor-pointer">INQUIRY</div>
+      <div
+        routerLink="/inquiries"
+        [appAnalyticsAction]="{ event: 'cta_select', location: 'header' }"
+        class="hover:text-[#f89b95] hover:cursor-pointer"
+      >INQUIRY</div>
     </div>
 
     <div
@@ -80,6 +84,7 @@
     >
       <a
         href="https://www.facebook.com/blackbegoniaflorist/"
+        [appAnalyticsAction]="{ event: 'social_click', location: 'header', platform: 'facebook' }"
         aria-label="Facebook"
         data-testid="public-social-link"
         target="_blank"
@@ -101,7 +106,8 @@
       </a>
 
       <a
-        href="https://www.instagram.com/blackbegoniaflorist/"
+        href="https://www.instagram.com/blackbegoniaflorals/"
+        [appAnalyticsAction]="{ event: 'social_click', location: 'header', platform: 'instagram' }"
         aria-label="Instagram"
         data-testid="public-social-link"
         target="_blank"
@@ -134,7 +140,12 @@
       <a routerLink="/testimonials" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">TESTIMONIALS</a>
       <a routerLink="/portfolio" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">PORTFOLIO</a>
       <a routerLink="/workshops" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">WORKSHOPS</a>
-      <a routerLink="/inquiries" (click)="toggleMenu()" class="block font-semibold hover:text-[#f89b95]">INQUIRY</a>
+      <a
+        routerLink="/inquiries"
+        [appAnalyticsAction]="{ event: 'cta_select', location: 'mobile_header' }"
+        (click)="toggleMenu()"
+        class="block font-semibold hover:text-[#f89b95]"
+      >INQUIRY</a>
     </div>
   </div>
 </section>

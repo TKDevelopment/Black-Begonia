@@ -137,7 +137,8 @@
 
       <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
         <a
-          routerLink="/inquiries"
+        routerLink="/inquiries"
+        [appAnalyticsAction]="{ event: 'cta_select', location: 'location_detail' }"
           class="inline-flex items-center justify-center rounded-full bg-[#ea938c] px-8 py-3 text-lg md:text-xl text-black transition-transform duration-300 hover:scale-[1.02]"
         >
           Inquire About Your Wedding
