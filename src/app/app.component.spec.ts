@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/auth.service';
 import { SeoRouteListenerService } from './core/seo/seo-route-listener.service';
+import { WebsiteAnalyticsService } from './core/analytics/website-analytics.service';
 
 describe('AppComponent', () => {
   const authService = {
@@ -11,6 +12,7 @@ describe('AppComponent', () => {
   const seoRouteListener = {
     init: jasmine.createSpy('init'),
   };
+  const analytics = { init: jasmine.createSpy('init') };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -19,11 +21,13 @@ describe('AppComponent', () => {
         provideRouter([]),
         { provide: AuthService, useValue: authService },
         { provide: SeoRouteListenerService, useValue: seoRouteListener },
+        { provide: WebsiteAnalyticsService, useValue: analytics },
       ],
     }).compileComponents();
 
     authService.init.calls.reset();
     seoRouteListener.init.calls.reset();
+    analytics.init.calls.reset();
   });
 
   it('should create the app', () => {
@@ -51,5 +55,12 @@ describe('AppComponent', () => {
 
     expect(compiled.querySelector('app-toast')).toBeTruthy();
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
+  });
+
+  it('initializes analytics without awaiting it before authentication', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    expect(analytics.init).toHaveBeenCalled();
+    expect(authService.init).toHaveBeenCalled();
   });
 });

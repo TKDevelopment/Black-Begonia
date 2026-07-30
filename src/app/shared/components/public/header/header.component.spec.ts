@@ -46,4 +46,12 @@ describe('HeaderComponent', () => {
     expect(menuButton).toBeNull();
     expect(socialLinks.length).toBe(2);
   });
+
+  it('uses the canonical Instagram account URL', () => {
+    const instagramLink = fixture.nativeElement.querySelector(
+      'a[aria-label="Instagram"]'
+    ) as HTMLAnchorElement;
+
+    expect(instagramLink.href).toBe('https://www.instagram.com/blackbegoniaflorals/');
+  });
 });

@@ -3,11 +3,12 @@ import { RouterLink } from "@angular/router";
 import { NgIf } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AnalyticsActionDirective } from '../../../directives/analytics-action.directive';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [RouterLink, NgIf],
+  imports: [RouterLink, NgIf, AnalyticsActionDirective],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss']
 })

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -16,7 +16,9 @@ import { ToastService } from '../../../core/services/toast.service';
 import { SeoService } from '../../../core/seo/seo.service';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { CreateGeneralLeadInput } from '../../../core/models/create-general-lead-input';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { InquiryMeasurementService } from '../../../core/analytics/inquiry-measurement.service';
+import { AnalyticsOriginContext } from '../../../core/analytics/analytics.models';
 
 @Component({
   selector: 'app-general-inquiries',
@@ -24,6 +26,7 @@ import { Router } from '@angular/router';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './general-inquiries.component.html',
   styleUrl: './general-inquiries.component.scss',
+  providers: [InquiryMeasurementService],
 })
 export class GeneralInquiriesComponent implements OnInit {
   private readonly inquiryEmailMaxAttempts = 3;
@@ -37,6 +40,9 @@ export class GeneralInquiriesComponent implements OnInit {
   submittedInquiry: { lead_id: string } | null = null;
   invalidTooltips: Record<string, 'hidden' | 'visible' | 'fading'> = {};
   private tooltipTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  private readonly analyticsOrigin: AnalyticsOriginContext | undefined =
+    this.route?.snapshot.queryParamMap.get('origin') === 'workshop' ? 'workshop' : undefined;
 
   constructor(
     private fb: FormBuilder,
@@ -44,7 +50,8 @@ export class GeneralInquiriesComponent implements OnInit {
     private leadRepository: LeadRepositoryService,
     private toast: ToastService,
     private router: Router,
-    private seo: SeoService
+    private seo: SeoService,
+    private inquiryMeasurement: InquiryMeasurementService
   ) {
     this.generalInquiryForm = this.fb.group({
       firstName: [
@@ -193,6 +200,7 @@ export class GeneralInquiriesComponent implements OnInit {
       };
 
       const lead = await this.leadRepository.createGeneralLead(payload);
+      this.inquiryMeasurement.confirm('general', this.analyticsOrigin);
 
       const urls = this.getCleanInspirationUrls();
 
@@ -250,6 +258,19 @@ export class GeneralInquiriesComponent implements OnInit {
       this.toast.showToast('Failed to submit your inquiry. Please try again later.', 'error');
     } finally {
       this.submitting = false;      
+    }
+  }
+
+  onMeaningfulInteraction(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const controlName = target.getAttribute('formcontrolname');
+    const meaningfulControls = new Set([
+      'firstName', 'lastName', 'phone', 'email', 'serviceType', 'eventDate',
+      'preferredContactMethod', 'leadSource', 'notes',
+    ]);
+    if (controlName && meaningfulControls.has(controlName)) {
+      this.inquiryMeasurement.start('general', this.analyticsOrigin);
     }
   }
 

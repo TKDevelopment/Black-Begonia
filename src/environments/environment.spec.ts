@@ -12,13 +12,14 @@ describe('default environment', () => {
     expect(environment.grapesjsStudioLicenseKey).toBe('default');
     expect(environment.googleClientId).toBe('default');
     expect(environment.googleApiKey).toBe('default');
+    expect(environment.ga4MeasurementId).toBe('');
   });
 
   it('exposes only public payment capabilities and origins', () => {
     expect(environment.paymentPublicOrigin).toBe('http://localhost:4200');
     expect(environment.paymentCapabilities).toEqual({ stripeCard: true, venmo: true, cash: true, check: true });
     expect(environment.paypalClientId).toBe('default');
-    for (const forbidden of ['stripeSecretKey', 'stripeWebhookSecret', 'paypalClientSecret', 'mailgunApiKey', 'mailgunSigningKey', 'paymentTokenEncryptionKey', 'supabaseServiceRoleKey', 'paymentAutomationKey']) {
+    for (const forbidden of ['stripeSecretKey', 'stripeWebhookSecret', 'paypalClientSecret', 'mailgunApiKey', 'mailgunSigningKey', 'paymentTokenEncryptionKey', 'supabaseServiceRoleKey', 'paymentAutomationKey', 'googleAnalyticsApiSecret']) {
       expect(forbidden in environment).toBeFalse();
     }
   });

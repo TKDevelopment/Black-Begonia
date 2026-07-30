@@ -8,11 +8,12 @@ import {
 } from './locations.data';
 import { SeoService } from '../../../core/seo/seo.service';
 import { JsonLdService } from '../../../core/seo/jsonld.service';
+import { AnalyticsActionDirective } from '../../../shared/directives/analytics-action.directive';
 
 @Component({
   selector: 'app-location-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgOptimizedImage],
+  imports: [CommonModule, RouterModule, NgOptimizedImage, AnalyticsActionDirective],
   templateUrl: './locations.component.html',
   styleUrl: './locations.component.scss'
 })

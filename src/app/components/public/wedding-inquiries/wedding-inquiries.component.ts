@@ -18,6 +18,7 @@ import { SupabaseService } from '../../../core/supabase/clients/supabase.service
 import { CreateWeddingLeadInput } from '../../../core/models/create-wedding-lead-input';
 import { LeadRepositoryService } from '../../../core/supabase/repositories/lead-repository.service';
 import { Router } from '@angular/router';
+import { InquiryMeasurementService } from '../../../core/analytics/inquiry-measurement.service';
 
 type BudgetOption = {
   label: string;
@@ -30,6 +31,7 @@ type BudgetOption = {
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './wedding-inquiries.component.html',
   styleUrl: './wedding-inquiries.component.scss',
+  providers: [InquiryMeasurementService],
 })
 export class WeddingInquiriesComponent implements OnInit {
   private readonly inquiryEmailMaxAttempts = 3;
@@ -82,7 +84,8 @@ export class WeddingInquiriesComponent implements OnInit {
     private toast: ToastService,
     private seo: SeoService,
     private leadRepository: LeadRepositoryService,
-    private router: Router
+    private router: Router,
+    private inquiryMeasurement: InquiryMeasurementService
   ) {
     this.weddingInquiryForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z]+$/), Validators.minLength(2)]],
@@ -256,6 +259,7 @@ export class WeddingInquiriesComponent implements OnInit {
       };
 
       const lead = await this.leadRepository.createWeddingLead(payload);
+      this.inquiryMeasurement.confirm('wedding');
 
       const urls = this.getCleanInspirationUrls();
       if (urls.length > 0) {
@@ -321,6 +325,20 @@ export class WeddingInquiriesComponent implements OnInit {
       );
     } finally {
       this.submitting = false;
+    }
+  }
+
+  onMeaningfulInteraction(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const controlName = target.getAttribute('formcontrolname');
+    const meaningfulControls = new Set([
+      'firstName', 'lastName', 'fianceFirstName', 'fianceLastName', 'phone',
+      'email', 'eventDate', 'serviceType', 'ceremonyVenue', 'receptionVenue',
+      'budget', 'guests', 'preferredContactMethod', 'leadSource', 'notes',
+    ]);
+    if (controlName && meaningfulControls.has(controlName)) {
+      this.inquiryMeasurement.start('wedding');
     }
   }
 

@@ -3,10 +3,11 @@ import { HeaderComponent } from '../../../shared/components/public/header/header
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { FooterComponent } from '../../../shared/components/public/footer/footer.component';
+import { AnalyticsPreferencesComponent } from '../../../shared/components/public/analytics-preferences/analytics-preferences.component';
 
 @Component({
   selector: 'app-public-layout',
-  imports: [CommonModule, RouterOutlet, HeaderComponent, FooterComponent],
+  imports: [CommonModule, RouterOutlet, HeaderComponent, FooterComponent, AnalyticsPreferencesComponent],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.scss'
 })
@@ -16,4 +17,5 @@ export class PublicLayoutComponent {
   @ViewChild(HeaderComponent) header!: HeaderComponent;
 
   readonly paymentHeader = this.route.snapshot.data['headerMode'] === 'payment';
+  analyticsPreferencesOpen = false;
 }

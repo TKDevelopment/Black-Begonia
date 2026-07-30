@@ -1,14 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AnalyticsActionDirective } from '../../../directives/analytics-action.directive';
 
 @Component({
   selector: 'app-footer',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AnalyticsActionDirective],
   templateUrl: './footer.component.html',
   styleUrl: './footer.component.scss'
 })
 export class FooterComponent {
+  @Output() analyticsPreferences = new EventEmitter<void>();
   @ViewChild('gallery', { static: true }) gallery!: ElementRef<HTMLDivElement>;
 
   // Placeholder list (you can swap this with real image objects later)

@@ -69,6 +69,8 @@
 
         <a
           [routerLink]="section.inquiryLink"
+          [queryParams]="{ origin: 'workshop' }"
+          [appAnalyticsAction]="{ event: 'cta_select', location: 'workshops' }"
           class="inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-[0.16em] sm:tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300"
         >
           Request More Information
@@ -205,6 +207,8 @@
 
         <a
           [routerLink]="section.inquiryLink"
+          [queryParams]="{ origin: 'workshop' }"
+          [appAnalyticsAction]="{ event: 'cta_select', location: 'workshops' }"
           class="inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-[0.16em] sm:tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300"
         >
           Request More Information
@@ -229,6 +233,8 @@
 
       <a
         routerLink="/inquiries/general"
+        [queryParams]="{ origin: 'workshop' }"
+        [appAnalyticsAction]="{ event: 'cta_select', location: 'workshops_bottom' }"
         class="inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 border border-gray-500 hover:bg-[#fba59f] hover:text-white hover:border-[#fba59f] font-light tracking-[0.16em] sm:tracking-widest text-xs sm:text-sm md:text-base uppercase transition-all duration-300"
       >
         Inquire Now

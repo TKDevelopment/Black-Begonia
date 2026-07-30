@@ -6,6 +6,7 @@ export interface AppEnvironment {
     grapesjsStudioLicenseKey: string;
     googleClientId: string;
     googleApiKey: string;
+    ga4MeasurementId: string;
     paymentPublicOrigin: string;
     paypalClientId: string;
     paymentCapabilities: {
