@@ -1,0 +1,184 @@
+<main class="status-page" [attr.aria-busy]="loading()">
+  <section class="status-card" aria-live="polite">
+    <p class="eyebrow">Workshop booking</p>
+    <p *ngIf="loading()" aria-live="polite">Checking your booking status&hellip;</p>
+
+    <ng-container *ngIf="!loading() && status() as current">
+      <ng-container [ngSwitch]="current.state">
+        <div *ngSwitchCase="'processing'">
+          <h1>Payment is processing</h1>
+          <p>We are waiting for the payment provider’s verified result.</p>
+          <p>Support reference: {{ $any(current).supportReference }}</p>
+        </div>
+        <div *ngSwitchCase="'pending_venmo'" class="pending-venmo-status">
+          <h1>Waiting for Venmo confirmation</h1>
+          <p>The florist will confirm your booking after matching the direct payment.</p>
+          <aside class="pending-help">
+            <h2>Still waiting after 24 hours?</h2>
+            <p>
+              If you have not received a confirmation within 24 hours, please
+              email Becca or send her a text so she can check your payment.
+            </p>
+            <div class="pending-contact-links">
+              <a href="mailto:becca@blackbegoniaflorals.com">becca&#64;blackbegoniaflorals.com</a>
+              <a href="sms:+14018714996">Text (401) 871-4996</a>
+            </div>
+          </aside>
+        </div>
+        <div *ngSwitchCase="'confirmed'" class="confirmed-status">
+          <h1>You’re confirmed for {{ $any(current).workshopTitle }}!</h1>
+          <p class="celebration-copy">
+            We’re so excited to design beautiful arrangements with you!
+          </p>
+
+          <dl class="event-facts">
+            <div class="event-fact event-fact--primary">
+              <dt>Workshop</dt>
+              <dd>{{ $any(current).workshopTitle }}</dd>
+            </div>
+            <div class="event-fact event-fact--primary event-location">
+              <dt>Location</dt>
+              <dd>
+                <strong>{{ $any(current).venueName }}</strong>
+                <span class="event-location__address">
+                  {{ $any(current).addressLine1 }}<ng-container *ngIf="$any(current).addressLine2">, {{ $any(current).addressLine2 }}</ng-container>,
+                  {{ $any(current).locality }}, {{ $any(current).region }} {{ $any(current).postalCode }}
+                </span>
+              </dd>
+            </div>
+            <div class="event-fact event-fact--secondary">
+              <dt>Date</dt>
+              <dd>{{ formatEventDate($any(current)) }}</dd>
+            </div>
+            <div class="event-fact event-fact--secondary">
+              <dt>Time</dt>
+              <dd>{{ formatEventTime($any(current)) }}</dd>
+            </div>
+            <div class="event-fact event-fact--secondary">
+              <dt>Seats booked</dt>
+              <dd>
+                {{ $any(current).activeQuantity }}
+                {{ $any(current).activeQuantity === 1 ? 'seat' : 'seats' }}
+              </dd>
+            </div>
+          </dl>
+
+          <section class="terms-reminder" aria-labelledby="terms-reminder-title">
+            <h2 id="terms-reminder-title">Refunds &amp; cancellations</h2>
+            <p>
+              Your reservation remains subject to the Workshop Terms &amp;
+              Conditions you accepted when booking. Please review the accepted
+              terms below before requesting a cancellation or refund.
+            </p>
+            <details>
+              <summary>Review the terms you accepted</summary>
+              <p>{{ $any(current).termsSnapshot }}</p>
+            </details>
+          </section>
+
+          <aside class="contact-note">
+            <h2>Questions or concerns?</h2>
+            <p>
+              Becca is here to help with questions about your booking or
+              workshop. Reach her using the email address or phone number below.
+            </p>
+            <div class="contact-links">
+              <a href="mailto:becca@blackbegoniaflorals.com">becca&#64;blackbegoniaflorals.com</a>
+              <a href="tel:+14018714996">(401) 871-4996</a>
+            </div>
+          </aside>
+        </div>
+        <div *ngSwitchCase="'action_required'">
+          <h1>Your booking needs attention</h1>
+          <ng-container *ngIf="$any(current).action === 'reschedule'; else genericAction">
+            <p>Your workshop schedule changed. Your seats have not moved automatically.</p>
+            <dl>
+              <div *ngIf="$any(current).sourceTitle">
+                <dt>Original workshop</dt>
+                <dd>{{ $any(current).sourceTitle }} · {{ $any(current).sourceStartAt | date:'medium' }}</dd>
+              </div>
+              <div *ngIf="$any(current).replacementTitle">
+                <dt>Replacement workshop</dt>
+                <dd>
+                  {{ $any(current).replacementTitle }} ·
+                  {{ $any(current).replacementStartAt | date:'medium' }} ·
+                  {{ $any(current).replacementVenue }}
+                </dd>
+              </div>
+              <div *ngIf="$any(current).protectedQuantity">
+                <dt>Protected seats</dt><dd>{{ $any(current).protectedQuantity }}</dd>
+              </div>
+              <div *ngIf="$any(current).responseDeadline">
+                <dt>Response deadline</dt>
+                <dd>{{ $any(current).responseDeadline | date:'medium' }}</dd>
+              </div>
+            </dl>
+            <p *ngIf="$any(current).responseState === 'expired'">
+              The response window expired. Contact the florist; no transfer was accepted.
+            </p>
+          </ng-container>
+          <ng-template #genericAction>
+            <p>Please use your latest secure email link or contact the florist with your support reference.</p>
+          </ng-template>
+        </div>
+        <div *ngSwitchCase="'privacy_verification_pending'">
+          <h1>Verify your request</h1>
+          <p>Use the single-purpose link sent to the booking’s current contact email.</p>
+        </div>
+        <div *ngSwitchCase="'proposed_email_pending'">
+          <h1>Confirm the proposed email</h1>
+          <p>The current booking email remains active until the separate confirmation link is used.</p>
+        </div>
+        <div *ngSwitchCase="'proposed_email_confirmed'">
+          <h1>The new contact email is confirmed</h1>
+          <p>Previous booking-status and verification links are no longer valid.</p>
+        </div>
+        <div *ngSwitchCase="'proposed_email_expired'">
+          <h1>The email confirmation expired</h1>
+          <p>The existing booking email remains unchanged.</p>
+        </div>
+        <div *ngSwitchCase="'cancelled'"><h1>This booking was cancelled</h1></div>
+        <div *ngSwitchCase="'refunded'"><h1>This booking was refunded</h1></div>
+        <div *ngSwitchDefault>
+          <h1>This access link is unavailable</h1>
+          <p>
+            Enter the access code from your most recent booking email below.
+            If you still need help, contact Black Begonia Florals directly.
+          </p>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <form *ngIf="showRecovery()" class="access-form" [formGroup]="accessCodeForm" (ngSubmit)="useAccessCode()">
+      <h2>Already have an access code?</h2>
+      <label>Access code
+        <input type="password" formControlName="accessCode" autocomplete="one-time-code" />
+      </label>
+      <button type="submit">Open booking status</button>
+    </form>
+
+    <form *ngIf="showRescheduleResponse()" [formGroup]="rescheduleResponseForm">
+      <h2>Respond to a workshop schedule change</h2>
+      <p>
+        Enter the single-purpose code from the reschedule email. Accepting moves
+        only your protected seats. Declining requests cancellation and refund
+        review; it does not move money automatically.
+      </p>
+      <label>Response code
+        <input type="password" formControlName="responseCode" autocomplete="one-time-code" />
+      </label>
+      <div class="actions">
+        <button type="button" [disabled]="rescheduleBusy()"
+          (click)="respondToReschedule('accept')">Accept replacement</button>
+        <button type="button" [disabled]="rescheduleBusy()"
+          (click)="respondToReschedule('decline')">Decline and request cancellation</button>
+      </div>
+      <p *ngIf="rescheduleMessage()" role="status">{{ rescheduleMessage() }}</p>
+      <p *ngIf="rescheduleError()" role="alert">{{ rescheduleError() }}</p>
+    </form>
+
+    <a *ngIf="showBrowseWorkshops()" class="browse-button" routerLink="/workshops">
+      Browse upcoming workshops
+    </a>
+  </section>
+</main>

@@ -5,6 +5,9 @@ import { LandingComponent } from './components/public/landing/landing.component'
 import { authGuard, authChildGuard } from './core/guards/auth.guard';
 import { adminRoleGuard, adminRoleChildGuard } from './core/guards/admin-role.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import {
+  workshopRetentionPolicyAdminGuard,
+} from './core/guards/workshop-retention-policy-admin.guard';
 
 export const routes: Routes = [
   {
@@ -119,6 +122,46 @@ export const routes: Routes = [
         data: { analytics: { eligible: true, pageCategory: 'workshop' } },
         loadComponent: () =>
           import('./components/public/workshops/workshops.component').then(m => m.WorkshopsComponent),
+      },
+      {
+        path: 'workshops/:seriesSlug/:workshopDate/terms-and-conditions',
+        data: { analytics: { eligible: false, pageCategory: 'terms' } },
+        loadComponent: () =>
+          import('./components/public/workshop-terms-and-conditions/workshop-terms-and-conditions.component').then(
+            m => m.WorkshopTermsAndConditionsComponent
+          ),
+      },
+      {
+        path: 'workshops/:seriesSlug/:workshopDate/reserve',
+        data: { analytics: { eligible: true, pageCategory: 'workshop_reservation' } },
+        loadComponent: () =>
+          import('./components/workshop-booking/workshop-reservation/workshop-reservation.component').then(
+            m => m.WorkshopReservationComponent
+          ),
+      },
+      {
+        path: 'workshops/:seriesSlug/:workshopDate',
+        data: { analytics: { eligible: true, pageCategory: 'workshop_detail' } },
+        loadComponent: () =>
+          import('./components/public/workshop-detail/workshop-detail.component').then(
+            m => m.WorkshopDetailComponent
+          ),
+      },
+      {
+        path: 'workshops/:seriesSlug',
+        data: { analytics: { eligible: true, pageCategory: 'workshop_detail' } },
+        loadComponent: () =>
+          import('./components/public/workshop-detail/workshop-detail.component').then(
+            m => m.WorkshopDetailComponent
+          ),
+      },
+      {
+        path: 'workshop-booking/status',
+        data: { analytics: { eligible: false, pageCategory: 'workshop_booking_status' } },
+        loadComponent: () =>
+          import('./components/workshop-booking/workshop-booking-status/workshop-booking-status.component').then(
+            m => m.WorkshopBookingStatusComponent
+          ),
       },
       {
         path: 'testimonials',
@@ -264,6 +307,62 @@ export const routes: Routes = [
         path: 'payments',
         loadComponent: () =>
           import('./components/private/payments/payments.component').then(m => m.PaymentsComponent),
+      },
+      {
+        path: 'workshops',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./components/private/workshops/workshops.component').then(
+            m => m.WorkshopsComponent
+          ),
+      },
+      {
+        path: 'workshops/new',
+        loadComponent: () =>
+          import('./components/private/workshops/workshop-editor/workshop-editor.component').then(
+            m => m.WorkshopEditorComponent
+          ),
+      },
+      {
+        path: 'workshops/:occurrenceId/edit',
+        loadComponent: () =>
+          import('./components/private/workshops/workshop-editor/workshop-editor.component').then(
+            m => m.WorkshopEditorComponent
+          ),
+      },
+      {
+        path: 'settings/workshop-privacy-policy',
+        canActivate: [workshopRetentionPolicyAdminGuard],
+        loadComponent: () =>
+          import('./components/private/workshops/workshop-data-retention-policy/workshop-data-retention-policy.component').then(
+            m => m.WorkshopDataRetentionPolicyComponent
+          ),
+      },
+      {
+        path: 'workshops/privacy-policy',
+        pathMatch: 'full',
+        redirectTo: 'settings/workshop-privacy-policy',
+      },
+      {
+        path: 'workshops/:occurrenceId/roster',
+        loadComponent: () =>
+          import('./components/private/workshops/workshop-roster/workshop-roster.component').then(
+            m => m.WorkshopRosterComponent
+          ),
+      },
+      {
+        path: 'workshops/:occurrenceId/financials',
+        loadComponent: () =>
+          import('./components/private/workshops/workshop-financials/workshop-financials.component').then(
+            m => m.WorkshopFinancialsComponent
+          ),
+      },
+      {
+        path: 'workshops/:occurrenceId',
+        loadComponent: () =>
+          import('./components/private/workshops/workshop-occurrence-detail/workshop-occurrence-detail.component').then(
+            m => m.WorkshopOccurrenceDetailComponent
+          ),
       },
       {
         path: 'projects/:projectId/proposal-revision',

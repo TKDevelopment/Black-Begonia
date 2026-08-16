@@ -9,6 +9,7 @@ export type SeoInput = {
   url?: string;
   type?: 'website' | 'article' | 'profile' | string;
   keywords?: string[];
+  robots?: 'index,follow,max-image-preview:large' | 'noindex,follow' | 'noindex,nofollow';
 };
 
 @Injectable({ providedIn: 'root' })
@@ -28,14 +29,17 @@ export class SeoService {
       url = 'https://blackbegoniaflorals.com/',
       type = 'website',
       keywords = [],
+      robots = 'index,follow,max-image-preview:large',
     } = input;
 
     this.titleSrv.setTitle(title);
 
     this.updateTag({ name: 'description', content: description });
-    this.updateTag({ name: 'robots', content: 'index,follow,max-image-preview:large' });
+    this.updateTag({ name: 'robots', content: robots });
     if (keywords.length) {
       this.updateTag({ name: 'keywords', content: keywords.join(', ') });
+    } else {
+      this.meta.removeTag("name='keywords'");
     }
 
     this.setCanonicalUrl(url);

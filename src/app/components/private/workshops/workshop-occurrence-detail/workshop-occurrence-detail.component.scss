@@ -1,0 +1,18 @@
+.detail-page { padding: 1.5rem; display: grid; gap: 1.25rem; color: var(--text-color, #2f2723); }
+header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+nav { display: flex; gap: .75rem; flex-wrap: wrap; }
+nav a { padding: .65rem .85rem; border: 1px solid currentColor; border-radius: .5rem; }
+section { padding: 1.25rem; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: .75rem; background: var(--surface-color, #fff); }
+.metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; }
+.metrics div { display: grid; padding: .8rem; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: .5rem; }
+.metrics strong { font-size: 1.5rem; }
+.error { color: #a52828; }
+.notice { font-weight: 600; color: #805500; }
+.actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+button, select, input { min-height: 2.75rem; }
+button { padding: .6rem .85rem; }
+.danger { color: #8a1f1f; border-color: currentColor; }
+form { display: grid; gap: .9rem; max-width: 38rem; }
+label { display: grid; gap: .35rem; }
+.response-row { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: .75rem 0; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); flex-wrap: wrap; }
+@media (max-width: 800px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

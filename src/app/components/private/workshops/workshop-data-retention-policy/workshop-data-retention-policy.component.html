@@ -1,0 +1,91 @@
+<main class="policy-page">
+  <header class="policy-header">
+    <p class="eyebrow">CRM Settings</p>
+    <h1>Workshop privacy and retention</h1>
+    <p>Manage the approved retention policy and verified workshop customer data requests.</p>
+  </header>
+
+  @if (loading()) {
+    <p class="policy-state" role="status">Loading privacy administration&hellip;</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+
+    <section class="policy-section">
+      <h2>Active policy</h2>
+      @if (activePolicy(); as active) {
+        <p><strong>{{ active.policy_version }}</strong> activated
+          {{ active.activated_at | date:'medium' }}</p>
+        <button class="secondary-action" type="button" (click)="retire(active)">Retire active policy</button>
+      } @else {
+        <p class="warning">No active policy. Minimization requests must fail safely until an approved policy is activated.</p>
+      }
+    </section>
+
+    <section class="policy-section">
+      <h2>Create policy draft</h2>
+      <form class="form-grid" (ngSubmit)="createDraft()">
+        <label><span>Version</span><input name="policyVersion" [(ngModel)]="policyVersion" placeholder="2026-02" required /></label>
+        <label><span>Effective time</span><input name="effectiveAt" [(ngModel)]="effectiveAt" type="datetime-local" /></label>
+        <label><span>Operational days</span><input name="operational" [(ngModel)]="operationalRetentionDays" type="number" min="0" /></label>
+        <label><span>Communication days</span><input name="communication" [(ngModel)]="communicationRetentionDays" type="number" min="0" /></label>
+        <label><span>Financial days</span><input name="financial" [(ngModel)]="financialRetentionDays" type="number" min="0" /></label>
+        <label><span>Dispute days</span><input name="dispute" [(ngModel)]="disputeRetentionDays" type="number" min="0" /></label>
+        <label><span>Audit days</span><input name="audit" [(ngModel)]="auditRetentionDays" type="number" min="0" /></label>
+        <button class="primary-action" type="submit">Create draft</button>
+      </form>
+    </section>
+
+    <section class="policy-section">
+      <h2>Policy versions</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Version</th><th>State</th><th>Effective</th><th>Action</th></tr></thead>
+          <tbody>
+            @for (policy of policies(); track policy.workshop_data_retention_policy_id) {
+              <tr>
+                <td>{{ policy.policy_version }}</td>
+                <td>{{ policy.state }}</td>
+                <td>{{ policy.effective_at | date:'medium' }}</td>
+                <td>
+                  @if (policy.state === 'draft') {
+                    <button class="secondary-action" type="button" (click)="approve(policy)">Approve</button>
+                  } @else if (policy.state === 'approved') {
+                    <button class="secondary-action" type="button" (click)="activate(policy)">Activate</button>
+                  } @else { <span class="locked">Content locked</span> }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4">No policy versions have been created.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="policy-section">
+      <h2>Personal-data requests</h2>
+      @for (request of requests(); track request.workshop_personal_data_request_id) {
+        <article class="request-card">
+          <div>
+            <strong>{{ request.request_type }}</strong>
+            <span>{{ request.requested_field_categories.join(', ') }}</span>
+            <span>State: {{ request.state }}</span>
+            @if (request.reason_category) {
+              <span>Reason: {{ request.reason_category }}</span>
+            }
+          </div>
+          @if (canProcess(request)) {
+            <div class="actions">
+              <button class="secondary-action" type="button" (click)="process(request, 'approve')">Process</button>
+              <button type="button" class="danger" (click)="process(request, 'deny')">Deny</button>
+            </div>
+          } @else {
+            <span>Awaiting verification or already resolved</span>
+          }
+        </article>
+      } @empty { <p>No personal-data requests.</p> }
+    </section>
+  }
+</main>

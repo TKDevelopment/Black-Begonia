@@ -1,4 +1,5 @@
 @use './styles/proposal-template-studio';
+@use './styles/workshop-responsive';
 
 @tailwind base;
 @tailwind components;
@@ -33,6 +34,26 @@
 
   .tooltip-fade-out {
     animation: tooltipFadeOut 500ms ease-in forwards;
+  }
+
+  .validation-tooltip {
+    position: absolute;
+    bottom: calc(100% + .5rem);
+    left: 50%;
+    z-index: 50;
+    width: max-content;
+    max-width: min(18rem, 90vw);
+    transform: translate(-50%, -100%);
+    border-radius: .375rem;
+    background: #ea938c;
+    padding: .35rem .65rem;
+    color: white;
+    box-shadow: 0 10px 20px rgba(77, 38, 34, .2);
+    font-size: .7rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: normal;
+    pointer-events: none;
   }
 }
 
@@ -602,3 +623,60 @@ app-payment-options {
     .routing-numbers { font-size: .58rem; letter-spacing: .04em; }
   }
 }
+
+// Workshop editor theme bridge and proposal-builder destructive icon treatment.
+// Kept global so the large workshop editor remains below its component budget.
+app-workshop-editor .workshop-editor {
+  --w-page: var(--crm-page-bg, #f7f4f1);
+  --w-surface: var(--crm-surface, #fff);
+  --w-elevated: var(--crm-surface-elevated, #fffdfa);
+  --w-muted: var(--crm-surface-muted, #f7f2ee);
+  --w-highlight: var(--crm-surface-highlight, #eee7e2);
+  --w-border: var(--crm-border, #e8dfd9);
+  --w-border-strong: var(--crm-border-strong, #d6cdc7);
+  --w-text: var(--crm-text, #292524);
+  --w-strong: var(--crm-text-strong, #292524);
+  --w-muted-text: var(--crm-text-muted, #57534e);
+  --w-soft: var(--crm-text-soft, #78716c);
+  --w-accent: var(--crm-accent, #c46f67);
+  background: var(--w-page);
+  color: var(--w-text);
+}
+
+app-workshop-editor .concept-picker {
+  align-items: end;
+  display: grid;
+  gap: .65rem;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+app-workshop-editor .destructive-icon-button {
+  align-items: center;
+  background: color-mix(in srgb, #f43f5e 10%, var(--w-elevated));
+  border: 1px solid color-mix(in srgb, #f43f5e 35%, var(--w-border));
+  border-radius: .75rem;
+  color: color-mix(in srgb, #e11d48 72%, var(--w-text));
+  display: inline-flex;
+  height: 2.25rem;
+  justify-content: center;
+  padding: 0;
+  transition: background 160ms ease, border-color 160ms ease;
+  width: 2.25rem;
+}
+
+app-workshop-editor .destructive-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, #f43f5e 20%, var(--w-elevated));
+  border-color: color-mix(in srgb, #f43f5e 55%, var(--w-border));
+}
+
+app-workshop-editor .destructive-icon-button svg { height: 1rem; width: 1rem; }
+
+@media (max-width: 700px) {
+  app-workshop-editor .concept-picker {
+    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@include workshop-responsive.styles;

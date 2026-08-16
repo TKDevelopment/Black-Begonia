@@ -1,0 +1,22 @@
+:host { display:block; }
+.workshop-terms-page { position:relative; isolation:isolate; min-height:100vh; padding:3.5rem clamp(1rem,4vw,3rem); background-image:linear-gradient(rgb(41 37 36/.24),rgb(41 37 36/.34)),url('/assets/images/website/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg'); background-position:center; background-size:cover; }
+.workshop-terms-page::before { position:absolute; inset:0; z-index:-1; background:rgb(254 252 250/.12); content:''; }
+.terms-panel { max-width:66rem; padding:clamp(1.35rem,3vw,2.5rem); border:1px solid rgb(255 255 255/.72); border-radius:1rem; background:rgb(254 252 250/.92); box-shadow:0 20px 55px rgb(41 37 36/.22); backdrop-filter:blur(12px); }
+.back-link,.return-action { color:#92544e; font-size:.7rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.policy-meta { margin-top:1.2rem; color:#b8615d; font-size:.67rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+h1,h2 { color:#292524; font-family:'Cormorant Garamond',serif; }
+h1 { margin-top:.6rem; font-size:clamp(2.5rem,6vw,3.7rem); line-height:1; }
+.introduction,section p { margin-top:.8rem; font-size:.94rem; line-height:1.65; }
+section { margin-top:1.75rem; }
+h2 { font-size:1.7rem; line-height:1.15; }
+.terms-copy { white-space:pre-line; }
+.term-clause { margin-top:1.35rem; padding-top:1.35rem; border-top:1px solid #ded5cf; }
+.term-clause:first-child { margin-top:1rem; padding-top:0; border-top:0; }
+.term-clause h3 { color:#3b3430; font-size:1.15rem; font-weight:750; line-height:1.3; }
+.term-clause p { margin-top:.45rem; }
+.return-action { display:inline-flex; margin-top:2rem; padding:.75rem 1rem; border:1px solid #92544e; }
+.page-state { padding:2.5rem 0; text-align:center; }
+a:focus-visible { outline:3px solid #d3938c; outline-offset:4px; }
+@media(min-width:800px){h1{white-space:nowrap}}
+@media(max-width:700px){.workshop-terms-page{padding-top:2rem;padding-right:max(.75rem,env(safe-area-inset-right));padding-bottom:2rem;padding-left:max(.75rem,env(safe-area-inset-left))}.terms-panel{padding:1.25rem;border-radius:.75rem}section{margin-top:1.4rem}}
+@media(max-width:390px){.terms-panel{padding:1rem}h1{font-size:2.3rem}h2{font-size:1.5rem}.introduction,section p{font-size:.9rem}}

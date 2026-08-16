@@ -1,0 +1,141 @@
+<main class="financial-page">
+  <a [routerLink]="['/admin/workshops', occurrenceId]">← Workshop operations</a>
+  <header>
+    <div>
+      <span>Workshop financials</span>
+      <h1>{{ occurrence()?.title_snapshot ?? 'Workshop' }}</h1>
+      <p>Immutable revenue, refunds, fees, expenses, and reconciliation history.</p>
+    </div>
+    <button type="button" (click)="downloadExport()" [disabled]="!entries().length">
+      Export reporting CSV
+    </button>
+  </header>
+
+  @if (loading()) {
+    <p role="status">Loading workshop financials…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+  @if (message()) { <p class="success" role="status">{{ message() }}</p> }
+
+  @if (summary(); as totals) {
+    <section class="metrics" aria-label="Financial summary">
+      <div><span>Gross revenue</span><strong>{{ money(totals.grossRevenueMinor) }}</strong></div>
+      <div><span>Refunds</span><strong>{{ money(totals.refundsMinor) }}</strong></div>
+      <div><span>Provider fees</span><strong>{{ money(totals.providerFeesMinor) }}</strong></div>
+      <div><span>Expenses</span><strong>{{ money(totals.expensesMinor) }}</strong></div>
+      <div><span>Net result</span><strong>{{ money(totals.netIncomeMinor) }}</strong></div>
+      <div><span>Open exceptions</span><strong>{{ totals.openExceptionCount }}</strong></div>
+    </section>
+  }
+
+  @if (attentionEntries().length) {
+    <section class="attention" aria-labelledby="attention-heading">
+      <h2 id="attention-heading">Disputes and reversals</h2>
+      <p>These facts require review. They have not cancelled bookings or released seats.</p>
+      @for (entry of attentionEntries(); track entry.source_id) {
+        <p><strong>{{ entry.entry_category }}</strong> · {{ money(entry.signed_amount_minor) }}
+          · {{ entry.traceable_reference }}</p>
+      }
+    </section>
+  }
+
+  <div class="columns">
+    <section aria-labelledby="expense-heading">
+      <h2 id="expense-heading">Add direct expense</h2>
+      <form [formGroup]="expenseForm" (ngSubmit)="submitExpense()">
+        <label>Category
+          <select formControlName="category">
+            <option value="materials">Materials</option><option value="venue">Venue</option>
+            <option value="labor">Labor</option><option value="marketing">Marketing</option>
+            <option value="travel">Travel</option><option value="equipment">Equipment</option>
+            <option value="fees">Fees</option><option value="other">Other</option>
+          </select>
+        </label>
+        <label>Description <input formControlName="description" maxlength="500" /></label>
+        <label>Vendor or payee <input formControlName="vendorOrPayee" maxlength="160" /></label>
+        <label>Amount in cents <input type="number" min="1" step="1" formControlName="amountMinor" /></label>
+        <label>Expense date <input type="date" formControlName="expenseDate" /></label>
+        <label>Note <textarea formControlName="note" maxlength="500"></textarea></label>
+        <label>Private receipt evidence
+          <input type="file" accept=".jpg,.jpeg,.png,.pdf" (change)="selectReceipt($event)" />
+        </label>
+        <button type="submit" [disabled]="busy()">Record expense</button>
+      </form>
+    </section>
+
+    <section aria-labelledby="refund-heading">
+      <h2 id="refund-heading">Stripe refunds</h2>
+      <p>Eligibility uses the trusted charge and remaining balance. Refunds never cancel seats.</p>
+      <ul class="charge-list">
+        @for (entry of chargeEntries(); track entry.source_id) {
+          <li>
+            <span>{{ entry.entry_date | date:'mediumDate' }} · {{ money(entry.signed_amount_minor) }}
+              · {{ entry.traceable_reference }}</span>
+            <button type="button" (click)="inspectRefund(entry.source_id)" [disabled]="busy()">
+              Check refund balance
+            </button>
+          </li>
+        } @empty { <li>No trusted charges available.</li> }
+      </ul>
+      @if (refundEligibility(); as eligibility) {
+        <form [formGroup]="refundForm" (ngSubmit)="submitRefund()">
+          <p>Remaining refundable: <strong>{{ money(eligibility.remainingRefundableMinor) }}</strong>
+            {{ eligibility.currency }}</p>
+          <label>Amount in cents
+            <input type="number" min="1" step="1"
+              [max]="eligibility.remainingRefundableMinor" formControlName="amountMinor" />
+          </label>
+          <label>Reason
+            <select formControlName="reason">
+              <option value="customer_requested">Customer requested</option>
+              <option value="duplicate">Duplicate payment</option>
+              <option value="fraudulent">Fraudulent</option>
+              <option value="event_cancelled">Workshop cancelled</option>
+              <option value="other">Other approved reason</option>
+            </select>
+          </label>
+          <button type="submit" [disabled]="busy()">Confirm Stripe refund request</button>
+        </form>
+      }
+    </section>
+  </div>
+
+  <section aria-labelledby="external-heading">
+    <h2 id="external-heading">Record external Venmo refund</h2>
+    <form class="inline-form" [formGroup]="externalRefundForm" (ngSubmit)="submitExternalRefund()">
+      <label>Original transaction ID <input formControlName="transactionId" /></label>
+      <label>Amount in cents <input type="number" min="1" step="1" formControlName="amountMinor" /></label>
+      <label>External reference <input formControlName="reference" /></label>
+      <label>Completed at <input type="datetime-local" formControlName="occurredAt" /></label>
+      <button type="submit" [disabled]="busy()">Record completed refund</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="exceptions-heading">
+    <h2 id="exceptions-heading">Payment exceptions</h2>
+    @for (exception of exceptions(); track exception.workshop_payment_exception_id) {
+      <article [class.urgent]="exception.urgency === 'urgent'">
+        <div><strong>{{ exception.exception_type.replaceAll('_', ' ') }}</strong>
+          <p>{{ exception.summary }} {{ exception.safe_detail }}</p></div>
+        @if (exception.state !== 'resolved') {
+          <button type="button" (click)="resolveException(exception)" [disabled]="busy()">Resolve</button>
+        }
+      </article>
+    } @empty { <p>No payment exceptions.</p> }
+  </section>
+
+  <section aria-labelledby="history-heading">
+    <h2 id="history-heading">Immutable history</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Category</th><th>Source</th><th>Amount</th><th>State</th><th>Reference</th></tr></thead>
+      <tbody>
+        @for (entry of entries(); track entry.source_type + entry.source_id) {
+          <tr><td>{{ entry.entry_date | date:'medium' }}</td><td>{{ entry.entry_category }}</td>
+            <td>{{ entry.method }}</td><td>{{ money(entry.signed_amount_minor) }}</td>
+            <td>{{ entry.transaction_state }}</td><td>{{ entry.traceable_reference }}</td></tr>
+        }
+      </tbody>
+    </table></div>
+  </section>
+</main>

@@ -1,0 +1,465 @@
+@mixin styles {
+  :where(
+    app-workshops,
+    app-workshop-detail,
+    app-workshop-terms-and-conditions,
+    app-workshop-reservation,
+    app-workshop-booking-status,
+    app-admin-workshops,
+    app-workshop-editor,
+    app-workshop-customer-preview,
+    app-workshop-occurrence-detail,
+    app-workshop-roster,
+    app-workshop-financials,
+    app-workshop-data-retention-policy,
+    app-payment-options,
+    app-payment-status,
+    app-payments,
+    app-payment-obligation-modal,
+    app-payment-settings-modal
+  ) {
+    --workshop-responsive-contract: phone-tablet-laptop-desktop-ultrawide;
+    display: block;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  :where(
+    app-workshops,
+    app-workshop-detail,
+    app-workshop-terms-and-conditions,
+    app-workshop-reservation,
+    app-workshop-booking-status,
+    app-admin-workshops,
+    app-workshop-editor,
+    app-workshop-customer-preview,
+    app-workshop-occurrence-detail,
+    app-workshop-roster,
+    app-workshop-financials,
+    app-workshop-data-retention-policy,
+    app-payment-options,
+    app-payment-status,
+    app-payments,
+    app-payment-obligation-modal,
+    app-payment-settings-modal
+  ) :where(main, section, article, header, footer, nav, aside, form, fieldset, div, dl, ol, ul) {
+    min-inline-size: 0;
+  }
+
+  :where(
+    app-workshops,
+    app-workshop-detail,
+    app-workshop-terms-and-conditions,
+    app-workshop-reservation,
+    app-workshop-booking-status,
+    app-admin-workshops,
+    app-workshop-editor,
+    app-workshop-customer-preview,
+    app-workshop-occurrence-detail,
+    app-workshop-roster,
+    app-workshop-financials,
+    app-workshop-data-retention-policy,
+    app-payment-options,
+    app-payment-status,
+    app-payments,
+    app-payment-obligation-modal,
+    app-payment-settings-modal
+  ) :where(h1, h2, h3, p, dd, li, a, button, label) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(
+    app-workshops,
+    app-workshop-detail,
+    app-workshop-terms-and-conditions,
+    app-workshop-reservation,
+    app-workshop-booking-status,
+    app-admin-workshops,
+    app-workshop-editor,
+    app-workshop-customer-preview,
+    app-workshop-occurrence-detail,
+    app-workshop-roster,
+    app-workshop-financials,
+    app-workshop-data-retention-policy,
+    app-payment-options,
+    app-payment-status,
+    app-payments,
+    app-payment-obligation-modal,
+    app-payment-settings-modal
+  ) :where(img, svg, video, canvas, input, select, textarea, button) {
+    max-inline-size: 100%;
+  }
+
+  app-workshops .workshops-page { container: workshops-public / inline-size; }
+  app-workshop-detail .detail-page { container: workshop-detail / inline-size; }
+  app-workshop-terms-and-conditions .workshop-terms-page { container: workshop-terms / inline-size; }
+  app-workshop-reservation .reservation-page { container: workshop-reservation / inline-size; }
+  app-workshop-booking-status .status-page { container: workshop-status / inline-size; }
+  app-admin-workshops .workshops-admin { container: workshops-admin / inline-size; }
+  app-workshop-editor .workshop-editor { container: workshop-editor / inline-size; }
+  app-workshop-customer-preview .preview-panel { container: workshop-preview / inline-size; }
+  app-workshop-occurrence-detail .detail-page { container: workshop-occurrence / inline-size; }
+  app-workshop-roster .roster-page { container: workshop-roster / inline-size; }
+  app-workshop-financials .financial-page { container: workshop-financials / inline-size; }
+  app-workshop-data-retention-policy .policy-page { container: workshop-policy / inline-size; }
+  app-payment-options .payment-page { container: payment-options / inline-size; }
+  app-payment-status .status-page { container: payment-status / inline-size; }
+
+  app-workshop-occurrence-detail .detail-page,
+  app-workshop-data-retention-policy .policy-page {
+    inline-size: 100%;
+    margin-inline: auto;
+    max-inline-size: 90rem;
+  }
+
+  app-workshop-roster .roster-page {
+    inline-size: 100%;
+    margin-inline: auto;
+    max-inline-size: 118rem;
+  }
+
+  app-workshop-roster .table-wrap,
+  app-workshop-financials .table-wrap,
+  app-workshop-data-retention-policy .table-wrap {
+    max-inline-size: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  app-workshop-financials .table-wrap table { min-inline-size: 46rem; }
+  app-workshop-data-retention-policy .table-wrap table { min-inline-size: 48rem; }
+
+  app-workshop-customer-preview .preview-panel,
+  app-workshop-roster .reservation-modal,
+  app-payment-obligation-modal [role='dialog'],
+  app-payment-settings-modal [role='dialog'] {
+    max-block-size: calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)));
+    max-inline-size: calc(100vw - max(1rem, env(safe-area-inset-left)) - max(1rem, env(safe-area-inset-right)));
+    overscroll-behavior: contain;
+  }
+
+  @container workshops-public (max-width: 53.125rem) {
+    app-workshops .featured.featured { grid-template-columns: 1fr; }
+    app-workshops .carousel-controls.carousel-controls {
+      grid-column: 1 / -1;
+      justify-content: center;
+      position: static;
+      padding: 0 1rem 1rem;
+    }
+    app-workshops .workshop-row.workshop-row { grid-template-columns: 3.2rem 6rem minmax(0, 1fr); }
+    app-workshops .workshop-action.workshop-action { align-items: flex-start; grid-column: 3; text-align: start; }
+    app-workshops .private-inquiry.private-inquiry { grid-template-columns: auto minmax(0, 1fr); }
+    app-workshops .private-inquiry > .outline-button { grid-column: 2; justify-self: start; white-space: normal; }
+  }
+
+  @media (max-width: 40rem) {
+    app-workshops .workshops-content { padding-block: 2.5rem 3.5rem; }
+    app-workshops .featured.featured {
+      border-radius: .7rem;
+      box-shadow: 0 1.4rem 3rem rgb(55 42 36 / .14);
+      margin-bottom: 4.25rem;
+      overflow: hidden;
+    }
+    app-workshops .featured-image.featured-image { padding: 0; }
+    app-workshops .featured-copy.featured-copy { padding: 1.65rem 1.35rem 1.35rem; }
+    app-workshops .featured-copy .featured-count { margin-top: 1rem; }
+    app-workshops .featured-copy h2 { font-size: clamp(2.45rem, 12vw, 3.45rem); }
+    app-workshops .featured-copy .primary-button { inline-size: 100%; margin-top: 1.35rem; }
+    app-workshops .carousel-controls.carousel-controls {
+      border-top: 1px solid rgb(255 255 255 / .12);
+      padding-block: .8rem;
+    }
+    app-workshops .section-heading.section-heading { margin-bottom: 1.35rem; }
+    app-workshops .section-heading h2 { font-size: clamp(2.6rem, 13vw, 3.5rem); line-height: .94; }
+    app-workshops .workshop-list.workshop-list { display: grid; gap: 1.25rem; }
+    app-workshops .workshop-row.workshop-row {
+      --workshop-mobile-layout: editorial-event-card;
+      align-items: start;
+      background: #fff;
+      border: 1px solid #dfd3cc;
+      border-radius: .75rem;
+      box-shadow: 0 .8rem 2rem rgb(67 48 40 / .08);
+      gap: 0;
+      grid-template-columns: minmax(0, 1fr);
+      overflow: hidden;
+      padding: 0;
+      position: relative;
+    }
+    app-workshops .workshop-row:last-child { border-bottom: 1px solid #dfd3cc; }
+    app-workshops .workshop-row > img {
+      grid-column: 1;
+      grid-row: 1;
+      inline-size: 100%;
+      width: 100%;
+    }
+    app-workshops .date-block.date-block {
+      align-items: center;
+      background: rgb(46 41 38 / .94);
+      border: 1px solid rgb(255 255 255 / .22);
+      border-radius: .35rem;
+      box-shadow: 0 .45rem 1rem rgb(28 22 19 / .2);
+      display: grid;
+      inset-block-start: .75rem;
+      inset-inline-start: .75rem;
+      min-inline-size: 3.7rem;
+      padding: .5rem .65rem .55rem;
+      position: absolute;
+      text-align: center;
+      z-index: 1;
+    }
+    app-workshops .date-block span { color: #efb8b2; font-size: .62rem; }
+    app-workshops .date-block strong { color: #fff; font-size: 2rem; }
+    app-workshops .workshop-copy.workshop-copy {
+      grid-column: 1;
+      padding: 1.35rem 1.2rem .75rem;
+    }
+    app-workshops .workshop-copy h3 { font-size: clamp(1.85rem, 9vw, 2.35rem); }
+    app-workshops .workshop-copy > p:not(.theme) { font-size: .9rem; }
+    app-workshops .workshop-action.workshop-action {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: .65rem .85rem;
+      grid-column: 1;
+      inline-size: 100%;
+      padding: 0 1.2rem 1.2rem;
+      text-align: start;
+    }
+    app-workshops .workshop-action .seat-urgency { flex: 1 0 100%; margin: 0; }
+    app-workshops .workshop-action .availability { margin-inline-end: auto; }
+    app-workshops .workshop-action > strong {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem;
+      line-height: 1;
+    }
+    app-workshops .details-button.details-button {
+      flex: 1 0 100%;
+      inline-size: 100%;
+      min-block-size: 3rem;
+    }
+    app-workshops .private-inquiry.private-inquiry { grid-template-columns: 1fr; }
+    app-workshops .private-inquiry > .outline-button { grid-column: 1; inline-size: 100%; }
+  }
+
+  @container workshop-detail (max-width: 60rem) {
+    app-workshop-detail .hero-composition.hero-composition { grid-template-columns: 1fr; }
+    app-workshop-detail .series-date-row.series-date-row { grid-template-columns: minmax(0, 1fr) auto; }
+    app-workshop-detail .series-date-actions.series-date-actions { grid-column: 1 / -1; }
+    app-workshop-detail .detail-footer.detail-footer { grid-template-columns: auto minmax(0, 1fr); }
+    app-workshop-detail .detail-footer a { grid-column: 2; justify-self: start; }
+  }
+
+  @container workshop-detail (max-width: 40rem) {
+    app-workshop-detail .breadcrumb.breadcrumb { margin-bottom: 10px; }
+    app-workshop-detail .gallery > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    app-workshop-detail .series-date-row.series-date-row { grid-template-columns: 1fr; }
+    app-workshop-detail .series-date-actions.series-date-actions { grid-column: auto; inline-size: 100%; white-space: normal; }
+    app-workshop-detail .series-date-actions a { flex: 1 1 10rem; }
+    app-workshop-detail .detail-footer.detail-footer { grid-template-columns: 1fr; }
+    app-workshop-detail .detail-footer a { grid-column: 1; justify-self: stretch; white-space: normal; }
+  }
+
+  @container workshop-terms (max-width: 43.75rem) {
+    app-workshop-terms-and-conditions .terms-panel.terms-panel { inline-size: 100%; padding: clamp(1rem, 4vw, 1.25rem); }
+    app-workshop-terms-and-conditions h1 { white-space: normal; }
+    app-workshop-terms-and-conditions .return-action.return-action { justify-content: center; inline-size: 100%; }
+  }
+
+  @container workshop-reservation (max-width: 60rem) {
+    app-workshop-reservation .reservation-panel.reservation-panel { grid-template-columns: 1fr; margin-inline: auto; max-inline-size: 46rem; }
+  }
+
+  @container workshop-reservation (max-width: 37.5rem) {
+    app-workshop-reservation .reservation-panel.reservation-panel { gap: 1.25rem; padding: clamp(.8rem, 3vw, 1rem); }
+    app-workshop-reservation .form-row.form-row { grid-template-columns: 1fr; gap: 0; }
+    app-workshop-reservation .summary-total.summary-total { align-items: flex-start; flex-direction: column; }
+    app-workshop-reservation .booking-form.booking-form,
+    app-workshop-reservation .venmo-handoff.venmo-handoff { padding: clamp(.8rem, 3vw, 1rem); }
+  }
+
+  @container workshop-status (max-width: 43.75rem) {
+    app-workshop-booking-status .event-facts.event-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    app-workshop-booking-status .actions.actions { flex-direction: column; }
+    app-workshop-booking-status .actions button { inline-size: 100%; }
+  }
+
+  @container workshop-status (max-width: 26.875rem) {
+    app-workshop-booking-status .event-facts.event-facts { grid-template-columns: 1fr; }
+    app-workshop-booking-status .event-fact--wide { grid-column: auto; }
+    app-workshop-booking-status .contact-links,
+    app-workshop-booking-status .pending-contact-links { flex-direction: column; }
+    app-workshop-booking-status button,
+    app-workshop-booking-status .browse-button { inline-size: 100%; }
+  }
+
+  @container workshops-admin (max-width: 45rem) {
+    app-admin-workshops .workshop-row > div { align-items: stretch !important; flex-direction: column !important; }
+    app-admin-workshops .workshop-row dl { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    app-admin-workshops .workshop-row > div > div:last-child { inline-size: 100%; }
+  }
+
+  @container workshops-admin (max-width: 30rem) {
+    app-admin-workshops .workshop-row dl { grid-template-columns: 1fr !important; }
+    app-admin-workshops .workshop-row > div > div:last-child > button { flex: 1 1 100%; }
+  }
+
+  @container workshop-editor (max-width: 62.5rem) {
+    app-workshop-editor .occurrence-row.occurrence-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    app-workshop-editor .occurrence-remove-cell.occurrence-remove-cell { grid-column: 2; }
+  }
+
+  @container workshop-editor (max-width: 43.75rem) {
+    app-workshop-editor .form-grid.form-grid,
+    app-workshop-editor .media-uploader.media-uploader,
+    app-workshop-editor .occurrence-row.occurrence-row,
+    app-workshop-editor .pending-media-list li { grid-template-columns: 1fr; }
+    app-workshop-editor :where(.field.full, .venue-name, .address-field, .city-field, .state-field, .zip-field, .occurrence-remove-cell) { grid-column: auto; }
+    app-workshop-editor .media-upload.media-upload { inline-size: 100%; }
+  }
+
+  @container workshop-editor (max-width: 32.5rem) {
+    app-workshop-editor .sticky-actions.sticky-actions { display: grid; grid-template-columns: 1fr; }
+    app-workshop-editor .sticky-actions button,
+    app-workshop-editor .series-update-actions button { inline-size: 100%; }
+    app-workshop-editor .scope-options.scope-options { align-items: stretch; flex-direction: column; }
+    app-workshop-editor .media-actions.media-actions { flex-wrap: wrap; }
+  }
+
+  @container workshop-preview (max-width: 42.5rem) {
+    app-workshop-customer-preview .details-grid.details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    app-workshop-customer-preview .details-grid > div:first-child { grid-column: 1 / -1; }
+    app-workshop-customer-preview .experience.experience { grid-template-columns: 1fr; }
+    app-workshop-customer-preview .gallery-grid.gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @container workshop-occurrence (max-width: 50rem) {
+    app-workshop-occurrence-detail .metrics.metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @container workshop-occurrence (max-width: 32.5rem) {
+    app-workshop-occurrence-detail .metrics.metrics { grid-template-columns: 1fr; }
+    app-workshop-occurrence-detail header,
+    app-workshop-occurrence-detail .response-row { align-items: stretch; flex-direction: column; }
+    app-workshop-occurrence-detail nav,
+    app-workshop-occurrence-detail nav a,
+    app-workshop-occurrence-detail .actions,
+    app-workshop-occurrence-detail .actions button { inline-size: 100%; }
+  }
+
+  @container workshop-roster (max-width: 65.625rem) {
+    app-workshop-roster .roster-toolbar.roster-toolbar { grid-template-columns: minmax(15rem, 1fr) minmax(10rem, 13rem); }
+    app-workshop-roster .roster-toolbar button { inline-size: 100%; }
+  }
+
+  @container workshop-roster (max-width: 56.25rem) {
+    app-workshop-roster .metrics.metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    app-workshop-roster .two-column.two-column { grid-template-columns: 1fr; }
+    app-workshop-roster .waitlist-header.waitlist-header { align-items: flex-start; flex-direction: column; }
+    app-workshop-roster .waitlist-controls.waitlist-controls { inline-size: 100%; justify-content: flex-start; }
+  }
+
+  @container workshop-roster (max-width: 37.5rem) {
+    app-workshop-roster .roster-toolbar.roster-toolbar,
+    app-workshop-roster .form-grid.form-grid { grid-template-columns: 1fr; }
+    app-workshop-roster .waitlist-controls.waitlist-controls,
+    app-workshop-roster .modal-actions.modal-actions { align-items: stretch; flex-direction: column; }
+    app-workshop-roster .waitlist-entry.waitlist-entry { grid-template-columns: 2rem minmax(0, 1fr); }
+    app-workshop-roster .seat-request,
+    app-workshop-roster .waitlist-entry > .status-badge { grid-column: 2; }
+    app-workshop-roster .modal-actions button { inline-size: 100%; }
+  }
+
+  @container workshop-roster (max-width: 26.875rem) {
+    app-workshop-roster .metrics.metrics { grid-template-columns: 1fr; }
+  }
+
+  @container workshop-financials (max-width: 47.5rem) {
+    app-workshop-financials .columns.columns { grid-template-columns: 1fr; }
+    app-workshop-financials :where(header, .charge-list li, article) { align-items: stretch; flex-direction: column; }
+  }
+
+  @container workshop-financials (max-width: 32.5rem) {
+    app-workshop-financials .metrics.metrics { grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr)); }
+    app-workshop-financials button { inline-size: 100%; }
+  }
+
+  @container workshop-policy (max-width: 50rem) {
+    app-workshop-data-retention-policy .form-grid.form-grid { grid-template-columns: 1fr; }
+    app-workshop-data-retention-policy .request-card.request-card { align-items: flex-start; flex-direction: column; }
+  }
+
+  @container workshop-policy (max-width: 32.5rem) {
+    app-workshop-data-retention-policy .actions.actions { align-items: stretch; flex-direction: column; inline-size: 100%; }
+    app-workshop-data-retention-policy .actions button,
+    app-workshop-data-retention-policy .primary-action { inline-size: 100%; }
+  }
+
+  @container payment-options (max-width: 30rem) {
+    app-payment-options .payment-card.payment-card { border-radius: 1.35rem; padding: clamp(1rem, 4vw, 1.15rem); }
+    app-payment-options .breakdown.breakdown { grid-template-columns: 1fr; }
+    app-payment-options .method-button.method-button { grid-template-columns: 2.2rem minmax(0, 1fr) auto; }
+    app-payment-options .check-topline,
+    app-payment-options .check-bottomline { align-items: stretch; flex-direction: column; gap: .6rem; }
+    app-payment-options .check-date,
+    app-payment-options .check-memo,
+    app-payment-options .check-signature { inline-size: 100%; margin-inline: 0; }
+  }
+
+  @container payment-status (max-width: 30rem) {
+    app-payment-status .status-card.status-card { border-radius: 1.35rem; padding: clamp(1.15rem, 6vw, 2rem); }
+    app-payment-status h1 { font-size: clamp(2.2rem, 11vw, 3rem); line-height: 1; }
+  }
+
+  @media (max-width: 40rem) {
+    app-workshops .workshops-content,
+    app-workshop-detail .detail-page,
+    app-workshop-terms-and-conditions .workshop-terms-page,
+    app-workshop-reservation .reservation-page,
+    app-workshop-booking-status .status-page,
+    app-workshop-roster .roster-page,
+    app-workshop-financials .financial-page,
+    app-workshop-data-retention-policy .policy-page,
+    app-workshop-occurrence-detail .detail-page,
+    app-payment-options .payment-page,
+    app-payment-status .status-page {
+      padding-left: max(.75rem, env(safe-area-inset-left)) !important;
+      padding-right: max(.75rem, env(safe-area-inset-right)) !important;
+    }
+
+    app-workshop-detail .detail-page,
+    app-workshop-terms-and-conditions .workshop-terms-page,
+    app-workshop-reservation .reservation-page,
+    app-workshop-booking-status .status-page,
+    app-payment-options .payment-page,
+    app-payment-status .status-page {
+      padding-bottom: max(2rem, env(safe-area-inset-bottom)) !important;
+    }
+
+    app-workshop-customer-preview .preview-backdrop,
+    app-workshop-roster .modal-backdrop,
+    app-payment-obligation-modal > div,
+    app-payment-settings-modal > div {
+      padding-top: max(.5rem, env(safe-area-inset-top)) !important;
+      padding-right: max(.5rem, env(safe-area-inset-right)) !important;
+      padding-bottom: max(.5rem, env(safe-area-inset-bottom)) !important;
+      padding-left: max(.5rem, env(safe-area-inset-left)) !important;
+    }
+
+    app-payment-obligation-modal header,
+    app-payment-settings-modal header,
+    app-payment-settings-modal footer {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    app-payment-obligation-modal .history { grid-template-columns: 1fr; }
+    app-payment-obligation-modal .history > :last-child { text-align: start; }
+    app-payment-obligation-modal .action,
+    app-payment-settings-modal :where(.primary, .secondary) { inline-size: 100%; }
+    app-payment-settings-modal .toggle { align-items: flex-start; }
+  }
+}

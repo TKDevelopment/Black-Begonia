@@ -6,7 +6,7 @@ import {
   NavigationStart,
   Router,
 } from '@angular/router';
-import { BehaviorSubject, filter, Subscription } from 'rxjs';
+import { BehaviorSubject, filter, firstValueFrom, Subscription, take } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ANALYTICS_PRODUCTION_ORIGIN,
@@ -20,7 +20,11 @@ import {
   AnalyticsRouteClassification,
   AnalyticsRouteData,
   AnalyticsRuntimeState,
+  WorkshopAnalyticsPlacement,
+  WorkshopAnalyticsProvider,
+  WorkshopAnalyticsQuantityBand,
 } from './analytics.models';
+import type { WorkshopBookingService } from '../supabase/services/workshop-booking.service';
 import { AnalyticsPreferenceService } from './analytics-preference.service';
 import { AnalyticsRegionService } from './analytics-region.service';
 import { AnalyticsRoutePolicyService } from './analytics-route-policy.service';
@@ -50,6 +54,7 @@ export class WebsiteAnalyticsService {
   };
   private previousPage: string | null = null;
   private campaign: AnalyticsCampaignContext = {};
+  private readonly workshopMilestones = new Set<string>();
 
   private readonly stateSubject = new BehaviorSubject<AnalyticsRuntimeState>('inactive');
   readonly state$ = this.stateSubject.asObservable();
@@ -139,6 +144,83 @@ export class WebsiteAnalyticsService {
     this.track('not_found', { page_category: 'not_found' });
   }
 
+  trackWorkshopSelection(
+    placement: WorkshopAnalyticsPlacement,
+    publicContentId: string,
+  ): void {
+    this.trackWorkshopOnce('workshop_select', {
+      placement,
+      content_category: 'workshop',
+      content_id: publicContentId,
+    });
+  }
+
+  trackWorkshopDetailView(publicContentId: string): void {
+    this.trackWorkshopOnce('workshop_detail_view', {
+      content_category: 'workshop',
+      content_id: publicContentId,
+    });
+  }
+
+  trackWorkshopReservationStart(
+    publicContentId: string,
+    quantity: number,
+  ): void {
+    this.trackWorkshopOnce('workshop_reservation_start', {
+      content_category: 'workshop',
+      content_id: publicContentId,
+      quantity_band: this.quantityBand(quantity),
+    });
+  }
+
+  trackWorkshopCheckoutStart(
+    provider: WorkshopAnalyticsProvider,
+    quantity: number,
+  ): void {
+    this.trackWorkshopOnce('workshop_checkout_start', {
+      content_category: 'workshop',
+      provider,
+      quantity_band: this.quantityBand(quantity),
+    });
+  }
+
+  async processPendingWorkshopOutcome(
+    bookingService: WorkshopBookingService,
+    expectedPublicContentId: string,
+  ): Promise<void> {
+    if (['resolving', 'loading'].includes(this.state)) {
+      await firstValueFrom(this.state$.pipe(
+        filter((state) => !['resolving', 'loading'].includes(state)),
+        take(1),
+      ));
+    }
+    const normalizedId = this.sanitizer.normalizePublicContentId(
+      expectedPublicContentId,
+    );
+    const permitted = this.state === 'enabled'
+      && this.currentRoute.eligible
+      && this.currentRoute.pageCategory === 'workshop_detail'
+      && this.currentRoute.contentId === normalizedId;
+    const outcome = await bookingService.resolvePendingAnalyticsOutcome(
+      permitted,
+    );
+    if (
+      !permitted
+      || !outcome
+      || outcome.publicContentId !== normalizedId
+    ) {
+      return;
+    }
+    this.trackWorkshopOnce('workshop_booking_confirmed', {
+      content_category: outcome.category,
+      content_id: outcome.publicContentId,
+      currency: outcome.currency,
+      ...(outcome.valueMinor === undefined
+        ? {}
+        : { value: outcome.valueMinor / 100 }),
+    });
+  }
+
   private async handleNavigation(event: NavigationEnd): Promise<void> {
     const data = this.leafAnalyticsData(this.router.routerState.snapshot.root);
     this.currentRoute = this.routes.classify(event.urlAfterRedirects, data);
@@ -226,6 +308,35 @@ export class WebsiteAnalyticsService {
     if (sanitized) {
       this.google.send(name, sanitized);
     }
+  }
+
+  private trackWorkshopOnce(
+    name: Extract<
+      AnalyticsEventName,
+      | 'workshop_select'
+      | 'workshop_detail_view'
+      | 'workshop_reservation_start'
+      | 'workshop_checkout_start'
+      | 'workshop_booking_confirmed'
+    >,
+    parameters: AnalyticsEventParameters,
+  ): void {
+    if (this.state !== 'enabled' || !this.currentRoute.eligible) return;
+    const sanitized = this.sanitizer.sanitizeEvent(name, {
+      page_category: this.currentRoute.pageCategory ?? 'not_found',
+      ...parameters,
+    });
+    if (!sanitized) return;
+    const key = `${name}:${JSON.stringify(sanitized)}`;
+    if (this.workshopMilestones.has(key)) return;
+    this.workshopMilestones.add(key);
+    this.google.send(name, sanitized);
+  }
+
+  private quantityBand(quantity: number): WorkshopAnalyticsQuantityBand {
+    if (quantity <= 1) return 'one';
+    if (quantity === 2) return 'two';
+    return 'three_plus';
   }
 
   private sendPageView(): void {

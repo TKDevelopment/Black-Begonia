@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CheckoutHandoff, CustomerPaymentProjection, PaymentMethodChoice } from '../../../core/models/payment-request';
 import { CustomerPaymentService } from '../../../core/supabase/services/customer-payment.service';
 
@@ -47,9 +47,8 @@ function spellDollars(value: number): string {
   templateUrl: './payment-options.component.html',
   styleUrl: './payment-options.component.scss',
 })
-export class PaymentOptionsComponent implements OnInit, AfterViewInit {
+export class PaymentOptionsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly payments = inject(CustomerPaymentService);
 
   readonly loading = signal(true);
@@ -69,8 +68,6 @@ export class PaymentOptionsComponent implements OnInit, AfterViewInit {
     }
     this.loading.set(false);
   }
-
-  ngAfterViewInit(): void {}
 
   money(cents: number | undefined) {
     return cents == null
@@ -140,7 +137,7 @@ export class PaymentOptionsComponent implements OnInit, AfterViewInit {
         ...this.projection(),
         intention: {
           method: 'venmo_business_profile',
-          pauseEndsAt: new Date(Date.now() + 604800000).toISOString(),
+          pauseEndsAt: handoff.pauseEndsAt,
         },
       });
       return;
@@ -155,20 +152,5 @@ export class PaymentOptionsComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    await this.payments.loadPayPalSdk(handoff.clientId);
-    const paypal = (globalThis as any).paypal;
-    if (!paypal?.Buttons) throw new Error('Venmo is unavailable on this device.');
-    paypal.Buttons({
-      fundingSource: paypal.FUNDING.VENMO,
-      createOrder: () => handoff.orderId,
-      onApprove: async () => {
-        await this.payments.captureVenmo(this.token, handoff.attempt);
-        void this.router.navigate(['/pay', this.token, 'status'], {
-          queryParams: { attempt: handoff.attempt },
-        });
-      },
-      onCancel: () => this.error.set('Venmo approval was canceled. Your balance is still outstanding.'),
-      onError: () => this.error.set('Venmo could not be completed. Try another method.'),
-    }).render('#venmo-buttons');
   }
 }

@@ -28,10 +28,12 @@ export class SidebarComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   readonly crmThemeService = inject(CrmThemeService);
-  readonly proposalSettingsOpen = signal(
-    this.router.url.startsWith('/admin/catalog-items') ||
-      this.router.url.startsWith('/admin/tax-regions')
-  );
+  readonly openNavGroups = signal<Record<string, boolean>>({
+    'Proposal Settings':
+      this.router.url.startsWith('/admin/catalog-items') ||
+      this.router.url.startsWith('/admin/tax-regions'),
+    'CRM Settings': this.router.url.startsWith('/admin/settings/'),
+  });
 
   readonly navItems: SidebarNavItem[] = [
     { label: 'Dashboard', route: '/admin/dashboard', exact: true },
@@ -40,6 +42,7 @@ export class SidebarComponent {
     { label: 'Organizations', route: '/admin/organizations' },
     { label: 'Projects', route: '/admin/projects' },
     { label: 'Payments', route: '/admin/payments' },
+    { label: 'Workshops', route: '/admin/workshops' },
     { label: 'Tasks', route: '/admin/tasks' },
   ];
 
@@ -49,6 +52,15 @@ export class SidebarComponent {
       children: [
         { label: 'Catalog', route: '/admin/catalog-items' },
         { label: 'Tax Regions', route: '/admin/tax-regions' },
+      ],
+    },
+    {
+      label: 'CRM Settings',
+      children: [
+        {
+          label: 'Privacy & Retention',
+          route: '/admin/settings/workshop-privacy-policy',
+        },
       ],
     },
   ];
@@ -62,8 +74,15 @@ export class SidebarComponent {
     this.crmThemeService.toggle();
   }
 
-  toggleProposalSettings(): void {
-    this.proposalSettingsOpen.update((open) => !open);
+  toggleNavGroup(label: string): void {
+    this.openNavGroups.update((groups) => ({
+      ...groups,
+      [label]: !groups[label],
+    }));
+  }
+
+  isNavGroupOpen(label: string): boolean {
+    return this.openNavGroups()[label] ?? false;
   }
 
   isRouteActive(route: string, exact = false): boolean {
