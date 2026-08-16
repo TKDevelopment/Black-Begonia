@@ -1,0 +1,109 @@
+<main class="detail-page" [attr.aria-busy]="loading()">
+  <div *ngIf="loading()" class="detail-state" aria-live="polite">Loading workshop details&hellip;</div>
+  <div *ngIf="!loading() && error()" class="detail-state" role="alert">
+    <h1>Workshop unavailable</h1><p>{{ error() }}</p>
+    <a routerLink="/workshops">Browse upcoming workshops</a>
+  </div>
+  <div *ngIf="!loading() && notFound()" class="detail-state">
+    <h1>Workshop not found</h1>
+    <p>This date may no longer be public, or the link may be incomplete.</p>
+    <a routerLink="/workshops">Browse upcoming workshops</a>
+  </div>
+
+  <ng-container *ngIf="!loading() && workshop() as item">
+    <div class="detail-shell">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a routerLink="/workshops">Workshops</a><span aria-hidden="true">/</span><span>{{ item.title }}</span>
+      <ng-container *ngIf="!seriesPage()"><span aria-hidden="true">/</span><span>{{ item.workshopDate }}</span></ng-container>
+    </nav>
+    <header class="hero">
+      <div class="hero-composition">
+        <div class="hero-media">
+          <img [src]="item.heroImageUrl" [alt]="item.heroAltText"
+            fetchpriority="high" decoding="async" sizes="(max-width: 800px) 100vw, 67vw" />
+        </div>
+        <div class="hero-copy">
+          <div class="hero-heading-group">
+            <p class="eyebrow">{{ item.theme }}</p>
+            <h1>{{ item.title }}</h1>
+          </div>
+          <dl class="hero-facts">
+            <div><dt>When</dt><dd>{{ seriesPage() ? seriesOccurrences().length + ' upcoming dates' : formatDate(item.startAt, item.timezone) }}</dd></div>
+            <div>
+              <dt>Where</dt>
+              <dd>
+                {{ item.venueName }}<br />{{ item.addressLine1 }}<br />
+                <ng-container *ngIf="item.addressLine2">{{ item.addressLine2 }}<br /></ng-container>
+                {{ item.locality }}, {{ item.region }} {{ item.postalCode }}
+              </dd>
+            </div>
+            <div><dt>Per seat</dt><dd>{{ formatMoney(item.priceMinor, item.currency) }}</dd></div>
+          </dl>
+          <div class="hero-booking">
+            <div class="hero-status">
+              <p *ngIf="lifecycleMessage(item)" class="lifecycle-note" role="status">{{ lifecycleMessage(item) }}</p>
+              <p *ngIf="item.remainingSeats !== null" class="seat-urgency" role="status">
+                Only {{ item.remainingSeats }} {{ item.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
+              </p>
+            </div>
+            <div class="hero-actions">
+              <button *ngIf="seriesPage()" type="button" class="primary-action hero-upcoming-action" (click)="scrollToUpcomingEvents()">View Upcoming Events</button>
+              <a *ngIf="!seriesPage() && canReserve(item)" class="primary-action" [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']"
+                [appAnalyticsAction]="{ event: 'cta_select', location: 'workshop_detail_reserve' }">Reserve seats</a>
+              <a *ngIf="!seriesPage() && canJoinWaitlist(item)" class="primary-action" [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']">Join the waitlist</a>
+              <a *ngIf="item.lifecycleStatus === 'rescheduled' && item.replacementUrl" class="primary-action" [routerLink]="item.replacementUrl">View the new date</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="experience-wrap">
+      <article class="experience-panel">
+        <p class="eyebrow">The experience</p>
+        <h2>{{ item.advertisingLine | titlecase }}</h2>
+        <p class="description">{{ item.description }}</p>
+        <section><h3>What is included</h3><p>{{ item.includedMaterials }}</p></section>
+        <section *ngIf="seriesPage()" #upcomingEvents id="upcoming-workshop-events" class="series-dates" aria-labelledby="series-dates-title">
+          <p class="eyebrow">Choose your date</p>
+          <h3 id="series-dates-title">Upcoming workshop events</h3>
+          <article *ngFor="let occurrence of seriesOccurrences()" class="series-date-row">
+            <div>
+              <time [attr.datetime]="occurrence.startAt">{{ formatDate(occurrence.startAt, occurrence.timezone) }}</time>
+              <p>{{ occurrence.venueName }}, {{ occurrence.locality }} · {{ formatMoney(occurrence.priceMinor, occurrence.currency) }} per seat</p>
+            </div>
+            <p *ngIf="occurrence.remainingSeats !== null" class="seat-urgency">
+              Only {{ occurrence.remainingSeats }} {{ occurrence.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
+            </p>
+            <div class="series-date-actions">
+              <a class="details-button" [routerLink]="['/workshops', occurrence.seriesSlug, occurrence.workshopDate]">
+                See Details <span aria-hidden="true">&rarr;</span>
+              </a>
+              <a *ngIf="canReserveSummary(occurrence)" class="primary-action" [routerLink]="['/workshops', occurrence.seriesSlug, occurrence.workshopDate, 'reserve']">Reserve seats</a>
+            </div>
+          </article>
+        </section>
+        <section *ngIf="item.accessibilityGuidance"><h3>Accessibility</h3><p>{{ item.accessibilityGuidance }}</p></section>
+        <section *ngIf="item.contactGuidance"><h3>Questions before booking?</h3><p>{{ item.contactGuidance }}</p></section>
+      </article>
+    </div>
+
+    <section *ngIf="item.media.length > 1" class="gallery" aria-labelledby="gallery-title">
+      <p class="eyebrow">A glimpse inside</p><h2 id="gallery-title">Workshop gallery</h2>
+      <div><img *ngFor="let image of item.media" [src]="image.url" [alt]="image.altText"
+        loading="lazy" decoding="async" sizes="(max-width: 520px) 100vw, 33vw" /></div>
+    </section>
+
+    <footer class="detail-footer">
+      <div class="detail-footer__ornament" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="detail-footer__copy">
+        <h2>Looking for a private workshop?</h2>
+        <p>Planning a birthday, shower, team gathering, or a creative afternoon with your favorite people? Tell us about your group, preferred date, and floral style, and we&rsquo;ll shape a workshop around the occasion.</p>
+      </div>
+      <a routerLink="/inquiries/general">Plan a custom gathering <span aria-hidden="true">&rarr;</span></a>
+    </footer>
+    </div>
+  </ng-container>
+</main>

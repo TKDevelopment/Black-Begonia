@@ -1,0 +1,212 @@
+<main class="workshop-editor min-h-screen">
+  <div class="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-9">
+    <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <button type="button" class="back-button" (click)="cancel()">← Back to workshops</button>
+        <p class="mt-5 text-xs font-semibold uppercase tracking-[.2em] text-[#c46f67]">Workshop catalog</p>
+        <h1 class="mt-2 font-cormorant text-4xl text-stone-900 md:text-5xl">
+          {{ currentOccurrence() ? 'Edit workshop' : 'Create workshop' }}
+        </h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Define the customer-facing message, venue, New York local schedule, seats, price, terms, and payment readiness.</p>
+      </div>
+      <span *ngIf="currentOccurrence()" class="status-badge">{{ currentOccurrence()!.status.replaceAll('_', ' ') }}</span>
+    </header>
+
+    <div *ngIf="loading()" class="state-card" aria-live="polite">Loading workshop editor…</div>
+    <p *ngIf="error()" class="editor-error mb-5 rounded-xl border p-4 text-sm" role="alert">{{ error() }}</p>
+    <p *ngIf="materialChangeWarning()" class="editor-warning mb-5 rounded-xl border p-4 text-sm" role="status">{{ materialChangeWarning() }}</p>
+
+    <form *ngIf="!loading()" [formGroup]="form" (ngSubmit)="save(false)" class="space-y-5" novalidate>
+      <section class="editor-card">
+        <h2>Workshop story</h2>
+        <div class="form-grid">
+          <div class="concept-picker full">
+            <label class="field">Workshop concept
+              <select formControlName="definitionId" (change)="definitionChanged()">
+                <option value="">Create a new reusable concept</option>
+                <option *ngFor="let definition of conceptOptions()" [value]="definition.workshop_definition_id">
+                  {{ definition.title }}{{ definition.is_reusable ? '' : ' — staged for this workshop' }}
+                </option>
+              </select>
+            </label>
+            <button
+              *ngIf="selectedDefinition()?.is_reusable"
+              type="button"
+              class="destructive-icon-button"
+              [disabled]="conceptBusy()"
+              aria-label="Remove selected reusable workshop concept"
+              title="Remove selected reusable workshop concept"
+              (click)="removeSelectedConcept()"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <label class="field">Title<span class="field-control"><input formControlName="title" maxlength="160" placeholder="Summer Garden Centerpiece" [attr.aria-invalid]="fieldInvalid('title')" /><span *ngIf="tooltipVisible('title')" class="validation-tooltip">{{ validationMessage('title') }}</span></span></label>
+          <label class="field">Theme<span class="field-control"><input formControlName="theme" maxlength="80" placeholder="Seasonal floral design" [attr.aria-invalid]="fieldInvalid('theme')" /><span *ngIf="tooltipVisible('theme')" class="validation-tooltip">{{ validationMessage('theme') }}</span></span></label>
+          <p class="full generated-slug-note">The public URL is generated automatically from the title and occurrence date.</p>
+          <label class="field full">Advertising line<span class="field-control"><input formControlName="advertisingLine" maxlength="240" placeholder="Design a garden-inspired centerpiece with us." [attr.aria-invalid]="fieldInvalid('advertisingLine')" /><span *ngIf="tooltipVisible('advertisingLine')" class="validation-tooltip">{{ validationMessage('advertisingLine') }}</span></span></label>
+          <label class="field full">Description<span class="field-control"><textarea formControlName="description" rows="5" placeholder="Describe the workshop experience, core theme, and what guests will create." [attr.aria-invalid]="fieldInvalid('description')"></textarea><span *ngIf="tooltipVisible('description')" class="validation-tooltip">{{ validationMessage('description') }}</span></span></label>
+          <label class="field full">Included materials<span class="field-control"><textarea formControlName="includedMaterials" rows="3" placeholder="Flowers, vessel, tools, and instruction." [attr.aria-invalid]="fieldInvalid('includedMaterials')"></textarea><span *ngIf="tooltipVisible('includedMaterials')" class="validation-tooltip">{{ validationMessage('includedMaterials') }}</span></span></label>
+        </div>
+        <div class="story-media">
+          <h3>Hero and gallery imagery</h3>
+          <p class="section-copy">Use one descriptive hero image and a small ordered gallery. Alternative text is required for every public image.</p>
+          <div class="media-uploader">
+            <label class="field">Image role
+              <select [value]="mediaRole()" (change)="changeMediaRole($any($event.target).value)">
+                <option value="hero">Hero</option>
+                <option value="gallery">Gallery</option>
+              </select>
+            </label>
+            <label class="field">{{ mediaRole() === 'gallery' ? 'Gallery images' : 'Hero image' }}
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" [multiple]="mediaRole() === 'gallery'" (change)="selectMediaFile($event)" />
+            </label>
+            <button type="button" class="secondary-action media-upload" [disabled]="mediaBusy()" (click)="uploadMedia()">Upload</button>
+          </div>
+          <ol *ngIf="pendingMedia().length" class="pending-media-list">
+            <li *ngFor="let pending of pendingMedia(); let index = index; trackBy: trackPendingMedia">
+              <span class="pending-media-name">{{ pending.file.name }}</span>
+              <label class="field">Alternative text
+                <input [value]="pending.altText" (input)="updatePendingMediaAlt(index, $any($event.target).value)" maxlength="500" placeholder="Describe what is visible in this image" />
+              </label>
+            </li>
+          </ol>
+          <ol *ngIf="media().length; else noMedia" class="media-grid">
+            <li *ngFor="let item of media(); let index = index" class="media-item">
+              <img [src]="item.public_url" [alt]="item.alt_text" loading="lazy" />
+              <div><strong>{{ item.media_role }}</strong><p>{{ item.alt_text }}</p></div>
+              <div class="media-actions">
+                <button type="button" aria-label="Move image earlier" [disabled]="index === 0 || mediaBusy()" (click)="moveMedia(index, -1)">&uarr;</button>
+                <button type="button" aria-label="Move image later" [disabled]="index === media().length - 1 || mediaBusy()" (click)="moveMedia(index, 1)">&darr;</button>
+                <button type="button" class="remove-media" [disabled]="mediaBusy()" (click)="removeMedia(item)">Remove</button>
+              </div>
+            </li>
+          </ol>
+          <ng-template #noMedia><p class="empty-media">No workshop imagery has been uploaded yet.</p></ng-template>
+        </div>
+      </section>
+
+      <section class="editor-card">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2>Single date or workshop series</h2>
+            <p class="section-copy">Each occurrence is an independent workshop record. All schedule values use America/New_York automatically.</p>
+          </div>
+          <button *ngIf="!currentOccurrence()" type="button" class="secondary-action" (click)="addOccurrence()">+ Add workshop occurrence</button>
+        </div>
+        <div *ngIf="!currentOccurrence() && seriesMode()" class="form-grid">
+          <label class="field full">Series label
+            <span class="field-control"><input [value]="seriesLabel()" (input)="seriesLabel.set($any($event.target).value)" maxlength="160" placeholder="Fall centerpiece workshops" [attr.aria-invalid]="fieldInvalid('seriesLabel')" /><span *ngIf="tooltipVisible('seriesLabel')" class="validation-tooltip">{{ validationMessage('seriesLabel') }}</span></span>
+          </label>
+        </div>
+        <div formArrayName="occurrences" class="occurrence-editor-list">
+          <fieldset *ngFor="let schedule of occurrenceSchedules.controls; let index = index" [formGroupName]="index" class="occurrence-row">
+            <legend>Workshop occurrence {{ index + 1 }}</legend>
+            <label class="field">Workshop date<span class="field-control"><input type="date" formControlName="date" placeholder="YYYY-MM-DD" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.date')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.date')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.date') }}</span></span></label>
+            <label class="field">Local start time<span class="field-control"><input type="time" formControlName="localStartTime" placeholder="1:00 PM" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.localStartTime')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.localStartTime')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.localStartTime') }}</span></span></label>
+            <label class="field">Local end time<span class="field-control"><input type="time" formControlName="localEndTime" placeholder="3:00 PM" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.localEndTime')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.localEndTime')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.localEndTime') }}</span></span></label>
+            <label class="field">Registration start date<span class="field-control"><input type="date" formControlName="registrationStartDate" placeholder="YYYY-MM-DD" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.registrationStartDate')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.registrationStartDate')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.registrationStartDate') }}</span></span></label>
+            <label class="field">Registration close date<span class="field-control"><input type="date" formControlName="registrationCloseDate" placeholder="YYYY-MM-DD" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.registrationCloseDate')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.registrationCloseDate')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.registrationCloseDate') }}</span></span></label>
+            <div *ngIf="occurrenceSchedules.length > 1" class="occurrence-remove-cell">
+              <button type="button" class="remove-occurrence destructive-icon-button" [attr.aria-label]="'Remove workshop occurrence ' + (index + 1)" (click)="removeOccurrence(index)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <section *ngIf="currentSeries()" class="editor-card">
+        <h2>Series update scope</h2>
+        <p class="section-copy">
+          {{ currentSeries()!.series_label }} contains independently manageable occurrences. Preview exactly which dates will change before applying shared content, venue, capacity, price, terms, or payment settings.
+        </p>
+        <fieldset class="scope-options">
+          <legend>Apply this edit to</legend>
+          <label><input type="radio" name="seriesScope" value="current" [checked]="seriesScope() === 'current'" (change)="seriesScope.set('current')" /> Current occurrence only</label>
+          <label><input type="radio" name="seriesScope" value="selected" [checked]="seriesScope() === 'selected'" (change)="seriesScope.set('selected')" /> Selected occurrences</label>
+          <label><input type="radio" name="seriesScope" value="all_future" [checked]="seriesScope() === 'all_future'" (change)="seriesScope.set('all_future')" /> All eligible future occurrences</label>
+        </fieldset>
+        <ol class="series-occurrences">
+          <li *ngFor="let occurrence of seriesOccurrences()">
+            <label>
+              <input
+                type="checkbox"
+                [checked]="selectedSeriesOccurrenceIds().includes(occurrence.workshop_occurrence_id)"
+                [disabled]="seriesScope() !== 'selected'"
+                (change)="toggleSeriesOccurrence(occurrence.workshop_occurrence_id, $any($event.target).checked)"
+              />
+              <span>{{ occurrence.local_start | date:'medium' }} — {{ occurrence.venue_name }}</span>
+            </label>
+            <span *ngFor="let badge of overrideLabels(occurrence)" class="override-badge">{{ badge }}</span>
+          </li>
+        </ol>
+        <div class="series-update-actions">
+          <button type="button" class="secondary-action" (click)="previewBulkUpdate()">Preview affected dates</button>
+          <button *ngIf="seriesUpdatePreview()" type="button" class="primary-action" [disabled]="saving()" (click)="applyBulkUpdate()">Confirm series update</button>
+        </div>
+        <div *ngIf="seriesUpdatePreview()" class="series-preview" role="status">
+          <strong>{{ seriesUpdatePreview()!.occurrenceIds.length }} occurrence(s) will change.</strong>
+          <p *ngIf="seriesUpdatePreview()!.bookedOccurrenceIds.length">
+            {{ seriesUpdatePreview()!.bookedOccurrenceIds.length }} affected occurrence(s) already have bookings and require explicit confirmation.
+          </p>
+        </div>
+      </section>
+
+      <section class="editor-card">
+        <h2>Venue</h2>
+        <p class="section-copy">All workshops are located in the United States. Schedule times use America/New_York automatically.</p>
+        <div class="form-grid venue-grid">
+          <label class="field venue-name">Venue name<span class="field-control"><input formControlName="venueName" placeholder="Black Begonia Studio" [attr.aria-invalid]="fieldInvalid('venueName')" /><span *ngIf="tooltipVisible('venueName')" class="validation-tooltip">{{ validationMessage('venueName') }}</span></span></label>
+          <label class="field address-field">Address line 1<span class="field-control"><input formControlName="addressLine1" placeholder="100 Flower Lane" [attr.aria-invalid]="fieldInvalid('addressLine1')" /><span *ngIf="tooltipVisible('addressLine1')" class="validation-tooltip">{{ validationMessage('addressLine1') }}</span></span></label>
+          <label class="field address-field">Address line 2<span class="field-control"><input formControlName="addressLine2" placeholder="Suite, studio, or building (optional)" /></span></label>
+          <label class="field city-field">City<span class="field-control"><input formControlName="locality" placeholder="Providence" [attr.aria-invalid]="fieldInvalid('locality')" /><span *ngIf="tooltipVisible('locality')" class="validation-tooltip">{{ validationMessage('locality') }}</span></span></label>
+          <label class="field state-field">State<span class="field-control"><select formControlName="region" [attr.aria-invalid]="fieldInvalid('region')"><option value="" disabled>Select a state</option><option *ngFor="let state of stateOptions" [value]="state[0]">{{ state[1] }}</option></select><span *ngIf="tooltipVisible('region')" class="validation-tooltip">{{ validationMessage('region') }}</span></span></label>
+          <label class="field zip-field">Zipcode<span class="field-control"><input formControlName="postalCode" inputmode="numeric" placeholder="02903" [attr.aria-invalid]="fieldInvalid('postalCode')" /><span *ngIf="tooltipVisible('postalCode')" class="validation-tooltip">{{ validationMessage('postalCode') }}</span></span></label>
+        </div>
+        <ul *ngIf="scheduleErrors().length" class="validation-list" role="alert">
+          <li *ngFor="let message of scheduleErrors()">{{ message }}</li>
+        </ul>
+      </section>
+
+      <section class="editor-card">
+        <h2>Seats, pricing, and terms</h2>
+        <p *ngIf="stripeCatalogMessage()" class="catalog-state" role="status">{{ stripeCatalogMessage() }}</p>
+        <div class="form-grid pricing-grid">
+          <label class="field">Open seats<span class="field-control"><input type="number" formControlName="capacity" min="1" placeholder="12" [attr.aria-invalid]="fieldInvalid('capacity')" /><span *ngIf="tooltipVisible('capacity')" class="validation-tooltip">{{ validationMessage('capacity') }}</span></span></label>
+          <label class="field">Maximum seats per booking<span class="field-control"><input type="number" formControlName="perBookingLimit" min="1" placeholder="4" [attr.aria-invalid]="fieldInvalid('perBookingLimit')" /><span *ngIf="tooltipVisible('perBookingLimit')" class="validation-tooltip">{{ validationMessage('perBookingLimit') }}</span></span></label>
+          <label class="field">Tax-inclusive price per seat<span class="field-control currency-control"><span class="currency-prefix" aria-hidden="true">$</span><input type="number" formControlName="priceMajor" min="0" step="0.01" placeholder="85.00" aria-label="Tax-inclusive price per seat in US dollars" [attr.aria-invalid]="fieldInvalid('priceMajor')" /><span class="currency-suffix" aria-hidden="true">USD</span><span *ngIf="tooltipVisible('priceMajor')" class="validation-tooltip">{{ validationMessage('priceMajor') }}</span></span></label>
+          <label class="field full">Workshop terms<span class="field-control"><textarea formControlName="terms" rows="5" placeholder="Describe cancellation, transfer, and attendance terms." [attr.aria-invalid]="fieldInvalid('terms')"></textarea><span *ngIf="tooltipVisible('terms')" class="validation-tooltip">{{ validationMessage('terms') }}</span></span></label>
+        </div>
+      </section>
+
+      <div class="sticky-actions">
+        <button type="button" class="secondary-action" (click)="openPreview()">Preview</button>
+        <button type="submit" class="secondary-action" [disabled]="saving()">Save draft</button>
+        <button type="button" class="primary-action" [disabled]="saving()" (click)="save(true)">Save and publish</button>
+      </div>
+    </form>
+  </div>
+
+  <app-workshop-customer-preview
+    *ngIf="previewOpen()"
+    [title]="form.controls.title.value"
+    [theme]="form.controls.theme.value"
+    [advertisingLine]="form.controls.advertisingLine.value"
+    [description]="form.controls.description.value"
+    [includedMaterials]="form.controls.includedMaterials.value"
+    [venueName]="form.controls.venueName.value"
+    [locality]="form.controls.locality.value"
+    [region]="form.controls.region.value"
+    [priceMajor]="form.controls.priceMajor.value"
+    [dateLabel]="previewDateLabel()"
+    [timeLabel]="previewTimeLabel()"
+    [hero]="previewHeroMedia()"
+    [gallery]="previewGalleryMedia()"
+    (closed)="closePreview()"
+  />
+</main>

@@ -1,0 +1,130 @@
+<main class="detail-page">
+  <a routerLink="/admin/workshops">← Workshops</a>
+  @if (loading()) {
+    <p role="status">Loading workshop occurrence…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    @if (occurrence(); as workshop) {
+      <header>
+      <div>
+        <span>{{ workshop.status.replaceAll('_', ' ') }}</span>
+        <h1>{{ workshop.title_snapshot }}</h1>
+        <p>{{ formatDate(workshop.start_at) }} · {{ workshop.venue_name }}</p>
+      </div>
+      <nav aria-label="Workshop occurrence actions">
+        <a [routerLink]="['/admin/workshops', occurrenceId, 'edit']">Edit workshop</a>
+        <a [routerLink]="['/admin/workshops', occurrenceId, 'roster']">Open full roster</a>
+        <a [routerLink]="['/admin/workshops', occurrenceId, 'financials']">Financials</a>
+        @if (workshop.published_at) {
+          <a [routerLink]="publicWorkshopRoute(workshop)">Public preview</a>
+        }
+      </nav>
+      </header>
+
+      <section class="metrics" aria-label="Operational summary">
+      <div><strong>{{ bookingCount() }}</strong><span>Bookings</span></div>
+      <div><strong>{{ activeSeatCount() }}</strong><span>Active seats</span></div>
+      <div><strong>{{ checkedInCount() }}</strong><span>Checked in</span></div>
+      <div><strong>{{ waitlist().length }}</strong><span>Waitlist</span></div>
+      <div><strong>{{ workshop.capacity }}</strong><span>Capacity</span></div>
+      </section>
+
+      <section aria-labelledby="lifecycle-heading">
+      <h2 id="lifecycle-heading">Lifecycle controls</h2>
+      @if (operationalState(); as state) {
+        <p>
+          Persisted: {{ state.lifecycle.replaceAll('_', ' ') }} ·
+          Availability: {{ state.availability.replaceAll('_', ' ') }} ·
+          {{ state.remainingQuantity }} remaining
+        </p>
+        @if (state.completionReviewRequired) {
+          <p class="notice">This past workshop requires completion review.</p>
+        }
+      }
+      <div class="actions">
+        @if (occurrence()?.status === 'published_open') {
+          <button type="button" [disabled]="actionBusy()"
+            (click)="transition('registration_closed')">Close registration</button>
+        }
+        @if (operationalState()?.completionReviewRequired) {
+          <button type="button" [disabled]="actionBusy()"
+            (click)="transition('completed')">Complete after review</button>
+        }
+        @if (['completed', 'cancelled', 'rescheduled'].includes(occurrence()?.status ?? '')) {
+          <button type="button" [disabled]="actionBusy()"
+            (click)="transition('archived')">Archive operational record</button>
+        }
+        @if (['draft', 'published_open', 'registration_closed'].includes(occurrence()?.status ?? '')) {
+          <button type="button" class="danger" [disabled]="actionBusy()"
+            (click)="cancelOccurrence('other')">Cancel workshop</button>
+        }
+      </div>
+      @if (actionMessage()) { <p role="status">{{ actionMessage() }}</p> }
+      @if (actionError()) { <p class="error" role="alert">{{ actionError() }}</p> }
+      </section>
+
+      @if (['published_open', 'registration_closed'].includes(workshop.status)) {
+        <section aria-labelledby="reschedule-heading">
+        <h2 id="reschedule-heading">Material reschedule</h2>
+        <p>
+          Affected bookings will not move automatically. Equivalent replacement
+          capacity is protected until each customer accepts, declines, or expires.
+        </p>
+        <form [formGroup]="rescheduleForm" (ngSubmit)="beginReschedule()">
+          <label>Replacement occurrence
+            <select formControlName="replacementOccurrenceId">
+              <option value="">Choose an upcoming workshop</option>
+              @for (candidate of replacementCandidates(); track candidate.workshop_occurrence_id) {
+                <option [value]="candidate.workshop_occurrence_id">
+                  {{ candidate.title_snapshot }} · {{ formatDate(candidate.start_at) }}
+                </option>
+              }
+            </select>
+          </label>
+          <label>Customer response deadline
+            <input type="datetime-local" formControlName="responseDeadline" />
+          </label>
+          <button type="submit" [disabled]="actionBusy()">Begin material reschedule</button>
+        </form>
+        </section>
+      }
+
+      @if (rescheduleResponses().length) {
+        <section aria-labelledby="responses-heading">
+        <h2 id="responses-heading">Reschedule responses</h2>
+        <p>{{ pendingRescheduleCount() }} pending · {{ followUpCount() }} need follow-up</p>
+        <button type="button" [disabled]="actionBusy()" (click)="expireDueResponses()">
+          Refresh overdue responses
+        </button>
+        @for (response of rescheduleResponses(); track response.workshop_reschedule_response_id) {
+          <div class="response-row">
+            <span>{{ response.protected_quantity }} seat(s) · {{ response.response }}</span>
+            <span>Deadline {{ formatDate(response.response_token_expires_at) }}</span>
+            @if (response.response === 'expired') {
+              <button type="button" [disabled]="actionBusy()"
+                (click)="resolveNonresponse(response.workshop_reschedule_response_id)">
+                Resolve as cancellation
+              </button>
+            }
+          </div>
+        }
+        </section>
+      }
+
+      <section>
+      <h2>Roster preview</h2>
+      @for (row of roster().slice(0, 8); track row.booking_reference + '-' + row.seat_number) {
+        <p>{{ row.booking_reference }} · Seat {{ row.seat_number }} · {{ row.attendance_state }}</p>
+      } @empty { <p>No active roster entries.</p> }
+      </section>
+
+      <section>
+      <h2>Waitlist summary</h2>
+      @for (entry of waitlist().slice(0, 5); track entry.workshop_waitlist_entry_id) {
+        <p>{{ entry.requested_quantity }} seat(s) · {{ entry.state }}</p>
+      } @empty { <p>No waitlist entries.</p> }
+      </section>
+    }
+  }
+</main>

@@ -90,6 +90,57 @@ export class AnalyticsRoutePolicyService {
       };
     }
 
+    const workshopReservationMatch = path.match(
+      /^\/workshops\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(\d{4}-\d{2}-\d{2})\/reserve$/,
+    );
+    if (
+      workshopReservationMatch
+      && routeData.pageCategory === 'workshop_reservation'
+      && workshopReservationMatch[1].length <= 80
+    ) {
+      return {
+        eligible: true,
+        canonicalPath: `/workshops/${workshopReservationMatch[1]}/${workshopReservationMatch[2]}/reserve`,
+        pageCategory: 'workshop_reservation',
+        contentCategory: 'workshop',
+        contentId: workshopReservationMatch[1],
+      };
+    }
+
+    const workshopOccurrenceMatch = path.match(
+      /^\/workshops\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(\d{4}-\d{2}-\d{2})$/,
+    );
+    if (
+      workshopOccurrenceMatch
+      && routeData.pageCategory === 'workshop_detail'
+      && workshopOccurrenceMatch[1].length <= 80
+    ) {
+      return {
+        eligible: true,
+        canonicalPath: `/workshops/${workshopOccurrenceMatch[1]}/${workshopOccurrenceMatch[2]}`,
+        pageCategory: 'workshop_detail',
+        contentCategory: 'workshop',
+        contentId: workshopOccurrenceMatch[1],
+      };
+    }
+
+    const workshopSeriesMatch = path.match(
+      /^\/workshops\/([a-z0-9]+(?:-[a-z0-9]+)*)$/,
+    );
+    if (
+      workshopSeriesMatch
+      && routeData.pageCategory === 'workshop_detail'
+      && workshopSeriesMatch[1].length <= 80
+    ) {
+      return {
+        eligible: true,
+        canonicalPath: `/workshops/${workshopSeriesMatch[1]}`,
+        pageCategory: 'workshop_detail',
+        contentCategory: 'workshop',
+        contentId: workshopSeriesMatch[1],
+      };
+    }
+
     return { eligible: false, canonicalPath: null, pageCategory: null };
   }
 
@@ -101,6 +152,7 @@ export class AnalyticsRoutePolicyService {
       path === '/change-password' ||
       path === '/pay' ||
       path.startsWith('/pay/') ||
+      path === '/workshop-booking/status' ||
       path === '/admin' ||
       path.startsWith('/admin/')
     );

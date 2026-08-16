@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 
 const SITE_URL = 'https://blackbegoniaflorals.com';
-
 const staticRoutes = [
   { url: '/', priority: '1.00' },
   { url: '/about', priority: '0.90' },
@@ -17,97 +16,138 @@ const staticRoutes = [
   { url: '/inquiries/general', priority: '0.80' },
   { url: '/locations', priority: '0.86' },
   { url: '/privacy-policy', priority: '0.30' },
-  { url: '/terms-and-conditions', priority: '0.30' }
+  { url: '/terms-and-conditions', priority: '0.30' },
 ];
-
 const locationRoutes = [
-  '/locations/newport-ri-wedding-florist',
-  '/locations/watch-hill-ri-wedding-florist',
-  '/locations/providence-ri-wedding-florist',
-  '/locations/bristol-ri-wedding-florist',
-  '/locations/south-kingstown-ri-wedding-florist',
-  '/locations/narragansett-ri-wedding-florist',
-  '/locations/westerly-ri-wedding-florist',
-  '/locations/north-kingstown-ri-florist',
-  '/locations/mystic-ct-wedding-florist',
-  '/locations/stonington-ct-wedding-florist',
-  '/locations/boston-ma-wedding-florist'
-].map((url) => ({
-  url,
-  priority: '0.82'
-}));
+  'newport-ri-wedding-florist', 'watch-hill-ri-wedding-florist',
+  'providence-ri-wedding-florist', 'bristol-ri-wedding-florist',
+  'south-kingstown-ri-wedding-florist', 'narragansett-ri-wedding-florist',
+  'westerly-ri-wedding-florist', 'north-kingstown-ri-florist',
+  'mystic-ct-wedding-florist', 'stonington-ct-wedding-florist',
+  'boston-ma-wedding-florist',
+].map((slug) => ({ url: `/locations/${slug}`, priority: '0.82' }));
+
+function dateOnly(value, fallback) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString().slice(0, 10);
+}
+
+function xmlEscape(value) {
+  return String(value)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
 
 function toXmlUrl({ url, priority, lastmod }) {
   return `
   <url>
-    <loc>${SITE_URL}${url}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${xmlEscape(`${SITE_URL}${url}`)}</loc>
+    <lastmod>${xmlEscape(lastmod)}</lastmod>
     <priority>${priority}</priority>
   </url>`;
 }
 
-async function getPortfolioRoutes() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+async function fetchSupabaseRows(endpoint, env, fetchImpl) {
+  const response = await fetchImpl(endpoint, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    },
+  });
+  if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+  return response.json();
+}
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.log('[sitemap] SUPABASE_URL or SUPABASE_ANON_KEY missing; skipping portfolio URLs.');
-    return [];
-  }
-
+async function getPortfolioRoutes(env = process.env, fetchImpl = fetch, today = new Date().toISOString().slice(0, 10)) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return [];
   try {
-    const endpoint =
-      `${supabaseUrl}/rest/v1/portfolio_galleries?select=slug,updated_at,is_active&is_active=eq.true`;
-
-    const response = await fetch(endpoint, {
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`
-      }
-    });
-
-    if (!response.ok) {
-      console.warn('[sitemap] Failed to fetch portfolio galleries:', response.status);
-      return [];
-    }
-
-    const rows = await response.json();
-
-    return rows
-      .filter((row) => !!row.slug)
-      .map((row) => ({
-        url: `/portfolio/${row.slug}`,
-        priority: '0.78',
-        lastmod: row.updated_at
-          ? new Date(row.updated_at).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0]
-      }));
+    const endpoint = `${env.SUPABASE_URL}/rest/v1/portfolio_galleries?select=slug,updated_at,is_active&is_active=eq.true`;
+    const rows = await fetchSupabaseRows(endpoint, env, fetchImpl);
+    return rows.filter((row) => row.slug).map((row) => ({
+      url: `/portfolio/${row.slug}`,
+      priority: '0.78',
+      lastmod: dateOnly(row.updated_at, today),
+    }));
   } catch (error) {
-    console.warn('[sitemap] Error fetching portfolio routes:', error);
+    console.warn('[sitemap] Failed to fetch portfolio galleries:', error.message);
     return [];
   }
 }
 
-async function buildSitemap() {
-  const today = new Date().toISOString().split('T')[0];
-  const portfolioRoutes = await getPortfolioRoutes();
+function workshopRoutesFromRows(rows, today) {
+  const allowed = new Set(['series', 'published_open', 'registration_closed', 'completed', 'cancelled', 'rescheduled']);
+  return rows
+    .filter((row) => row.slug
+      && (!row.lifecycleStatus || allowed.has(row.lifecycleStatus))
+      && row.seoStatus !== 'redirect'
+      && /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4}-\d{2}-\d{2})?$/.test(row.slug))
+    .map((row) => ({
+      url: `/workshops/${row.slug}`,
+      priority: row.lifecycleStatus === 'completed' ? '0.65' : '0.76',
+      lastmod: dateOnly(row.lastmod, today),
+    }));
+}
 
-  const allRoutes = [
+async function getWorkshopRoutes(env = process.env, fetchImpl = fetch, today = new Date().toISOString().slice(0, 10)) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return [];
+  try {
+    const endpoint = `${env.SUPABASE_URL}/rest/v1/rpc/get_public_workshop_sitemap`;
+    const rows = await fetchSupabaseRows(endpoint, env, fetchImpl);
+    return workshopRoutesFromRows(rows, today);
+  } catch (error) {
+    console.warn('[sitemap] Failed to fetch workshop URLs:', error.message);
+    return [];
+  }
+}
+
+function deduplicateRoutes(routes) {
+  const byUrl = new Map();
+  for (const route of routes) {
+    const existing = byUrl.get(route.url);
+    if (!existing || route.lastmod > existing.lastmod) byUrl.set(route.url, route);
+  }
+  return [...byUrl.values()].sort((a, b) => a.url.localeCompare(b.url));
+}
+
+function createSitemap(routes) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${routes.map(toXmlUrl).join('')}
+</urlset>`;
+}
+
+async function buildSitemap(options = {}) {
+  const now = options.now ?? new Date();
+  const today = now.toISOString().slice(0, 10);
+  const env = options.env ?? process.env;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const [portfolioRoutes, workshopRoutes] = await Promise.all([
+    getPortfolioRoutes(env, fetchImpl, today),
+    getWorkshopRoutes(env, fetchImpl, today),
+  ]);
+  const routes = deduplicateRoutes([
     ...staticRoutes.map((route) => ({ ...route, lastmod: today })),
     ...locationRoutes.map((route) => ({ ...route, lastmod: today })),
-    ...portfolioRoutes
-  ];
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allRoutes
-    .map(toXmlUrl)
-    .join('')}
-</urlset>`;
-
-  const outputPath = path.join(process.cwd(), 'src', 'sitemap.xml');
-  fs.writeFileSync(outputPath, xml, 'utf8');
-
-  console.log(`[sitemap] Generated sitemap with ${allRoutes.length} URLs at ${outputPath}`);
+    ...portfolioRoutes,
+    ...workshopRoutes,
+  ]);
+  const outputPath = options.outputPath ?? path.join(process.cwd(), 'src', 'sitemap.xml');
+  fs.writeFileSync(outputPath, createSitemap(routes), 'utf8');
+  console.log(`[sitemap] Generated sitemap with ${routes.length} URLs at ${outputPath}`);
+  return { routes, outputPath };
 }
 
-buildSitemap();
+module.exports = {
+  buildSitemap,
+  createSitemap,
+  deduplicateRoutes,
+  getWorkshopRoutes,
+  workshopRoutesFromRows,
+};
+
+if (require.main === module) {
+  buildSitemap().catch((error) => {
+    console.error('[sitemap] Generation failed:', error);
+    process.exitCode = 1;
+  });
+}

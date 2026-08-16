@@ -59,4 +59,53 @@ describe('AnalyticsRoutePolicyService', () => {
       })
     ).toEqual({ eligible: true, canonicalPath: '/not-found', pageCategory: 'not_found' });
   });
+
+  it('classifies an allowlisted workshop slug without retaining query or fragment data', () => {
+    expect(service.classify(
+      '/workshops/autumn-centerpiece?email=customer@example.test#secret',
+      { eligible: true, pageCategory: 'workshop_detail' },
+    )).toEqual({
+      eligible: true,
+      canonicalPath: '/workshops/autumn-centerpiece',
+      pageCategory: 'workshop_detail',
+      contentCategory: 'workshop',
+      contentId: 'autumn-centerpiece',
+    });
+    expect(service.classify('/workshops/customer@example.test', {
+      eligible: true,
+      pageCategory: 'workshop_detail',
+    }).eligible).toBeFalse();
+    expect(service.classify('/workshops/autumn-centerpiece/2026-10-15', {
+      eligible: true,
+      pageCategory: 'workshop_detail',
+    })).toEqual(jasmine.objectContaining({
+      eligible: true,
+      canonicalPath: '/workshops/autumn-centerpiece/2026-10-15',
+      contentId: 'autumn-centerpiece',
+    }));
+  });
+
+  it('classifies the clean reservation route but denies status, payment, and CRM routes', () => {
+    expect(service.classify('/workshops/autumn-centerpiece/2026-10-15/reserve', {
+      eligible: true,
+      pageCategory: 'workshop_reservation',
+    })).toEqual({
+      eligible: true,
+      canonicalPath: '/workshops/autumn-centerpiece/2026-10-15/reserve',
+      pageCategory: 'workshop_reservation',
+      contentCategory: 'workshop',
+      contentId: 'autumn-centerpiece',
+    });
+    for (const url of [
+      '/workshop-booking/status#grant',
+      '/pay/signed-token',
+      '/admin/workshops/occurrence-id',
+    ]) {
+      expect(service.isDefinitelyExcluded(url)).toBeTrue();
+      expect(service.classify(url, {
+        eligible: true,
+        pageCategory: 'workshop_detail',
+      }).eligible).toBeFalse();
+    }
+  });
 });

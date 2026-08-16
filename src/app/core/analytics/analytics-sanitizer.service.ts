@@ -40,6 +40,36 @@ const EVENT_PARAMETERS: Record<AnalyticsEventName, ReadonlySet<string>> = {
   file_download: new Set(['page_category', 'resource_category']),
   scroll: new Set(['page_category', 'percent_scrolled']),
   not_found: new Set(['page_category']),
+  workshop_select: new Set([
+    'page_category',
+    'placement',
+    'content_category',
+    'content_id',
+  ]),
+  workshop_detail_view: new Set([
+    'page_category',
+    'content_category',
+    'content_id',
+  ]),
+  workshop_reservation_start: new Set([
+    'page_category',
+    'content_category',
+    'content_id',
+    'quantity_band',
+  ]),
+  workshop_checkout_start: new Set([
+    'page_category',
+    'content_category',
+    'provider',
+    'quantity_band',
+  ]),
+  workshop_booking_confirmed: new Set([
+    'page_category',
+    'content_category',
+    'content_id',
+    'currency',
+    'value',
+  ]),
 };
 
 @Injectable({ providedIn: 'root' })
@@ -81,6 +111,14 @@ export class AnalyticsSanitizerService {
     } catch {
       return {};
     }
+  }
+
+  normalizePublicContentId(value: string): string | null {
+    const normalized = value.trim().toLowerCase();
+    return normalized.length <= MAX_VALUE_LENGTH
+      && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)
+      ? normalized
+      : null;
   }
 
   private sanitizeCampaignValue(value: string | null): string | undefined {
@@ -132,7 +170,12 @@ export class AnalyticsSanitizerService {
       }
     }
 
-    const normalized = value.trim().toLowerCase();
+    const normalized = key === 'content_id'
+      ? this.normalizePublicContentId(value)
+      : value.trim().toLowerCase();
+    if (normalized === null) {
+      return null;
+    }
     if (
       normalized.length === 0 ||
       normalized.length > MAX_VALUE_LENGTH ||

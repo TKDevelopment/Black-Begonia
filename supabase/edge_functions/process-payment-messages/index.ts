@@ -24,13 +24,99 @@ const money = (cents: number) =>
     cents / 100,
   );
 
+function buildPaymentEmail(
+  kind: string,
+  principalCents: number,
+  customerFeeCents: number,
+  paymentUrl: string,
+) {
+  const copy = kind === "initial_request"
+    ? {
+      subject: "Your Black Begonia payment request",
+      eyebrow: "Payment request",
+      heading: "Your payment is ready",
+      introduction:
+        "A secure payment request is ready for your Black Begonia floral project.",
+      amountLabel: "Amount due",
+    }
+    : kind === "deposit_reminder"
+    ? {
+      subject: "A gentle reminder about your Black Begonia deposit",
+      eyebrow: "Payment reminder",
+      heading: "A gentle deposit reminder",
+      introduction:
+        "This is a friendly reminder that the deposit for your floral project is still awaiting payment.",
+      amountLabel: "Deposit due",
+    }
+    : kind === "final_reminder"
+    ? {
+      subject: "A gentle reminder about your Black Begonia balance",
+      eyebrow: "Payment reminder",
+      heading: "Your final balance is coming due",
+      introduction:
+        "Your event is getting closer, and the final balance for your floral project is ready for payment.",
+      amountLabel: "Balance due",
+    }
+    : kind === "receipt"
+    ? {
+      subject: "Black Begonia payment receipt",
+      eyebrow: "Payment received",
+      heading: "Thank you for your payment",
+      introduction:
+        "We recorded your payment and updated your Black Begonia floral project.",
+      amountLabel: "Payment received",
+    }
+    : {
+      subject: "Important Black Begonia payment adjustment",
+      eyebrow: "Payment update",
+      heading: "Your project payment was updated",
+      introduction:
+        "An adjustment was recorded for your Black Begonia floral project payment.",
+      amountLabel: "Updated amount",
+    };
+  const hasCallToAction = Boolean(paymentUrl);
+  const feeLine = customerFeeCents > 0
+    ? `<tr><td style="padding-top:8px;color:#756a64;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Processing fee</td><td style="padding-top:8px;color:#433a35;font-family:Arial,Helvetica,sans-serif;font-size:13px;text-align:right;">${
+      money(customerFeeCents)
+    }</td></tr>`
+    : "";
+  const callToAction = hasCallToAction
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px auto 0;"><tr><td style="border-radius:8px;background:#c46f67;"><a href="${
+      escapeHtml(paymentUrl)
+    }" style="display:inline-block;padding:14px 24px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;">View secure payment options</a></td></tr></table>`
+    : "";
+  const html =
+    `<!doctype html><html><body style="margin:0;padding:0;background:#f5f0ec;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f0ec;"><tr><td style="padding:28px 14px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px;margin:0 auto;overflow:hidden;border:1px solid #e7ddd6;border-radius:18px;background:#ffffff;"><tr><td style="padding:30px 36px;background:#111111;text-align:center;"><div style="margin-bottom:10px;color:#ea938c;font-family:Georgia,'Times New Roman',serif;font-size:12px;letter-spacing:.26em;text-transform:uppercase;">Black Begonia Floral Co.</div><div style="color:#f7f4f1;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.2;">${
+      escapeHtml(copy.heading)
+    }</div></td></tr><tr><td style="padding:38px 36px 18px;"><div style="margin-bottom:14px;color:#a65e57;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;">${
+      escapeHtml(copy.eyebrow)
+    }</div><p style="margin:0;color:#302a27;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.75;">${
+      escapeHtml(copy.introduction)
+    }</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;padding:20px;border:1px solid #eadfd8;border-radius:12px;background:#fbf8f5;"><tr><td style="color:#756a64;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;">${
+      escapeHtml(copy.amountLabel)
+    }</td><td style="color:#302a27;font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;text-align:right;">${
+      money(principalCents)
+    }</td></tr>${feeLine}</table>${callToAction}</td></tr><tr><td style="padding:18px 36px 34px;"><p style="margin:0;color:#756a64;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;text-align:center;">Questions or concerns? Reply to this email and Becca will be happy to help.</p></td></tr><tr><td style="padding:20px 36px;background:#f4ede8;color:#81756e;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;text-align:center;">Black Begonia Floral Co. &middot; Thoughtful flowers for meaningful moments</td></tr></table></td></tr></table></body></html>`;
+  const text =
+    `${copy.heading}\n\n${copy.introduction}\n\n${copy.amountLabel}: ${
+      money(principalCents)
+    }${
+      customerFeeCents > 0 ? `\nProcessing fee: ${money(customerFeeCents)}` : ""
+    }${
+      hasCallToAction ? `\n\nView secure payment options: ${paymentUrl}` : ""
+    }\n\nQuestions or concerns? Reply to this email and Becca will be happy to help.`;
+  return { ...copy, html, text };
+}
+
 const safeErrorMessage = (error: unknown) => {
   const candidate = error instanceof Error
     ? error.message
     : error && typeof error === "object"
     ? ["message", "details", "hint", "code"]
       .map((key) => (error as Record<string, unknown>)[key])
-      .filter((value): value is string => typeof value === "string" && value.length > 0)
+      .filter((value): value is string =>
+        typeof value === "string" && value.length > 0
+      )
       .join(" | ")
     : "Processor failed";
   return candidate
@@ -99,6 +185,7 @@ async function decryptToken(
 async function sendMail(
   recipient: string,
   subject: string,
+  text: string,
   html: string,
   deliveryId: string,
 ) {
@@ -126,9 +213,15 @@ async function sendMail(
     throw new Error("MG_REGION must be either us or eu");
   }
   const configuredOrigin = envValue("MG_BASE_URL", "MAILGUN_API_ORIGIN") ||
-    (region === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net");
+    (region === "eu"
+      ? "https://api.eu.mailgun.net"
+      : "https://api.mailgun.net");
   const apiOrigin = configuredOrigin.replace(/\/+$/, "");
-  if (!["https://api.mailgun.net", "https://api.eu.mailgun.net"].includes(apiOrigin)) {
+  if (
+    !["https://api.mailgun.net", "https://api.eu.mailgun.net"].includes(
+      apiOrigin,
+    )
+  ) {
     throw new Error("MG_BASE_URL is not an approved Mailgun API origin");
   }
   const form = new FormData();
@@ -139,6 +232,7 @@ async function sendMail(
   );
   form.set("to", recipient);
   form.set("subject", subject);
+  form.set("text", text);
   form.set("html", html);
   if (replyTo) form.set("h:Reply-To", replyTo);
   form.set("v:delivery_id", deliveryId);
@@ -148,9 +242,7 @@ async function sendMail(
     {
       method: "POST",
       headers: {
-        Authorization: `Basic ${
-          btoa(`api:${apiKey}`)
-        }`,
+        Authorization: `Basic ${btoa(`api:${apiKey}`)}`,
       },
       body: form,
     },
@@ -173,13 +265,14 @@ async function sendMail(
     : response.status === 404
     ? "Mailgun could not find the sending domain at the configured regional API origin."
     : `Mailgun returned HTTP ${response.status}`;
-  const providerMessage = typeof body.message === "string" && response.status !== 401
-    ? body.message
-      .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "[redacted-email]")
-      .replace(/https?:\/\/\S+/g, "[redacted-url]")
-      .replace(/[\r\n]+/g, " ")
-      .slice(0, 240)
-    : statusGuidance;
+  const providerMessage =
+    typeof body.message === "string" && response.status !== 401
+      ? body.message
+        .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "[redacted-email]")
+        .replace(/https?:\/\/\S+/g, "[redacted-url]")
+        .replace(/[\r\n]+/g, " ")
+        .slice(0, 240)
+      : statusGuidance;
   return {
     ok: response.ok,
     status: response.status,
@@ -220,9 +313,10 @@ serve(async (request) => {
     const requestBody = await request.json().catch(() => ({})) as {
       requestedDeliveryId?: unknown;
     };
-    const requestedDeliveryId = typeof requestBody.requestedDeliveryId === "string"
-      ? requestBody.requestedDeliveryId
-      : "";
+    const requestedDeliveryId =
+      typeof requestBody.requestedDeliveryId === "string"
+        ? requestBody.requestedDeliveryId
+        : "";
     if (!requestedDeliveryId) {
       stage = "refresh_project_statuses";
       await db.rpc("refresh_project_payment_statuses", {
@@ -268,13 +362,16 @@ serve(async (request) => {
           p_token_digest: token.digest,
           p_token_ciphertext: token.ciphertext,
           p_token_iv: token.iv,
-          p_token_key_version: Deno.env.get("PAYMENT_TOKEN_KEY_VERSION") ?? "v1",
+          p_token_key_version: Deno.env.get("PAYMENT_TOKEN_KEY_VERSION") ??
+            "v1",
           p_command_key: crypto.randomUUID(),
         });
         if (!issued.error) report.requestsCreated += 1;
       }
     }
-    stage = requestedDeliveryId ? "claim_specific_delivery" : "claim_delivery_batch";
+    stage = requestedDeliveryId
+      ? "claim_specific_delivery"
+      : "claim_delivery_batch";
     const claimed = requestedDeliveryId
       ? await db.rpc("claim_specific_payment_delivery", {
         p_delivery_id: requestedDeliveryId,
@@ -310,8 +407,7 @@ serve(async (request) => {
     for (const delivery of deliveries) {
       report.claimed += 1;
       try {
-        let subject = "Your Black Begonia payment update";
-        let callToAction = "";
+        let paymentUrl = "";
         if (
           ["initial_request", "deposit_reminder", "final_reminder"].includes(
             delivery.kind,
@@ -328,37 +424,19 @@ serve(async (request) => {
           const url = `${Deno.env.get("PAYMENT_PUBLIC_ORIGIN")}/pay/${
             encodeURIComponent(token)
           }`;
-          subject = delivery.kind === "initial_request"
-            ? "Your Black Begonia payment request"
-            : "Reminder: your Black Begonia payment is due";
-          callToAction = `<p><a href="${
-            escapeHtml(url)
-          }" style="display:inline-block;padding:12px 20px;background:#32261f;color:#fff;text-decoration:none;border-radius:6px">View payment options</a></p>`;
-        } else if (delivery.kind === "receipt") {
-          subject = "Black Begonia payment receipt";
-        } else if (delivery.kind === "adjustment_notice") {
-          subject = "Important Black Begonia payment adjustment";
+          paymentUrl = url;
         }
-        const html =
-          `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h1 style="font-size:24px">Black Begonia Florals</h1><p>${
-            delivery.kind === "receipt"
-              ? "We recorded your payment."
-              : delivery.kind === "adjustment_notice"
-              ? "An adjustment was recorded for your project payment."
-              : "A project payment is ready."
-          }</p><p><strong>Payment amount: ${
-            money(Number(delivery.principalCents ?? 0))
-          }</strong></p>${
-            Number(delivery.customerFeeCents ?? 0)
-              ? `<p>Processing fee: ${
-                money(Number(delivery.customerFeeCents))
-              }</p>`
-              : ""
-          }${callToAction}<p>If you have questions, reply to this email.</p></div>`;
+        const email = buildPaymentEmail(
+          String(delivery.kind ?? ""),
+          Number(delivery.principalCents ?? 0),
+          Number(delivery.customerFeeCents ?? 0),
+          paymentUrl,
+        );
         const result = await sendMail(
           String(delivery.recipientEmail),
-          subject,
-          html,
+          email.subject,
+          email.text,
+          email.html,
           String(delivery.deliveryId),
         );
         const outcome = result.ok
@@ -371,9 +449,7 @@ serve(async (request) => {
           p_status: outcome,
           p_mailgun_message_id: result.id,
           p_failure_class: result.ok ? null : `mailgun_http_${result.status}`,
-          p_redacted_error: result.ok
-            ? null
-            : result.message,
+          p_redacted_error: result.ok ? null : result.message,
         });
         const failureClass = result.ok ? null : `mailgun_http_${result.status}`;
         report.results.push({
@@ -439,16 +515,19 @@ serve(async (request) => {
         message: redactedError,
       }),
     );
-    return new Response(JSON.stringify({
-      error: "Processor failed",
-      failureClass,
-      redactedError,
-    }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
+    return new Response(
+      JSON.stringify({
+        error: "Processor failed",
+        failureClass,
+        redactedError,
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
       },
-    });
+    );
   }
 });

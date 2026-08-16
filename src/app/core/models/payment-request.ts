@@ -38,6 +38,11 @@ export interface CustomerPaymentProjection {
 
 export type CheckoutHandoff =
   | { kind: 'redirect'; url: string; attempt: string }
-  | { kind: 'paypal_order'; orderId: string; attempt: string; clientId: string }
-  | { kind: 'manual_venmo'; approvedTarget: string; reference: string; amountCents: number }
+  | {
+      kind: 'manual_venmo';
+      approvedTarget: string;
+      reference: string;
+      amountCents: number;
+      pauseEndsAt: string;
+    }
   | { kind: 'intention'; method: 'cash' | 'check'; instructions: string; pauseEndsAt: string };

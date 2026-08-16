@@ -4,12 +4,14 @@ import { filter } from 'rxjs/operators';
 import { SeoService } from './seo.service';
 import { ROUTE_META } from './seo.routes-meta';
 import { DOCUMENT } from '@angular/common';
+import { JsonLdService } from './jsonld.service';
 
 @Injectable({ providedIn: 'root' })
 export class SeoRouteListenerService {
   constructor(
     private router: Router,
     private seo: SeoService,
+    private jsonLd: JsonLdService,
     @Inject(DOCUMENT) private doc: Document
   ) {}
 
@@ -19,6 +21,7 @@ export class SeoRouteListenerService {
       const path = (urlTree.root.children['primary']?.segments.map(s => s.path).join('/') || '').toLowerCase();
       const meta = ROUTE_META.find(m => m.path.toLowerCase() === path);
       const canonicalUrl = `${domain}${path ? '/' + path : '/'}`;
+      this.jsonLd.clearPageSchemas();
 
       if (meta) {
         this.seo.setPageMeta({
@@ -28,9 +31,8 @@ export class SeoRouteListenerService {
           image: meta.image || `${domain}/assets/images/og-default.png`,
           keywords: meta.keywords || []
         });
-      } else {
-        // still keep canonical updated
-        this.seo.setPageMeta({ url: canonicalUrl });
+      } else if (!/^workshops\/[^/]+$/.test(path)) {
+        this.seo.setPageMeta({ url: canonicalUrl, keywords: [] });
       }
     });
   }

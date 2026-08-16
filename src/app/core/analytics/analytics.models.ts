@@ -26,6 +26,8 @@ export type AnalyticsPageCategory =
   | 'inquiry_success'
   | 'service'
   | 'workshop'
+  | 'workshop_detail'
+  | 'workshop_reservation'
   | 'testimonials'
   | 'privacy'
   | 'terms'
@@ -43,11 +45,19 @@ export type AnalyticsEventName =
   | 'outbound_click'
   | 'file_download'
   | 'scroll'
-  | 'not_found';
+  | 'not_found'
+  | 'workshop_select'
+  | 'workshop_detail_view'
+  | 'workshop_reservation_start'
+  | 'workshop_checkout_start'
+  | 'workshop_booking_confirmed';
 
 export type AnalyticsInquiryType = 'general' | 'wedding';
 export type AnalyticsOriginContext = 'workshop';
 export type AnalyticsSocialPlatform = 'instagram' | 'facebook';
+export type WorkshopAnalyticsPlacement = 'carousel' | 'list';
+export type WorkshopAnalyticsProvider = 'stripe' | 'direct_venmo';
+export type WorkshopAnalyticsQuantityBand = 'one' | 'two' | 'three_plus';
 
 export interface AnalyticsPreferenceRecord {
   schemaVersion: 1;
@@ -78,7 +88,7 @@ export interface AnalyticsRouteClassification {
   eligible: boolean;
   canonicalPath: string | null;
   pageCategory: AnalyticsPageCategory | null;
-  contentCategory?: 'portfolio' | 'location' | 'service';
+  contentCategory?: 'portfolio' | 'location' | 'service' | 'workshop';
   contentId?: string;
 }
 
@@ -104,6 +114,15 @@ export interface AnalyticsAction {
   location: string;
   category?: string;
   platform?: AnalyticsSocialPlatform;
+}
+
+export interface SafeWorkshopAnalyticsOutcome {
+  event: 'workshop_booking_confirmed';
+  publicContentId: string;
+  category: 'workshop';
+  quantity: number;
+  currency: 'USD';
+  valueMinor?: number;
 }
 
 export interface GtagWindow extends Window {

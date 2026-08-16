@@ -1,0 +1,29 @@
+:host { display: block; }
+.financial-page { max-width: 1180px; margin: 0 auto; padding: 1.5rem; color: #302d2a; }
+header, .charge-list li, article { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+header { border-bottom: 1px solid #d9d2ca; padding-bottom: 1rem; }
+h1 { margin: .25rem 0; font-family: "Cormorant Garamond", serif; font-size: clamp(2rem, 5vw, 3.25rem); }
+h2 { margin-top: 0; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: .75rem; margin: 1.5rem 0; }
+.metrics div { border: 1px solid #ddd4ca; padding: 1rem; background: #faf8f4; }
+.metrics span, .metrics strong { display: block; }
+.metrics strong { margin-top: .35rem; font-size: 1.3rem; }
+.columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1.25rem; }
+section { margin: 1.25rem 0; padding: 1.15rem; border: 1px solid #ded7cf; border-radius: .35rem; }
+form { display: grid; gap: .8rem; }
+label { display: grid; gap: .25rem; font-weight: 600; }
+input, select, textarea, button { font: inherit; padding: .65rem; }
+textarea { min-height: 5rem; }
+button { cursor: pointer; }
+.charge-list { list-style: none; padding: 0; }
+.charge-list li, article { border-top: 1px solid #e4ddd5; padding: .75rem 0; }
+.attention, .urgent { border-color: #b4653a; background: #fff8f2; }
+.error { color: #8a1f1f; }
+.success { color: #23633a; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: .65rem; text-align: left; border-bottom: 1px solid #e4ddd5; white-space: nowrap; }
+@media (max-width: 760px) {
+  .columns { grid-template-columns: 1fr; }
+  header, .charge-list li, article { align-items: stretch; flex-direction: column; }
+}
