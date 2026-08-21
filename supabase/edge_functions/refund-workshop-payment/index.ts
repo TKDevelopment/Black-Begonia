@@ -43,6 +43,8 @@ const withinLimit = (userId: string) => {
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     .test(value);
+const safeProviderError = (value: unknown) =>
+  typeof value === "string" && value.length <= 80 ? value : null;
 
 serve(async (request) => {
   const origin = request.headers.get("origin") ?? "";
@@ -74,6 +76,18 @@ serve(async (request) => {
     if (!withinLimit(userData.user.id)) {
       return respond(origin, 429, {
         error: "Refund requests are temporarily unavailable",
+      });
+    }
+    const stripeKey = Deno.env.get("STRIPE_RESTRICTED_KEY") ?? "";
+    if (!stripeKey) {
+      console.error(JSON.stringify({
+        function: "refund-workshop-payment",
+        stage: "configuration",
+        safe_failure: "stripe_key_missing",
+      }));
+      return respond(origin, 503, {
+        error: "Stripe refunds are not configured",
+        supportCode: "stripe_key_missing",
       });
     }
 
@@ -124,6 +138,26 @@ serve(async (request) => {
         error: "The requested refund is not currently eligible",
       });
     }
+    const providerPaymentId = String(
+      eligibility.data.providerChargeId ?? "",
+    );
+    const providerPaymentParameter = providerPaymentId.startsWith("pi_")
+      ? "payment_intent"
+      : providerPaymentId.startsWith("ch_")
+      ? "charge"
+      : null;
+    if (!providerPaymentParameter) {
+      console.error(JSON.stringify({
+        function: "refund-workshop-payment",
+        stage: "provider_reference",
+        safe_failure: "unsupported_stripe_payment_reference",
+        reference_prefix: providerPaymentId.slice(0, 3),
+      }));
+      return respond(origin, 409, {
+        error: "The Stripe payment reference cannot be refunded",
+        supportCode: "unsupported_stripe_payment_reference",
+      });
+    }
     const requested = await caller.rpc(
       seatQuantity === null
         ? "manage_workshop_financials"
@@ -165,7 +199,7 @@ serve(async (request) => {
       ? reason
       : "requested_by_customer";
     const form = new URLSearchParams({
-      charge: String(requested.data.providerChargeId),
+      [providerPaymentParameter]: providerPaymentId,
       amount: String(amountMinor),
       reason: stripeReason,
       "metadata[payment_context]": "workshop",
@@ -179,7 +213,7 @@ serve(async (request) => {
       method: "POST",
       headers: {
         Authorization:
-          `Bearer ${Deno.env.get("STRIPE_RESTRICTED_KEY") ?? ""}`,
+          `Bearer ${stripeKey}`,
         "Content-Type": "application/x-www-form-urlencoded",
         "Idempotency-Key": commandKey,
       },
@@ -191,6 +225,27 @@ serve(async (request) => {
       { auth: { persistSession: false } },
     );
     if (!providerResponse.ok) {
+      let providerError: Record<string, unknown> = {};
+      try {
+        const body = await providerResponse.json() as {
+          error?: Record<string, unknown>;
+        };
+        providerError = body.error ?? {};
+      } catch {
+        // Stripe can return a non-JSON gateway body; status and request ID are sufficient.
+      }
+      console.error(JSON.stringify({
+        function: "refund-workshop-payment",
+        stage: "stripe_refund_create",
+        provider_status: providerResponse.status,
+        provider_request_id: safeProviderError(
+          providerResponse.headers.get("request-id"),
+        ),
+        provider_error_type: safeProviderError(providerError["type"]),
+        provider_error_code: safeProviderError(providerError["code"]),
+        provider_error_param: safeProviderError(providerError["param"]),
+        refund_request_id: requestId,
+      }));
       await service.rpc("manage_workshop_financials", {
         p_action: "refund_provider_failed",
         p_payload: {
@@ -203,6 +258,8 @@ serve(async (request) => {
         state: "provider_failed",
         requestId,
         error: "Stripe did not accept the refund request",
+        supportCode: safeProviderError(providerError["code"]) ??
+          `stripe_http_${providerResponse.status}`,
       });
     }
     providerAccepted = true;

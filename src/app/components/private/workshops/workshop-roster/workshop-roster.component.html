@@ -81,7 +81,7 @@
                   <span class="muted"> of {{ booking.purchased_quantity }} active</span>
                 </td>
                 <td class="booking-status-cell">
-                  <span class="status-badge" [attr.data-state]="booking.status">{{ booking.status.replaceAll('_', ' ') }}</span>
+                  <span class="status-badge" [attr.data-state]="bookingStatusState(booking)">{{ bookingStatusLabel(booking) }}</span>
                 </td>
                 <td>
                   <div class="booking-actions flex flex-wrap items-center gap-2">

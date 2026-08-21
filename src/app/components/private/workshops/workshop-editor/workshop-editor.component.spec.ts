@@ -26,6 +26,7 @@ describe('WorkshopEditorComponent', () => {
         'listDefinitions', 'listSeries', 'listOccurrences', 'getOccurrence',
         'createDefinition', 'retireDefinition', 'createSeries', 'generateSeries',
         'previewSeriesUpdate', 'applySeriesUpdate', 'saveOccurrence',
+        'updateConcept',
         'publishOccurrence', 'listMedia', 'syncStripeCatalog',
         'countOccurrenceBookings', 'deleteOccurrence',
       ],
@@ -38,6 +39,7 @@ describe('WorkshopEditorComponent', () => {
     repository.listMedia.and.resolveTo([]);
     repository.createDefinition.and.resolveTo(definition);
     repository.saveOccurrence.and.resolveTo(workshopOccurrenceFixture({ status: 'draft' }));
+    repository.updateConcept.and.resolveTo([workshopOccurrenceFixture({ status: 'draft' })]);
     repository.countOccurrenceBookings.and.resolveTo(0);
     repository.syncStripeCatalog.and.resolveTo({
       productId: 'prod_workshop',
@@ -394,6 +396,32 @@ describe('WorkshopEditorComponent', () => {
       workshopSeriesId: current.workshop_series_id,
       localStart: '2026-11-14T13:00',
     }));
+  });
+
+  it('propagates edited concept copy to every occurrence without including schedule fields', async () => {
+    const current = workshopOccurrenceFixture({ status: 'published_open' });
+    component.currentOccurrence.set(current);
+    component.form.patchValue({
+      ...component.validExample(),
+      title: 'Pumpkins & Pours',
+      description: 'An updated concept description.',
+    });
+    repository.saveOccurrence.and.resolveTo(current);
+
+    await component.save(false);
+
+    expect(repository.updateConcept).toHaveBeenCalledWith(
+      current.workshop_definition_id,
+      {
+        title: 'Pumpkins & Pours',
+        theme: 'seasonal',
+        advertisingLine: 'Design a garden-inspired centerpiece with us.',
+        description: 'An updated concept description.',
+        includedMaterials: 'Flowers, vessel, tools, and instruction.',
+        defaultTerms: 'Workshop seats are subject to the published cancellation policy.',
+      },
+      jasmine.any(String),
+    );
   });
 
   it('publishes only appended drafts when saving an established published occurrence', async () => {

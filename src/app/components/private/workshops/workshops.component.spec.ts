@@ -46,7 +46,32 @@ describe('WorkshopsComponent', () => {
     expect(component.occurrences().length).toBe(1);
 
     component.statusFilter.set('draft');
-    expect(component.filteredOccurrences()).toEqual([]);
+    expect(component.filteredConcepts()).toEqual([]);
+  });
+
+  it('groups every occurrence of a concept into one chronologically ordered card', async () => {
+    const later = workshopOccurrenceFixture({
+      workshop_occurrence_id: '10000000-0000-4000-8000-000000000099',
+      local_start: '2026-10-17T13:00:00',
+      start_at: '2026-10-17T17:00:00.000Z',
+    });
+    const earlier = workshopOccurrenceFixture();
+    const anotherConcept = workshopOccurrenceFixture({
+      workshop_occurrence_id: '10000000-0000-4000-8000-000000000098',
+      workshop_definition_id: '10000000-0000-4000-8000-000000000097',
+      title_snapshot: 'Pumpkins & Pours',
+      local_start: '2026-09-19T13:00:00',
+      start_at: '2026-09-19T17:00:00.000Z',
+    });
+    repository.listOccurrences.and.resolveTo([later, anotherConcept, earlier]);
+
+    await component.load();
+
+    expect(component.filteredConcepts().length).toBe(2);
+    expect(component.filteredConcepts()[0].title).toBe('Summer Garden Centerpiece');
+    expect(component.filteredConcepts()[0].occurrences.map(
+      (occurrence) => occurrence.workshop_occurrence_id,
+    )).toEqual([earlier.workshop_occurrence_id, later.workshop_occurrence_id]);
   });
 
   it('shows safe empty and error states', async () => {
@@ -86,6 +111,24 @@ describe('WorkshopsComponent', () => {
       'Create, publish, and maintain workshop occurrences without changing the CRM calendar.',
     );
     expect(fixture.nativeElement.textContent).not.toContain('Privacy and retention');
+  });
+
+  it('renders one concept card with a row for each occurrence date', async () => {
+    repository.listOccurrences.and.resolveTo([
+      workshopOccurrenceFixture(),
+      workshopOccurrenceFixture({
+        workshop_occurrence_id: '10000000-0000-4000-8000-000000000099',
+        local_start: '2026-10-17T13:00:00',
+        start_at: '2026-10-17T17:00:00.000Z',
+      }),
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.workshop-row').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.concept-occurrence-row').length).toBe(2);
   });
 
   it('publishes drafts and reports catalog validation errors', async () => {

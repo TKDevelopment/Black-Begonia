@@ -15,6 +15,12 @@ import { LoadingStateBlockComponent } from '../../../shared/components/private/l
 
 type WorkshopStatusFilter = 'all' | WorkshopLifecycleStatus;
 
+interface WorkshopConceptCard {
+  workshopDefinitionId: string;
+  title: string;
+  occurrences: WorkshopOccurrence[];
+}
+
 @Component({
   selector: 'app-admin-workshops',
   standalone: true,
@@ -35,11 +41,22 @@ export class WorkshopsComponent implements OnInit {
   readonly series = signal<WorkshopSeries[]>([]);
   readonly statusFilter = signal<WorkshopStatusFilter>('all');
 
-  readonly filteredOccurrences = computed(() => {
+  readonly filteredConcepts = computed<WorkshopConceptCard[]>(() => {
     const filter = this.statusFilter();
-    return this.occurrences()
+    const orderedOccurrences = this.occurrences()
       .filter((occurrence) => filter === 'all' || occurrence.status === filter)
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+    const concepts = new Map<string, WorkshopOccurrence[]>();
+    for (const occurrence of orderedOccurrences) {
+      const conceptOccurrences = concepts.get(occurrence.workshop_definition_id) ?? [];
+      conceptOccurrences.push(occurrence);
+      concepts.set(occurrence.workshop_definition_id, conceptOccurrences);
+    }
+    return Array.from(concepts, ([workshopDefinitionId, occurrences]) => ({
+      workshopDefinitionId,
+      title: occurrences[0].title_snapshot,
+      occurrences,
+    }));
   });
 
   ngOnInit(): void {

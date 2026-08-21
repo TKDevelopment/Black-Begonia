@@ -582,8 +582,9 @@ export class WorkshopEditorComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     try {
-      const definitionId = await this.resolveDefinition();
       const value = this.form.getRawValue();
+      const existingDefinitionId = value.definitionId || null;
+      const definitionId = await this.resolveDefinition();
       const priceVersionId = (await this.repository.syncStripeCatalog(
         definitionId,
         Math.round(value.priceMajor * 100),
@@ -605,11 +606,24 @@ export class WorkshopEditorComponent implements OnInit {
           this.buildDraft(definitionId, priceVersionId, schedule, identity),
           crypto.randomUUID(),
         );
-        const needsPublishTransition = publish
-          && (saved.status === 'draft' || saved.status === 'registration_closed');
-        savedOccurrences.push(needsPublishTransition
-          ? await this.repository.publishOccurrence(saved.workshop_occurrence_id, crypto.randomUUID())
-          : saved);
+        savedOccurrences.push(saved);
+      }
+      if (existingDefinitionId) {
+        await this.repository.updateConcept(
+          definitionId,
+          this.definitionInput(value),
+          crypto.randomUUID(),
+        );
+      }
+      if (publish) {
+        for (const [index, occurrence] of savedOccurrences.entries()) {
+          if (occurrence.status === 'draft' || occurrence.status === 'registration_closed') {
+            savedOccurrences[index] = await this.repository.publishOccurrence(
+              occurrence.workshop_occurrence_id,
+              crypto.randomUUID(),
+            );
+          }
+        }
       }
       const finalOccurrence = savedOccurrences[0];
       this.currentOccurrence.set(finalOccurrence);
@@ -777,17 +791,21 @@ export class WorkshopEditorComponent implements OnInit {
   private async resolveDefinition(): Promise<string> {
     const value = this.form.getRawValue();
     if (value.definitionId) return value.definitionId;
-    const definition = await this.repository.createDefinition({
+    const definition = await this.repository.createDefinition(this.definitionInput(value));
+    this.definitions.update((items) => [...items, definition]);
+    this.form.controls.definitionId.setValue(definition.workshop_definition_id);
+    return definition.workshop_definition_id;
+  }
+
+  private definitionInput(value = this.form.getRawValue()) {
+    return {
       title: value.title,
       theme: value.theme,
       advertisingLine: value.advertisingLine,
       description: value.description,
       includedMaterials: value.includedMaterials,
       defaultTerms: value.terms,
-    });
-    this.definitions.update((items) => [...items, definition]);
-    this.form.controls.definitionId.setValue(definition.workshop_definition_id);
-    return definition.workshop_definition_id;
+    };
   }
 
   private patchDefinition(definition: WorkshopDefinition): void {

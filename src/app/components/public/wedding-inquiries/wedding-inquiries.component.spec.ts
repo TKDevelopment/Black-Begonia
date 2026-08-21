@@ -93,13 +93,25 @@ describe('WeddingInquiriesComponent', () => {
   it('should reset an incompatible budget when service type changes', () => {
     component.weddingInquiryForm.patchValue({
       serviceType: 'wedding-full-service',
-      budget: '$3,000 - $5,000',
+      budget: '$5,000 - $8,000',
     });
 
     component.weddingInquiryForm.get('serviceType')?.setValue('engagement');
 
     expect(component.weddingInquiryForm.get('budget')?.value).toBe('');
     expect(component.budgetOptions.map((option) => option.value)).toContain('$350 - $500');
+  });
+
+  it('should show the full-service wedding budget ranges', () => {
+    component.weddingInquiryForm.get('serviceType')?.setValue('wedding-full-service');
+
+    expect(component.budgetOptions.map((option) => option.value)).toEqual([
+      '$5,000 - $8,000',
+      '$8,000 - $10,000',
+      '$10,000 - $15,000',
+      '$15,000 - $20,000',
+      '$20,000+',
+    ]);
   });
 
   it('should create a wedding lead, save inspiration URLs, send emails, and navigate', async () => {
@@ -115,7 +127,7 @@ describe('WeddingInquiriesComponent', () => {
       serviceType: 'wedding-full-service',
       ceremonyVenue: 'Test Garden',
       receptionVenue: 'Test Hall',
-      budget: '$3,000 - $5,000',
+      budget: '$5,000 - $8,000',
       guests: 80,
       preferredContactMethod: 'email',
       leadSource: '',

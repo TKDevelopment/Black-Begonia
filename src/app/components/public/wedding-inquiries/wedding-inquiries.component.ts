@@ -40,10 +40,11 @@ export class WeddingInquiriesComponent implements OnInit {
     getFloralServicesForEventType('wedding');
   private readonly weddingBudgetOptions: Record<string, BudgetOption[]> = {
     'wedding-full-service': [
-      { label: '$3,000 - $5,000', value: '$3,000 - $5,000' },
       { label: '$5,000 - $8,000', value: '$5,000 - $8,000' },
       { label: '$8,000 - $10,000', value: '$8,000 - $10,000' },
-      { label: '$10,000+', value: '$10,000+' },
+      { label: '$10,000 - $15,000', value: '$10,000 - $15,000' },
+      { label: '$15,000 - $20,000', value: '$15,000 - $20,000' },
+      { label: '$20,000+', value: '$20,000+' },
     ],
     'wedding-ceremony-only': [
       { label: '$2,800 - $5,000', value: '$2,800 - $5,000' },

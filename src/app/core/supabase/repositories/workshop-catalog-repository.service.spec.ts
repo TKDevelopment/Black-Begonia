@@ -114,6 +114,31 @@ describe('WorkshopCatalogRepositoryService', () => {
     });
   });
 
+  it('delegates an atomic concept update for definition and occurrence snapshots', async () => {
+    const occurrence = workshopOccurrenceFixture();
+    client.rpc.and.resolveTo({ data: [occurrence], error: null });
+    const patch = {
+      title: 'Pumpkins & Pours',
+      theme: 'autumn',
+      advertisingLine: 'An autumn floral evening.',
+      description: 'Design with pumpkins and flowers.',
+      includedMaterials: 'Pumpkin, flowers, tools, and instruction.',
+      defaultTerms: 'Updated cancellation terms.',
+    };
+
+    await expectAsync(service.updateConcept(
+      occurrence.workshop_definition_id,
+      patch,
+      'command-concept-update',
+    )).toBeResolvedTo([occurrence]);
+
+    expect(client.rpc).toHaveBeenCalledWith('update_workshop_concept', {
+      p_workshop_definition_id: occurrence.workshop_definition_id,
+      p_patch: patch,
+      p_command_key: 'command-concept-update',
+    });
+  });
+
   it('surfaces publication validation errors without rewriting them', async () => {
     const error = { code: '22023', message: 'effective hero image is required' };
     client.rpc.and.resolveTo({ data: null, error });

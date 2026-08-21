@@ -16,6 +16,7 @@ export interface WorkshopCatalogRepository {
   listDefinitions(): Promise<WorkshopDefinition[]>;
   createDefinition(input: CreateWorkshopDefinitionInput): Promise<WorkshopDefinition>;
   updateDefinition(id: string, input: Partial<CreateWorkshopDefinitionInput>): Promise<WorkshopDefinition>;
+  updateConcept(id: string, input: CreateWorkshopDefinitionInput, commandKey: string): Promise<WorkshopOccurrence[]>;
   retireDefinition(id: string): Promise<WorkshopDefinition>;
   listOccurrences(): Promise<WorkshopOccurrence[]>;
   getOccurrence(id: string): Promise<WorkshopOccurrence | null>;
@@ -90,6 +91,28 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
       .eq('workshop_definition_id', id).select('*').single();
     if (error) throw error;
     return data as WorkshopDefinition;
+  }
+
+  async updateConcept(
+    id: string,
+    input: CreateWorkshopDefinitionInput,
+    commandKey: string,
+  ): Promise<WorkshopOccurrence[]> {
+    const patch = {
+      title: input.title.trim(),
+      theme: input.theme.trim(),
+      advertisingLine: input.advertisingLine.trim(),
+      description: input.description.trim(),
+      includedMaterials: input.includedMaterials.trim(),
+      defaultTerms: input.defaultTerms.trim(),
+    };
+    const { data, error } = await this.supabase.getClient().rpc('update_workshop_concept', {
+      p_workshop_definition_id: id,
+      p_patch: patch,
+      p_command_key: commandKey,
+    });
+    if (error) throw error;
+    return (data ?? []) as WorkshopOccurrence[];
   }
 
   async retireDefinition(id: string): Promise<WorkshopDefinition> {

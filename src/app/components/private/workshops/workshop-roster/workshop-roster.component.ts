@@ -269,6 +269,16 @@ export class WorkshopRosterComponent implements OnInit {
       && !!this.chargeFor(booking);
   }
 
+  bookingStatusState(booking: WorkshopBooking): string {
+    return ['partially_refunded', 'refunded'].includes(booking.payment_state)
+      ? booking.payment_state
+      : booking.status;
+  }
+
+  bookingStatusLabel(booking: WorkshopBooking): string {
+    return this.bookingStatusState(booking).replaceAll('_', ' ');
+  }
+
   async openRefundModal(booking: WorkshopBooking): Promise<void> {
     const charge = this.chargeFor(booking);
     if (!charge || !this.canRefundOrder(booking)) {
@@ -400,7 +410,20 @@ export class WorkshopRosterComponent implements OnInit {
         );
       }
       this.closeRefundModal();
-      await this.load();
+      if (charge.provider === 'stripe') {
+        const reconciled = await this.waitForStripeRefundReconciliation(
+          booking.workshop_booking_id,
+          booking.active_quantity - quantity,
+        );
+        if (!reconciled) {
+          this.actionMessage.set(
+            `Stripe accepted the ${this.formatCurrency(amountMinor)} refund. `
+            + 'The roster is still waiting for Stripe webhook confirmation; refresh shortly.',
+          );
+        }
+      } else {
+        await this.load();
+      }
     } catch {
       this.error.set(
         'We could not complete that refund. No unverified roster change was applied.',
@@ -408,6 +431,27 @@ export class WorkshopRosterComponent implements OnInit {
     } finally {
       this.refundBusy.set(false);
     }
+  }
+
+  private async waitForStripeRefundReconciliation(
+    bookingId: string,
+    expectedActiveQuantity: number,
+  ): Promise<boolean> {
+    const attempts = 8;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      await this.load();
+      const booking = this.bookings().find(
+        (candidate) => candidate.workshop_booking_id === bookingId,
+      );
+      if (booking && booking.active_quantity <= expectedActiveQuantity
+        && ['partially_refunded', 'refunded'].includes(booking.payment_state)) {
+        return true;
+      }
+      if (attempt < attempts - 1) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+    return false;
   }
 
   openVenmoApprovalModal(booking: WorkshopBooking): void {

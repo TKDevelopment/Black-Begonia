@@ -24,7 +24,9 @@ Server-side environment contract (record names only, never values):
   `SUPABASE_SERVICE_ROLE_KEY`.
 - Stripe: existing secret key/webhook secret plus the approved public
   success/cancel origins; workshop Product/Price IDs are persisted records, not
-  source-controlled environment values.
+  source-controlled environment values. `STRIPE_RESTRICTED_KEY` must have
+  read access to the Checkout/PaymentIntent/Charge objects used for verification
+  and write access to Refunds for `refund-workshop-payment`.
 - Mailgun: existing API key, sending domain/from identity, and webhook signing
   key.
 - Direct Venmo: approved business destination comes from
@@ -65,8 +67,13 @@ supabase/migrations/20260802011000_workshop_confirmation_delivery.sql
 supabase/migrations/20260815000000_workshop_stripe_event_idempotency.sql
 supabase/migrations/20260816000000_workshop_stripe_reconciliation_lock_order.sql
 supabase/migrations/20260820000000_workshop_occurrence_edit_management.sql
+supabase/migrations/20260821000000_workshop_concept_updates.sql
+supabase/migrations/20260821010000_workshop_refund_webhook_reconciliation.sql
 supabase/schemas/public/tables/workshop_*.sql
 supabase/schemas/public/functions/workshop_*.sql
+supabase/schemas/public/functions/update_workshop_concept.sql
+supabase/schemas/public/functions/reconcile_workshop_refund_request.sql
+supabase/schemas/public/functions/mark_workshop_refund_provider_failed.sql
 supabase/schemas/storage/workshop_media.sql
 supabase/tests/workshop_catalog_media.sql
 supabase/tests/workshop_booking_capacity.sql
@@ -85,7 +92,10 @@ Migration order:
    availability projections, and atomic inventory commands. After the later
    feature migrations, apply the occurrence edit-management refinement so
    published occurrence deletion locks inventory and rejects every occurrence
-   with any reservation record.
+   with any reservation record. Apply the concept-update refinement afterward
+   so CRM concept edits atomically update the definition and shared snapshots
+   for all of its occurrences without overwriting occurrence-specific dates,
+   venue, capacity, or price.
 3. Payments/reconciliation: attempts, transactions, provider events,
    exceptions, expenses, financial projection, and PayPal retirement changes.
    Apply the Stripe event-idempotency migration before deploying the matching
@@ -173,6 +183,24 @@ For each affected directory:
 - Run standalone Deno type-checking.
 - Do not create any unit, integration, endpoint, mock-runtime, or other automated
   test targeting an Edge Function.
+
+For `refund-workshop-payment`, deploy the current function after verifying the
+restricted key's Refunds write permission. Workshop charge transactions store
+the canonical PaymentIntent reference, so `pi_` references must be submitted to
+Stripe as `payment_intent`; legacy `ch_` references use `charge`. On a provider
+rejection, inspect the function log's redacted `provider_status`,
+`provider_request_id`, `provider_error_type`, `provider_error_code`, and
+`provider_error_param` fields. Never log the Stripe key or provider response
+message/body.
+
+Apply `20260821010000_workshop_refund_webhook_reconciliation.sql` before
+deploying the matching `stripe-payment-webhook`. The webhook merges Checkout
+Session and refund metadata so `workshop_refund_request_id` remains attached to
+the provider fact, then performs a replay-safe reconciliation that can repair a
+previously stored refund fact whose request metadata was dropped. Subscribe the
+Stripe endpoint explicitly to `refund.created`, `refund.updated`, and
+`refund.failed`. A successful refund releases only the request's selected seats;
+a failed refund leaves seats active and creates an urgent financial exception.
 
 ## 5. Configure test provider settings
 
@@ -519,7 +547,10 @@ occurrence-level payment switches off until their corresponding gates pass.
    or deployment console.
 3. Point the Stripe test-mode webhook at `stripe-payment-webhook` and subscribe
    to the supported checkout completion/failure/expiry, PaymentIntent
-   success/failure, charge success/refund, and dispute creation/closure events.
+   success/failure, `charge.succeeded`, `refund.created`, `refund.updated`,
+   `refund.failed`, and dispute creation/closure events. Stripe recommends
+   `refund.created` for refund-specific information; do not rely on
+   `charge.refunded` as the workshop refund reconciliation event.
    Verify the signing secret and merchant/account identity before enabling any
    workshop occurrence's `stripe_enabled` switch.
 4. Configure `WORKSHOP_SCHEDULER_SECRET` and
