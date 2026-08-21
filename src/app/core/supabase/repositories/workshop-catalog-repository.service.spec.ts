@@ -122,6 +122,30 @@ describe('WorkshopCatalogRepositoryService', () => {
       .toBeRejectedWith(error);
   });
 
+  it('counts booked reservations before delegating guarded occurrence deletion', async () => {
+    const occurrence = workshopOccurrenceFixture();
+    const bookingQuery = countResult(2);
+    client.from.and.returnValue(bookingQuery);
+    client.rpc.and.resolveTo({ data: { deleted: true }, error: null });
+
+    await expectAsync(service.countOccurrenceBookings(occurrence.workshop_occurrence_id))
+      .toBeResolvedTo(2);
+    await service.deleteOccurrence(occurrence.workshop_occurrence_id, 'command-delete');
+
+    expect(client.from).toHaveBeenCalledWith('workshop_bookings');
+    expect(bookingQuery.select).toHaveBeenCalledWith(
+      'workshop_booking_id',
+      { count: 'exact', head: true },
+    );
+    expect(bookingQuery.eq).toHaveBeenCalledWith(
+      'workshop_occurrence_id', occurrence.workshop_occurrence_id,
+    );
+    expect(client.rpc).toHaveBeenCalledWith('delete_workshop_occurrence', {
+      p_workshop_occurrence_id: occurrence.workshop_occurrence_id,
+      p_command_key: 'command-delete',
+    });
+  });
+
   it('invokes the standalone catalog boundary and maps readiness identifiers', async () => {
     const result = {
       productId: 'prod_workshop',
@@ -241,5 +265,15 @@ function mutationResult<T>(data: T) {
   query.eq.and.returnValue(query);
   query.select.and.returnValue(query);
   query.single.and.resolveTo({ data, error: null });
+  return query;
+}
+
+function countResult(count: number) {
+  const query = {
+    select: jasmine.createSpy('select'),
+    eq: jasmine.createSpy('eq'),
+  };
+  query.select.and.returnValue(query);
+  query.eq.and.resolveTo({ count, error: null });
   return query;
 }

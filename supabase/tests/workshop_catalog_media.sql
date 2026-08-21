@@ -54,8 +54,8 @@ select ok(
 );
 select ok(
   pg_get_functiondef('public.delete_workshop_occurrence(uuid,uuid)'::regprocedure)
-    like '%history%',
-  'delete command guards historical occurrences'
+    like '%workshop_bookings%',
+  'delete command guards occurrences with booked reservations'
 );
 
 insert into public.profiles(id, is_active)
@@ -254,15 +254,19 @@ select is(
   true,
   'successful publication promotes its staged definition into the reusable concept library'
 );
-select throws_ok(
+select lives_ok(
   $$select public.delete_workshop_occurrence(
     (select workshop_occurrence_id from public.workshop_occurrences
      where slug='garden-centerpiece-2026-11-08'),
     '20000000-0000-4000-8000-000000000031'
   )$$,
-  '55000',
-  'workshop occurrence has history',
-  'published occurrence deletion is blocked'
+  'published occurrence without reservations can be deleted'
+);
+select is(
+  (select count(*)::integer from public.workshop_occurrences
+   where slug='garden-centerpiece-2026-11-08'),
+  0,
+  'reservation-free published occurrence is removed'
 );
 reset role;
 

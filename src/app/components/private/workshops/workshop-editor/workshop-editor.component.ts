@@ -299,9 +299,49 @@ export class WorkshopEditorComponent implements OnInit {
     }));
   }
 
-  removeOccurrence(index: number): void {
-    if (this.occurrenceSchedules.length <= 1) return;
-    this.occurrenceSchedules.removeAt(index);
+  async removeOccurrence(index: number): Promise<void> {
+    const savedOccurrence = index === 0 ? this.currentOccurrence() : null;
+    if (!savedOccurrence) {
+      if (this.occurrenceSchedules.length <= 1
+        || !window.confirm('Remove this unsaved workshop occurrence?')) return;
+      this.occurrenceSchedules.removeAt(index);
+      return;
+    }
+
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const bookingCount = await this.repository.countOccurrenceBookings(
+        savedOccurrence.workshop_occurrence_id,
+      );
+      if (bookingCount > 0) {
+        window.alert(
+          `This occurrence cannot be deleted because it has ${bookingCount} booked ${bookingCount === 1 ? 'reservation' : 'reservations'}. Manage or cancel those reservations before trying again.`,
+        );
+        return;
+      }
+      if (!window.confirm(
+        'Permanently delete this workshop occurrence? This action cannot be undone.',
+      )) return;
+      await this.repository.deleteOccurrence(
+        savedOccurrence.workshop_occurrence_id,
+        crypto.randomUUID(),
+      );
+      this.toast.showToast('Workshop occurrence deleted.', 'success');
+      await this.router.navigate(['/admin/workshops']);
+    } catch (error) {
+      const message = this.safeMessage(error);
+      if (message.includes('booked reservations')) {
+        window.alert(
+          'This occurrence cannot be deleted because a reservation was booked before deletion completed. Manage or cancel its reservations before trying again.',
+        );
+      }
+      this.error.set(message);
+      this.toast.showToast(message, 'error');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   fieldInvalid(name: string): boolean {
@@ -549,15 +589,37 @@ export class WorkshopEditorComponent implements OnInit {
         Math.round(value.priceMajor * 100),
         crypto.randomUUID(),
       )).priceVersionId;
-      const saved = await this.repository.saveOccurrence(
-        this.buildDraft(definitionId, priceVersionId),
-        crypto.randomUUID(),
-      );
-      const finalOccurrence = publish
-        ? await this.repository.publishOccurrence(saved.workshop_occurrence_id, crypto.randomUUID())
-        : saved;
+      const schedules = this.occurrenceSchedules.getRawValue();
+      const savedOccurrences: WorkshopOccurrence[] = [];
+      for (const [index, schedule] of schedules.entries()) {
+        const identity = index === 0 ? undefined : {
+          workshopOccurrenceId: undefined,
+          workshopSeriesId: this.currentOccurrence()?.workshop_series_id,
+          slug: this.generatedSlug(
+            value.title,
+            schedule,
+            schedules.filter((item) => item.date === schedule.date).length > 1 ? index : undefined,
+          ),
+        };
+        const saved = await this.repository.saveOccurrence(
+          this.buildDraft(definitionId, priceVersionId, schedule, identity),
+          crypto.randomUUID(),
+        );
+        const needsPublishTransition = publish
+          && (saved.status === 'draft' || saved.status === 'registration_closed');
+        savedOccurrences.push(needsPublishTransition
+          ? await this.repository.publishOccurrence(saved.workshop_occurrence_id, crypto.randomUUID())
+          : saved);
+      }
+      const finalOccurrence = savedOccurrences[0];
       this.currentOccurrence.set(finalOccurrence);
-      this.toast.showToast(publish ? 'Workshop published.' : 'Workshop draft saved.', 'success');
+      const occurrenceLabel = savedOccurrences.length === 1
+        ? 'Workshop'
+        : `${savedOccurrences.length} workshop occurrences`;
+      this.toast.showToast(
+        publish ? `${occurrenceLabel} published.` : `${occurrenceLabel} saved.`,
+        'success',
+      );
       await this.router.navigate(['/admin/workshops', finalOccurrence.workshop_occurrence_id, 'edit']);
     } catch (error) {
       const message = this.safeMessage(error);
@@ -751,14 +813,16 @@ export class WorkshopEditorComponent implements OnInit {
     const utcOffsetMinutes = this.offsetForNewYorkLocal(localStart);
     if (utcOffsetMinutes === null) throw new Error('invalid_workshop_start_time');
     return {
-      workshopOccurrenceId: identity?.workshopOccurrenceId
-        ?? this.currentOccurrence()?.workshop_occurrence_id,
+      workshopOccurrenceId: identity === undefined
+        ? this.currentOccurrence()?.workshop_occurrence_id
+        : identity.workshopOccurrenceId,
       workshopDefinitionId: definitionId,
-      workshopSeriesId: identity?.workshopSeriesId
-        ?? this.currentOccurrence()?.workshop_series_id,
-      slug: identity?.slug
-        ?? this.currentOccurrence()?.slug
-        ?? this.generatedSlug(value.title, schedule),
+      workshopSeriesId: identity === undefined
+        ? this.currentOccurrence()?.workshop_series_id
+        : identity.workshopSeriesId,
+      slug: identity === undefined
+        ? this.currentOccurrence()?.slug ?? this.generatedSlug(value.title, schedule)
+        : identity.slug ?? this.generatedSlug(value.title, schedule),
       title: value.title.trim(),
       advertisingLine: value.advertisingLine.trim(),
       description: value.description.trim(),

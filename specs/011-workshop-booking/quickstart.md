@@ -64,6 +64,7 @@ supabase/migrations/20260802010000_workshop_public_remaining_seats.sql
 supabase/migrations/20260802011000_workshop_confirmation_delivery.sql
 supabase/migrations/20260815000000_workshop_stripe_event_idempotency.sql
 supabase/migrations/20260816000000_workshop_stripe_reconciliation_lock_order.sql
+supabase/migrations/20260820000000_workshop_occurrence_edit_management.sql
 supabase/schemas/public/tables/workshop_*.sql
 supabase/schemas/public/functions/workshop_*.sql
 supabase/schemas/storage/workshop_media.sql
@@ -81,7 +82,10 @@ Migration order:
    workshop audit events, pre-booking public projections, storage, policies,
    then the additive staged-to-reusable concept lifecycle refinement.
 2. Booking/capacity: holds, bookings, attendees, adjustments, booking-aware
-   availability projections, and atomic inventory commands.
+   availability projections, and atomic inventory commands. After the later
+   feature migrations, apply the occurrence edit-management refinement so
+   published occurrence deletion locks inventory and rejects every occurrence
+   with any reservation record.
 3. Payments/reconciliation: attempts, transactions, provider events,
    exceptions, expenses, financial projection, and PayPal retirement changes.
    Apply the Stripe event-idempotency migration before deploying the matching

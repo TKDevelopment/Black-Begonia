@@ -7,9 +7,9 @@ h1, h2, h3 { font-family: 'Cormorant Garamond',serif; font-weight: 600; }
 .page-state h2, .empty-state h3 { font-size: 2rem; }
 .page-state p, .empty-state p { color: #716862; margin: .7rem auto 1.4rem; max-width: 42rem; }
 .loading-mark { animation: pulse 1.4s ease-in-out infinite; background: #c67a72; border-radius: 50%; display: inline-block; height: .6rem; margin-bottom: 1rem; width: .6rem; }
-.featured { --featured-image-inset: clamp(.75rem, 1.5vw, 1.25rem); align-items:center; background: #352d29; color: white; display: grid; grid-template-columns: minmax(0,1.25fr) minmax(18rem,.75fr); margin: 0 auto 6rem; max-width: 90rem; position: relative; }
+.featured { --featured-image-inset: clamp(3rem, 1.5vw, 1.25rem); align-items:center; background: #352d29; color: white; display: grid; grid-template-columns: minmax(0,1.25fr) minmax(18rem,.75fr); margin: 0 auto 6rem; max-width: 90rem; position: relative; border-radius: 1.5rem; overflow: hidden; }
 .featured-image { box-sizing: border-box; overflow:hidden; padding-block: var(--featured-image-inset); padding-left: var(--featured-image-inset); width:100%; }
-.featured-image img { aspect-ratio: 16/9; display: block; height: auto; object-fit: cover; width: 100%; }
+.featured-image img { aspect-ratio: 16/9; display: block; height: auto; object-fit: cover; width: 100%; border-radius: 1.5rem; }
 .featured-copy { align-self: center; padding: clamp(2rem,5vw,5rem); }
 .featured-copy .eyebrow { color: #e2aaa4; }
 .featured-count { color: #ddd2ca; font-size: .76rem; letter-spacing: .08em; margin-top: 1.5rem; text-transform: uppercase; }

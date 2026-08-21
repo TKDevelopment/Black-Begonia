@@ -14,7 +14,7 @@
     <div class="detail-shell">
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <a routerLink="/workshops">Workshops</a><span aria-hidden="true">/</span><span>{{ item.title }}</span>
-      <ng-container *ngIf="!seriesPage()"><span aria-hidden="true">/</span><span>{{ item.workshopDate }}</span></ng-container>
+      <ng-container *ngIf="!seriesPage()"><span aria-hidden="true">/</span><span>{{ item.workshopDate | date:'fullDate' }}</span></ng-container>
     </nav>
     <header class="hero">
       <div class="hero-composition">

@@ -22,6 +22,7 @@ export interface WorkshopCatalogRepository {
   saveOccurrence(draft: WorkshopOccurrenceDraft, commandKey: string): Promise<WorkshopOccurrence>;
   publishOccurrence(id: string, commandKey: string): Promise<WorkshopOccurrence>;
   archiveOccurrence(id: string, commandKey: string): Promise<WorkshopOccurrence>;
+  countOccurrenceBookings(id: string): Promise<number>;
   deleteOccurrence(id: string, commandKey: string): Promise<void>;
   listSeries(): Promise<WorkshopSeries[]>;
   createSeries(input: CreateWorkshopSeriesInput): Promise<WorkshopSeries>;
@@ -138,6 +139,15 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
     });
     if (error) throw error;
     return data as WorkshopOccurrence;
+  }
+
+  async countOccurrenceBookings(id: string): Promise<number> {
+    const { count, error } = await this.supabase.getClient()
+      .from('workshop_bookings')
+      .select('workshop_booking_id', { count: 'exact', head: true })
+      .eq('workshop_occurrence_id', id);
+    if (error) throw error;
+    return count ?? 0;
   }
 
   async deleteOccurrence(id: string, commandKey: string): Promise<void> {

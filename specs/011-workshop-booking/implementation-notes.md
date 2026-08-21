@@ -1747,3 +1747,45 @@ recorded here as their tasks complete.
   825/825, and the isolated production build completed successfully. Existing
   budget warnings and placeholder Supabase prerender messages remain unchanged.
   The in-app browser surface was unavailable for a live responsive review.
+
+## 2026-08-20 - T188-T190 established occurrence management
+
+- Kept `Add workshop occurrence` horizontally aligned with the Single date or
+  workshop series heading for both new and established workshops. Saving an
+  established edit now persists every appended schedule row with the current
+  workshop definition and, when present, its existing series relationship.
+- Added confirmation before removing an unsaved schedule row. Saved draft or
+  published occurrences first count all reservation records. Any count above
+  zero opens a blocking alert and never offers deletion; zero reservations
+  produces an irreversible-delete confirmation before invoking the guarded
+  catalog command.
+- Added migration
+  `20260820000000_workshop_occurrence_edit_management.sql`. The database command
+  locks the occurrence, repeats the reservation check to close the UI-to-write
+  race, and relies on existing restrictive foreign keys to preserve any other
+  operational or financial history.
+- The focused editor/repository suite passed 33/33 tests and the dev Angular/SSR
+  build completed. The full suite completed 828/829 tests; its sole failure is
+  the pre-existing in-progress public workshop-detail style expectation in the
+  user's separate working-tree changes (`51.6px` expected versus `21.6px`, and
+  `none` expected versus the current gradient). The production build reached
+  bundle/prerender output but remains blocked by that same modified public
+  detail stylesheet exceeding its 8 kB error budget by 223 bytes. A local
+  Supabase/PostgreSQL runner is not installed or attached, so the new pgTAP
+  database contract remains for operator execution after applying the migration.
+
+## 2026-08-20 - T191 established occurrence republish correction
+
+- Diagnosed production PostgREST `55000 workshop occurrence cannot be published`
+  responses as a redundant frontend lifecycle transition: after saving the
+  established row, the editor attempted to publish it even when the database
+  correctly returned `published_open`.
+- The editor now invokes `publish_workshop_occurrence` only when Save and publish
+  receives a saved row in `draft` or `registration_closed`. An established open
+  row remains open without another transition, while each newly appended draft
+  is still published.
+- Added a regression with one established published occurrence and one appended
+  draft. It verifies two saves but exactly one publish call, targeting only the
+  appended occurrence. The focused editor/repository suite passed 34/34 tests.
+  This is an application deployment correction and requires no follow-up SQL
+  migration beyond the already published occurrence edit-management migration.

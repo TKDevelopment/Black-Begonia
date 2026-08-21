@@ -108,17 +108,21 @@ create or replace function public.delete_workshop_occurrence(
   p_command_key uuid
 ) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare v_occurrence public.workshop_occurrences;
+declare
+  v_occurrence public.workshop_occurrences;
+  v_booking_count bigint;
 begin
   if not public.is_internal_crm_user() then raise exception 'not authorized' using errcode='42501'; end if;
+  if p_command_key is null then raise exception 'invalid request' using errcode='22023'; end if;
   select * into v_occurrence from public.workshop_occurrences
     where workshop_occurrence_id=p_workshop_occurrence_id for update;
   if not found then return jsonb_build_object('deleted',true); end if;
-  if v_occurrence.status<>'draft' or v_occurrence.published_at is not null
-    or exists(select 1 from public.workshop_audit_events a
-      where a.workshop_occurrence_id=p_workshop_occurrence_id
-        and a.event_type<>'occurrence_saved') then
-    raise exception 'workshop occurrence has history' using errcode='55000';
+  select count(*) into v_booking_count
+  from public.workshop_bookings
+  where workshop_occurrence_id=p_workshop_occurrence_id;
+  if v_booking_count > 0 then
+    raise exception 'workshop occurrence has booked reservations'
+      using errcode='55000', detail=v_booking_count::text;
   end if;
   delete from public.workshop_media where workshop_occurrence_id=p_workshop_occurrence_id;
   delete from public.workshop_audit_events where workshop_occurrence_id=p_workshop_occurrence_id;
