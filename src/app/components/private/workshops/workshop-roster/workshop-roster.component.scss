@@ -33,10 +33,10 @@ tbody tr:last-child td { border-bottom:0; }
 td:first-child { min-width:12rem; }
 .contact-link { color:var(--r-accent); font-size:.76rem; }
 .customer-name { color:var(--r-strong); font-size:.9rem; }
-.muted,.payment-state { display:block; color:var(--r-muted); font-size:.72rem; }
+.muted { display:block; color:var(--r-muted); font-size:.72rem; }
 .status-badge { display:inline-flex; width:max-content; padding:.28rem .5rem; border-radius:999px; background:var(--r-subtle); color:var(--r-strong); font-size:.63rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
-.status-badge[data-state='confirmed'],.status-badge[data-state='checked_in'],.status-badge[data-state='waiting'] { background:color-mix(in srgb,var(--r-success) 18%,var(--r-surface)); color:var(--r-success); }
-.status-badge[data-state='cancelled'],.status-badge[data-state='expired'] { background:color-mix(in srgb,var(--r-danger) 13%,var(--r-surface)); color:var(--r-danger); }
+.status-badge:is([data-state=confirmed],[data-state=checked_in],[data-state=waiting],[data-state=partially_refunded]) { background:color-mix(in srgb,var(--r-success) 18%,var(--r-surface)); color:var(--r-success); }
+.status-badge:is([data-state=cancelled],[data-state=expired],[data-state=refunded]) { background:color-mix(in srgb,var(--r-danger) 13%,var(--r-surface)); color:var(--r-danger); }
 .empty-row { padding:2rem; text-align:center; color:var(--r-muted); }
 .two-column { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
 .operation-list article { padding:.75rem 0; border-bottom:1px solid var(--r-border); }

@@ -94,7 +94,7 @@
             <h2>Single date or workshop series</h2>
             <p class="section-copy">Each occurrence is an independent workshop record. All schedule values use America/New_York automatically.</p>
           </div>
-          <button *ngIf="!currentOccurrence()" type="button" class="secondary-action" (click)="addOccurrence()">+ Add workshop occurrence</button>
+          <button type="button" class="secondary-action" (click)="addOccurrence()">+ Add workshop occurrence</button>
         </div>
         <div *ngIf="!currentOccurrence() && seriesMode()" class="form-grid">
           <label class="field full">Series label
@@ -109,7 +109,7 @@
             <label class="field">Local end time<span class="field-control"><input type="time" formControlName="localEndTime" placeholder="3:00 PM" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.localEndTime')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.localEndTime')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.localEndTime') }}</span></span></label>
             <label class="field">Registration start date<span class="field-control"><input type="date" formControlName="registrationStartDate" placeholder="YYYY-MM-DD" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.registrationStartDate')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.registrationStartDate')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.registrationStartDate') }}</span></span></label>
             <label class="field">Registration close date<span class="field-control"><input type="date" formControlName="registrationCloseDate" placeholder="YYYY-MM-DD" [attr.aria-invalid]="fieldInvalid('occurrences.' + index + '.registrationCloseDate')" /><span *ngIf="tooltipVisible('occurrences.' + index + '.registrationCloseDate')" class="validation-tooltip">{{ validationMessage('occurrences.' + index + '.registrationCloseDate') }}</span></span></label>
-            <div *ngIf="occurrenceSchedules.length > 1" class="occurrence-remove-cell">
+            <div *ngIf="currentOccurrence() || occurrenceSchedules.length > 1" class="occurrence-remove-cell">
               <button type="button" class="remove-occurrence destructive-icon-button" [attr.aria-label]="'Remove workshop occurrence ' + (index + 1)" (click)="removeOccurrence(index)">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />

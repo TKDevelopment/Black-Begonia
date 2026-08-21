@@ -3,6 +3,15 @@ select no_plan();
 
 select ok(to_regclass('public.workshop_seat_holds') is not null,'seat holds exist');
 select ok(to_regclass('public.workshop_bookings') is not null,'bookings exist');
+select has_function(
+  'public','delete_workshop_occurrence',array['uuid','uuid'],
+  'booking-aware occurrence deletion command exists'
+);
+select matches(
+  pg_get_functiondef('public.delete_workshop_occurrence(uuid,uuid)'::regprocedure),
+  'workshop_bookings',
+  'occurrence deletion checks booked reservations at the database boundary'
+);
 select ok(to_regclass('public.workshop_attendees') is not null,'attendees exist');
 select ok(to_regclass('public.workshop_booking_adjustments') is not null,'booking adjustments exist');
 select has_index('public','workshop_seat_holds','idx_workshop_holds_active_capacity','active holds are indexed for capacity');
@@ -157,6 +166,25 @@ select is(
   1,
   'one booking shell exists before idempotent replay'
 );
+insert into public.profiles(id,is_active)
+values ('30000000-0000-4000-8000-000000000090',true)
+on conflict (id) do update set is_active=true;
+insert into public.user_roles(user_id,role)
+values ('30000000-0000-4000-8000-000000000090','admin')
+on conflict (user_id,role) do nothing;
+set local role authenticated;
+set local request.jwt.claims =
+  '{"sub":"30000000-0000-4000-8000-000000000090","role":"authenticated"}';
+select throws_ok(
+  $$select public.delete_workshop_occurrence(
+    '30000000-0000-4000-8000-000000000010',
+    '30000000-0000-4000-8000-000000000091'
+  )$$,
+  '55000',
+  'workshop occurrence has booked reservations',
+  'published occurrence deletion is blocked after any reservation is created'
+);
+reset role;
 select lives_ok(
   $$select public.create_workshop_seat_hold(
     'capacity-available',2,'First Customer','first@example.test',null,1,

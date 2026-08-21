@@ -24,7 +24,7 @@ describe('Workshop CRM representative scale performance', () => {
     TestBed.resetTestingModule();
   });
 
-  it('retrieves and renders the 500-occurrence CRM list within two seconds at p95', async () => {
+  it('retrieves and renders 500 occurrences in one concept card within two seconds at p95', async () => {
     const catalog = jasmine.createSpyObj<WorkshopCatalogRepositoryService>(
       'WorkshopCatalogRepositoryService',
       ['listOccurrences', 'listSeries'],
@@ -54,7 +54,8 @@ describe('Workshop CRM representative scale performance', () => {
     console.info(
       `[workshop-scale] CRM occurrence list: 500 rows, ${RUN_COUNT} runs, p95=${p95.toFixed(1)}ms`,
     );
-    expect(fixture.nativeElement.querySelectorAll('article.workshop-row').length).toBe(500);
+    expect(fixture.nativeElement.querySelectorAll('article.workshop-row').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.concept-occurrence-row').length).toBe(500);
     expect(p95).toBeLessThan(P95_LIMIT_MS);
   });
 

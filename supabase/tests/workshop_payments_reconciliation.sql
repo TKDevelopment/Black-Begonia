@@ -795,12 +795,20 @@ select lives_ok(
       'providerObjectId','re_roster_refund','providerObjectType','refund',
       'providerEventId','evt_roster_refund','eventType','refund.updated',
       'occurredAt',now(),'payloadDigest',repeat('f',64),
-      'refundRequestId',(select workshop_refund_request_id
-        from public.workshop_refund_requests
-        where command_key='32000000-0000-4000-8000-000000000051')
+      'paymentAttemptId',(select workshop_payment_attempt_id
+        from public.workshop_payment_transactions
+        where provider_transaction_id='pi_roster_refund')
     ),
     '32000000-0000-4000-8000-000000000053'
-  )$$,'verified Stripe refund reconciliation releases selected seats'
+  )$$,'verified Stripe refund evidence remains durable without request metadata'
+);
+select lives_ok(
+  $$select public.reconcile_workshop_refund_request(
+    (select workshop_refund_request_id
+      from public.workshop_refund_requests
+      where command_key='32000000-0000-4000-8000-000000000051'),
+    're_roster_refund'
+  )$$,'refund-request reconciliation repairs previously detached provider evidence'
 );
 select is(
   (select active_quantity from public.workshop_bookings
@@ -811,6 +819,58 @@ select ok(
   (select seats_released_at is not null from public.workshop_refund_requests
     where command_key='32000000-0000-4000-8000-000000000051'),
   'Stripe refund request records its seat release completion'
+);
+
+set local role authenticated;
+select lives_ok(
+  $$select public.manage_workshop_refund_order(
+    'request_stripe',
+    jsonb_build_object(
+      'transactionId',(select workshop_payment_transaction_id
+        from public.workshop_payment_transactions
+        where provider_transaction_id='pi_roster_refund'),
+      'amountMinor',7500,'seatQuantity',1,'currency','USD',
+      'reason','customer_requested'
+    ),
+    '32000000-0000-4000-8000-000000000054'
+  )$$,'a second seat-aware Stripe refund can be requested'
+);
+reset role;
+select lives_ok(
+  $$select public.manage_workshop_financials(
+    'refund_provider_accepted',
+    jsonb_build_object(
+      'requestId',(select workshop_refund_request_id
+        from public.workshop_refund_requests
+        where command_key='32000000-0000-4000-8000-000000000054'),
+      'providerRefundId','re_roster_refund_failed'
+    ),
+    '32000000-0000-4000-8000-000000000055'
+  )$$,'the second refund reaches provider accepted state'
+);
+select lives_ok(
+  $$select public.mark_workshop_refund_provider_failed(
+    (select workshop_refund_request_id
+      from public.workshop_refund_requests
+      where command_key='32000000-0000-4000-8000-000000000054'),
+    're_roster_refund_failed','provider_reported_failed',
+    '32000000-0000-4000-8000-000000000056'
+  )$$,'a verified failed refund event records the provider failure'
+);
+select is(
+  (select state from public.workshop_refund_requests
+    where command_key='32000000-0000-4000-8000-000000000054'),
+  'provider_failed','failed asynchronous refunds leave the request retryable for review'
+);
+select is(
+  (select active_quantity from public.workshop_bookings
+    where contact_email='stripe@example.test'),
+  1,'failed Stripe refunds do not release seats'
+);
+select is(
+  (select count(*)::integer from public.workshop_payment_exceptions
+    where command_key='32000000-0000-4000-8000-000000000056'),
+  1,'failed Stripe refunds create one urgent CRM exception'
 );
 
 insert into public.workshop_payment_transactions(

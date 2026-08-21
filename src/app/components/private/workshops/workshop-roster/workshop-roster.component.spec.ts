@@ -230,6 +230,39 @@ describe('WorkshopRosterComponent', () => {
     expect(statusCell.textContent?.trim()).toBe('confirmed');
   });
 
+  it('shows a green partially refunded status from the authoritative payment state', () => {
+    component.bookings.set([{
+      ...component.bookings()[0],
+      active_quantity: 2,
+      purchased_quantity: 4,
+      payment_state: 'partially_refunded',
+    }]);
+    fixture.detectChanges();
+
+    const badge = fixture.nativeElement.querySelector(
+      '.booking-status-cell .status-badge',
+    ) as HTMLElement;
+    expect(badge.textContent?.trim()).toBe('partially refunded');
+    expect(badge.dataset['state']).toBe('partially_refunded');
+  });
+
+  it('shows a red refunded status after all seats are released', () => {
+    component.bookings.set([{
+      ...component.bookings()[0],
+      active_quantity: 0,
+      purchased_quantity: 4,
+      status: 'cancelled',
+      payment_state: 'refunded',
+    }]);
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('.roster-card tbody tr') as HTMLElement;
+    const badge = row.querySelector('.booking-status-cell .status-badge') as HTMLElement;
+    expect(row.textContent).toContain('0 of 4 active');
+    expect(badge.textContent?.trim()).toBe('refunded');
+    expect(badge.dataset['state']).toBe('refunded');
+  });
+
   it('replaces Cancel Seats with Refund Order for a confirmed paid booking', () => {
     const actions = fixture.nativeElement.querySelector('.booking-actions') as HTMLElement;
     const labels = Array.from(actions.querySelectorAll('button'), (button: unknown) =>
@@ -248,6 +281,11 @@ describe('WorkshopRosterComponent', () => {
     expect(modal.textContent).toContain('1 of 2 active seats');
 
     component.refundConfirmation = true;
+    operations.listBookings.and.resolveTo([{
+      ...component.bookings()[0],
+      active_quantity: 1,
+      payment_state: 'partially_refunded',
+    }]);
     await component.refundSelectedSeats();
 
     expect(financials.requestStripeRefund).toHaveBeenCalledWith(
@@ -256,6 +294,8 @@ describe('WorkshopRosterComponent', () => {
     expect(operations.cancelSeats).not.toHaveBeenCalled();
     expect(component.actionMessage()).toContain('Stripe refund requested');
     expect(component.actionMessage()).toContain('verified');
+    expect(component.bookings()[0].active_quantity).toBe(1);
+    expect(component.bookings()[0].payment_state).toBe('partially_refunded');
   });
 
   it('records a manual Venmo refund only after the florist confirms it was sent', async () => {

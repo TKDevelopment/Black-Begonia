@@ -155,7 +155,10 @@ serve(async (request) => {
       }
     }
     const metadata =
-      (session?.metadata ?? authoritative.metadata ?? {}) as Record<
+      ({
+        ...(session?.metadata ?? {}),
+        ...(authoritative.metadata ?? {}),
+      }) as Record<
         string,
         unknown
       >;
@@ -232,6 +235,7 @@ serve(async (request) => {
       const financialEvents = new Set([
         "refund.created",
         "refund.updated",
+        "refund.failed",
         "charge.succeeded",
         "charge.dispute.created",
         "charge.dispute.closed",
@@ -345,6 +349,31 @@ serve(async (request) => {
           p_command_key: crypto.randomUUID(),
         });
         if (financial.error) throw financial.error;
+        if (
+          financialKind === "refund" && financialState === "confirmed" &&
+          isUuid(workshopRefundRequestId)
+        ) {
+          const reconciledRefund = await db.rpc(
+            "reconcile_workshop_refund_request",
+            {
+              p_refund_request_id: workshopRefundRequestId,
+              p_provider_refund_id: financialProviderObjectId,
+            },
+          );
+          if (reconciledRefund.error) throw reconciledRefund.error;
+        }
+        if (
+          String(event.type) === "refund.failed" &&
+          isUuid(workshopRefundRequestId)
+        ) {
+          const failed = await db.rpc("mark_workshop_refund_provider_failed", {
+            p_refund_request_id: workshopRefundRequestId,
+            p_provider_refund_id: financialProviderObjectId,
+            p_safe_failure: "provider_reported_failed",
+            p_command_key: crypto.randomUUID(),
+          });
+          if (failed.error) throw failed.error;
+        }
         return new Response(
           JSON.stringify({
             received: true,

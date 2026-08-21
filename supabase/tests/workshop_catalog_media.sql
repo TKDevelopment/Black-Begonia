@@ -32,6 +32,10 @@ select has_trigger('public','workshop_occurrences','allocate_workshop_occurrence
 select has_function('public','publish_workshop_occurrence',array['uuid','uuid'],'publication command exists');
 select has_function('public','archive_workshop_occurrence',array['uuid','uuid'],'archive command exists');
 select has_function('public','delete_workshop_occurrence',array['uuid','uuid'],'guarded delete command exists');
+select has_function(
+  'public','update_workshop_concept',array['uuid','jsonb','uuid'],
+  'atomic workshop concept update command exists'
+);
 select ok(
   pg_get_functiondef('public.save_workshop_occurrence(jsonb,uuid)'::regprocedure)
     like '%at time zone%',
@@ -54,8 +58,8 @@ select ok(
 );
 select ok(
   pg_get_functiondef('public.delete_workshop_occurrence(uuid,uuid)'::regprocedure)
-    like '%history%',
-  'delete command guards historical occurrences'
+    like '%workshop_bookings%',
+  'delete command guards occurrences with booked reservations'
 );
 
 insert into public.profiles(id, is_active)
@@ -254,15 +258,19 @@ select is(
   true,
   'successful publication promotes its staged definition into the reusable concept library'
 );
-select throws_ok(
+select lives_ok(
   $$select public.delete_workshop_occurrence(
     (select workshop_occurrence_id from public.workshop_occurrences
      where slug='garden-centerpiece-2026-11-08'),
     '20000000-0000-4000-8000-000000000031'
   )$$,
-  '55000',
-  'workshop occurrence has history',
-  'published occurrence deletion is blocked'
+  'published occurrence without reservations can be deleted'
+);
+select is(
+  (select count(*)::integer from public.workshop_occurrences
+   where slug='garden-centerpiece-2026-11-08'),
+  0,
+  'reservation-free published occurrence is removed'
 );
 reset role;
 
@@ -562,6 +570,53 @@ select ok(
       ?| array['contact_email','contact_phone','created_by','updated_by','stripe_price_version_id']
   ),
   'public detail excludes internal and customer-private fields'
+);
+
+set local role authenticated;
+set local request.jwt.claims =
+  '{"sub":"20000000-0000-4000-8000-000000000001","role":"authenticated"}';
+select lives_ok(
+  $$select public.update_workshop_concept(
+    '20000000-0000-4000-8000-000000000010',
+    jsonb_build_object(
+      'title','Pumpkins & Pours',
+      'theme','autumn',
+      'advertisingLine','Gather for flowers and fall pours.',
+      'description','Create an autumn centerpiece around a pumpkin vessel.',
+      'includedMaterials','Pumpkin, flowers, tools, and instruction.',
+      'defaultTerms','Updated cancellation terms.'
+    ),
+    '20000000-0000-4000-8000-000000000052'
+  )$$,
+  'editing a workshop concept updates all of its occurrence snapshots'
+);
+reset role;
+
+select is(
+  (select count(distinct title_snapshot)::integer
+   from public.workshop_occurrences
+   where workshop_definition_id='20000000-0000-4000-8000-000000000010'),
+  1,
+  'all occurrences of one concept retain the same title snapshot'
+);
+select is(
+  (select min(title_snapshot)
+   from public.workshop_occurrences
+   where workshop_definition_id='20000000-0000-4000-8000-000000000010'),
+  'Pumpkins & Pours',
+  'the concept title propagates to every occurrence'
+);
+select is(
+  (select title from public.workshop_definitions
+   where workshop_definition_id='20000000-0000-4000-8000-000000000010'),
+  'Pumpkins & Pours',
+  'the authoritative definition is updated with its occurrence snapshots'
+);
+select is(
+  (select capacity from public.workshop_occurrences
+   where slug='garden-series-2027-06-19'),
+  14,
+  'concept propagation preserves occurrence-specific capacity'
 );
 
 select * from finish();

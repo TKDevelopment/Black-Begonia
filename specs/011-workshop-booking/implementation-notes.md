@@ -1747,3 +1747,124 @@ recorded here as their tasks complete.
   825/825, and the isolated production build completed successfully. Existing
   budget warnings and placeholder Supabase prerender messages remain unchanged.
   The in-app browser surface was unavailable for a live responsive review.
+
+## 2026-08-20 - T188-T190 established occurrence management
+
+- Kept `Add workshop occurrence` horizontally aligned with the Single date or
+  workshop series heading for both new and established workshops. Saving an
+  established edit now persists every appended schedule row with the current
+  workshop definition and, when present, its existing series relationship.
+- Added confirmation before removing an unsaved schedule row. Saved draft or
+  published occurrences first count all reservation records. Any count above
+  zero opens a blocking alert and never offers deletion; zero reservations
+  produces an irreversible-delete confirmation before invoking the guarded
+  catalog command.
+- Added migration
+  `20260820000000_workshop_occurrence_edit_management.sql`. The database command
+  locks the occurrence, repeats the reservation check to close the UI-to-write
+  race, and relies on existing restrictive foreign keys to preserve any other
+  operational or financial history.
+- The focused editor/repository suite passed 33/33 tests and the dev Angular/SSR
+  build completed. The full suite completed 828/829 tests; its sole failure is
+  the pre-existing in-progress public workshop-detail style expectation in the
+  user's separate working-tree changes (`51.6px` expected versus `21.6px`, and
+  `none` expected versus the current gradient). The production build reached
+  bundle/prerender output but remains blocked by that same modified public
+  detail stylesheet exceeding its 8 kB error budget by 223 bytes. A local
+  Supabase/PostgreSQL runner is not installed or attached, so the new pgTAP
+  database contract remains for operator execution after applying the migration.
+
+## 2026-08-20 - T191 established occurrence republish correction
+
+- Diagnosed production PostgREST `55000 workshop occurrence cannot be published`
+  responses as a redundant frontend lifecycle transition: after saving the
+  established row, the editor attempted to publish it even when the database
+  correctly returned `published_open`.
+- The editor now invokes `publish_workshop_occurrence` only when Save and publish
+  receives a saved row in `draft` or `registration_closed`. An established open
+  row remains open without another transition, while each newly appended draft
+  is still published.
+- Added a regression with one established published occurrence and one appended
+  draft. It verifies two saves but exactly one publish call, targeting only the
+  appended occurrence. The focused editor/repository suite passed 34/34 tests.
+  This is an application deployment correction and requires no follow-up SQL
+  migration beyond the already published occurrence edit-management migration.
+
+## 2026-08-20 - T192 concept-grouped CRM workshop catalog
+
+- Replaced occurrence-per-card rendering on `/admin/workshops` with one card per
+  stable `workshop_definition_id`. Each card shows its chronologically ordered
+  occurrence dates and retains date-specific roster, edit, public-preview,
+  publish, delete, and archive controls. Lifecycle filtering is applied before
+  grouping, so a filtered concept card contains only matching occurrences.
+- Established edits now call replay-safe `update_workshop_concept` after saving
+  occurrence-specific form data. The atomic command updates authoritative
+  definition copy and every occurrence title, advertising line, description,
+  included-materials, and terms snapshot. Changed terms increment the concept
+  terms version. Schedule, venue, capacity, price, payment configuration, and
+  lifecycle state remain occurrence-specific and are not part of the patch.
+- Added declarative SQL and additive migration
+  `20260821000000_workshop_concept_updates.sql`, plus pgTAP contracts for command
+  presence, definition/snapshot propagation, and capacity preservation.
+- Focused admin/editor/repository coverage passed 45/45 tests. The adjusted
+  500-occurrence scale scenario passed 2/2 with the grouped card rendering all
+  500 occurrence rows at 151.3 ms p95. TypeScript spec compilation and the dev
+  Angular/SSR build passed. A local Supabase/PostgreSQL runner is unavailable,
+  so the pgTAP contract remains for operator execution after the new migration.
+- The production build compiled and prerendered but remains blocked by the
+  user's separate public workshop-detail stylesheet exceeding its 8 kB error
+  budget. The full suite completed 833/834 tests; its sole remaining public
+  workshop-detail computed-style expectation is likewise outside this
+  refinement and unchanged here.
+
+## 2026-08-20 - T193 Stripe roster-refund PaymentIntent correction
+
+- Traced the CRM refund-order 502 to the function's explicit Stripe rejection
+  response. The absence of a Supabase log was expected from the old code because
+  its non-2xx provider branch persisted failure state and returned 502 without
+  logging the provider status.
+- Workshop reconciliation intentionally stores the canonical Stripe
+  PaymentIntent ID (`pi_...`) as the paid charge transaction's provider
+  reference. The refund endpoint incorrectly submitted that value in Stripe's
+  `charge` field, which accepts `ch_...` identifiers. It now chooses
+  `payment_intent` for `pi_...` and retains `charge` compatibility for `ch_...`.
+  Unsupported prefixes are rejected before a durable refund request is created.
+- Added an early missing-key configuration response and redacted provider
+  diagnostics containing only status, Stripe request ID, bounded error
+  type/code/parameter, and the internal refund request UUID. Provider response
+  messages/bodies, credentials, and customer data remain excluded.
+- No migration or automated Edge Function test was added. The feature plan
+  explicitly requires independent Edge Function type-checking instead. Deno
+  check passed, and the focused roster plus financial-repository regression
+  passed 30/30 tests. Deployment requires the current
+  `refund-workshop-payment` function and a `STRIPE_RESTRICTED_KEY` with Refunds
+  write permission.
+
+## 2026-08-20 - T194 Stripe refund webhook roster reconciliation
+
+- Traced the successful-Stripe/stale-roster outcome to webhook metadata
+  precedence. Loading the related Checkout Session replaced the refund object's
+  metadata, dropping `workshop_refund_request_id`; the immutable refund fact
+  could be recorded, but the request could not transition to `reconciled`, so
+  its seat-release trigger never ran.
+- The webhook now merges Session metadata with authoritative refund metadata,
+  accepts `refund.failed`, and invokes a replay-safe database reconciliation
+  after confirmed refund evidence is durable. The additive
+  `20260821010000_workshop_refund_webhook_reconciliation.sql` migration can also
+  attach an already-recorded Stripe refund fact to its request when the same
+  provider event is resent after deployment. Failed provider outcomes create an
+  urgent financial exception and preserve seats.
+- The roster now derives refund badges from authoritative `payment_state`:
+  partial refunds display `Partially refunded` in green with the reduced active
+  count; full refunds display `Refunded` in red with zero active seats. After
+  Stripe accepts a request, the component performs bounded authoritative reloads
+  while awaiting webhook reconciliation and never decrements seats locally.
+- Focused roster coverage passed 24/24 tests. The existing Edge Function was
+  not targeted by an automated test per the feature constraint; standalone
+  `deno check --config supabase/deno.json` passed. PostgreSQL assertions were
+  added for detached-evidence recovery and asynchronous failure without seat
+  release, but could not run locally because neither Supabase CLI nor the Docker
+  daemon is available. The production build compiled and prerendered; its final
+  gate remains blocked by the user's separate public workshop-detail stylesheet
+  exceeding the 8 kB component budget by 279 bytes. The roster stylesheet no
+  longer exceeds its error budget after compaction.

@@ -114,12 +114,61 @@ describe('WorkshopCatalogRepositoryService', () => {
     });
   });
 
+  it('delegates an atomic concept update for definition and occurrence snapshots', async () => {
+    const occurrence = workshopOccurrenceFixture();
+    client.rpc.and.resolveTo({ data: [occurrence], error: null });
+    const patch = {
+      title: 'Pumpkins & Pours',
+      theme: 'autumn',
+      advertisingLine: 'An autumn floral evening.',
+      description: 'Design with pumpkins and flowers.',
+      includedMaterials: 'Pumpkin, flowers, tools, and instruction.',
+      defaultTerms: 'Updated cancellation terms.',
+    };
+
+    await expectAsync(service.updateConcept(
+      occurrence.workshop_definition_id,
+      patch,
+      'command-concept-update',
+    )).toBeResolvedTo([occurrence]);
+
+    expect(client.rpc).toHaveBeenCalledWith('update_workshop_concept', {
+      p_workshop_definition_id: occurrence.workshop_definition_id,
+      p_patch: patch,
+      p_command_key: 'command-concept-update',
+    });
+  });
+
   it('surfaces publication validation errors without rewriting them', async () => {
     const error = { code: '22023', message: 'effective hero image is required' };
     client.rpc.and.resolveTo({ data: null, error });
 
     await expectAsync(service.publishOccurrence('occurrence', 'command'))
       .toBeRejectedWith(error);
+  });
+
+  it('counts booked reservations before delegating guarded occurrence deletion', async () => {
+    const occurrence = workshopOccurrenceFixture();
+    const bookingQuery = countResult(2);
+    client.from.and.returnValue(bookingQuery);
+    client.rpc.and.resolveTo({ data: { deleted: true }, error: null });
+
+    await expectAsync(service.countOccurrenceBookings(occurrence.workshop_occurrence_id))
+      .toBeResolvedTo(2);
+    await service.deleteOccurrence(occurrence.workshop_occurrence_id, 'command-delete');
+
+    expect(client.from).toHaveBeenCalledWith('workshop_bookings');
+    expect(bookingQuery.select).toHaveBeenCalledWith(
+      'workshop_booking_id',
+      { count: 'exact', head: true },
+    );
+    expect(bookingQuery.eq).toHaveBeenCalledWith(
+      'workshop_occurrence_id', occurrence.workshop_occurrence_id,
+    );
+    expect(client.rpc).toHaveBeenCalledWith('delete_workshop_occurrence', {
+      p_workshop_occurrence_id: occurrence.workshop_occurrence_id,
+      p_command_key: 'command-delete',
+    });
   });
 
   it('invokes the standalone catalog boundary and maps readiness identifiers', async () => {
@@ -241,5 +290,15 @@ function mutationResult<T>(data: T) {
   query.eq.and.returnValue(query);
   query.select.and.returnValue(query);
   query.single.and.resolveTo({ data, error: null });
+  return query;
+}
+
+function countResult(count: number) {
+  const query = {
+    select: jasmine.createSpy('select'),
+    eq: jasmine.createSpy('eq'),
+  };
+  query.select.and.returnValue(query);
+  query.eq.and.resolveTo({ count, error: null });
   return query;
 }

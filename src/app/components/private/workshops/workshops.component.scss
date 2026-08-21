@@ -2,6 +2,8 @@
 .workshops-admin { background: var(--crm-page-bg,#f7f4f1); color: var(--crm-text,#292524); }
 .workshop-row { transition: border-color 180ms ease, transform 180ms ease; }
 .workshop-row:hover { border-color: color-mix(in srgb,var(--crm-accent,#c46f67) 55%,var(--crm-border,#d5c2b3)); transform: translateY(-1px); }
+.concept-occurrence-row { background: color-mix(in srgb,var(--crm-surface-highlight,#eee7e2) 35%,var(--crm-surface,#fff)); }
+.occurrence-count { color: var(--crm-text-soft,#78716c); font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 dt { color: var(--crm-text-soft,#78716c); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 dd { color: var(--crm-text-strong,#292524); margin-top: .2rem; }
 .status-pill, .featured-pill { border-radius: 999px; display: inline-flex; font-size: .62rem; font-weight: 700; padding: .25rem .5rem; text-transform: uppercase; }

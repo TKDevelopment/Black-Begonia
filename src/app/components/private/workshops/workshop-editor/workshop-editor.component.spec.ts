@@ -26,7 +26,9 @@ describe('WorkshopEditorComponent', () => {
         'listDefinitions', 'listSeries', 'listOccurrences', 'getOccurrence',
         'createDefinition', 'retireDefinition', 'createSeries', 'generateSeries',
         'previewSeriesUpdate', 'applySeriesUpdate', 'saveOccurrence',
+        'updateConcept',
         'publishOccurrence', 'listMedia', 'syncStripeCatalog',
+        'countOccurrenceBookings', 'deleteOccurrence',
       ],
     );
     const definition = workshopDefinitionFixture();
@@ -37,6 +39,8 @@ describe('WorkshopEditorComponent', () => {
     repository.listMedia.and.resolveTo([]);
     repository.createDefinition.and.resolveTo(definition);
     repository.saveOccurrence.and.resolveTo(workshopOccurrenceFixture({ status: 'draft' }));
+    repository.updateConcept.and.resolveTo([workshopOccurrenceFixture({ status: 'draft' })]);
+    repository.countOccurrenceBookings.and.resolveTo(0);
     repository.syncStripeCatalog.and.resolveTo({
       productId: 'prod_workshop',
       priceId: 'price_workshop',
@@ -347,17 +351,144 @@ describe('WorkshopEditorComponent', () => {
     expect(component.conceptOptions()).toEqual([{ ...definition, is_reusable: false }]);
   });
 
-  it('adds and removes independently editable occurrence schedule rows', () => {
+  it('adds and removes independently editable unsaved occurrence schedule rows', async () => {
+    spyOn(window, 'confirm').and.returnValue(true);
     component.addOccurrence();
     component.occurrenceSchedules.at(1).patchValue({ date: '2026-11-14' });
 
     expect(component.occurrenceSchedules.length).toBe(2);
     expect(component.seriesMode()).toBeTrue();
 
-    component.removeOccurrence(0);
+    await component.removeOccurrence(0);
     expect(component.occurrenceSchedules.length).toBe(1);
     expect(component.seriesMode()).toBeFalse();
     expect(component.occurrenceSchedules.at(0).controls.date.value).toBe('2026-11-14');
+  });
+
+  it('adds a new occurrence after an established occurrence and persists both rows', async () => {
+    const current = workshopOccurrenceFixture({ status: 'published_open' });
+    const added = workshopOccurrenceFixture({
+      workshop_occurrence_id: '10000000-0000-4000-8000-000000000099',
+      status: 'draft',
+      published_at: null,
+      local_start: '2026-11-14T13:00:00',
+      local_end: '2026-11-14T15:00:00',
+    });
+    component.currentOccurrence.set(current);
+    component.form.patchValue(component.validExample());
+    component.addOccurrence();
+    component.occurrenceSchedules.at(1).patchValue({
+      date: '2026-11-14',
+      localStartTime: '13:00',
+      localEndTime: '15:00',
+      registrationStartDate: '2026-09-01',
+      registrationCloseDate: '2026-11-13',
+    });
+    repository.saveOccurrence.and.returnValues(Promise.resolve(current), Promise.resolve(added));
+
+    await component.save(false);
+
+    expect(repository.saveOccurrence).toHaveBeenCalledTimes(2);
+    expect(repository.saveOccurrence.calls.argsFor(0)[0].workshopOccurrenceId)
+      .toBe(current.workshop_occurrence_id);
+    expect(repository.saveOccurrence.calls.argsFor(1)[0]).toEqual(jasmine.objectContaining({
+      workshopOccurrenceId: undefined,
+      workshopSeriesId: current.workshop_series_id,
+      localStart: '2026-11-14T13:00',
+    }));
+  });
+
+  it('propagates edited concept copy to every occurrence without including schedule fields', async () => {
+    const current = workshopOccurrenceFixture({ status: 'published_open' });
+    component.currentOccurrence.set(current);
+    component.form.patchValue({
+      ...component.validExample(),
+      title: 'Pumpkins & Pours',
+      description: 'An updated concept description.',
+    });
+    repository.saveOccurrence.and.resolveTo(current);
+
+    await component.save(false);
+
+    expect(repository.updateConcept).toHaveBeenCalledWith(
+      current.workshop_definition_id,
+      {
+        title: 'Pumpkins & Pours',
+        theme: 'seasonal',
+        advertisingLine: 'Design a garden-inspired centerpiece with us.',
+        description: 'An updated concept description.',
+        includedMaterials: 'Flowers, vessel, tools, and instruction.',
+        defaultTerms: 'Workshop seats are subject to the published cancellation policy.',
+      },
+      jasmine.any(String),
+    );
+  });
+
+  it('publishes only appended drafts when saving an established published occurrence', async () => {
+    const current = workshopOccurrenceFixture({ status: 'published_open' });
+    const added = workshopOccurrenceFixture({
+      workshop_occurrence_id: '10000000-0000-4000-8000-000000000098',
+      status: 'draft',
+      published_at: null,
+      local_start: '2026-12-05T13:00:00',
+      local_end: '2026-12-05T15:00:00',
+    });
+    component.currentOccurrence.set(current);
+    component.form.patchValue(component.validExample());
+    component.addOccurrence();
+    component.occurrenceSchedules.at(1).patchValue({
+      date: '2026-12-05',
+      localStartTime: '13:00',
+      localEndTime: '15:00',
+      registrationStartDate: '2026-09-01',
+      registrationCloseDate: '2026-12-04',
+    });
+    repository.saveOccurrence.and.returnValues(Promise.resolve(current), Promise.resolve(added));
+    repository.publishOccurrence.and.resolveTo({
+      ...added,
+      status: 'published_open',
+      published_at: '2026-08-21T00:00:00Z',
+    });
+
+    await component.save(true);
+
+    expect(repository.publishOccurrence).toHaveBeenCalledTimes(1);
+    expect(repository.publishOccurrence).toHaveBeenCalledWith(
+      added.workshop_occurrence_id,
+      jasmine.any(String),
+    );
+  });
+
+  it('blocks deletion of a saved occurrence that has booked reservations', async () => {
+    const current = workshopOccurrenceFixture({ status: 'published_open' });
+    component.currentOccurrence.set(current);
+    repository.countOccurrenceBookings.and.resolveTo(2);
+    spyOn(window, 'alert');
+    spyOn(window, 'confirm');
+
+    await component.removeOccurrence(0);
+
+    expect(repository.countOccurrenceBookings).toHaveBeenCalledWith(
+      current.workshop_occurrence_id,
+    );
+    expect(window.alert).toHaveBeenCalledWith(jasmine.stringMatching(/2 booked reservations/i));
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(repository.deleteOccurrence).not.toHaveBeenCalled();
+  });
+
+  it('confirms and deletes a saved occurrence with no booked reservations', async () => {
+    const current = workshopOccurrenceFixture({ status: 'published_open' });
+    component.currentOccurrence.set(current);
+    repository.countOccurrenceBookings.and.resolveTo(0);
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    await component.removeOccurrence(0);
+
+    expect(window.confirm).toHaveBeenCalledWith(jasmine.stringMatching(/permanently delete/i));
+    expect(repository.deleteOccurrence).toHaveBeenCalledWith(
+      current.workshop_occurrence_id,
+      jasmine.any(String),
+    );
   });
 
   it('generates independently identified occurrence drafts from the date preview', async () => {

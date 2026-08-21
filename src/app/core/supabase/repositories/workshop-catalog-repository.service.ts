@@ -16,12 +16,14 @@ export interface WorkshopCatalogRepository {
   listDefinitions(): Promise<WorkshopDefinition[]>;
   createDefinition(input: CreateWorkshopDefinitionInput): Promise<WorkshopDefinition>;
   updateDefinition(id: string, input: Partial<CreateWorkshopDefinitionInput>): Promise<WorkshopDefinition>;
+  updateConcept(id: string, input: CreateWorkshopDefinitionInput, commandKey: string): Promise<WorkshopOccurrence[]>;
   retireDefinition(id: string): Promise<WorkshopDefinition>;
   listOccurrences(): Promise<WorkshopOccurrence[]>;
   getOccurrence(id: string): Promise<WorkshopOccurrence | null>;
   saveOccurrence(draft: WorkshopOccurrenceDraft, commandKey: string): Promise<WorkshopOccurrence>;
   publishOccurrence(id: string, commandKey: string): Promise<WorkshopOccurrence>;
   archiveOccurrence(id: string, commandKey: string): Promise<WorkshopOccurrence>;
+  countOccurrenceBookings(id: string): Promise<number>;
   deleteOccurrence(id: string, commandKey: string): Promise<void>;
   listSeries(): Promise<WorkshopSeries[]>;
   createSeries(input: CreateWorkshopSeriesInput): Promise<WorkshopSeries>;
@@ -91,6 +93,28 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
     return data as WorkshopDefinition;
   }
 
+  async updateConcept(
+    id: string,
+    input: CreateWorkshopDefinitionInput,
+    commandKey: string,
+  ): Promise<WorkshopOccurrence[]> {
+    const patch = {
+      title: input.title.trim(),
+      theme: input.theme.trim(),
+      advertisingLine: input.advertisingLine.trim(),
+      description: input.description.trim(),
+      includedMaterials: input.includedMaterials.trim(),
+      defaultTerms: input.defaultTerms.trim(),
+    };
+    const { data, error } = await this.supabase.getClient().rpc('update_workshop_concept', {
+      p_workshop_definition_id: id,
+      p_patch: patch,
+      p_command_key: commandKey,
+    });
+    if (error) throw error;
+    return (data ?? []) as WorkshopOccurrence[];
+  }
+
   async retireDefinition(id: string): Promise<WorkshopDefinition> {
     const { data, error } = await this.supabase.getClient()
       .from('workshop_definitions')
@@ -138,6 +162,15 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
     });
     if (error) throw error;
     return data as WorkshopOccurrence;
+  }
+
+  async countOccurrenceBookings(id: string): Promise<number> {
+    const { count, error } = await this.supabase.getClient()
+      .from('workshop_bookings')
+      .select('workshop_booking_id', { count: 'exact', head: true })
+      .eq('workshop_occurrence_id', id);
+    if (error) throw error;
+    return count ?? 0;
   }
 
   async deleteOccurrence(id: string, commandKey: string): Promise<void> {
