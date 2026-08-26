@@ -26,14 +26,24 @@
             <dt>Where</dt><dd>{{ item.venueName }}<br />{{ item.locality }}, {{ item.region }}</dd>
           </div>
           <div class="summary-fact">
-            <dt>Per seat</dt><dd>{{ formatMoney(item.priceMinor, item.currency) }}</dd>
+            <dt>Per seat before tax</dt><dd>{{ formatMoney(item.priceMinor, item.currency) }}</dd>
           </div>
           <div class="summary-fact">
             <dt>Booking limit</dt><dd>{{ item.perBookingLimit }} seats</dd>
           </div>
         </dl>
         <div class="summary-total" aria-live="polite">
-          <span class="summary-total-label">Total:</span>
+          <dl class="summary-total-breakdown">
+            <div>
+              <dt>Subtotal</dt>
+              <dd>{{ formatMoney(orderSubtotalMinor(item), item.currency) }}</dd>
+            </div>
+            <div>
+              <dt>Tax ({{ item.taxRegion }} {{ taxRateLabel(item) }})</dt>
+              <dd>{{ formatMoney(orderTaxMinor(item), item.currency) }}</dd>
+            </div>
+          </dl>
+          <span class="summary-total-label">Total</span>
           <strong class="summary-total-amount">
             {{ formatMoney(orderTotalMinor(item), item.currency) }}
           </strong>

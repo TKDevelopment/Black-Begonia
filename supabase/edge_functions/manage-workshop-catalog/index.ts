@@ -106,7 +106,7 @@ serve(async (request) => {
       { auth: { persistSession: false } },
     );
     const definitionResult = await service.from("workshop_definitions")
-      .select("workshop_definition_id,title,description,stripe_product_id")
+      .select("workshop_definition_id,title,advertising_line,stripe_product_id")
       .eq("workshop_definition_id", definitionId).single();
     if (definitionResult.error || !definitionResult.data) {
       return respond(origin, 404, { error: "Workshop definition not found" });
@@ -134,7 +134,7 @@ serve(async (request) => {
     if (!productId) {
       const productForm = new URLSearchParams({
         name: String(definitionResult.data.title),
-        description: String(definitionResult.data.description).slice(0, 500),
+        description: String(definitionResult.data.advertising_line).slice(0, 500),
         "metadata[workshop_definition_id]": definitionId,
       });
       const product = await stripePost(

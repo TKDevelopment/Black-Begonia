@@ -12,7 +12,7 @@ Add a complete public-workshop commerce and operations system to the existing
 Angular application: CRM definition/series/occurrence management, public
 listing and detail routes, atomic seat holds, Stripe Checkout, direct Venmo
 reconciliation, roster/waitlist/lifecycle tools, immutable workshop financials,
-tax-inclusive minor-unit pricing, search metadata, and privacy-safe funnel
+pre-tax minor-unit seat pricing with fixed state tax snapshots, search metadata, and privacy-safe funnel
 analytics with one-time trusted confirmation outcomes. Booking-status recovery,
 bounded waitlist offers, technical refund eligibility, and authenticated
 personal-data correction/minimization with customer-controlled verification and
@@ -408,10 +408,10 @@ strategy. No unresolved planning marker remains.
 3. The database locks the occurrence, expires eligible holds, calculates
    sellable seats, snapshots price/terms/contact, and returns a hold plus
    single-purpose booking/status token.
-4. Stripe selection creates one Checkout Session for the hold using the synced
-   Product/Price and quantity. The snapshotted tax-inclusive unit price in
-   integer minor units produces the same required total for Stripe and direct
-   Venmo. Direct Venmo selection supersedes any active Stripe attempt and
+4. Stripe selection creates one Checkout Session for the hold using the
+   snapshotted pre-tax seat price, quantity, and tax line. The snapshotted
+   subtotal, tax, and total in integer minor units produce the same required
+   total for Stripe and direct Venmo. Direct Venmo selection supersedes any active Stripe attempt and
    returns only the approved destination, amount, reference, and effective
    deadline.
 5. Stripe success is accepted only by the signed webhook and authoritative

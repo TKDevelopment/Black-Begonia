@@ -37,7 +37,7 @@
                 {{ item.locality }}, {{ item.region }} {{ item.postalCode }}
               </dd>
             </div>
-            <div><dt>Per seat</dt><dd>{{ formatMoney(item.priceMinor, item.currency) }}</dd></div>
+            <div><dt>Per seat before tax</dt><dd>{{ formatMoney(item.priceMinor, item.currency) }}</dd></div>
           </dl>
           <div class="hero-booking">
             <div class="hero-status">
@@ -70,7 +70,7 @@
           <article *ngFor="let occurrence of seriesOccurrences()" class="series-date-row">
             <div>
               <time [attr.datetime]="occurrence.startAt">{{ formatDate(occurrence.startAt, occurrence.timezone) }}</time>
-              <p>{{ occurrence.venueName }}, {{ occurrence.locality }} · {{ formatMoney(occurrence.priceMinor, occurrence.currency) }} per seat</p>
+              <p>{{ occurrence.venueName }}, {{ occurrence.locality }} · {{ formatMoney(occurrence.priceMinor, occurrence.currency) }} before tax</p>
             </div>
             <p *ngIf="occurrence.remainingSeats !== null" class="seat-urgency">
               Only {{ occurrence.remainingSeats }} {{ occurrence.remainingSeats === 1 ? 'seat' : 'seats' }} remaining

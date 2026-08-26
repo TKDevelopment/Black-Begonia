@@ -15,7 +15,11 @@ h2 { margin-bottom:1.2rem; font-size:1.8rem; }
 .summary-fact { padding:.75rem 0; }
 .summary-fact--wide { grid-column:1/-1; border-bottom:1px solid #e7dfda; }
 .summary-fact:not(.summary-fact--wide)+.summary-fact { padding-left:1rem; border-left:1px solid #e7dfda; }
-.summary-total { display:flex; align-items:baseline; gap:.55rem; padding:1rem 1.15rem; border-bottom:1px solid #dccdc6; background:linear-gradient(135deg,#f8efeb 0%,#f3e5e0 100%); box-shadow:inset 3px 0 0 #c46f67; color:#3f3430; }
+.summary-total { display:grid; gap:.45rem; padding:1rem 1.15rem; border-bottom:1px solid #dccdc6; background:linear-gradient(135deg,#f8efeb 0%,#f3e5e0 100%); box-shadow:inset 3px 0 0 #c46f67; color:#3f3430; }
+.summary-total-breakdown { display:grid; gap:.3rem; margin:0; }
+.summary-total-breakdown div { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.summary-total-breakdown dt,.summary-total-breakdown dd { margin:0; }
+.summary-total-breakdown dd { color:#4f4540; font-weight:700; }
 .summary-total-label,.summary-total-amount { font-family:'Cormorant Garamond',serif; font-size:clamp(1.5rem,2.4vw,1.85rem); font-weight:700; line-height:1; }
 .summary-total-amount { color:#92544e; }
 dt { color:#8a7e77; font-size:.6rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; }

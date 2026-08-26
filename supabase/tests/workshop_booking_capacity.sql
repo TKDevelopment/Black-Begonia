@@ -141,12 +141,30 @@ select lives_ok(
 );
 select is(
   (
-    select total_minor_snapshot
+    select subtotal_minor_snapshot
     from public.workshop_bookings
     where contact_email='first@example.test'
   ),
   10000::bigint,
-  'total is the exact tax-inclusive unit price multiplied by quantity'
+  'subtotal is the pre-tax unit price multiplied by quantity'
+);
+select is(
+  (
+    select tax_minor_snapshot
+    from public.workshop_bookings
+    where contact_email='first@example.test'
+  ),
+  700::bigint,
+  'tax snapshot applies the configured RI rate to the subtotal'
+);
+select is(
+  (
+    select total_minor_snapshot
+    from public.workshop_bookings
+    where contact_email='first@example.test'
+  ),
+  10700::bigint,
+  'total snapshot is subtotal plus tax'
 );
 select is(
   (
@@ -289,7 +307,7 @@ select is(
     from public.workshop_payment_attempts
     where command_key='30000000-0000-4000-8000-000000000043'
   ),
-  10000::bigint,
+  10700::bigint,
   'Stripe and direct Venmo use the same immutable total'
 );
 select lives_ok(

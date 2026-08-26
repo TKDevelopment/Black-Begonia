@@ -25,16 +25,35 @@ begin
   where command_key = p_command_key;
 
   if found then
+    select * into v_booking
+    from public.workshop_bookings
+    where workshop_booking_id = v_attempt.workshop_booking_id;
+    select * into v_occurrence
+    from public.workshop_occurrences
+    where workshop_occurrence_id = v_booking.workshop_occurrence_id;
     return jsonb_build_object(
       'replayed', true,
       'paymentAttemptId', v_attempt.workshop_payment_attempt_id,
       'method', v_attempt.provider,
       'quantity', v_attempt.quantity,
+      'priceMinor', v_booking.price_per_seat_minor_snapshot,
+      'subtotalMinor', v_booking.subtotal_minor_snapshot,
+      'taxMinor', coalesce(v_booking.tax_minor_snapshot, 0),
+      'taxRateBasisPoints', coalesce(v_booking.tax_rate_basis_points_snapshot, 0),
+      'taxRegion', coalesce(v_booking.tax_region_snapshot, ''),
       'amountMinor', v_attempt.amount_minor,
       'currency', v_attempt.currency,
       'reference', v_attempt.reconciliation_reference,
       'effectiveExpiresAt', v_attempt.effective_expires_at,
-      'approvedTarget', v_attempt.venmo_target_snapshot
+      'approvedTarget', v_attempt.venmo_target_snapshot,
+      'stripePriceId', v_attempt.stripe_price_id,
+      'workshopTitle', v_occurrence.title_snapshot,
+      'advertisingLine', v_occurrence.advertising_line_snapshot,
+      'startAt', v_occurrence.start_at,
+      'timezone', v_occurrence.timezone,
+      'venueName', v_occurrence.venue_name,
+      'locality', v_occurrence.locality,
+      'region', v_occurrence.region
     );
   end if;
 
@@ -162,12 +181,24 @@ begin
     'paymentAttemptId', v_attempt.workshop_payment_attempt_id,
     'method', v_attempt.provider,
     'quantity', v_attempt.quantity,
+    'priceMinor', v_booking.price_per_seat_minor_snapshot,
+    'subtotalMinor', v_booking.subtotal_minor_snapshot,
+    'taxMinor', coalesce(v_booking.tax_minor_snapshot, 0),
+    'taxRateBasisPoints', coalesce(v_booking.tax_rate_basis_points_snapshot, 0),
+    'taxRegion', coalesce(v_booking.tax_region_snapshot, ''),
     'amountMinor', v_attempt.amount_minor,
     'currency', v_attempt.currency,
     'reference', v_attempt.reconciliation_reference,
     'effectiveExpiresAt', v_attempt.effective_expires_at,
     'approvedTarget', v_attempt.venmo_target_snapshot,
-    'stripePriceId', v_attempt.stripe_price_id
+    'stripePriceId', v_attempt.stripe_price_id,
+    'workshopTitle', v_occurrence.title_snapshot,
+    'advertisingLine', v_occurrence.advertising_line_snapshot,
+    'startAt', v_occurrence.start_at,
+    'timezone', v_occurrence.timezone,
+    'venueName', v_occurrence.venue_name,
+    'locality', v_occurrence.locality,
+    'region', v_occurrence.region
   );
 end;
 $$;

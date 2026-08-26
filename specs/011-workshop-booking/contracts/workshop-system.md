@@ -117,6 +117,8 @@ interface PublicWorkshopListItem {
   timezone: string;
   venueSummary: string;
   priceMinor: number;
+  taxRegion: 'RI' | 'CT' | 'MA';
+  taxRateBasisPoints: 700 | 635 | 625;
   currency: 'USD';
   availability: 'available' | 'limited' | 'sold_out' | 'waitlist_available' | 'registration_closed';
   waitlistEnabled: boolean;
@@ -128,8 +130,9 @@ interface PublicWorkshopListItem {
 ```
 
 All `*Minor` money fields are integer minor currency units. The workshop
-`priceMinor` is the complete tax-inclusive required per-seat amount; no
-additional mandatory checkout charge is added.
+`priceMinor` is the pre-tax required per-seat amount. Reservation totals expose
+and snapshot subtotal, tax amount, and final total using the occurrence's
+supported state tax rate.
 
 ### `get_public_workshop_occurrence(p_slug text)`
 
@@ -201,7 +204,11 @@ Successful response:
   "supportReference": "BBW-2026-000001",
   "quantity": 2,
   "priceMinor": 8500,
-  "totalMinor": 17000,
+  "subtotalMinor": 17000,
+  "taxMinor": 1190,
+  "taxRateBasisPoints": 700,
+  "taxRegion": "RI",
+  "totalMinor": 18190,
   "currency": "USD",
   "effectiveExpiresAt": "2026-10-01T16:30:00Z",
   "methods": ["stripe", "direct_venmo"]

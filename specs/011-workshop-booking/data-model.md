@@ -17,7 +17,8 @@
 - Anonymous customer access is token scoped; raw tokens are never stored.
 - Existing project-payment records remain separate and unchanged.
 - Workshop money is stored in integer minor currency units. The published
-  per-seat amount is tax-inclusive and is the complete required amount.
+  per-seat amount is pre-tax; each occurrence snapshots a fixed supported state
+  tax rate, and each booking snapshots subtotal, tax, and required total.
 - Analytics outcome eligibility is created only from trusted confirmation. The
   Edge Function creates each raw grant; Postgres registers and stores only its
   digest and redeems it atomically without exposing booking data.
@@ -26,24 +27,24 @@
 
 ```text
 Workshop Definition
-  ├── Workshop Media
-  ├── Stripe Price Versions
-  └── Workshop Series
-        ├── Workshop Media overrides
-        └── Workshop Occurrence
-              ├── Workshop Media overrides
-              ├── Seat Holds
-              ├── Bookings ── Attendees
-              │     ├── Booking Adjustments
-              │     ├── Reschedule Responses
-              │     ├── Payment Attempts
-              │     ├── Payment Transactions
-              │     ├── Payment Exceptions
-              │     ├── Analytics Outcome Grants
-              │     └── Communications
-              ├── Waitlist Entries ── Waitlist Offers
-              ├── Expenses
-              └── Audit Events
+  â”œâ”€â”€ Workshop Media
+  â”œâ”€â”€ Stripe Price Versions
+  â””â”€â”€ Workshop Series
+        â”œâ”€â”€ Workshop Media overrides
+        â””â”€â”€ Workshop Occurrence
+              â”œâ”€â”€ Workshop Media overrides
+              â”œâ”€â”€ Seat Holds
+              â”œâ”€â”€ Bookings â”€â”€ Attendees
+              â”‚     â”œâ”€â”€ Booking Adjustments
+              â”‚     â”œâ”€â”€ Reschedule Responses
+              â”‚     â”œâ”€â”€ Payment Attempts
+              â”‚     â”œâ”€â”€ Payment Transactions
+              â”‚     â”œâ”€â”€ Payment Exceptions
+              â”‚     â”œâ”€â”€ Analytics Outcome Grants
+              â”‚     â””â”€â”€ Communications
+              â”œâ”€â”€ Waitlist Entries â”€â”€ Waitlist Offers
+              â”œâ”€â”€ Expenses
+              â””â”€â”€ Audit Events
 ```
 
 ## 1. `workshop_definitions`
@@ -87,7 +88,9 @@ Logical grouping for generated occurrences.
 | `workshop_definition_id` | uuid | Required parent |
 | `series_label` | text | Required internal/public relationship label |
 | `default_capacity` | integer | Positive |
-| `default_price_minor` | bigint | Non-negative complete tax-inclusive amount |
+| `default_price_minor` | bigint | Non-negative pre-tax per-seat amount |
+| `default_tax_region` | text | `RI`, `CT`, or `MA`; defaults `RI` |
+| `default_tax_rate_basis_points` | integer | Fixed by state: RI `700`, CT `635`, MA `625` |
 | `default_currency` | text | Initially `USD` |
 | `default_venue_*` | text | Name/address/locality/region/postal/country |
 | `default_timezone` | text | Valid named timezone |
@@ -119,7 +122,9 @@ One dated operational and public event.
 | `registration_opens_at`, `registration_closes_at` | timestamptz | Valid ordered window |
 | `capacity` | integer | Positive |
 | `per_booking_limit` | integer | Positive and no greater than capacity |
-| `price_minor` | bigint | Non-negative complete tax-inclusive amount |
+| `price_minor` | bigint | Non-negative pre-tax per-seat amount |
+| `tax_region` | text | `RI`, `CT`, or `MA` |
+| `tax_rate_basis_points` | integer | Fixed by `tax_region`: RI `700`, CT `635`, MA `625` |
 | `currency` | text | Initially `USD` |
 | `stripe_price_version_id` | uuid | Required when Stripe enabled |
 | `stripe_enabled`, `venmo_enabled`, `waitlist_enabled` | boolean | Persisted compatibility flags; CRM workshop writes set all three true and expose no florist toggle |
@@ -135,12 +140,12 @@ One dated operational and public event.
 ### Occurrence lifecycle
 
 ```text
-draft ──publish──> published_open
-published_open ──close──> registration_closed
-draft/published_open/registration_closed ──cancel──> cancelled
-published_open/registration_closed ──replace──> rescheduled
-published_open/registration_closed ──review──> completed
-rescheduled/cancelled/completed ──archive──> archived
+draft â”€â”€publishâ”€â”€> published_open
+published_open â”€â”€closeâ”€â”€> registration_closed
+draft/published_open/registration_closed â”€â”€cancelâ”€â”€> cancelled
+published_open/registration_closed â”€â”€replaceâ”€â”€> rescheduled
+published_open/registration_closed â”€â”€reviewâ”€â”€> completed
+rescheduled/cancelled/completed â”€â”€archiveâ”€â”€> archived
 ```
 
 - Available, limited, sold-out, and waitlist-available are separately derived
@@ -185,7 +190,7 @@ Durable mapping between Black Begonia pricing and Stripe catalog objects.
 | `workshop_stripe_price_version_id` | uuid | Primary key |
 | `workshop_definition_id` | uuid | Required |
 | `stripe_product_id`, `stripe_price_id` | text | Required, unique |
-| `amount_minor` | bigint | Positive complete tax-inclusive amount |
+| `amount_minor` | bigint | Positive required total amount for the payment attempt |
 | `currency` | text | Required |
 | `state` | text | `pending`, `active`, `inactive`, `failed` |
 | `provider_created_at` | timestamptz | Provider fact |
@@ -232,7 +237,9 @@ Customer reservation and current operational projection.
 | `active_quantity` | integer | Current capacity-bearing quantity |
 | `status` | text | Booking lifecycle below |
 | `payment_state` | text | Payment lifecycle below |
-| `price_per_seat_minor_snapshot`, `subtotal_minor_snapshot`, `total_minor_snapshot` | bigint | Immutable; total equals unit price × purchased quantity |
+| `price_per_seat_minor_snapshot`, `subtotal_minor_snapshot` | bigint | Immutable; subtotal equals pre-tax unit price times purchased quantity |
+| `tax_region_snapshot`, `tax_rate_basis_points_snapshot`, `tax_minor_snapshot` | text/integer/bigint | Immutable supported-state tax facts applied to the subtotal |
+| `total_minor_snapshot` | bigint | Immutable; total equals subtotal plus tax and required charges |
 | `required_charges_minor_snapshot` | bigint | Immutable zero for initial release |
 | `currency` | text | Immutable |
 | `terms_snapshot`, `terms_version` | text/integer | Immutable acceptance |
@@ -243,13 +250,13 @@ Customer reservation and current operational projection.
 ### Booking lifecycle
 
 ```text
-pending_payment ──verified──> confirmed ──check-in──> checked_in
-pending_payment ──expiry/cancel──> expired/cancelled
-confirmed ──full cancellation──> cancelled
-confirmed ──dispute──> payment_disputed ──resolve──> confirmed/cancelled
-confirmed ──reschedule──> transfer_action_required
-transfer_action_required ──accept──> transferred
-transfer_action_required ──decline/cancel──> cancelled
+pending_payment â”€â”€verifiedâ”€â”€> confirmed â”€â”€check-inâ”€â”€> checked_in
+pending_payment â”€â”€expiry/cancelâ”€â”€> expired/cancelled
+confirmed â”€â”€full cancellationâ”€â”€> cancelled
+confirmed â”€â”€disputeâ”€â”€> payment_disputed â”€â”€resolveâ”€â”€> confirmed/cancelled
+confirmed â”€â”€rescheduleâ”€â”€> transfer_action_required
+transfer_action_required â”€â”€acceptâ”€â”€> transferred
+transfer_action_required â”€â”€decline/cancelâ”€â”€> cancelled
 ```
 
 Partial cancellation adjusts `active_quantity` without replacing the booking or
@@ -340,7 +347,7 @@ Time-limited availability offered to one entry.
 | `offered_quantity` | integer | Positive, at most requested and available |
 | `state` | text | `active`, `accepted`, `declined`, `expired`, `cancelled` |
 | `offer_token_digest` | text | Unique |
-| `normal_expires_at` | timestamptz | Configured 1–72 hour duration |
+| `normal_expires_at` | timestamptz | Configured 1â€“72 hour duration |
 | `effective_expires_at` | timestamptz | Earliest of normal expiry, registration close, or occurrence start |
 | `resolved_at` | timestamptz | Nullable |
 | `created_at` | timestamptz | Audit |

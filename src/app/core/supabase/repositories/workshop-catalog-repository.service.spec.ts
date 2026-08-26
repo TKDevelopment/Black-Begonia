@@ -209,6 +209,7 @@ describe('WorkshopCatalogRepositoryService', () => {
       label: ` ${series.series_label} `,
       capacity: series.default_capacity,
       priceMinor: series.default_price_minor,
+      taxRegion: series.default_tax_region,
       venueName: series.default_venue_name,
       addressLine1: series.default_address_line_1,
       locality: series.default_locality,
@@ -224,6 +225,12 @@ describe('WorkshopCatalogRepositoryService', () => {
     );
 
     expect(generated).toEqual(occurrences);
+    expect(client.from.calls.mostRecent().returnValue.insert).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        default_tax_region: 'RI',
+        default_tax_rate_basis_points: 700,
+      }),
+    );
     expect(client.rpc).toHaveBeenCalledWith('generate_workshop_series_occurrences', {
       p_workshop_series_id: series.workshop_series_id,
       p_dates: jasmine.any(Array),

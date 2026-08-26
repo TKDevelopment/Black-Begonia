@@ -113,24 +113,28 @@ describe('WorkshopReservationComponent', () => {
       .toContain('FizzFritesLadyFingerLounge_Apr3_KCP208.jpg');
   });
 
-  it('shows a live order total for the selected number of seats', () => {
+  it('shows a live subtotal, tax, and order total for the selected number of seats', () => {
     component.form.controls.quantity.setValue(3);
     fixture.detectChanges();
 
     const total = fixture.nativeElement.querySelector('.summary-total') as HTMLElement;
     const label = total.querySelector('.summary-total-label') as HTMLElement;
     const amount = total.querySelector('.summary-total-amount') as HTMLElement;
-    expect(label.textContent?.trim()).toBe('Total:');
-    expect(amount.textContent?.trim()).toBe('$255.00');
+    expect(total.textContent).toContain('Subtotal');
+    expect(total.textContent).toContain('$255.00');
+    expect(total.textContent).toContain('Tax (RI 7%)');
+    expect(total.textContent).toContain('$17.85');
+    expect(label.textContent?.trim()).toBe('Total');
+    expect(amount.textContent?.trim()).toBe('$272.85');
     expect(total.textContent).not.toContain('seats selected');
-    expect(getComputedStyle(total).display).toBe('flex');
+    expect(getComputedStyle(total).display).toBe('grid');
     expect(getComputedStyle(label).fontSize).toBe(getComputedStyle(amount).fontSize);
     expect(Number.parseInt(getComputedStyle(label).fontWeight, 10)).toBeGreaterThanOrEqual(600);
 
     component.form.controls.quantity.setValue(1);
     fixture.detectChanges();
     expect(total.textContent).not.toContain('seat selected');
-    expect(amount.textContent?.trim()).toBe('$85.00');
+    expect(amount.textContent?.trim()).toBe('$90.95');
   });
 
   it('hands an exact valid reservation to Stripe without storing the booking token', async () => {
@@ -141,7 +145,11 @@ describe('WorkshopReservationComponent', () => {
         supportReference: 'BBW-2026-TEST',
         quantity: 2,
         priceMinor: 8500,
-        totalMinor: 17000,
+        subtotalMinor: 17000,
+        taxMinor: 1190,
+        taxRateBasisPoints: 700,
+        taxRegion: 'RI',
+        totalMinor: 18190,
         currency: 'USD',
         effectiveExpiresAt: '2026-10-01T16:30:00Z',
         methods: ['stripe', 'direct_venmo'],
@@ -197,7 +205,11 @@ describe('WorkshopReservationComponent', () => {
         supportReference: 'BBW-2026-TEST',
         quantity: 1,
         priceMinor: 8500,
-        totalMinor: 8500,
+        subtotalMinor: 8500,
+        taxMinor: 595,
+        taxRateBasisPoints: 700,
+        taxRegion: 'RI',
+        totalMinor: 9095,
         currency: 'USD',
         effectiveExpiresAt: '2026-10-02T16:00:00Z',
         methods: ['direct_venmo'],
@@ -206,7 +218,7 @@ describe('WorkshopReservationComponent', () => {
         state: 'pending_manual_payment',
         method: 'direct_venmo',
         approvedTarget: 'https://venmo.com/u/approved-business',
-        amountMinor: 8500,
+        amountMinor: 9095,
         currency: 'USD',
         reference: 'BBW-2026-TEST-A1B2C3',
         effectiveExpiresAt: '2026-10-02T16:00:00Z',

@@ -50,6 +50,7 @@ returns table (
   "heroImageUrl" text, "heroAltText" text, "startAt" timestamptz,
   "endAt" timestamptz, "timezone" text, "venueName" text,
   "locality" text, "region" text, "priceMinor" bigint, "currency" text,
+  "taxRegion" text, "taxRateBasisPoints" integer,
   "availability" text, "remainingSeats" integer,
   "isFeatured" boolean, "featuredOrder" smallint,
   "updatedAt" timestamptz
@@ -60,6 +61,7 @@ as $$
     o.local_start::date::text, o.title_snapshot, o.advertising_line_snapshot,
     d.theme, hero.public_url, hero.alt_text, o.start_at, o.end_at, o.timezone,
     o.venue_name, o.locality, o.region, o.price_minor, o.currency,
+    o.tax_region, o.tax_rate_basis_points,
     public.get_workshop_public_availability(o.workshop_occurrence_id),
     public.get_workshop_public_remaining_seats(o.workshop_occurrence_id),
     o.is_featured, o.featured_order, o.updated_at
