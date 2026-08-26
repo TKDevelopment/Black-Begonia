@@ -114,7 +114,7 @@
               Only {{ workshop.remainingSeats }} {{ workshop.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
             </span>
             <span class="availability" [attr.data-state]="workshop.availability">{{ workshop.availability.replaceAll('_', ' ') }}</span>
-            <strong>{{ formatMoney(workshop.priceMinor, workshop.currency) }}</strong>
+            <strong>{{ formatMoney(workshop.priceMinor, workshop.currency) }} before tax</strong>
             <a class="details-button" [routerLink]="['/workshops', workshop.seriesSlug, workshop.workshopDate]"
               (click)="trackSelection(workshop, 'list')">
               See Details <span aria-hidden="true">&rarr;</span>

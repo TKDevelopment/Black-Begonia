@@ -1,4 +1,5 @@
 export type WorkshopCurrency = 'USD';
+export type WorkshopTaxRegion = 'RI' | 'CT' | 'MA';
 export type WorkshopLifecycleStatus =
   | 'draft'
   | 'published_open'
@@ -46,6 +47,8 @@ export interface WorkshopSeries {
   series_label: string;
   default_capacity: number;
   default_price_minor: number;
+  default_tax_region: WorkshopTaxRegion;
+  default_tax_rate_basis_points: number;
   default_currency: WorkshopCurrency;
   default_venue_name: string;
   default_address_line_1: string;
@@ -66,6 +69,7 @@ export interface CreateWorkshopSeriesInput {
   label: string;
   capacity: number;
   priceMinor: number;
+  taxRegion: WorkshopTaxRegion;
   venueName: string;
   addressLine1: string;
   addressLine2?: string | null;
@@ -98,6 +102,8 @@ export interface WorkshopSeriesUpdatePatch {
   capacity?: number;
   perBookingLimit?: number;
   priceMinor?: number;
+  taxRegion?: WorkshopTaxRegion;
+  taxRateBasisPoints?: number;
   stripePriceVersionId?: string | null;
   stripeEnabled?: boolean;
   venmoEnabled?: boolean;
@@ -142,6 +148,8 @@ export interface WorkshopOccurrence {
   capacity: number;
   per_booking_limit: number;
   price_minor: number;
+  tax_region: WorkshopTaxRegion;
+  tax_rate_basis_points: number;
   currency: WorkshopCurrency;
   stripe_price_version_id: string | null;
   stripe_enabled: boolean;
@@ -218,6 +226,8 @@ export interface PublicWorkshopSummary {
   locality: string;
   region: string;
   priceMinor: number;
+  taxRegion: WorkshopTaxRegion;
+  taxRateBasisPoints: number;
   currency: WorkshopCurrency;
   availability: WorkshopAvailability;
   remainingSeats: number | null;
@@ -277,6 +287,8 @@ export interface WorkshopOccurrenceDraft {
   capacity: number;
   perBookingLimit: number;
   priceMinor: number;
+  taxRegion: WorkshopTaxRegion;
+  taxRateBasisPoints: number;
   currency: WorkshopCurrency;
   stripePriceVersionId?: string | null;
   stripeEnabled: boolean;

@@ -67,6 +67,9 @@ export interface WorkshopBooking {
   payment_state: WorkshopPaymentState;
   price_per_seat_minor_snapshot: number;
   subtotal_minor_snapshot: number;
+  tax_region_snapshot: string | null;
+  tax_rate_basis_points_snapshot: number | null;
+  tax_minor_snapshot: number | null;
   total_minor_snapshot: number;
   required_charges_minor_snapshot: number;
   currency: WorkshopCurrency;
@@ -414,6 +417,10 @@ export interface WorkshopHeldBooking {
   supportReference: string;
   quantity: number;
   priceMinor: number;
+  subtotalMinor: number;
+  taxMinor: number;
+  taxRateBasisPoints: number;
+  taxRegion: string;
   totalMinor: number;
   currency: WorkshopCurrency;
   effectiveExpiresAt: string;

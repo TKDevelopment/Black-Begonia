@@ -170,8 +170,22 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
     return Number.isInteger(quantity) && quantity > 0 ? quantity : 0;
   }
 
-  orderTotalMinor(workshop: PublicWorkshopOccurrence): number {
+  orderSubtotalMinor(workshop: PublicWorkshopOccurrence): number {
     return workshop.priceMinor * this.selectedSeatCount();
+  }
+
+  orderTaxMinor(workshop: PublicWorkshopOccurrence): number {
+    return Math.round(
+      this.orderSubtotalMinor(workshop) * workshop.taxRateBasisPoints / 10_000,
+    );
+  }
+
+  orderTotalMinor(workshop: PublicWorkshopOccurrence): number {
+    return this.orderSubtotalMinor(workshop) + this.orderTaxMinor(workshop);
+  }
+
+  taxRateLabel(workshop: PublicWorkshopOccurrence): string {
+    return `${(workshop.taxRateBasisPoints / 100).toFixed(2).replace(/\.?0+$/, '')}%`;
   }
 
   formatDate(value: string, timezone: string): string {

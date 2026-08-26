@@ -19,6 +19,8 @@ declare
   v_booking public.workshop_bookings;
   v_hold public.workshop_seat_holds;
   v_reserved bigint;
+  v_subtotal_minor bigint;
+  v_tax_minor bigint;
   v_normal_expires_at timestamptz;
   v_effective_expires_at timestamptz;
 begin
@@ -52,6 +54,10 @@ begin
       'supportReference', v_booking.booking_reference,
       'quantity', v_booking.purchased_quantity,
       'priceMinor', v_booking.price_per_seat_minor_snapshot,
+      'subtotalMinor', v_booking.subtotal_minor_snapshot,
+      'taxMinor', coalesce(v_booking.tax_minor_snapshot, 0),
+      'taxRateBasisPoints', coalesce(v_booking.tax_rate_basis_points_snapshot, 0),
+      'taxRegion', coalesce(v_booking.tax_region_snapshot, ''),
       'totalMinor', v_booking.total_minor_snapshot,
       'currency', v_booking.currency,
       'effectiveExpiresAt', v_existing.effective_expires_at,
@@ -125,6 +131,8 @@ begin
     v_occurrence.registration_closes_at,
     v_occurrence.start_at
   );
+  v_subtotal_minor := v_occurrence.price_minor * p_quantity;
+  v_tax_minor := ((v_subtotal_minor * v_occurrence.tax_rate_basis_points + 5000) / 10000);
 
   insert into public.workshop_bookings (
     workshop_occurrence_id,
@@ -138,6 +146,9 @@ begin
     active_quantity,
     price_per_seat_minor_snapshot,
     subtotal_minor_snapshot,
+    tax_region_snapshot,
+    tax_rate_basis_points_snapshot,
+    tax_minor_snapshot,
     total_minor_snapshot,
     required_charges_minor_snapshot,
     currency,
@@ -155,8 +166,11 @@ begin
     p_quantity,
     p_quantity,
     v_occurrence.price_minor,
-    v_occurrence.price_minor * p_quantity,
-    v_occurrence.price_minor * p_quantity,
+    v_subtotal_minor,
+    v_occurrence.tax_region,
+    v_occurrence.tax_rate_basis_points,
+    v_tax_minor,
+    v_subtotal_minor + v_tax_minor,
     0,
     v_occurrence.currency,
     v_occurrence.terms_snapshot,
@@ -190,6 +204,10 @@ begin
     'supportReference', v_booking.booking_reference,
     'quantity', v_booking.purchased_quantity,
     'priceMinor', v_booking.price_per_seat_minor_snapshot,
+    'subtotalMinor', v_booking.subtotal_minor_snapshot,
+    'taxMinor', coalesce(v_booking.tax_minor_snapshot, 0),
+    'taxRateBasisPoints', coalesce(v_booking.tax_rate_basis_points_snapshot, 0),
+    'taxRegion', coalesce(v_booking.tax_region_snapshot, ''),
     'totalMinor', v_booking.total_minor_snapshot,
     'currency', v_booking.currency,
     'effectiveExpiresAt', v_hold.effective_expires_at,

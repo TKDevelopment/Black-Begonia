@@ -30,6 +30,8 @@ create table public.workshop_occurrences (
   capacity integer not null check (capacity > 0),
   per_booking_limit integer not null check (per_booking_limit > 0 and per_booking_limit <= capacity),
   price_minor bigint not null check (price_minor >= 0),
+  tax_region text not null default 'RI' check (tax_region in ('RI','CT','MA')),
+  tax_rate_basis_points integer not null default 700 check (tax_rate_basis_points in (700,635,625)),
   currency text not null default 'USD' check (currency = 'USD'),
   stripe_price_version_id uuid null references public.workshop_stripe_price_versions(workshop_stripe_price_version_id) on delete restrict,
   stripe_enabled boolean not null default false,
@@ -55,6 +57,11 @@ create table public.workshop_occurrences (
   ),
   constraint workshop_occurrences_stripe_price check (
     not stripe_enabled or stripe_price_version_id is not null
+  ),
+  constraint workshop_occurrences_tax_region_rate check (
+    (tax_region = 'RI' and tax_rate_basis_points = 700)
+    or (tax_region = 'CT' and tax_rate_basis_points = 635)
+    or (tax_region = 'MA' and tax_rate_basis_points = 625)
   ),
   constraint workshop_occurrences_replacement check (
     replacement_occurrence_id is null or replacement_occurrence_id <> workshop_occurrence_id
@@ -83,6 +90,8 @@ returns table (
   "locality" text,
   "region" text,
   "priceMinor" bigint,
+  "taxRegion" text,
+  "taxRateBasisPoints" integer,
   "currency" text,
   "availability" text,
   "isFeatured" boolean,
@@ -93,7 +102,7 @@ language sql stable security definer set search_path = ''
 as $$
   select o.slug, o.title_snapshot, o.advertising_line_snapshot, d.theme,
     m.public_url, m.alt_text, o.start_at, o.end_at, o.timezone, o.venue_name,
-    o.locality, o.region, o.price_minor, o.currency,
+    o.locality, o.region, o.price_minor, o.tax_region, o.tax_rate_basis_points, o.currency,
     case when o.registration_closes_at <= now() then 'closed' else 'available' end,
     o.is_featured, o.featured_order, o.updated_at
   from public.workshop_occurrences o
@@ -138,6 +147,8 @@ as $$
     'postalCode', o.postal_code,
     'country', o.country,
     'priceMinor', o.price_minor,
+    'taxRegion', o.tax_region,
+    'taxRateBasisPoints', o.tax_rate_basis_points,
     'currency', o.currency,
     'perBookingLimit', o.per_booking_limit,
     'stripeEnabled', o.stripe_enabled,

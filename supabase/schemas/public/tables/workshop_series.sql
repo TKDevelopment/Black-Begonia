@@ -4,6 +4,8 @@ create table public.workshop_series (
   series_label text not null check (char_length(btrim(series_label)) between 1 and 160),
   default_capacity integer not null check (default_capacity > 0),
   default_price_minor bigint not null check (default_price_minor >= 0),
+  default_tax_region text not null default 'RI' check (default_tax_region in ('RI','CT','MA')),
+  default_tax_rate_basis_points integer not null default 700 check (default_tax_rate_basis_points in (700,635,625)),
   default_currency text not null default 'USD' check (default_currency = 'USD'),
   default_venue_name text not null,
   default_address_line_1 text not null,
@@ -16,7 +18,12 @@ create table public.workshop_series (
   created_by uuid null references public.profiles(id) on delete set null,
   updated_by uuid null references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint workshop_series_tax_region_rate check (
+    (default_tax_region = 'RI' and default_tax_rate_basis_points = 700)
+    or (default_tax_region = 'CT' and default_tax_rate_basis_points = 635)
+    or (default_tax_region = 'MA' and default_tax_rate_basis_points = 625)
+  )
 );
 create index idx_workshop_series_definition on public.workshop_series (workshop_definition_id);
 create trigger trg_workshop_series_updated_at before update on public.workshop_series

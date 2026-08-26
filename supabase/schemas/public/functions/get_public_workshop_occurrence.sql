@@ -16,7 +16,10 @@ as $$
     'timezone', o.timezone, 'venueName', o.venue_name,
     'addressLine1', o.address_line_1, 'addressLine2', o.address_line_2,
     'locality', o.locality, 'region', o.region, 'postalCode', o.postal_code,
-    'country', o.country, 'priceMinor', o.price_minor, 'currency', o.currency,
+    'country', o.country, 'priceMinor', o.price_minor,
+    'taxRegion', o.tax_region,
+    'taxRateBasisPoints', o.tax_rate_basis_points,
+    'currency', o.currency,
     'perBookingLimit', o.per_booking_limit, 'stripeEnabled', o.stripe_enabled,
     'venmoEnabled', o.venmo_enabled, 'waitlistEligible', false,
     'availability', public.get_workshop_public_availability(
