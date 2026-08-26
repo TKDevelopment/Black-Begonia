@@ -22,6 +22,9 @@ const safeEqual = (left: string, right: string) => {
   }
   return difference === 0;
 };
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(value);
 
 async function verifyStripeSignature(
   rawBody: string,
@@ -120,10 +123,22 @@ serve(async (request) => {
           payment_intent: charge.payment_intent,
           on_behalf_of: charge.on_behalf_of,
           transfer_data: charge.transfer_data,
-          metadata: charge.metadata,
+          metadata: { ...charge.metadata, ...authoritative.metadata },
           currency: authoritative.currency ?? charge.currency,
         };
       }
+    } else if (source.object === "dispute" && source.charge) {
+      const charge = await stripeGet(
+        `charges/${encodeURIComponent(source.charge)}`,
+      );
+      authoritative = {
+        ...source,
+        payment_intent: charge.payment_intent,
+        on_behalf_of: charge.on_behalf_of,
+        transfer_data: charge.transfer_data,
+        metadata: { ...charge.metadata, ...source.metadata },
+        currency: source.currency ?? charge.currency,
+      };
     }
     if (!session) {
       const paymentIntentId = authoritative.payment_intent ?? authoritative.id;
@@ -139,6 +154,21 @@ serve(async (request) => {
         session = sessions.data?.[0];
       }
     }
+    const metadata =
+      ({
+        ...(session?.metadata ?? {}),
+        ...(authoritative.metadata ?? {}),
+      }) as Record<
+        string,
+        unknown
+      >;
+    const paymentContext = String(metadata["payment_context"] ?? "");
+    const workshopAttemptId = String(
+      metadata["workshop_payment_attempt_id"] ?? "",
+    );
+    const workshopRefundRequestId = String(
+      metadata["workshop_refund_request_id"] ?? "",
+    );
     const attemptId = String(
       session?.metadata?.payment_attempt_id ??
         authoritative.metadata?.payment_attempt_id ?? "",
@@ -193,6 +223,189 @@ serve(async (request) => {
       { auth: { persistSession: false } },
     );
     const payloadDigest = await sha256(rawBody);
+    if (paymentContext === "workshop") {
+      const bookingEvents = new Set([
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.async_payment_failed",
+        "checkout.session.expired",
+        "payment_intent.succeeded",
+        "payment_intent.payment_failed",
+      ]);
+      const financialEvents = new Set([
+        "refund.created",
+        "refund.updated",
+        "refund.failed",
+        "charge.succeeded",
+        "charge.dispute.created",
+        "charge.dispute.closed",
+      ]);
+      if (
+        !/^[0-9a-f-]{36}$/i.test(workshopAttemptId) ||
+        !bookingEvents.has(String(event.type)) &&
+          !financialEvents.has(String(event.type))
+      ) {
+        return new Response(
+          JSON.stringify({ received: true, ignored: true }),
+          { status: 200, headers: jsonHeaders },
+        );
+      }
+      const providerPaymentId = String(
+        session?.payment_intent ?? authoritative.payment_intent ??
+          (source.object === "payment_intent" ? authoritative.id : ""),
+      );
+      const workshopAmount = Number(
+        session?.amount_total ?? authoritative.amount_received ??
+          authoritative.amount ?? 0,
+      );
+      const workshopCurrency = String(
+        session?.currency ?? authoritative.currency ?? "",
+      ).toUpperCase();
+      if (financialEvents.has(String(event.type))) {
+        let financialKind = "fee";
+        let financialState = "confirmed";
+        let financialAmount = workshopAmount;
+        let financialProviderObjectId = String(
+          source.id ?? authoritative.id ?? event.id,
+        );
+        if (String(event.type).includes("refund")) {
+          financialKind = "refund";
+          financialAmount = Number(
+            authoritative.amount ?? authoritative.amount_refunded ?? 0,
+          );
+          financialState = authoritative.status === "failed"
+            ? "failed"
+            : authoritative.status === "pending"
+            ? "pending"
+            : "confirmed";
+        } else if (String(event.type).includes("dispute")) {
+          financialKind = String(event.type).endsWith(".closed")
+            ? "reversal"
+            : "dispute";
+          financialAmount = Number(authoritative.amount ?? 0);
+        } else if (source.object === "charge") {
+          const balanceTransactionId =
+            typeof authoritative.balance_transaction ===
+                "string"
+              ? authoritative.balance_transaction
+              : "";
+          if (balanceTransactionId) {
+            const balanceTransaction = await stripeGet(
+              `balance_transactions/${
+                encodeURIComponent(balanceTransactionId)
+              }`,
+            );
+            financialAmount = Number(balanceTransaction.fee ?? 0);
+            financialProviderObjectId = balanceTransactionId;
+          } else {
+            financialAmount = Number(
+              authoritative.balance_transaction?.fee ?? 0,
+            );
+          }
+        }
+        if (String(event.type) === "charge.succeeded") {
+          const chargeReconciliation = await db.rpc(
+            "reconcile_workshop_stripe_event",
+            {
+              p_provider_event_id: String(event.id),
+              p_event_type: "payment_intent.succeeded",
+              p_provider_object_id: providerPaymentId || String(source.id),
+              p_provider_object_type: "payment_intent",
+              p_event_occurred_at: new Date(Number(event.created) * 1000)
+                .toISOString(),
+              p_signature_verified_at: new Date().toISOString(),
+              p_payload_digest: payloadDigest,
+              p_payment_attempt_id: workshopAttemptId,
+              p_provider_payment_id: providerPaymentId || null,
+              p_amount_minor: workshopAmount,
+              p_currency: workshopCurrency,
+              p_command_key: crypto.randomUUID(),
+            },
+          );
+          if (chargeReconciliation.error) throw chargeReconciliation.error;
+        }
+        const financial = await db.rpc("manage_workshop_financials", {
+          p_action: "record_provider_fact",
+          p_payload: {
+            kind: financialKind,
+            state: financialState,
+            amountMinor: financialAmount,
+            currency: workshopCurrency,
+            providerObjectId: financialProviderObjectId,
+            providerObjectType: String(source.object ?? "unknown"),
+            providerEventId: String(event.type) === "charge.succeeded"
+              ? `${event.id}:fee`
+              : String(event.id),
+            eventType: String(event.type) === "charge.succeeded"
+              ? "charge.succeeded.fee"
+              : String(event.type),
+            occurredAt: new Date(Number(event.created) * 1000).toISOString(),
+            payloadDigest,
+            paymentAttemptId: workshopAttemptId,
+            refundRequestId: isUuid(workshopRefundRequestId)
+              ? workshopRefundRequestId
+              : null,
+          },
+          p_command_key: crypto.randomUUID(),
+        });
+        if (financial.error) throw financial.error;
+        if (
+          financialKind === "refund" && financialState === "confirmed" &&
+          isUuid(workshopRefundRequestId)
+        ) {
+          const reconciledRefund = await db.rpc(
+            "reconcile_workshop_refund_request",
+            {
+              p_refund_request_id: workshopRefundRequestId,
+              p_provider_refund_id: financialProviderObjectId,
+            },
+          );
+          if (reconciledRefund.error) throw reconciledRefund.error;
+        }
+        if (
+          String(event.type) === "refund.failed" &&
+          isUuid(workshopRefundRequestId)
+        ) {
+          const failed = await db.rpc("mark_workshop_refund_provider_failed", {
+            p_refund_request_id: workshopRefundRequestId,
+            p_provider_refund_id: financialProviderObjectId,
+            p_safe_failure: "provider_reported_failed",
+            p_command_key: crypto.randomUUID(),
+          });
+          if (failed.error) throw failed.error;
+        }
+        return new Response(
+          JSON.stringify({
+            received: true,
+            duplicate: financial.data?.replayed === true,
+          }),
+          { status: 200, headers: jsonHeaders },
+        );
+      }
+      const reconciled = await db.rpc("reconcile_workshop_stripe_event", {
+        p_provider_event_id: String(event.id),
+        p_event_type: String(event.type),
+        p_provider_object_id: String(source.id ?? session?.id ?? event.id),
+        p_provider_object_type: String(source.object ?? "unknown"),
+        p_event_occurred_at: new Date(Number(event.created) * 1000)
+          .toISOString(),
+        p_signature_verified_at: new Date().toISOString(),
+        p_payload_digest: payloadDigest,
+        p_payment_attempt_id: workshopAttemptId,
+        p_provider_payment_id: providerPaymentId || null,
+        p_amount_minor: workshopAmount,
+        p_currency: workshopCurrency,
+        p_command_key: crypto.randomUUID(),
+      });
+      if (reconciled.error) throw reconciled.error;
+      return new Response(
+        JSON.stringify({
+          received: true,
+          duplicate: reconciled.data?.replayed === true,
+        }),
+        { status: 200, headers: jsonHeaders },
+      );
+    }
     const inserted = await db.from("payment_provider_events").upsert({
       provider: "stripe",
       provider_event_id: event.id,

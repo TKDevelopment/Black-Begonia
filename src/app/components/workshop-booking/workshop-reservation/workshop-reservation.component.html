@@ -1,0 +1,153 @@
+<main class="reservation-page" [attr.aria-busy]="loading() || submitting()">
+  <div class="reservation-shell">
+    <a class="back-link" [routerLink]="workshop() ? ['/workshops', workshop()!.seriesSlug, workshop()!.workshopDate] : ['/workshops']">
+      Back to workshop details
+    </a>
+
+    <p *ngIf="loading()" class="state" aria-live="polite">Loading reservation details&hellip;</p>
+    <section *ngIf="!loading() && error() && !workshop()" class="state" role="alert">
+      <h1>Reservation unavailable</h1>
+      <p>{{ error() }}</p>
+    </section>
+
+    <div *ngIf="!loading() && workshop() as item" class="reservation-panel">
+      <header class="reservation-summary">
+        <p class="eyebrow">Reserve your place</p>
+        <h1>{{ item.title }}</h1>
+        <p class="summary-line">{{ item.advertisingLine }}</p>
+        <p *ngIf="item.remainingSeats !== null" class="seat-urgency" role="status">
+          Only {{ item.remainingSeats }} {{ item.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
+        </p>
+        <dl class="summary-facts">
+          <div class="summary-fact summary-fact--wide">
+            <dt>When</dt><dd>{{ formatDate(item.startAt, item.timezone) }}</dd>
+          </div>
+          <div class="summary-fact summary-fact--wide">
+            <dt>Where</dt><dd>{{ item.venueName }}<br />{{ item.locality }}, {{ item.region }}</dd>
+          </div>
+          <div class="summary-fact">
+            <dt>Per seat</dt><dd>{{ formatMoney(item.priceMinor, item.currency) }}</dd>
+          </div>
+          <div class="summary-fact">
+            <dt>Booking limit</dt><dd>{{ item.perBookingLimit }} seats</dd>
+          </div>
+        </dl>
+        <div class="summary-total" aria-live="polite">
+          <span class="summary-total-label">Total:</span>
+          <strong class="summary-total-amount">
+            {{ formatMoney(orderTotalMinor(item), item.currency) }}
+          </strong>
+        </div>
+      </header>
+
+      <form *ngIf="!handoff()" class="booking-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <h2>Your reservation</h2>
+        <label class="field seats-field">
+          Number of seats
+          <input type="number" formControlName="quantity" min="1" [max]="item.perBookingLimit" />
+          <span *ngIf="invalidTooltips['quantity'] !== 'hidden' && invalidTooltips['quantity']"
+            class="validation-tooltip" role="alert"
+            [ngClass]="{ 'tooltip-fade-in': invalidTooltips['quantity'] === 'visible', 'tooltip-fade-out': invalidTooltips['quantity'] === 'fading' }">
+            Choose between 1 and {{ item.perBookingLimit }} seats
+          </span>
+        </label>
+
+        <div class="form-row name-row">
+          <label class="field">
+            First Name
+            <input type="text" formControlName="firstName" autocomplete="given-name" placeholder="First name" />
+            <span *ngIf="invalidTooltips['firstName'] !== 'hidden' && invalidTooltips['firstName']"
+              class="validation-tooltip" role="alert"
+              [ngClass]="{ 'tooltip-fade-in': invalidTooltips['firstName'] === 'visible', 'tooltip-fade-out': invalidTooltips['firstName'] === 'fading' }">
+              First name is required
+            </span>
+          </label>
+          <label class="field">
+            Last Name
+            <input type="text" formControlName="lastName" autocomplete="family-name" placeholder="Last name" />
+            <span *ngIf="invalidTooltips['lastName'] !== 'hidden' && invalidTooltips['lastName']"
+              class="validation-tooltip" role="alert"
+              [ngClass]="{ 'tooltip-fade-in': invalidTooltips['lastName'] === 'visible', 'tooltip-fade-out': invalidTooltips['lastName'] === 'fading' }">
+              Last name is required
+            </span>
+          </label>
+        </div>
+
+        <div class="form-row contact-row">
+          <label class="field">
+            Email
+            <input type="email" formControlName="contactEmail" autocomplete="email" placeholder="you@example.com" />
+            <span *ngIf="invalidTooltips['contactEmail'] !== 'hidden' && invalidTooltips['contactEmail']"
+              class="validation-tooltip" role="alert"
+              [ngClass]="{ 'tooltip-fade-in': invalidTooltips['contactEmail'] === 'visible', 'tooltip-fade-out': invalidTooltips['contactEmail'] === 'fading' }">
+              Enter a valid email address
+            </span>
+          </label>
+          <label class="field">
+            Phone
+            <input type="tel" formControlName="contactPhone" autocomplete="tel" placeholder="(555) 555-5555" />
+          </label>
+        </div>
+
+        <fieldset class="payment-options">
+          <legend>Payment option</legend>
+          <label *ngIf="item.stripeEnabled" class="choice">
+            <input type="radio" formControlName="paymentMethod" value="stripe" />
+            <span>Secure card checkout with Stripe</span>
+          </label>
+          <label *ngIf="item.venmoEnabled" class="choice">
+            <input type="radio" formControlName="paymentMethod" value="direct_venmo" />
+            <span>Pay the florist directly through Venmo</span>
+          </label>
+          <span *ngIf="invalidTooltips['paymentMethod'] !== 'hidden' && invalidTooltips['paymentMethod']"
+            class="validation-tooltip" role="alert"
+            [ngClass]="{ 'tooltip-fade-in': invalidTooltips['paymentMethod'] === 'visible', 'tooltip-fade-out': invalidTooltips['paymentMethod'] === 'fading' }">
+            Choose a payment option
+          </span>
+        </fieldset>
+
+        <label class="choice terms">
+          <input type="checkbox" formControlName="acceptedTerms" />
+          <span>
+            I have read and accept the
+            <a [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'terms-and-conditions']">
+              Workshop Terms &amp; Conditions
+            </a>.
+          </span>
+          <span *ngIf="invalidTooltips['acceptedTerms'] !== 'hidden' && invalidTooltips['acceptedTerms']"
+            class="validation-tooltip" role="alert"
+            [ngClass]="{ 'tooltip-fade-in': invalidTooltips['acceptedTerms'] === 'visible', 'tooltip-fade-out': invalidTooltips['acceptedTerms'] === 'fading' }">
+            Accept the Workshop Terms &amp; Conditions
+          </span>
+        </label>
+
+        <p *ngIf="error()" class="form-error" role="alert">{{ error() }}</p>
+        <button type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Reserving seats...' : 'Continue to payment' }}
+        </button>
+      </form>
+
+      <section *ngIf="handoff()?.state === 'pending_manual_payment' && handoff() as payment"
+        class="venmo-handoff" aria-live="polite">
+        <p class="eyebrow">Seats held temporarily</p>
+        <h2>Complete your direct Venmo payment</h2>
+        <p class="venmo-amount">Send
+          <strong>{{ formatMoney($any(payment).amountMinor, $any(payment).currency) }}</strong>
+          directly to Black Begonia Florals.</p>
+        <div class="venmo-note">
+          <strong>Add a note with your payment</strong>
+          <span>Include the name and email address used for this reservation in your Venmo note so we can match your payment to your seats.</span>
+        </div>
+        <a class="venmo-link" [href]="$any(payment).approvedTarget" target="_blank"
+          rel="noopener noreferrer">Open the florist's Venmo</a>
+        <p class="fine-print">
+          Your booking is confirmed only after the florist verifies the payment.
+          The disclosed hold deadline is {{ $any(payment).effectiveExpiresAt | date:'medium' }}.
+        </p>
+        <button class="status-link" type="button" (click)="openBookingStatus()">
+          I sent the Venmo payment
+        </button>
+      </section>
+    </div>
+  </div>
+</main>

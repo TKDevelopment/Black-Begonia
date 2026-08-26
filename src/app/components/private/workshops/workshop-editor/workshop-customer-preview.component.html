@@ -1,0 +1,51 @@
+<div class="preview-backdrop" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+  <section class="preview-panel">
+    <button type="button" class="preview-close" aria-label="Close preview" (click)="closed.emit()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+      </svg>
+    </button>
+    <p class="preview-label">Customer preview</p>
+    <div class="preview-card">
+      <header class="hero-header" [class.hero-header-empty]="!hero">
+        <img *ngIf="hero" class="hero-background" [src]="hero.public_url" [alt]="hero.alt_text" />
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-copy">
+          <p class="eyebrow">{{ theme || 'Workshop' }}</p>
+          <h2 id="preview-title">{{ title || 'Untitled workshop' }}</h2>
+          <p class="lead">{{ advertisingLine }}</p>
+          <p *ngIf="!hero" class="hero-note">Upload a hero image to preview the finished header.</p>
+        </div>
+      </header>
+
+      <div class="preview-body">
+        <dl class="details-grid">
+          <div><dt>When</dt><dd class="when"><span>{{ dateLabel }}</span><span>{{ timeLabel }}</span></dd></div>
+          <div><dt>Where</dt><dd>{{ venueName || 'Venue not set' }}<br />{{ locality }}<span *ngIf="locality && region">, </span>{{ region }}</dd></div>
+          <div><dt>Per seat</dt><dd>{{ priceMajor | currency:'USD' }}</dd></div>
+        </dl>
+
+        <article class="experience">
+          <div>
+            <p class="eyebrow">The workshop</p>
+            <p class="description">{{ description }}</p>
+          </div>
+          <section>
+            <h3>What is included</h3>
+            <p>{{ includedMaterials }}</p>
+          </section>
+        </article>
+
+        <section *ngIf="gallery.length" class="gallery" aria-labelledby="preview-gallery-title">
+          <div class="gallery-heading">
+            <p class="eyebrow">Arrangement preview</p>
+            <h3 id="preview-gallery-title">A glimpse at the flowers</h3>
+          </div>
+          <div class="gallery-grid">
+            <img *ngFor="let image of gallery" [src]="image.public_url" [alt]="image.alt_text" />
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>

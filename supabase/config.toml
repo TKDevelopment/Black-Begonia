@@ -1,38 +1,76 @@
 project_id = "black-begonia"
 
+[functions.manage-workshop-catalog]
+entrypoint = "./edge_functions/manage-workshop-catalog/index.ts"
+# Browser preflight has no bearer token. The function authenticates the caller,
+# verifies the existing internal CRM role, and keeps Stripe credentials server-side.
+verify_jwt = false
+
+[functions.refund-workshop-payment]
+entrypoint = "./edge_functions/refund-workshop-payment/index.ts"
+# Browser preflight has no bearer token. The standalone function authenticates
+# the internal caller before requesting a Stripe refund.
+verify_jwt = false
+
 [functions.issue-payment-request]
+entrypoint = "./edge_functions/issue-payment-request/index.ts"
 # Browser preflight requests do not include a bearer token. The function performs
 # its own user authentication and origin validation before issuing a request.
 verify_jwt = false
 
 [functions.retry-payment-delivery]
+entrypoint = "./edge_functions/retry-payment-delivery/index.ts"
 # Browser preflight requests do not include a bearer token. The function
 # validates the caller and CRM role before it queues and dispatches a retry.
 verify_jwt = false
 
 [functions.resolve-payment-request]
+entrypoint = "./edge_functions/resolve-payment-request/index.ts"
 # Public customers authenticate with the opaque, request-scoped payment token.
 # The function enforces origin, rate-limit, token digest, and lifecycle checks.
 verify_jwt = false
 
 [functions.create-payment-checkout]
+entrypoint = "./edge_functions/create-payment-checkout/index.ts"
 # Public customers authenticate with the opaque payment token. The function
 # revalidates the request and reserves checkout state through service-only RPCs.
 verify_jwt = false
 
 [functions.capture-venmo-order]
+entrypoint = "./edge_functions/capture-venmo-order/index.ts"
 # The opaque payment token and stored attempt/order correlation are validated
 # inside the standalone function before server-side provider capture.
 verify_jwt = false
 
 [functions.stripe-payment-webhook]
+entrypoint = "./edge_functions/stripe-payment-webhook/index.ts"
 # Stripe callbacks authenticate through raw-body signature verification.
 verify_jwt = false
 
 [functions.paypal-payment-webhook]
+entrypoint = "./edge_functions/paypal-payment-webhook/index.ts"
 # PayPal callbacks authenticate through PayPal transmission verification.
 verify_jwt = false
 
 [functions.mailgun-webhook]
+entrypoint = "./edge_functions/mailgun-webhook/index.ts"
 # Mailgun callbacks authenticate through MG_WEBHOOK_SIGNING_KEY verification.
+verify_jwt = false
+
+[functions.redeem-workshop-analytics-outcome]
+entrypoint = "./edge_functions/redeem-workshop-analytics-outcome/index.ts"
+# The opaque single-purpose grant is validated, hashed, and rate-limited inside
+# the standalone function; browser preflight requests have no bearer token.
+verify_jwt = false
+
+[functions.manage-workshop-booking-access]
+entrypoint = "./edge_functions/manage-workshop-booking-access/index.ts"
+# Status, recovery, and customer actions authenticate with scoped opaque tokens;
+# the function validates origin, purpose, digest, expiry, and rate limits.
+verify_jwt = false
+
+[functions.process-workshop-messages]
+# Cron invocations authenticate with a dedicated header or the service role;
+# the worker enforces this boundary before claiming any queued messages.
+entrypoint = "./edge_functions/process-workshop-messages/index.ts"
 verify_jwt = false

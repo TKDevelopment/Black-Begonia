@@ -42,21 +42,41 @@ describe('SidebarComponent', () => {
     expect(component.userDisplayName).toBe('Test Admin');
   });
 
-  it('keeps proposal settings focused on catalog and tax regions only', () => {
-    expect(component.groupedNav).toEqual([
+  it('separates proposal configuration from CRM privacy settings', () => {
+    const proposalSettings = component.groupedNav.find(
+      (group) => group.label === 'Proposal Settings'
+    );
+    const crmSettings = component.groupedNav.find(
+      (group) => group.label === 'CRM Settings'
+    );
+
+    expect(proposalSettings?.children).toEqual([
+      jasmine.objectContaining({ label: 'Catalog', route: '/admin/catalog-items' }),
+      jasmine.objectContaining({ label: 'Tax Regions', route: '/admin/tax-regions' }),
+    ]);
+    expect(proposalSettings?.children.some((item) => item.route.includes('proposal-templates')))
+      .toBeFalse();
+    expect(crmSettings?.children).toEqual([
       jasmine.objectContaining({
-        label: 'Proposal Settings',
-        children: [
-          jasmine.objectContaining({ label: 'Catalog', route: '/admin/catalog-items' }),
-          jasmine.objectContaining({ label: 'Tax Regions', route: '/admin/tax-regions' }),
-        ],
+        label: 'Privacy & Retention',
+        route: '/admin/settings/workshop-privacy-policy',
       }),
     ]);
-    expect(component.groupedNav[0].children.some((item) => item.route.includes('proposal-templates'))).toBeFalse();
+
+    expect(component.isNavGroupOpen('CRM Settings')).toBeFalse();
+    component.toggleNavGroup('CRM Settings');
+    expect(component.isNavGroupOpen('CRM Settings')).toBeTrue();
   });
 
   it('exposes the guarded Payments table destination', () => {
     expect(component.navItems).toContain(jasmine.objectContaining({ label: 'Payments', route: '/admin/payments' }));
     expect(fixture.nativeElement.textContent).toContain('Payments');
+  });
+
+  it('exposes Workshops as a primary CRM destination', () => {
+    expect(component.navItems).toContain(
+      jasmine.objectContaining({ label: 'Workshops', route: '/admin/workshops' })
+    );
+    expect(fixture.nativeElement.textContent).toContain('Workshops');
   });
 });

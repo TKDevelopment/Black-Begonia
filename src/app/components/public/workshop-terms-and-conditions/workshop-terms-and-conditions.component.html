@@ -1,0 +1,48 @@
+<main class="workshop-terms-page px-5 py-16 text-stone-700 sm:px-8 lg:py-24"
+  [attr.aria-busy]="loading()">
+  <article class="terms-panel mx-auto max-w-4xl">
+    <a *ngIf="workshop() as item" class="back-link"
+      [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']">
+      Back to reservation
+    </a>
+
+    <p *ngIf="loading()" class="page-state" aria-live="polite">Loading workshop terms&hellip;</p>
+    <div *ngIf="!loading() && error()" class="page-state" role="alert">
+      <h1>Workshop Terms &amp; Conditions</h1>
+      <p>{{ error() }}</p>
+      <a routerLink="/workshops">Browse upcoming workshops</a>
+    </div>
+
+    <ng-container *ngIf="!loading() && workshop() as item">
+      <p class="policy-meta">Terms version {{ item.termsVersion }} &middot; Updated {{ formatUpdated(item.updatedAt) }}</p>
+      <h1>Workshop Terms &amp; Conditions</h1>
+      <p class="introduction">
+        These booking terms apply to <strong>{{ item.title }}</strong> on the selected workshop date.
+        Please read them before returning to your reservation.
+      </p>
+
+      <section aria-labelledby="booking-agreement-title">
+        <h2 id="booking-agreement-title">Booking agreement</h2>
+        <div class="terms-copy">
+          <section *ngFor="let clause of termsClauses()" class="term-clause">
+            <h3 *ngIf="clause.title">{{ clause.title }}</h3>
+            <p>{{ clause.body }}</p>
+          </section>
+        </div>
+      </section>
+
+      <section aria-labelledby="acceptance-title">
+        <h2 id="acceptance-title">Acceptance</h2>
+        <p>
+          On the reservation page, you will be asked to confirm that you have read and accept
+          this exact terms version before seats can be held or payment can begin.
+        </p>
+      </section>
+
+      <a class="return-action"
+        [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']">
+        Return to reservation
+      </a>
+    </ng-container>
+  </article>
+</main>

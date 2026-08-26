@@ -18,6 +18,27 @@ type LocationSchemaInput = {
   faq?: FaqItem[];
 };
 
+export type WorkshopEventSchemaInput = {
+  name: string;
+  description: string;
+  url: string;
+  startDate: string;
+  endDate: string;
+  previousStartDate?: string | null;
+  status: 'scheduled' | 'cancelled' | 'rescheduled';
+  images: string[];
+  venueName: string;
+  streetAddress: string;
+  locality: string;
+  region: string;
+  postalCode: string;
+  country: string;
+  priceMinor: number;
+  currency: string;
+  availability: 'available' | 'limited' | 'sold_out' | 'waitlist_available' | 'closed';
+  validFrom?: string | null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class JsonLdService {
   constructor(@Inject(DOCUMENT) private doc: Document) {}
@@ -32,7 +53,7 @@ export class JsonLdService {
       this.doc.head.appendChild(script);
     }
 
-    script.text = JSON.stringify(data);
+    script.text = JSON.stringify(data).replace(/</g, '\\u003c');
   }
 
   private removeScript(id: string) {
@@ -49,6 +70,59 @@ export class JsonLdService {
     this.removeScript('schema-location-service');
     this.removeScript('schema-locations-hub');
     this.removeScript('schema-portfolio-gallery');
+    this.removeScript('schema-workshop-event');
+  }
+
+  setWorkshopEvent(input: WorkshopEventSchemaInput) {
+    const eventStatus = {
+      scheduled: 'https://schema.org/EventScheduled',
+      cancelled: 'https://schema.org/EventCancelled',
+      rescheduled: 'https://schema.org/EventRescheduled',
+    }[input.status];
+    const availability = ['available', 'limited'].includes(input.availability)
+      ? 'https://schema.org/InStock'
+      : input.availability === 'waitlist_available'
+        ? 'https://schema.org/LimitedAvailability'
+        : 'https://schema.org/SoldOut';
+
+    this.setScript('schema-workshop-event', {
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: input.name,
+      description: input.description,
+      url: input.url,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      ...(input.previousStartDate ? { previousStartDate: input.previousStartDate } : {}),
+      eventStatus,
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      image: input.images,
+      organizer: {
+        '@type': 'Organization',
+        name: 'Black Begonia Florals',
+        url: 'https://blackbegoniaflorals.com',
+      },
+      location: {
+        '@type': 'Place',
+        name: input.venueName,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: input.streetAddress,
+          addressLocality: input.locality,
+          addressRegion: input.region,
+          postalCode: input.postalCode,
+          addressCountry: input.country,
+        },
+      },
+      offers: {
+        '@type': 'Offer',
+        price: (input.priceMinor / 100).toFixed(2),
+        priceCurrency: input.currency,
+        url: input.url,
+        availability,
+        ...(input.validFrom ? { validFrom: input.validFrom } : {}),
+      },
+    });
   }
 
   setLocalBusiness() {

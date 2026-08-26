@@ -1,0 +1,419 @@
+<main class="roster-page">
+  <header class="page-header">
+    <div>
+      <a class="back-link" routerLink="/admin/workshops">&larr; Workshops</a>
+      <h1>Workshop roster</h1>
+      <p>Manage customer reservations, attendance, waitlist offers, and privacy-conscious exports.</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="page-state" role="status">Loading workshop operations&hellip;</p>
+  } @else if (error() && !reservationModalOpen() && !cancellationBooking() && !venmoApprovalBooking() && !refundBooking()) {
+    <p class="error page-state" role="alert">{{ error() }}</p>
+  } @else {
+    <section class="metrics overflow-hidden" aria-label="Roster counts">
+      <div><span>Bookings</span><strong>{{ bookings().length }}</strong></div>
+      <div><span>Active seats</span><strong>{{ activeSeatCount() }}</strong></div>
+      <div><span>Scheduled seats</span><strong>{{ scheduledSeatCount() }}</strong></div>
+      <div><span>Available seats</span><strong>{{ availableSeatCount() }}</strong></div>
+      <div><span>Checked in</span><strong>{{ checkedInCount() }}</strong></div>
+      <div><span>Waitlist</span><strong>{{ waitlist().length }}</strong></div>
+    </section>
+
+    @if (actionMessage()) {
+      <p class="notice" role="status">{{ actionMessage() }}</p>
+    }
+
+    <section class="content-card roster-card overflow-hidden">
+      <div class="section-heading">
+        <div>
+          <h2>Roster</h2>
+        </div>
+      </div>
+
+      <div class="roster-toolbar">
+        <label class="filter-field">
+          <span>Filter roster</span>
+          <input [ngModel]="query()" (ngModelChange)="query.set($event)"
+            placeholder="Name, email, phone, or payment status" />
+        </label>
+        <label class="status-filter">
+          <span>Booking status</span>
+          <select aria-label="Filter roster by status" [ngModel]="statusFilter()"
+            (ngModelChange)="statusFilter.set($event)">
+            <option value="all">All statuses</option>
+            @for (option of bookingStatusOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <button class="secondary-button" type="button" (click)="exportRoster()"
+          [disabled]="!filteredBookings().length">
+          Export printable roster
+        </button>
+        <button class="primary-button" type="button" (click)="openReservationModal()">
+          Add Reservation
+        </button>
+      </div>
+
+      <div class="table-wrap shadow-sm">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer</th><th>Email</th><th>Phone</th><th>Seats</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (booking of filteredBookings(); track booking.workshop_booking_id) {
+              <tr class="transition-colors duration-150 hover:bg-black/[0.025]">
+                <td>
+                  <strong class="customer-name">{{ booking.contact_name }}</strong>
+                </td>
+                <td><a *ngIf="booking.contact_email; else noEmail" class="contact-link"
+                  [href]="'mailto:' + booking.contact_email">{{ booking.contact_email }}</a>
+                  <ng-template #noEmail><span class="muted">&mdash;</span></ng-template></td>
+                <td><a *ngIf="booking.contact_phone; else noPhone" class="contact-link"
+                  [href]="'tel:' + booking.contact_phone">{{ formatPhone(booking.contact_phone) }}</a>
+                  <ng-template #noPhone><span class="muted">&mdash;</span></ng-template></td>
+                <td>
+                  <strong>{{ booking.active_quantity }}</strong>
+                  <span class="muted"> of {{ booking.purchased_quantity }} active</span>
+                </td>
+                <td class="booking-status-cell">
+                  <span class="status-badge" [attr.data-state]="bookingStatusState(booking)">{{ bookingStatusLabel(booking) }}</span>
+                </td>
+                <td>
+                  <div class="booking-actions flex flex-wrap items-center gap-2">
+                    @if (booking.status === 'confirmed') {
+                      <button class="secondary-button danger-button" type="button"
+                        (click)="openRefundModal(booking)" [disabled]="!canRefundOrder(booking)"
+                        [title]="canRefundOrder(booking) ? 'Refund selected seats' : 'No refundable payment is available'">
+                        Refund Order
+                      </button>
+                    } @else {
+                      <button class="secondary-button danger-button" type="button"
+                        (click)="openCancellationModal(booking)" [disabled]="booking.active_quantity < 1">
+                        Cancel Seats
+                      </button>
+                    }
+                    @if (canConfirmVenmoPayment(booking)) {
+                      <button class="venmo-confirm-button primary-button" type="button"
+                        (click)="openVenmoApprovalModal(booking)">
+                        Confirm Venmo Payment
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="empty-row">No bookings match these filters.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <div class="content-card">
+        <div class="section-heading"><h2>Attendance</h2></div>
+        <div class="operation-list">
+          @for (attendee of attendees(); track attendee.workshop_attendee_id) {
+            <article>
+              <span>Seat {{ attendee.seat_number }} &mdash; {{ attendee.display_name || 'Guest' }}</span>
+              <button class="text-button" type="button" (click)="checkIn(attendee)"
+                [disabled]="attendee.attendance_state !== 'expected'">Check in</button>
+            </article>
+          } @empty { <p class="muted">No expected attendees.</p> }
+        </div>
+      </div>
+
+      <div class="content-card waitlist-card">
+        <div class="waitlist-header">
+          <div>
+            <h2 class="waitlist-title">Waitlist</h2>
+          </div>
+          <div class="waitlist-controls">
+            <label>Offer window
+              <select [(ngModel)]="offerMinutes">
+                <option [ngValue]="720">12 hours</option>
+                <option [ngValue]="1440">24 hours</option>
+                <option [ngValue]="2880">48 hours</option>
+                <option [ngValue]="4320">72 hours</option>
+              </select>
+            </label>
+            <button class="secondary-button" type="button" (click)="offerNext()"
+              [disabled]="!waitlist().length">Offer next seats</button>
+          </div>
+        </div>
+        <ol class="waitlist-list">
+          @for (entry of waitlist(); track entry.workshop_waitlist_entry_id; let position = $index) {
+            <li class="waitlist-entry">
+              <span class="queue-position" [attr.aria-label]="'Queue position ' + (position + 1)">{{ position + 1 }}</span>
+              <div class="waitlist-customer">
+                <strong>{{ entry.contact_name }}</strong>
+                <a [href]="'mailto:' + entry.contact_email">{{ entry.contact_email }}</a>
+              </div>
+              <span class="seat-request">
+                {{ entry.requested_quantity }} {{ entry.requested_quantity === 1 ? 'seat' : 'seats' }} requested
+              </span>
+              <span class="status-badge" [attr.data-state]="entry.state">{{ entry.state }}</span>
+            </li>
+          } @empty {
+            <li class="waitlist-empty">
+              <strong>The waitlist is clear.</strong>
+              <span>No customers are currently waiting for seats.</span>
+            </li>
+          }
+        </ol>
+      </div>
+    </section>
+  }
+
+  @if (reservationModalOpen()) {
+    <div class="modal-backdrop" (click)="closeReservationModal()">
+      <section class="reservation-modal" role="dialog" aria-modal="true"
+        aria-labelledby="add-reservation-title" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Workshop roster</p>
+            <h2 id="add-reservation-title">Add Reservation</h2>
+          </div>
+          <button class="crm-destructive-close" type="button" aria-label="Close Add Reservation"
+            (click)="closeReservationModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </header>
+        <form class="form-grid" (ngSubmit)="createReservation()">
+          <label class="full-width">Customer name
+            <input name="manualName" [(ngModel)]="manualName" placeholder="First and last name" required />
+          </label>
+          <label>Email
+            <input name="manualEmail" [(ngModel)]="manualEmail" type="email" placeholder="customer@example.com" required />
+          </label>
+          <label>Phone
+            <input name="manualPhone" [(ngModel)]="manualPhone" type="tel" placeholder="(555) 555-5555" />
+          </label>
+          <label>Seats
+            <input name="manualQuantity" [(ngModel)]="manualQuantity" type="number" min="1" required />
+          </label>
+          <label>Reservation type
+            <select name="manualType" [(ngModel)]="manualType">
+              <option value="manual">Manual payment</option>
+              <option value="complimentary">Complimentary</option>
+            </select>
+          </label>
+          <label class="full-width">Reason
+            <textarea name="manualReason" [(ngModel)]="manualReason"
+              placeholder="Why is this reservation being added manually?" required></textarea>
+          </label>
+          <p *ngIf="error()" class="error full-width" role="alert">{{ error() }}</p>
+          <div class="modal-actions full-width">
+            <button class="secondary-button" type="button" (click)="closeReservationModal()">Cancel</button>
+            <button class="primary-button" type="submit" [disabled]="reservationBusy()">
+              {{ reservationBusy() ? 'Adding reservation...' : 'Add Reservation' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+
+  @if (cancellationBooking(); as booking) {
+    <div class="modal-backdrop" (click)="closeCancellationModal()">
+      <section class="reservation-modal cancellation-modal" role="dialog" aria-modal="true"
+        aria-labelledby="cancel-seats-title" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">{{ booking.contact_name }}</p>
+            <h2 id="cancel-seats-title">Cancel Seats</h2>
+          </div>
+          <button class="crm-destructive-close" type="button" aria-label="Close Cancel Seats"
+            (click)="closeCancellationModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </header>
+        <p class="cancellation-copy">
+          Select how many of the {{ booking.active_quantity }} active
+          {{ booking.active_quantity === 1 ? 'seat' : 'seats' }} to cancel.
+        </p>
+        <label class="cancellation-seat-control content-card mb-5">Seats to cancel
+          <span class="muted">Only the selected seats will be cancelled. Any remaining seats will stay active.</span>
+          <input type="number" min="1" [max]="booking.active_quantity"
+            [ngModel]="cancellationQuantity()"
+            (ngModelChange)="setCancellationQuantity($event)"
+            [attr.aria-label]="'Seats to cancel for ' + booking.contact_name" />
+        </label>
+        <p *ngIf="error()" class="error" role="alert">{{ error() }}</p>
+        <div class="modal-actions">
+          <button class="secondary-button" type="button" (click)="closeCancellationModal()"
+            [disabled]="cancellationBusy()">Keep Reservation</button>
+          <button class="danger-confirm-button" type="button" (click)="cancelSelectedSeats()"
+            [disabled]="cancellationBusy()">
+            {{ cancellationBusy() ? 'Cancelling...' : 'Cancel ' + cancellationQuantity() +
+              (cancellationQuantity() === 1 ? ' Seat' : ' Seats') }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (venmoApprovalBooking(); as booking) {
+    <div class="modal-backdrop" (click)="closeVenmoApprovalModal()">
+      <section class="reservation-modal venmo-confirmation-modal" role="dialog" aria-modal="true"
+        aria-labelledby="confirm-venmo-title" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">{{ booking.contact_name }}</p>
+            <h2 id="confirm-venmo-title" class="venmo-modal-title text-4xl">
+              Confirm Venmo Payment
+            </h2>
+          </div>
+          <button class="crm-destructive-close" type="button" aria-label="Close Confirm Venmo Payment"
+            (click)="closeVenmoApprovalModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </header>
+        <p class="venmo-confirmation-copy cancellation-copy mb-6">
+          Verify this payment in Venmo, then record the exact transaction details below.
+          Matching, on-time payments confirm the booking automatically; discrepancies are
+          held for financial review.
+        </p>
+        <form class="form-grid" (ngSubmit)="confirmVenmoPayment()">
+          <label class="full-width">Venmo transaction ID
+            <input name="venmoProviderPaymentId" [(ngModel)]="venmoProviderPaymentId"
+              placeholder="Transaction ID shown in Venmo" required />
+          </label>
+          <label>Amount received (USD)
+            <input name="venmoAmountDollars" [(ngModel)]="venmoAmountDollars"
+              type="number" min="0.01" step="0.01" required />
+          </label>
+          <label>Received at
+            <input name="venmoOccurredAt" [(ngModel)]="venmoOccurredAt"
+              type="datetime-local" required />
+          </label>
+          <p *ngIf="error()" class="error full-width" role="alert">{{ error() }}</p>
+          <div class="modal-actions full-width">
+            <button class="secondary-button" type="button" (click)="closeVenmoApprovalModal()"
+              [disabled]="venmoApprovalBusy()">Not Yet</button>
+            <button class="primary-button" type="submit"
+              [disabled]="venmoApprovalBusy() || !venmoProviderPaymentId.trim() || venmoAmountDollars < 0.01 || !venmoOccurredAt">
+              {{ venmoApprovalBusy() ? 'Recording payment...' : 'Confirm Payment Received' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+
+  @if (refundBooking(); as booking) {
+    <div class="modal-backdrop" (click)="closeRefundModal()">
+      <section class="reservation-modal cancellation-modal refund-modal" role="dialog"
+        aria-modal="true" aria-labelledby="refund-order-title"
+        (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">{{ booking.contact_name }}</p>
+            <h2 id="refund-order-title" class="text-4xl">Refund Order</h2>
+          </div>
+          <button class="crm-destructive-close" type="button" aria-label="Close Refund Order"
+            (click)="closeRefundModal()" [disabled]="refundBusy()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </header>
+
+        @if (refundLoading()) {
+          <p class="page-state" role="status">Checking the refundable balance&hellip;</p>
+        } @else {
+          @if (refundEligibility(); as eligibility) {
+          <div class="content-card mb-5 grid gap-3 sm:grid-cols-2">
+            <div><span class="muted">Payment method</span>
+              <strong>{{ eligibility.provider === 'stripe' ? 'Stripe' : 'Direct Venmo' }}</strong></div>
+            <div><span class="muted">Refundable balance</span>
+              <strong>{{ formatCurrency(eligibility.remainingRefundableMinor) }}</strong></div>
+            <div><span class="muted">Active seats</span>
+              <strong>{{ booking.active_quantity }}</strong></div>
+            <div><span class="muted">Price per seat</span>
+              <strong>{{ formatCurrency(booking.price_per_seat_minor_snapshot) }}</strong></div>
+          </div>
+
+          @if (eligibility.provider === 'stripe') {
+            <p class="cancellation-copy mb-5">
+              Stripe processes this refund automatically. Seats are released only after a
+              verified Stripe confirmation, protecting the roster if the provider rejects or
+              delays the refund.
+            </p>
+          } @else {
+            <p class="cancellation-copy mb-5">
+              Send the refund in Venmo first, then confirm the completed transaction here.
+              Recording it will release the selected seats and preserve an auditable reference.
+            </p>
+          }
+
+          <form class="form-grid" (ngSubmit)="refundSelectedSeats()">
+            <label>Seats to refund
+              <span class="muted">{{ refundQuantity() }} of {{ booking.active_quantity }} active seats</span>
+              <input name="refundQuantity" type="number" min="1"
+                [max]="maximumRefundSeats()" [ngModel]="refundQuantity()"
+                (ngModelChange)="setRefundQuantity($event)" required />
+            </label>
+            <label>Refund amount
+              <span class="muted">Calculated from the original seat price</span>
+              <input [value]="formatCurrency(refundAmountMinor())" readonly
+                aria-label="Calculated refund amount" />
+            </label>
+            <label class="full-width">Reason
+              <select name="refundReason" [(ngModel)]="refundReason" required>
+                <option value="customer_requested">Customer requested</option>
+                <option value="duplicate">Duplicate payment</option>
+                <option value="fraudulent">Fraudulent payment</option>
+                <option value="event_cancelled">Event cancelled</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            @if (eligibility.provider === 'direct_venmo') {
+              <label>Venmo refund transaction ID
+                <input name="refundReference" [(ngModel)]="refundReference"
+                  placeholder="Completed Venmo refund ID" required />
+              </label>
+              <label>Refund sent at
+                <input name="refundOccurredAt" [(ngModel)]="refundOccurredAt"
+                  type="datetime-local" required />
+              </label>
+            }
+            <label class="full-width flex !grid-cols-none grid-flow-col items-start gap-3 rounded-lg border p-4">
+              <input class="!min-h-0 !w-auto mt-1" name="refundConfirmation"
+                [(ngModel)]="refundConfirmation" type="checkbox" required />
+              <span>
+                @if (eligibility.provider === 'stripe') {
+                  I confirm Stripe should process this {{ formatCurrency(refundAmountMinor()) }} refund.
+                } @else {
+                  I confirm I already sent this {{ formatCurrency(refundAmountMinor()) }} refund in Venmo.
+                }
+              </span>
+            </label>
+            <p *ngIf="error()" class="error full-width" role="alert">{{ error() }}</p>
+            <div class="modal-actions full-width">
+              <button class="secondary-button" type="button" (click)="closeRefundModal()"
+                [disabled]="refundBusy()">Keep Order</button>
+              <button class="danger-confirm-button" type="submit"
+                [disabled]="refundBusy() || !refundConfirmation || maximumRefundSeats() < 1">
+                {{ refundBusy() ? 'Processing refund...' :
+                  'Refund ' + formatCurrency(refundAmountMinor()) }}
+              </button>
+            </div>
+          </form>
+          }
+        }
+      </section>
+    </div>
+  }
+</main>

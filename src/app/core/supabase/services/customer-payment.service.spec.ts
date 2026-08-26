@@ -31,11 +31,10 @@ describe('CustomerPaymentService', () => {
     spyOn(service,'resolve').and.returnValues(Promise.resolve({state:'processing'}),Promise.resolve({state:'confirmed'}));
     expect((await service.poll('token','attempt',3,0)).state).toBe('confirmed');
   });
-  it('loads the PayPal SDK lazily once with Venmo funding enabled', async () => {
-    const append=spyOn(document.head,'appendChild').and.callFake(((node:Node)=>{setTimeout(()=>((node as HTMLScriptElement).onload as any)?.(new Event('load')));return node;}) as any);
-    const first=service.loadPayPalSdk('public-client');const second=service.loadPayPalSdk('public-client');
-    expect(first).toBe(second);await first;
-    const script=append.calls.mostRecent().args[0] as HTMLScriptElement;
-    expect(script.src).toContain('client-id=public-client');expect(script.src).toContain('enable-funding=venmo');
+  it('maps direct Venmo instructions without invoking a capture endpoint', async () => {
+    invoke.and.resolveTo({data:{kind:'manual_venmo',approvedTarget:'https://venmo.com/u/black-begonia',reference:'BB-PROJECT-1',amountCents:30000,pauseEndsAt:'2026-08-01T00:00:00Z'},error:null});
+    await expectAsync(service.choose('token','venmo')).toBeResolvedTo(jasmine.objectContaining({kind:'manual_venmo',pauseEndsAt:'2026-08-01T00:00:00Z'}));
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith('create-payment-checkout',{body:{token:'token',method:'venmo'}});
   });
 });

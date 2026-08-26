@@ -1,0 +1,22 @@
+:host { display: block; }
+.workshops-admin { background: var(--crm-page-bg,#f7f4f1); color: var(--crm-text,#292524); }
+.workshop-row { transition: border-color 180ms ease, transform 180ms ease; }
+.workshop-row:hover { border-color: color-mix(in srgb,var(--crm-accent,#c46f67) 55%,var(--crm-border,#d5c2b3)); transform: translateY(-1px); }
+.concept-occurrence-row { background: color-mix(in srgb,var(--crm-surface-highlight,#eee7e2) 35%,var(--crm-surface,#fff)); }
+.occurrence-count { color: var(--crm-text-soft,#78716c); font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+dt { color: var(--crm-text-soft,#78716c); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+dd { color: var(--crm-text-strong,#292524); margin-top: .2rem; }
+.status-pill, .featured-pill { border-radius: 999px; display: inline-flex; font-size: .62rem; font-weight: 700; padding: .25rem .5rem; text-transform: uppercase; }
+.status-pill { background: var(--crm-surface-highlight,#eee7e2); color: var(--crm-text,#4b3832); }
+.featured-pill { background: color-mix(in srgb,var(--crm-accent,#c46f67) 22%,var(--crm-surface,#fff)); color: var(--crm-text-strong,#8c443f); }
+.series-pill, .exception-pill { border-radius: 999px; font-size: .61rem; font-weight: 700; padding: .24rem .48rem; }
+.series-pill { background: color-mix(in srgb,#22c55e 12%,var(--crm-surface,#fff)); color: var(--crm-text-strong,#365243); }
+.exception-pill { background: color-mix(in srgb,#f59e0b 15%,var(--crm-surface,#fff)); color: var(--crm-text-strong,#7c4a2d); }
+.primary-action, .secondary-action, .danger-action { border-radius: .65rem; font-size: .72rem; font-weight: 650; padding: .48rem .7rem; transition: background 160ms ease; }
+.primary-action { background: var(--crm-accent,#c46f67); color: #211816; }
+.secondary-action { background: var(--crm-surface-elevated,#fff); border: 1px solid var(--crm-border-strong,rgba(0,0,0,.13)); color: var(--crm-text-strong,#44403c); }
+.danger-action { background: color-mix(in srgb,#f43f5e 10%,var(--crm-surface-elevated,#fff)); border: 1px solid color-mix(in srgb,#f43f5e 35%,var(--crm-border,#fecdd3)); color: color-mix(in srgb,#e11d48 72%,var(--crm-text,#292524)); }
+.action-error { background: color-mix(in srgb,#f43f5e 10%,var(--crm-surface,#fff)); border-color: color-mix(in srgb,#f43f5e 35%,var(--crm-border,#fecdd3)); color: var(--crm-text-strong,#9f1239); }
+button:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb,var(--crm-accent,#c46f67) 35%,transparent); outline-offset: 2px; }
+button:disabled { cursor: wait; opacity: .55; }
+@media (prefers-reduced-motion: reduce) { .workshop-row { transition: none; } .workshop-row:hover { transform: none; } }

@@ -57,4 +57,46 @@ describe('AnalyticsSanitizerService', () => {
       page_referrer: 'https://venue.example',
     });
   });
+
+  it('allowlists typed low-cardinality workshop milestone parameters', () => {
+    expect(service.sanitizeEvent('workshop_select', {
+      page_category: 'workshop',
+      placement: 'carousel',
+      content_category: 'workshop',
+      content_id: 'autumn-centerpiece',
+      raw_url: '/workshops/autumn-centerpiece?email=customer@example.test',
+      booking_reference: 'BBW-SECRET',
+    })).toEqual({
+      page_category: 'workshop',
+      placement: 'carousel',
+      content_category: 'workshop',
+      content_id: 'autumn-centerpiece',
+    });
+    expect(service.sanitizeEvent('workshop_checkout_start', {
+      page_category: 'workshop_detail',
+      content_category: 'workshop',
+      provider: 'stripe',
+      quantity_band: 'three_plus',
+      customer_email: 'customer@example.test',
+    })).toEqual({
+      page_category: 'workshop_detail',
+      content_category: 'workshop',
+      provider: 'stripe',
+      quantity_band: 'three_plus',
+    });
+  });
+
+  it('rejects URL, query, fragment, and PII-shaped workshop content identifiers', () => {
+    for (const value of [
+      '/workshops/autumn-centerpiece',
+      'autumn-centerpiece?token=secret',
+      'autumn-centerpiece#customer',
+      'customer@example.test',
+      'x'.repeat(81),
+    ]) {
+      expect(service.normalizePublicContentId(value)).toBeNull();
+    }
+    expect(service.normalizePublicContentId(' Autumn-Centerpiece '))
+      .toBe('autumn-centerpiece');
+  });
 });

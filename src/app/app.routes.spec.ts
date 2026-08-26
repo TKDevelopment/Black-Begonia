@@ -41,6 +41,44 @@ describe('app routes', () => {
     expect(typeof wildcardRoute?.children?.[0]?.loadComponent).toBe('function');
   });
 
+  it('places guarded workshop privacy administration under CRM Settings', () => {
+    const adminRoutes = routes.find((route) => route.path === 'admin')?.children ?? [];
+    const settingsRoute = adminRoutes.find(
+      (route) => route.path === 'settings/workshop-privacy-policy'
+    );
+    const legacyRoute = adminRoutes.find(
+      (route) => route.path === 'workshops/privacy-policy'
+    );
+
+    expect(settingsRoute).toBeDefined();
+    expect(settingsRoute?.canActivate?.length).toBe(1);
+    expect(typeof settingsRoute?.loadComponent).toBe('function');
+    expect(legacyRoute?.redirectTo).toBe('settings/workshop-privacy-policy');
+    expect(legacyRoute?.pathMatch).toBe('full');
+  });
+
+  it('keeps the workshop listing before its stable detail route and preserves inquiry routing', () => {
+    const publicRoutes = routes.find((route) => route.path === '')?.children ?? [];
+    const paths = publicRoutes.map((route) => route.path);
+    const listingIndex = paths.indexOf('workshops');
+    const seriesIndex = paths.indexOf('workshops/:seriesSlug');
+    const detailIndex = paths.indexOf('workshops/:seriesSlug/:workshopDate');
+    const reservationIndex = paths.indexOf('workshops/:seriesSlug/:workshopDate/reserve');
+    const workshopTermsIndex = paths.indexOf(
+      'workshops/:seriesSlug/:workshopDate/terms-and-conditions',
+    );
+
+    expect(listingIndex).toBeGreaterThanOrEqual(0);
+    expect(seriesIndex).toBeGreaterThan(listingIndex);
+    expect(detailIndex).toBeGreaterThan(listingIndex);
+    expect(reservationIndex).toBeGreaterThan(listingIndex);
+    expect(workshopTermsIndex).toBeGreaterThan(listingIndex);
+    expect(typeof publicRoutes[detailIndex].loadComponent).toBe('function');
+    expect(typeof publicRoutes[workshopTermsIndex].loadComponent).toBe('function');
+    expect(publicRoutes[workshopTermsIndex].data?.['analytics']?.eligible).toBeFalse();
+    expect(paths).toContain('inquiries/general');
+  });
+
   it('keeps customer payment routes isolated and never defines a payment details route', () => {
     const paymentLayoutRoute = routes.find((route) => route.path === 'pay');
     const paymentRoute = paymentLayoutRoute?.children?.find((route) => route.path === ':token');
@@ -68,7 +106,9 @@ describe('app routes', () => {
     const approved = [
       '', 'about', 'portfolio', 'portfolio/:slug', 'locations', 'locations/:slug',
       'inquiries', 'inquiries/success', 'inquiries/general', 'inquiries/weddings',
-      'services/weddings', 'services/general', 'workshops', 'testimonials',
+      'services/weddings', 'services/general', 'workshops',
+      'workshops/:seriesSlug', 'workshops/:seriesSlug/:workshopDate',
+      'workshops/:seriesSlug/:workshopDate/reserve', 'testimonials',
       'privacy-policy', 'terms-and-conditions',
     ];
     for (const path of approved) {

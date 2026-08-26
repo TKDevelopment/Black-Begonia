@@ -43,27 +43,14 @@ const hash = async (v: string) =>
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v)),
     ),
   ].map((x) => x.toString(16).padStart(2, "0")).join("");
-const paypalToken = async () => {
-  const basic = btoa(
-    `${Deno.env.get("PAYPAL_CLIENT_ID")}:${
-      Deno.env.get("PAYPAL_CLIENT_SECRET")
-    }`,
-  );
-  const r = await fetch(
-    `${
-      Deno.env.get("PAYPAL_API_ORIGIN") ?? "https://api-m.sandbox.paypal.com"
-    }/v1/oauth2/token`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${basic}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "grant_type=client_credentials",
-    },
-  );
-  if (!r.ok) throw new Error("PayPal authorization failed");
-  return (await r.json()).access_token as string;
+const approvedVenmoTarget = (value: unknown) => {
+  const target = String(value ?? "").trim();
+  if (/^@[A-Za-z0-9_-]{2,64}$/.test(target)) {
+    return `https://venmo.com/u/${target.slice(1)}`;
+  }
+  return /^https:\/\/venmo\.com\/u\/[A-Za-z0-9_-]{2,64}\/?$/.test(target)
+    ? target.replace(/\/$/, "")
+    : "";
 };
 serve(async (req) => {
   const origin = req.headers.get("origin") ?? "";
@@ -103,25 +90,34 @@ serve(async (req) => {
     }
     if (method === "venmo") {
       const { data: settings } = await db.from("payment_collection_settings")
-        .select("venmo_enabled,venmo_business_target").single();
-      if (!settings?.venmo_enabled) {
-        const { data, error } = await db.rpc("record_payment_intention", {
-          p_token_digest: digest,
-          p_method: "venmo_business_profile",
-          p_command_key: crypto.randomUUID(),
-        });
-        if (error) throw error;
-        return out(origin, 200, {
-          kind: "manual_venmo",
-          approvedTarget: settings?.venmo_business_target,
-          reference: data.reference,
-          amountCents: undefined,
+        .select("collection_enabled,venmo_enabled,venmo_business_target")
+        .single();
+      const target = approvedVenmoTarget(settings?.venmo_business_target);
+      if (!settings?.collection_enabled || !settings?.venmo_enabled || !target) {
+        return out(origin, 400, {
+          error: "Payment option is temporarily unavailable",
         });
       }
+      const { data, error } = await db.rpc("record_payment_intention", {
+        p_token_digest: digest,
+        p_method: "venmo_business_profile",
+        p_command_key: crypto.randomUUID(),
+      });
+      if (error) throw error;
+      return out(origin, 200, {
+        kind: "manual_venmo",
+        approvedTarget: target,
+        reference: data.reference,
+        amountCents: data.amount_cents,
+        pauseEndsAt: data.pause_ends_at,
+      });
     }
-    const providerMethod = method === "stripe_card"
-      ? "stripe_card"
-      : "paypal_venmo";
+    if (method !== "stripe_card") {
+      return out(origin, 400, {
+        error: "Payment option is temporarily unavailable",
+      });
+    }
+    const providerMethod = "stripe_card";
     const idempotency = crypto.randomUUID();
     const reserved = await db.rpc("reserve_payment_checkout", {
       p_token_digest: digest,
@@ -138,25 +134,13 @@ serve(async (req) => {
     const a = reserved.data.attempt;
     attemptId = a.payment_checkout_attempt_id;
     if (reserved.data.state === "existing" && a.provider_handoff_url) {
-      return out(
-        origin,
-        200,
-        providerMethod === "stripe_card"
-          ? {
-            kind: "redirect",
-            url: a.provider_handoff_url,
-            attempt: attemptId,
-          }
-          : {
-            kind: "paypal_order",
-            orderId: a.provider_order_id,
-            attempt: attemptId,
-            clientId: Deno.env.get("PAYPAL_CLIENT_ID"),
-          },
-      );
+      return out(origin, 200, {
+        kind: "redirect",
+        url: a.provider_handoff_url,
+        attempt: attemptId,
+      });
     }
-    if (providerMethod === "stripe_card") {
-      const form = new URLSearchParams({
+    const form = new URLSearchParams({
         mode: "payment",
         "line_items[0][price_data][currency]": "usd",
         "line_items[0][price_data][product_data][name]":
@@ -176,8 +160,8 @@ serve(async (req) => {
         "expires_at": String(
           Math.floor(new Date(a.expires_at).getTime() / 1000),
         ),
-      });
-      const sr = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    });
+    const sr = await fetch("https://api.stripe.com/v1/checkout/sessions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${Deno.env.get("STRIPE_RESTRICTED_KEY")}`,
@@ -185,64 +169,21 @@ serve(async (req) => {
           "Idempotency-Key": idempotency,
         },
         body: form,
-      });
-      if (!sr.ok) throw new Error("Stripe checkout failed");
-      const session = await sr.json();
-      await db.rpc("finalize_payment_checkout", {
+    });
+    if (!sr.ok) throw new Error("Stripe checkout failed");
+    const session = await sr.json();
+    await db.rpc("finalize_payment_checkout", {
         p_attempt_id: attemptId,
         p_state: "active",
         p_provider_id: session.id,
         p_handoff_url: session.url,
         p_client_token: null,
         p_error: null,
-      });
-      return out(origin, 200, {
-        kind: "redirect",
-        url: session.url,
-        attempt: attemptId,
-      });
-    }
-    const access = await paypalToken();
-    const pr = await fetch(
-      `${
-        Deno.env.get("PAYPAL_API_ORIGIN") ?? "https://api-m.sandbox.paypal.com"
-      }/v2/checkout/orders`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${access}`,
-          "Content-Type": "application/json",
-          "PayPal-Request-Id": idempotency,
-        },
-        body: JSON.stringify({
-          intent: "CAPTURE",
-          purchase_units: [{
-            custom_id: attemptId,
-            invoice_id: `BB-${attemptId}`,
-            amount: {
-              currency_code: "USD",
-              value: Number(a.principal_amount).toFixed(2),
-            },
-            payee: { merchant_id: Deno.env.get("PAYPAL_MERCHANT_ID") },
-          }],
-        }),
-      },
-    );
-    if (!pr.ok) throw new Error("Venmo order failed");
-    const order = await pr.json();
-    await db.rpc("finalize_payment_checkout", {
-      p_attempt_id: attemptId,
-      p_state: "active",
-      p_provider_id: order.id,
-      p_handoff_url: null,
-      p_client_token: null,
-      p_error: null,
     });
     return out(origin, 200, {
-      kind: "paypal_order",
-      orderId: order.id,
+      kind: "redirect",
+      url: session.url,
       attempt: attemptId,
-      clientId: Deno.env.get("PAYPAL_CLIENT_ID"),
     });
   } catch (error) {
     console.error(

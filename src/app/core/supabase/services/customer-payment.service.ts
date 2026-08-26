@@ -4,7 +4,6 @@ import { SupabaseService } from '../clients/supabase.service';
 
 @Injectable({ providedIn: 'root' })
 export class CustomerPaymentService {
-  private paypalSdkPromise: Promise<void> | null = null;
   constructor(private readonly supabase: SupabaseService) {}
 
   async resolve(token: string, attempt?: string | null): Promise<CustomerPaymentProjection> {
@@ -19,12 +18,6 @@ export class CustomerPaymentService {
     return data as CheckoutHandoff;
   }
 
-  async captureVenmo(token: string, attempt: string): Promise<CustomerPaymentProjection> {
-    const { error } = await this.supabase.getClient().functions.invoke('capture-venmo-order', { body: { token, attempt } });
-    if (error) throw new Error('Venmo capture could not be confirmed.');
-    return this.resolve(token, attempt);
-  }
-
   async poll(token: string, attempt: string | null, maxAttempts = 8, intervalMs = 1500): Promise<CustomerPaymentProjection> {
     let state = await this.resolve(token, attempt);
     for (let index = 1; index < maxAttempts && state.state === 'processing'; index += 1) {
@@ -32,18 +25,6 @@ export class CustomerPaymentService {
       state = await this.resolve(token, attempt);
     }
     return state;
-  }
-
-  loadPayPalSdk(clientId: string): Promise<void> {
-    if (typeof document === 'undefined' || (globalThis as any).paypal) return Promise.resolve();
-    if (this.paypalSdkPromise) return this.paypalSdkPromise;
-    this.paypalSdkPromise = new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&components=buttons&enable-funding=venmo`;
-      script.async = true; script.onload = () => resolve(); script.onerror = () => reject(new Error('Venmo could not be loaded.'));
-      document.head.appendChild(script);
-    });
-    return this.paypalSdkPromise;
   }
 
   private normalize(value: any): CustomerPaymentProjection {
