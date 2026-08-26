@@ -83,17 +83,52 @@ const safeDatabaseCode = (error: unknown) => {
   return [...safeCodes].find((code) => message.includes(code)) ??
     "invalid_request";
 };
+const asSafeString = (value: unknown, fallback: string, maxLength = 500) => {
+  const text = typeof value === "string" && value.trim()
+    ? value.trim()
+    : fallback;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
+};
+const taxRateLabel = (basisPoints: number) =>
+  `${(basisPoints / 100).toFixed(2).replace(/\.?0+$/, "")}%`;
+const formatWorkshopDate = (value: unknown, timezone: unknown) => {
+  const date = new Date(String(value ?? ""));
+  if (Number.isNaN(date.getTime())) return "Workshop date to be confirmed";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: typeof timezone === "string" && timezone ? timezone : "America/New_York",
+    }).format(date);
+  } catch {
+    return date.toISOString();
+  }
+};
 
 async function createStripeSession(
   attempt: Record<string, unknown>,
   commandKey: string,
 ) {
-  const priceId = String(attempt["stripePriceId"] ?? "");
   const quantity = Number(attempt["quantity"]);
   const attemptId = String(attempt["paymentAttemptId"] ?? "");
+  const priceMinor = Number(attempt["priceMinor"]);
+  const subtotalMinor = Number(attempt["subtotalMinor"]);
+  const taxMinor = Number(attempt["taxMinor"]);
+  const taxRateBasisPoints = Number(attempt["taxRateBasisPoints"]);
+  const amountMinor = Number(attempt["amountMinor"]);
+  const currency = String(attempt["currency"] ?? "").toLowerCase();
   if (
-    !priceId.startsWith("price_") || !Number.isSafeInteger(quantity) ||
-    quantity <= 0 || !isUuid(attemptId)
+    !Number.isSafeInteger(quantity) || quantity <= 0 || !isUuid(attemptId) ||
+    !Number.isSafeInteger(priceMinor) || priceMinor < 0 ||
+    !Number.isSafeInteger(subtotalMinor) || subtotalMinor !== priceMinor * quantity ||
+    !Number.isSafeInteger(taxMinor) || taxMinor < 0 ||
+    !Number.isSafeInteger(taxRateBasisPoints) || taxRateBasisPoints < 0 ||
+    !Number.isSafeInteger(amountMinor) || amountMinor !== subtotalMinor + taxMinor ||
+    currency !== "usd"
   ) {
     throw new Error("stripe_attempt_unavailable");
   }
@@ -102,16 +137,52 @@ async function createStripeSession(
   if (!/^https?:\/\/[^/]+/.test(publicOrigin)) {
     throw new Error("workshop_public_origin_unavailable");
   }
+  const workshopTitle = asSafeString(
+    attempt["workshopTitle"],
+    "Black Begonia workshop",
+    250,
+  );
+  const advertisingLine = asSafeString(
+    attempt["advertisingLine"],
+    "Hands-on floral workshop",
+    500,
+  );
+  const location = [
+    asSafeString(attempt["venueName"], "Workshop venue", 160),
+    [attempt["locality"], attempt["region"]]
+      .map((part) => typeof part === "string" ? part.trim() : "")
+      .filter(Boolean).join(", "),
+  ].filter(Boolean).join(" - ");
+  const dateLabel = formatWorkshopDate(attempt["startAt"], attempt["timezone"]);
+  const itemDescription = [advertisingLine, `Date: ${dateLabel}`, `Location: ${location}`]
+    .join("\n");
   const form = new URLSearchParams({
     mode: "payment",
-    "line_items[0][price]": priceId,
+    "line_items[0][price_data][currency]": currency,
+    "line_items[0][price_data][unit_amount]": String(priceMinor),
+    "line_items[0][price_data][product_data][name]": workshopTitle,
+    "line_items[0][price_data][product_data][description]": itemDescription,
     "line_items[0][quantity]": String(quantity),
     "metadata[payment_context]": "workshop",
     "metadata[workshop_payment_attempt_id]": attemptId,
+    "metadata[subtotal_minor]": String(subtotalMinor),
+    "metadata[tax_minor]": String(taxMinor),
+    "metadata[total_minor]": String(amountMinor),
+    "metadata[tax_region]": String(attempt["taxRegion"] ?? ""),
+    "metadata[tax_rate_basis_points]": String(taxRateBasisPoints),
     success_url:
       `${publicOrigin}/workshop-booking/status?checkout_session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${publicOrigin}/workshops`,
   });
+  if (taxMinor > 0) {
+    form.set("line_items[1][price_data][currency]", currency);
+    form.set("line_items[1][price_data][unit_amount]", String(taxMinor));
+    form.set(
+      "line_items[1][price_data][product_data][name]",
+      `Sales tax (${String(attempt["taxRegion"] ?? "").toUpperCase()} ${taxRateLabel(taxRateBasisPoints)})`,
+    );
+    form.set("line_items[1][quantity]", "1");
+  }
   const response = await fetch(
     "https://api.stripe.com/v1/checkout/sessions",
     {
@@ -205,6 +276,10 @@ serve(async (request) => {
         supportReference: result.data.supportReference,
         quantity: result.data.quantity,
         priceMinor: result.data.priceMinor,
+        subtotalMinor: result.data.subtotalMinor,
+        taxMinor: result.data.taxMinor,
+        taxRateBasisPoints: result.data.taxRateBasisPoints,
+        taxRegion: result.data.taxRegion,
         totalMinor: result.data.totalMinor,
         currency: result.data.currency,
         effectiveExpiresAt: result.data.effectiveExpiresAt,

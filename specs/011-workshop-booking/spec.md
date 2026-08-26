@@ -20,146 +20,147 @@ and is explicitly outside this specification."
 ### Session 2026-07-29
 
 - Q: How long should seats remain reserved while a direct Venmo payment awaits
-  manual florist verification? → A: Hold seats for 24 hours.
+  manual florist verification? â†’ A: Hold seats for 24 hours.
 - Q: What happens if a direct Venmo payment arrives after its 24-hour seat hold
-  expires? → A: Confirm only if seats remain; otherwise create an urgent
+  expires? â†’ A: Confirm only if seats remain; otherwise create an urgent
   exception and arrange a refund or customer-approved transfer.
-- Q: How are workshop refunds initiated? → A: The florist initiates full or
+- Q: How are workshop refunds initiated? â†’ A: The florist initiates full or
   partial Stripe refunds in the CRM; direct Venmo refunds occur externally and
   are recorded in the CRM.
-- Q: What participant information is required when reserving multiple seats? →
+- Q: What participant information is required when reserving multiple seats? â†’
   A: Require the booking contact's name and email; phone, attendee names, and
   accommodation details are optional.
 - Q: What happens to public event pages after completion, cancellation, or
-  rescheduling? → A: Keep completed pages permanently as Past Workshops; retain
+  rescheduling? â†’ A: Keep completed pages permanently as Past Workshops; retain
   cancelled and rescheduled URLs for 12 months with status and replacement
   links.
 
 - Q: How should a Stripe payment be handled when its seat hold expires near
-  payment completion? → A: Use Stripe's trusted payment-completion time:
+  payment completion? â†’ A: Use Stripe's trusted payment-completion time:
   confirm payments completed before expiration despite delayed notification;
   after-expiration payments confirm only if capacity remains, otherwise create
   an urgent exception for a florist-initiated refund or customer-approved
   transfer.
 
 - Q: What happens to existing bookings when an occurrence is materially
-  rescheduled? → A: Require each customer to accept a transfer during a stated
+  rescheduled? â†’ A: Require each customer to accept a transfer during a stated
   response window while equivalent replacement capacity is protected; customers
   may instead request cancellation and refund handling, and nonresponses remain
   unconfirmed and flagged for florist follow-up.
 
 - Q: How should a direct Venmo payment with the wrong amount or no usable
-  reference be handled? → A: Keep the booking pending in a reconciliation
+  reference be handled? â†’ A: Keep the booking pending in a reconciliation
   exception until the florist securely matches the payer; underpayments require
   the balance or an external refund, overpayments require an external excess
   refund, and missing references require manual identity verification without
   confirming extra seats or duplicating revenue.
 
 - Q: What happens to active holds and in-progress payments when the florist
-  cancels an occurrence? → A: Immediately invalidate active holds, prevent
+  cancels an occurrence? â†’ A: Immediately invalidate active holds, prevent
   further use of associated checkout sessions where possible, and notify
   pending customers not to pay; any payment that nevertheless completes is
   recorded without confirming a booking and creates an urgent,
   florist-controlled refund exception.
 
 - Q: What happens if multiple payment methods or tabs produce more than one
-  payment for the same intended booking? → A: Permit only one active payment
+  payment for the same intended booking? â†’ A: Permit only one active payment
   choice per booking; switching invalidates the prior Stripe session and marks
   prior Venmo instructions superseded, while any duplicate payments are
   recorded but confirm only one booking and create an urgent refund exception
   without consuming extra seats.
 
-- Q: Can a customer cancel only some seats in a multi-seat booking? → A: Allow
+- Q: Can a customer cancel only some seats in a multi-seat booking? â†’ A: Allow
   partial seat cancellation; release exactly the authorized cancelled seats,
   retain the remaining seats under the original booking, preserve original
   totals, and record adjusted quantities and any refund as immutable history.
 
 - Q: What happens when a normal seat hold would extend beyond registration close
-  or the workshop start? → A: Cap the hold at the earliest of its normal
+  or the workshop start? â†’ A: Cap the hold at the earliest of its normal
   expiration, registration close, or workshop start, disclose that effective
   deadline before payment, and apply the existing late-payment rules afterward.
 
 - Q: What happens to a confirmed booking and its seats when its payment is later
-  disputed or reversed? → A: Mark the booking payment-disputed with urgent
+  disputed or reversed? â†’ A: Mark the booking payment-disputed with urgent
   florist action required, retain its seats, and change capacity only when the
   florist explicitly resolves or cancels the booking.
 
 - Q: What happens when fewer seats become available than the first waitlisted
-  customer's requested quantity? → A: Offer that customer the available
+  customer's requested quantity? â†’ A: Offer that customer the available
   quantity up to their request; accepting the reduced quantity fulfills the
   waitlist entry, while decline or expiration passes the seats to the next
   customer.
 
 - Q: How should nonexistent or repeated local workshop times during
-  daylight-saving transitions be handled? → A: Reject nonexistent local times
+  daylight-saving transitions be handled? â†’ A: Reject nonexistent local times
   and reject repeated times rather than asking the florist to choose an offset;
   all workshop schedules use `America/New_York` consistently.
 
 - Q: Does the workshop Venmo seat-release deadline also govern existing project
-  payments? → A: No. The 24-hour/capped seat hold applies only to workshop
+  payments? â†’ A: No. The 24-hour/capped seat hold applies only to workshop
   bookings. Existing project-payment Venmo keeps its configured deadline,
   reminders, obligation allocation, and manual-reconciliation behavior without
   workshop seat-hold or seat-release language.
 
 - Q: How are workshop taxes and required charges presented in the initial
-  release? → A: The published price per seat is the complete customer-facing,
-  tax-inclusive required amount. No additional mandatory charge is added during
-  checkout, and Stripe and direct Venmo use the same snapshotted total.
+  release? A: The published price per seat is the pre-tax seat amount. The
+  florist selects RI, CT, or MA tax for each workshop; reservation and checkout
+  surfaces show subtotal, tax, and the same snapshotted final total for Stripe
+  and direct Venmo.
 
 - Q: How can a verified workshop booking be measured without enabling analytics
-  on payment or token-bearing pages? → A: Trusted confirmation creates one
+  on payment or token-bearing pages? â†’ A: Trusted confirmation creates one
   outcome eligibility; the first confirmed-status resolution may issue an
   opaque, single-use, non-identifying grant, retain only its digest, and expire
   it within 24 hours. An otherwise eligible public workshop page may redeem it
   once for an allowlisted outcome; blocked, expired, repeated, or ineligible
   redemptions produce no analytics event.
 
-- Q: How will the timed workshop usability outcomes be validated? → A: Use at
+- Q: How will the timed workshop usability outcomes be validated? â†’ A: Use at
   least five representative florist attempts for each administrative workflow
   and at least 20 representative customer attempts for discovery and payment
   handoff, with production-like content, provider test mode, recorded timing,
   assistance, completion, and sanitized observations.
 
 - Q: How long does a customer booking-status token remain valid and how is it
-  recovered? → A: It remains valid through 30 days after the occurrence ends or,
+  recovered? â†’ A: It remains valid through 30 days after the occurrence ends or,
   when later, 30 days after the latest unresolved qualifying customer-action
   deadline defined by FR-087. A rate-limited, non-enumerating request may email
   the booking contact a replacement token that invalidates the prior token.
 
-- Q: How long does a waitlist offer remain available? → A: Use a
+- Q: How long does a waitlist offer remain available? â†’ A: Use a
   florist-configurable duration with a 24-hour default and an allowed range of 1
   to 72 hours, capped at registration close or workshop start.
 
-- Q: What makes a Stripe refund technically eligible? → A: The actor must be
+- Q: What makes a Stripe refund technically eligible? â†’ A: The actor must be
   authorized, the original transaction must be a trusted Stripe charge with a
   positive remaining refundable balance, the amount must be positive and no
   greater than that balance in the original currency, and the request must not
   duplicate an active or completed command. Business or legal entitlement
   remains a florist decision.
 
-- Q: How are customer correction or minimization requests handled? → A:
+- Q: How are customer correction or minimization requests handled? â†’ A:
   Authorized florist users process a verified request in the CRM. Mutable
   operational fields may be corrected; approved minimization removes eligible
   personal fields while preserving legally required financial facts and
   non-identifying audit integrity. Public self-service deletion is outside the
   initial release.
-- Q: How is the identity behind a personal-data request verified? → A: Require
+- Q: How is the identity behind a personal-data request verified? â†’ A: Require
   either a valid booking-status token or a one-time verification link sent to
   the booking's current contact email and expiring within 24 hours. A support
   reference, name, email address, or florist authentication alone is not proof
   of the customer's authority over the booking.
-- Q: Where may the raw analytics outcome grant exist? → A: The booking Edge
+- Q: Where may the raw analytics outcome grant exist? â†’ A: The booking Edge
   Function generates and returns it once, while the database registers only its
   digest. For redemption, the Edge Function hashes the presented raw grant and
   sends only the digest to the database. The browser may hold the raw grant
   transiently in `sessionStorage`; it must never enter durable browser storage,
   URLs, logs, errors, audits, analytics, or database calls or persistence.
-- Q: What governs workshop personal-data minimization? → A: A versioned,
+- Q: What governs workshop personal-data minimization? â†’ A: A versioned,
   human-approved active retention policy with validated field rules. No default
   active policy is inferred, and minimization remains unavailable until one is
   explicitly activated.
 - Q: Which deadlines extend booking-status access and defer contact-email
-  minimization? → A: Only unresolved, customer-facing decisions such as a
+  minimization? â†’ A: Only unresolved, customer-facing decisions such as a
   material-reschedule response, an exceptional-payment refund or transfer
   choice, a cancellation outcome requiring confirmation, or another explicitly
   versioned booking action. Internal florist dates, retries, passive dispute
@@ -693,7 +694,7 @@ verify search signals remain accurate.
   promotion MUST be enabled automatically and MUST NOT be florist-editable
   occurrence flags.
 - **FR-004d**: On desktop-sized Create Workshop layouts, open seats, maximum
-  seats per booking, and tax-inclusive price MUST share one row; address lines
+  seats per booking, pre-tax price, and tax-state selector MUST share one row; address lines
   1 and 2 MUST share one row; and City, State, and Zipcode MUST share one row.
   The controls MUST reflow for narrow viewports without horizontal scrolling.
 - **FR-004e**: A new workshop MUST begin with a substantive, editable workshop
@@ -767,7 +768,7 @@ verify search signals remain accurate.
   accommodation or contact guidance.
 - **FR-015a**: `/workshops/{workshop-title}` MUST present the workshop series
   using the event-detail presentation and a chronological vertical list of its
-  upcoming occurrences immediately after “What is included”. Occurrence detail
+  upcoming occurrences immediately after â€œWhat is includedâ€. Occurrence detail
   URLs MUST use `/workshops/{workshop-title}/{workshop-date}` and reservation
   URLs MUST append `/reserve`; booking authority MUST remain occurrence-based.
 - **FR-015b**: Series and occurrence detail pages MUST use the original clean
@@ -801,9 +802,9 @@ verify search signals remain accurate.
 
 - **FR-020**: A customer MUST be able to request one or more seats up to the
   per-booking limit and current sellable capacity.
-- **FR-021**: Before checkout, the system MUST display seat quantity, per-seat
-  tax-inclusive complete required price, calculated total, contact information
-  being collected, and the payment method selected. The reservation page MUST
+- **FR-021**: Before checkout, the system MUST display seat quantity, pre-tax
+  per-seat price, subtotal, selected-state tax amount and rate, calculated total,
+  contact information being collected, and the payment method selected. The reservation page MUST
   link to occurrence-specific Workshop Terms & Conditions, MUST NOT render the
   full terms inline, and MUST require explicit checkbox acceptance of the exact
   displayed terms version before continuing. On larger screens, First Name and
@@ -1106,11 +1107,14 @@ verify search signals remain accurate.
   reconciliation behavior and MUST NOT display workshop-specific seat-hold or
   seat-release language.
 - **FR-085**: Workshop price per seat MUST be stored, calculated, and displayed
-  as the complete tax-inclusive customer amount in integer minor currency units.
-  Booking subtotal and total MUST equal the snapshotted price per seat multiplied
-  by selected quantity; Stripe and direct Venmo MUST use that same total. No
-  optional tip, convenience fee, customer-entered amount, or undisclosed
-  mandatory charge is part of the initial workshop booking flow.
+  as the pre-tax seat amount in integer minor currency units. Each workshop
+  occurrence MUST snapshot one supported tax state/rate: Rhode Island 7%,
+  Connecticut 6.35%, or Massachusetts 6.25%. Booking subtotal MUST equal the
+  snapshotted price per seat multiplied by selected quantity; tax MUST equal the
+  selected rate applied to subtotal; Stripe and direct Venmo MUST use the same
+  snapshotted final total. No optional tip, convenience fee, customer-entered
+  amount, or undisclosed mandatory charge is part of the initial workshop
+  booking flow.
 - **FR-086**: A verified-booking analytics outcome MUST require an opaque,
   system-issued, single-use outcome grant created only from trusted booking
   confirmation. The booking-status Edge Function MUST generate the raw grant, hash it,
@@ -1379,10 +1383,11 @@ verify search signals remain accurate.
   and operational deadline.
 - A default maximum seats-per-booking and hold duration will be business
   configurable during planning, with conservative launch defaults.
-- The published workshop price per seat is the complete tax-inclusive required
-  amount in integer minor currency units. No additional mandatory charge,
-  optional tip, convenience fee, or customer-entered payment amount is part of
-  the initial booking flow.
+- The published workshop price per seat is the pre-tax required seat amount in
+  integer minor currency units. Reservation and payment surfaces display
+  subtotal, selected-state tax, and the final required total. No optional tip,
+  convenience fee, customer-entered payment amount, or other undisclosed charge
+  is part of the initial booking flow.
 - Stripe is the primary automatically verified checkout. Black Begonia remains
   the catalog and inventory source of truth; Stripe mirrors one Product per
   reusable workshop definition and versioned one-time Prices, while a new

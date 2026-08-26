@@ -9,6 +9,7 @@ import {
   WorkshopSeries,
   WorkshopSeriesUpdatePatch,
   WorkshopSeriesUpdateResult,
+  WorkshopTaxRegion,
 } from '../../models/workshop';
 import { SupabaseService } from '../clients/supabase.service';
 
@@ -39,6 +40,17 @@ export interface WorkshopCatalogSyncResult {
   priceId: string;
   priceVersionId: string;
   reused: boolean;
+}
+
+export function workshopTaxRateBasisPoints(region: WorkshopTaxRegion): number {
+  switch (region) {
+    case 'RI':
+      return 700;
+    case 'CT':
+      return 635;
+    case 'MA':
+      return 625;
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -195,6 +207,8 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
         series_label: input.label.trim(),
         default_capacity: input.capacity,
         default_price_minor: input.priceMinor,
+        default_tax_region: input.taxRegion,
+        default_tax_rate_basis_points: workshopTaxRateBasisPoints(input.taxRegion),
         default_currency: 'USD',
         default_venue_name: input.venueName.trim(),
         default_address_line_1: input.addressLine1.trim(),
@@ -305,6 +319,8 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
       capacity: occurrence.capacity,
       perBookingLimit: occurrence.per_booking_limit,
       priceMinor: occurrence.price_minor,
+      taxRegion: occurrence.tax_region,
+      taxRateBasisPoints: occurrence.tax_rate_basis_points,
       currency: occurrence.currency,
       stripePriceVersionId: occurrence.stripe_price_version_id,
       stripeEnabled: occurrence.stripe_enabled,

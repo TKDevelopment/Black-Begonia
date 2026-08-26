@@ -17,9 +17,11 @@ declare
     from jsonb_array_elements(coalesce(p_patch->'confirmedBookedOccurrenceIds','[]'::jsonb))
   ), '{}'::uuid[]);
   v_material boolean := p_patch ?| array[
-    'priceMinor','capacity','venueName','addressLine1','addressLine2',
+    'priceMinor','taxRegion','capacity','venueName','addressLine1','addressLine2',
     'locality','region','postalCode','country','terms'
   ];
+  v_tax_region text;
+  v_tax_rate_basis_points integer;
   v_replay jsonb;
 begin
   if not public.is_internal_crm_user() then
@@ -88,6 +90,13 @@ begin
       using errcode = '55000',
       detail = array_to_string(v_booked_ids, ',');
   end if;
+  if p_patch ? 'taxRegion' then
+    v_tax_region := upper(btrim(p_patch->>'taxRegion'));
+    v_tax_rate_basis_points := public.workshop_tax_rate_basis_points(v_tax_region);
+    if v_tax_rate_basis_points is null then
+      raise exception 'invalid tax region' using errcode = '22023';
+    end if;
+  end if;
 
   update public.workshop_occurrences set
     title_snapshot = case when p_patch ? 'title' then btrim(p_patch->>'title') else title_snapshot end,
@@ -106,6 +115,8 @@ begin
     capacity = case when p_patch ? 'capacity' then (p_patch->>'capacity')::integer else capacity end,
     per_booking_limit = case when p_patch ? 'perBookingLimit' then (p_patch->>'perBookingLimit')::integer else per_booking_limit end,
     price_minor = case when p_patch ? 'priceMinor' then (p_patch->>'priceMinor')::bigint else price_minor end,
+    tax_region = case when p_patch ? 'taxRegion' then v_tax_region else tax_region end,
+    tax_rate_basis_points = case when p_patch ? 'taxRegion' then v_tax_rate_basis_points else tax_rate_basis_points end,
     stripe_price_version_id = case when p_patch ? 'stripePriceVersionId' then nullif(p_patch->>'stripePriceVersionId','')::uuid else stripe_price_version_id end,
     stripe_enabled = case when p_patch ? 'stripeEnabled' then (p_patch->>'stripeEnabled')::boolean else stripe_enabled end,
     venmo_enabled = case when p_patch ? 'venmoEnabled' then (p_patch->>'venmoEnabled')::boolean else venmo_enabled end,

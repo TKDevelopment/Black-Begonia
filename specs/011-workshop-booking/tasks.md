@@ -41,7 +41,7 @@ first vertical release slice.
 passes its migration and RLS checkpoint. Later slices are applied only when
 their dependent story begins.
 
-- [X] T006 [P] Create shared workshop definition, series, occurrence, media, lifecycle, tax-inclusive minor-unit price, and public-projection types in `src/app/core/models/workshop.ts`
+- [X] T006 [P] Create shared workshop definition, series, occurrence, media, lifecycle, pre-tax minor-unit price, state tax rate, and public-projection types in `src/app/core/models/workshop.ts`
 - [X] T007 [P] Create shared hold, booking, attendee, adjustment, reschedule, waitlist, customer-status, personal-data-request, replacement-email-verification, and retention-policy lifecycle types in `src/app/core/models/workshop-booking.ts`
 - [X] T008 [P] Create shared workshop transaction, exception, expense, summary, and reporting types in `src/app/core/models/workshop-financial.ts`
 - [X] T009 [P] Define the catalog/media slice tables, constraints, indexes, shared workshop audit events, pre-booking public projections, and storage policies in `supabase/schemas/public/tables/workshop_definitions.sql`, `supabase/schemas/public/tables/workshop_series.sql`, `supabase/schemas/public/tables/workshop_occurrences.sql`, `supabase/schemas/public/tables/workshop_media.sql`, `supabase/schemas/public/tables/workshop_stripe_price_versions.sql`, `supabase/schemas/public/tables/workshop_audit_events.sql`, and `supabase/schemas/storage/workshop_media.sql`
@@ -73,7 +73,7 @@ projection, edit it, and verify destructive deletion is blocked after history.
 
 ### Tests for User Story 1
 
-- [X] T020 [P] [US1] Add PostgreSQL checks for definition/occurrence CRUD, publication validation, unique slugs, required hero/address/terms, tax-inclusive non-negative minor-unit prices, DST rejection/offset selection, and deletion guards in `supabase/tests/workshop_catalog_media.sql`
+- [X] T020 [P] [US1] Add PostgreSQL checks for definition/occurrence CRUD, publication validation, unique slugs, required hero/address/terms, pre-tax non-negative minor-unit prices, tax-state snapshots, DST rejection/offset selection, and deletion guards in `supabase/tests/workshop_catalog_media.sql`
 - [X] T021 [P] [US1] Add Karma/Jasmine tests for catalog/occurrence repository mapping, validation errors, facade delegation, and replay-safe commands in `src/app/core/supabase/repositories/workshop-catalog-repository.service.spec.ts` and `src/app/core/supabase/repositories/workshop-admin-facade.service.spec.ts`
 - [X] T022 [P] [US1] Add Karma/Jasmine tests for image validation, upload ordering, alt text, public/private bucket use, and cleanup failures in `src/app/core/supabase/services/workshop-media.service.spec.ts`
 - [X] T023 [P] [US1] Add Karma/Jasmine tests for the CRM workshop list/editor publication, preview, catalog-state, and delete/archive decisions in `src/app/components/private/workshops/workshops.component.spec.ts` and `src/app/components/private/workshops/workshop-editor/workshop-editor.component.spec.ts`
@@ -167,11 +167,11 @@ project direct-Venmo timing and reconciliation remain intact.
 **Independent Test**: Exercise success, abandonment, expiry, final-seat races,
 late Stripe/Venmo payment, mismatched Venmo, method switching, duplicate payment,
 cancellation race, forged return, replayed/out-of-order provider events,
-tax-inclusive Stripe/Venmo total parity, and project Venmo regression.
+pre-tax subtotal/tax/total Stripe/Venmo parity, and project Venmo regression.
 
 ### Tests for User Story 4
 
-- [x] T052 [P] [US4] Add PostgreSQL capacity and amount tests for concurrent holds, quantity limits, tax-inclusive `unit minor × quantity` totals, effective cutoff, one active method, expiration, release, and never-overbook invariants in `supabase/tests/workshop_booking_capacity.sql`
+- [x] T052 [P] [US4] Add PostgreSQL capacity and amount tests for concurrent holds, quantity limits, pre-tax `unit minor × quantity` subtotals, selected-state tax, final totals, effective cutoff, one active method, expiration, release, and never-overbook invariants in `supabase/tests/workshop_booking_capacity.sql`
 - [x] T053 [P] [US4] Add PostgreSQL reconciliation tests for Stripe/Venmo total parity, trusted completion time, delayed/replayed/out-of-order Stripe events, late capacity, cancellation races, duplicate cross-method money, and exact-once booking/transaction effects in `supabase/tests/workshop_payments_reconciliation.sql`
 - [x] T054 [P] [US4] Add PostgreSQL direct Venmo tests for 24-hour/capped holds, safe references, on-time confirmation, late payment, underpayment, overpayment, missing reference, superseded instructions, and external resolution in `supabase/tests/workshop_venmo_reconciliation.sql`
 - [x] T055 [P] [US4] Add Karma/Jasmine tests for booking API/service mapping, status-token redaction, clean public paths, generic status-access recovery, token invalidation/rotation, endpoint-specific request mapping, and safe errors in `src/app/core/supabase/repositories/workshop-booking-repository.service.spec.ts` and `src/app/core/supabase/services/workshop-booking.service.spec.ts`
@@ -198,6 +198,7 @@ tax-inclusive Stripe/Venmo total parity, and project Venmo regression.
 - [ ] T073 [US4] Execute and record pre-retirement regression approval while PayPal remains available for rollback, covering project direct-Venmo configured deadlines/reminders/manual reconciliation/obligation allocation, Stripe, cash, check, and historical PayPal reads in `specs/011-workshop-booking/implementation-notes.md`
 - [ ] T074 [US4] After T073 approval, update provider enums/constraints and deployment configuration so new records cannot use PayPal, retire `supabase/edge_functions/capture-venmo-order/` and `supabase/edge_functions/paypal-payment-webhook/`, and preserve historical `source='paypal'` records through `supabase/migrations/20260729002000_workshop_payments_reconciliation.sql`, `supabase/schemas/public/tables/payment_checkout_attempts.sql`, and `supabase/schemas/public/tables/payment_provider_events.sql`
 - [ ] T075 [US4] Execute post-retirement Stripe, workshop/project direct-Venmo, project Stripe/cash/check, PayPal-absence bundle/config/deployment scans, final-seat, expiry, duplicate, and late-payment smoke scenarios and record evidence in `specs/011-workshop-booking/implementation-notes.md`
+- [X] T195 [US1] [US4] Refine workshop pricing to collect pre-tax seat price plus RI/CT/MA tax state, snapshot subtotal/tax/total for bookings, show the reserve-page breakdown, and send Stripe Checkout advertising line, workshop date, location, subtotal, tax, and total in `src/app/components/private/workshops/workshop-editor/workshop-editor.component.*`, `src/app/components/workshop-booking/workshop-reservation/workshop-reservation.component.*`, `supabase/edge_functions/create-workshop-booking/index.ts`, and `supabase/migrations/20260826000000_workshop_pre_tax_pricing.sql`
 
 **Checkpoint**: Workshop checkout is secure and exactly-once, direct Venmo is
 manual and auditable, and no active payment surface invokes PayPal.

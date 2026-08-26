@@ -12,9 +12,13 @@ import {
   WorkshopSeries,
   WorkshopSeriesUpdateResult,
   WorkshopSeriesUpdateScope,
+  WorkshopTaxRegion,
 } from '../../../../core/models/workshop';
 import { ToastService } from '../../../../core/services/toast.service';
-import { WorkshopCatalogRepositoryService } from '../../../../core/supabase/repositories/workshop-catalog-repository.service';
+import {
+  WorkshopCatalogRepositoryService,
+  workshopTaxRateBasisPoints,
+} from '../../../../core/supabase/repositories/workshop-catalog-repository.service';
 import { WorkshopMediaService } from '../../../../core/supabase/services/workshop-media.service';
 import { WorkshopCustomerPreviewComponent } from './workshop-customer-preview.component';
 
@@ -36,6 +40,15 @@ const US_STATES = [
   ['VT', 'Vermont'], ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'],
   ['WI', 'Wisconsin'], ['WY', 'Wyoming'],
 ] as const;
+
+const WORKSHOP_TAX_OPTIONS: Array<{
+  region: WorkshopTaxRegion;
+  label: string;
+}> = [
+  { region: 'RI', label: 'Rhode Island (7%)' },
+  { region: 'CT', label: 'Connecticut (6.35%)' },
+  { region: 'MA', label: 'Massachusetts (6.25%)' },
+];
 
 const DEFAULT_WORKSHOP_TERMS = `Reservation and payment
 Your reservation applies only to the workshop date, time, and number of seats shown in your confirmation. A reservation is confirmed only after full payment is verified. Stripe payments are verified electronically. Direct Venmo payments remain pending until Black Begonia Florals manually verifies the payment before the stated deadline; unverified or expired reservations may release their seats.
@@ -86,6 +99,7 @@ export class WorkshopEditorComponent implements OnInit {
   readonly publishAfterSave = signal(false);
   readonly seriesLabel = signal('');
   readonly stateOptions = US_STATES;
+  readonly taxOptions = WORKSHOP_TAX_OPTIONS;
   readonly invalidTooltips: Record<string, TooltipState> = {};
   private readonly tooltipTimers: Record<string, ReturnType<typeof setTimeout>> = {};
   readonly seriesScope = signal<WorkshopSeriesUpdateScope>('current');
@@ -142,6 +156,7 @@ export class WorkshopEditorComponent implements OnInit {
     capacity: [12, [Validators.required, Validators.min(1), Validators.max(10000)]],
     perBookingLimit: [4, [Validators.required, Validators.min(1)]],
     priceMajor: [85, [Validators.required, Validators.min(0), Validators.max(1000000)]],
+    taxRegion: ['RI' as WorkshopTaxRegion, Validators.required],
   });
 
   readonly occurrenceSchedules = this.form.controls.occurrences;
@@ -173,6 +188,7 @@ export class WorkshopEditorComponent implements OnInit {
     const schedule = value.occurrences[0];
     if (
       Math.round(value.priceMajor * 100) !== current.price_minor
+      || value.taxRegion !== current.tax_region
       || `${schedule.date}T${schedule.localStartTime}` !== this.toLocalInput(current.local_start)
       || value.venueName.trim() !== current.venue_name
       || value.terms.trim() !== current.terms_snapshot
@@ -283,6 +299,7 @@ export class WorkshopEditorComponent implements OnInit {
       capacity: 12,
       perBookingLimit: 4,
       priceMajor: 85,
+      taxRegion: 'RI',
     };
   }
 
@@ -676,6 +693,7 @@ export class WorkshopEditorComponent implements OnInit {
         label: this.seriesLabel(),
         capacity: value.capacity,
         priceMinor: Math.round(value.priceMajor * 100),
+        taxRegion: value.taxRegion,
         venueName: value.venueName,
         addressLine1: value.addressLine1,
         addressLine2: value.addressLine2,
@@ -784,6 +802,7 @@ export class WorkshopEditorComponent implements OnInit {
     if (occurrence.venue_name !== series.default_venue_name) labels.push('Venue override');
     if (occurrence.capacity !== series.default_capacity) labels.push('Capacity override');
     if (occurrence.price_minor !== series.default_price_minor) labels.push('Price override');
+    if (occurrence.tax_region !== series.default_tax_region) labels.push('Tax override');
     if (occurrence.timezone !== series.default_timezone) labels.push('Timezone override');
     return labels;
   }
@@ -867,6 +886,8 @@ export class WorkshopEditorComponent implements OnInit {
       capacity: value.capacity,
       perBookingLimit: value.perBookingLimit,
       priceMinor: Math.round(value.priceMajor * 100),
+      taxRegion: value.taxRegion,
+      taxRateBasisPoints: workshopTaxRateBasisPoints(value.taxRegion),
       currency: 'USD',
       stripePriceVersionId,
       stripeEnabled: true,
@@ -897,6 +918,8 @@ export class WorkshopEditorComponent implements OnInit {
       capacity: value.capacity,
       perBookingLimit: value.perBookingLimit,
       priceMinor: Math.round(value.priceMajor * 100),
+      taxRegion: value.taxRegion,
+      taxRateBasisPoints: workshopTaxRateBasisPoints(value.taxRegion),
       stripePriceVersionId: this.currentOccurrence()?.stripe_price_version_id,
       stripeEnabled: true,
       venmoEnabled: true,
@@ -930,6 +953,7 @@ export class WorkshopEditorComponent implements OnInit {
       capacity: occurrence.capacity,
       perBookingLimit: occurrence.per_booking_limit,
       priceMajor: occurrence.price_minor / 100,
+      taxRegion: occurrence.tax_region,
     });
   }
 
@@ -1055,6 +1079,7 @@ export class WorkshopEditorComponent implements OnInit {
   private fieldLabel(name: string): string {
     if (name === 'postalCode') return 'zipcode';
     if (name === 'capacity') return 'open seats';
+    if (name === 'taxRegion') return 'tax state';
     return name.replace(/([A-Z])/g, ' $1').toLowerCase();
   }
 

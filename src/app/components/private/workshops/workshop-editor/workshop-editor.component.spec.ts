@@ -280,6 +280,8 @@ describe('WorkshopEditorComponent', () => {
     expect(repository.saveOccurrence).toHaveBeenCalledWith(
       jasmine.objectContaining({
         priceMinor: 8500,
+        taxRegion: 'RI',
+        taxRateBasisPoints: 700,
         slug: 'summer-garden-centerpiece-2026-08-15',
         timezone: 'America/New_York',
         utcOffsetMinutes: -240,
@@ -518,6 +520,9 @@ describe('WorkshopEditorComponent', () => {
     const drafts = repository.generateSeries.calls.mostRecent().args[1];
     expect(drafts.length).toBe(2);
     expect(drafts[0].workshopOccurrenceId).toBeUndefined();
+    expect(repository.createSeries).toHaveBeenCalledWith(
+      jasmine.objectContaining({ taxRegion: 'RI' }),
+    );
     expect(drafts[0].slug).not.toBe(drafts[1].slug);
     expect(drafts.map((draft) => draft.utcOffsetMinutes)).toEqual([-240, -300]);
   });

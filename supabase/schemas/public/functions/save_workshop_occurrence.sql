@@ -15,6 +15,8 @@ declare
   v_local_start timestamp := (p_draft->>'localStart')::timestamp;
   v_local_end timestamp := (p_draft->>'localEnd')::timestamp;
   v_offset smallint := (p_draft->>'utcOffsetMinutes')::smallint;
+  v_tax_region text := upper(btrim(coalesce(p_draft->>'taxRegion', 'RI')));
+  v_tax_rate_basis_points integer;
   v_start_at timestamptz;
   v_end_at timestamptz;
   v_occurrence public.workshop_occurrences;
@@ -24,6 +26,10 @@ begin
   end if;
   if p_command_key is null or v_definition_id is null then
     raise exception 'invalid request' using errcode = '22023';
+  end if;
+  v_tax_rate_basis_points := public.workshop_tax_rate_basis_points(v_tax_region);
+  if v_tax_rate_basis_points is null then
+    raise exception 'invalid tax region' using errcode = '22023';
   end if;
 
   select (safe_metadata->>'occurrenceId')::uuid into v_existing_id
@@ -65,7 +71,7 @@ begin
       postal_code, country, timezone, local_start, local_end,
       utc_offset_minutes, start_at, end_at, registration_opens_at,
       registration_closes_at, capacity, per_booking_limit, price_minor,
-      currency, stripe_price_version_id, stripe_enabled, venmo_enabled,
+      tax_region, tax_rate_basis_points, currency, stripe_price_version_id, stripe_enabled, venmo_enabled,
       waitlist_enabled, is_featured, featured_order, created_by, updated_by
     ) values (
       v_definition_id, v_series_id, lower(btrim(p_draft->>'slug')),
@@ -80,7 +86,8 @@ begin
       (p_draft->>'registrationOpensAt')::timestamptz,
       (p_draft->>'registrationClosesAt')::timestamptz,
       (p_draft->>'capacity')::integer, (p_draft->>'perBookingLimit')::integer,
-      (p_draft->>'priceMinor')::bigint, upper(p_draft->>'currency'),
+      (p_draft->>'priceMinor')::bigint, v_tax_region, v_tax_rate_basis_points,
+      upper(p_draft->>'currency'),
       nullif(p_draft->>'stripePriceVersionId','')::uuid,
       coalesce((p_draft->>'stripeEnabled')::boolean,false),
       coalesce((p_draft->>'venmoEnabled')::boolean,false),
@@ -112,6 +119,8 @@ begin
       capacity = (p_draft->>'capacity')::integer,
       per_booking_limit = (p_draft->>'perBookingLimit')::integer,
       price_minor = (p_draft->>'priceMinor')::bigint,
+      tax_region = v_tax_region,
+      tax_rate_basis_points = v_tax_rate_basis_points,
       currency = upper(p_draft->>'currency'),
       stripe_price_version_id = nullif(p_draft->>'stripePriceVersionId','')::uuid,
       stripe_enabled = coalesce((p_draft->>'stripeEnabled')::boolean,false),

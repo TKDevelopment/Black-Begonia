@@ -21,6 +21,11 @@ create table public.workshop_bookings (
   )),
   price_per_seat_minor_snapshot bigint not null check (price_per_seat_minor_snapshot >= 0),
   subtotal_minor_snapshot bigint not null check (subtotal_minor_snapshot >= 0),
+  tax_region_snapshot text null check (tax_region_snapshot is null or tax_region_snapshot in ('RI','CT','MA')),
+  tax_rate_basis_points_snapshot integer null check (
+    tax_rate_basis_points_snapshot is null or tax_rate_basis_points_snapshot in (700,635,625)
+  ),
+  tax_minor_snapshot bigint null check (tax_minor_snapshot is null or tax_minor_snapshot >= 0),
   total_minor_snapshot bigint not null check (total_minor_snapshot >= 0),
   required_charges_minor_snapshot bigint not null default 0 check (required_charges_minor_snapshot >= 0),
   currency text not null check (currency = 'USD'),
@@ -34,7 +39,25 @@ create table public.workshop_bookings (
   updated_at timestamptz not null default now(),
   constraint workshop_booking_total_snapshot check (
     subtotal_minor_snapshot = price_per_seat_minor_snapshot * purchased_quantity
-    and total_minor_snapshot = subtotal_minor_snapshot + required_charges_minor_snapshot
+    and (
+      (
+        tax_region_snapshot is null
+        and tax_rate_basis_points_snapshot is null
+        and tax_minor_snapshot is null
+        and total_minor_snapshot = subtotal_minor_snapshot + required_charges_minor_snapshot
+      )
+      or (
+        tax_region_snapshot is not null
+        and tax_rate_basis_points_snapshot is not null
+        and tax_minor_snapshot = ((subtotal_minor_snapshot * tax_rate_basis_points_snapshot + 5000) / 10000)
+        and total_minor_snapshot = subtotal_minor_snapshot + tax_minor_snapshot + required_charges_minor_snapshot
+        and (
+          (tax_region_snapshot = 'RI' and tax_rate_basis_points_snapshot = 700)
+          or (tax_region_snapshot = 'CT' and tax_rate_basis_points_snapshot = 635)
+          or (tax_region_snapshot = 'MA' and tax_rate_basis_points_snapshot = 625)
+        )
+      )
+    )
   )
 );
 alter table public.workshop_seat_holds

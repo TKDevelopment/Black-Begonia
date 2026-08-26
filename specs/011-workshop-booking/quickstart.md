@@ -69,6 +69,7 @@ supabase/migrations/20260816000000_workshop_stripe_reconciliation_lock_order.sql
 supabase/migrations/20260820000000_workshop_occurrence_edit_management.sql
 supabase/migrations/20260821000000_workshop_concept_updates.sql
 supabase/migrations/20260821010000_workshop_refund_webhook_reconciliation.sql
+supabase/migrations/20260826000000_workshop_pre_tax_pricing.sql
 supabase/schemas/public/tables/workshop_*.sql
 supabase/schemas/public/functions/workshop_*.sql
 supabase/schemas/public/functions/update_workshop_concept.sql
@@ -262,9 +263,10 @@ Validate:
 - One reusable definition creates one Product and one active Price.
 - Five same-price occurrences reuse that Price.
 - Price change creates a new immutable Price without rewriting old bookings.
-- Published `priceMinor` is the complete tax-inclusive required per-seat amount.
-- For every tested quantity, subtotal and total equal `priceMinor × quantity`
-  with no extra mandatory charge, and Stripe/direct Venmo totals match exactly.
+- Published `priceMinor` is the pre-tax required per-seat amount.
+- For every tested quantity, subtotal equals `priceMinor` times quantity, tax
+  equals the selected state rate applied to subtotal, total equals subtotal plus
+  tax, and Stripe/direct Venmo totals match exactly.
 - Each hold creates a distinct Checkout Session with the held quantity.
 - Browser return without webhook remains processing.
 - Signed webhook confirms exactly one booking/transaction/capacity effect.

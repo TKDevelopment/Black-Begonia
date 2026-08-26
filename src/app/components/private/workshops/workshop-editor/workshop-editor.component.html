@@ -7,7 +7,7 @@
         <h1 class="mt-2 font-cormorant text-4xl text-stone-900 md:text-5xl">
           {{ currentOccurrence() ? 'Edit workshop' : 'Create workshop' }}
         </h1>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Define the customer-facing message, venue, New York local schedule, seats, price, terms, and payment readiness.</p>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Define the customer-facing message, venue, New York local schedule, seats, pre-tax price, terms, and payment readiness.</p>
       </div>
       <span *ngIf="currentOccurrence()" class="status-badge">{{ currentOccurrence()!.status.replaceAll('_', ' ') }}</span>
     </header>
@@ -179,7 +179,8 @@
         <div class="form-grid pricing-grid">
           <label class="field">Open seats<span class="field-control"><input type="number" formControlName="capacity" min="1" placeholder="12" [attr.aria-invalid]="fieldInvalid('capacity')" /><span *ngIf="tooltipVisible('capacity')" class="validation-tooltip">{{ validationMessage('capacity') }}</span></span></label>
           <label class="field">Maximum seats per booking<span class="field-control"><input type="number" formControlName="perBookingLimit" min="1" placeholder="4" [attr.aria-invalid]="fieldInvalid('perBookingLimit')" /><span *ngIf="tooltipVisible('perBookingLimit')" class="validation-tooltip">{{ validationMessage('perBookingLimit') }}</span></span></label>
-          <label class="field">Tax-inclusive price per seat<span class="field-control currency-control"><span class="currency-prefix" aria-hidden="true">$</span><input type="number" formControlName="priceMajor" min="0" step="0.01" placeholder="85.00" aria-label="Tax-inclusive price per seat in US dollars" [attr.aria-invalid]="fieldInvalid('priceMajor')" /><span class="currency-suffix" aria-hidden="true">USD</span><span *ngIf="tooltipVisible('priceMajor')" class="validation-tooltip">{{ validationMessage('priceMajor') }}</span></span></label>
+          <label class="field">Pre-tax price per seat<span class="field-control currency-control"><span class="currency-prefix" aria-hidden="true">$</span><input type="number" formControlName="priceMajor" min="0" step="0.01" placeholder="85.00" aria-label="Pre-tax price per seat in US dollars" [attr.aria-invalid]="fieldInvalid('priceMajor')" /><span class="currency-suffix" aria-hidden="true">USD</span><span *ngIf="tooltipVisible('priceMajor')" class="validation-tooltip">{{ validationMessage('priceMajor') }}</span></span></label>
+          <label class="field">Tax state<span class="field-control"><select formControlName="taxRegion" [attr.aria-invalid]="fieldInvalid('taxRegion')"><option *ngFor="let tax of taxOptions" [value]="tax.region">{{ tax.label }}</option></select><span *ngIf="tooltipVisible('taxRegion')" class="validation-tooltip">{{ validationMessage('taxRegion') }}</span></span></label>
           <label class="field full">Workshop terms<span class="field-control"><textarea formControlName="terms" rows="5" placeholder="Describe cancellation, transfer, and attendance terms." [attr.aria-invalid]="fieldInvalid('terms')"></textarea><span *ngIf="tooltipVisible('terms')" class="validation-tooltip">{{ validationMessage('terms') }}</span></span></label>
         </div>
       </section>
