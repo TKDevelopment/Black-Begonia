@@ -1,12 +1,13 @@
 :host { display:block; }
-.detail-page { min-height:100vh; padding:3.5rem clamp(1rem,4vw,3rem) 5rem; background-image:linear-gradient(rgb(41 37 36/.24),rgb(41 37 36/.34)),url('/assets/images/website/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg'); background-position:center; background-size:cover; color:#2e2926; }
+.detail-page { min-height:100vh; padding:3.5rem clamp(1rem,4vw,3rem) 5rem; background-image:linear-gradient(rgb(41 37 36/.24),rgb(41 37 36/.34)),url('/assets/images/website/FizzFritesLadyFingerLounge_Apr3_KCP208.jpg'); background-position:center; background-size:cover; color:#2e2926; font-family:'Cormorant Garamond',serif; }
 .detail-shell { margin:auto; max-width:90rem; }
 .breadcrumb { align-items:center; display:flex; flex-wrap:wrap; gap:.55rem; margin:0 0 calc(1.35rem); color:#ece2dc; font-size:1rem; letter-spacing:.03em; }
 .breadcrumb a { color:#feaa7d; font-weight:700; }
 .hero { border:0; border-radius:2rem; box-shadow:0 1.2rem 3rem rgb(58 42 36/.15); display:flex; flex-direction:column; margin:auto; max-width:90rem; overflow:hidden; padding:clamp(1.25rem,2.4vw,2rem); background:linear-gradient(135deg,#ffffff49 0%,#bd693ca4 100%); }
 .hero-composition { align-items:stretch; display:grid; grid-template-columns:minmax(0,1.6fr) minmax(18rem,.75fr); margin:auto; max-width:90rem;  border-radius:1.5rem; overflow:hidden; }
-.hero-media>img { aspect-ratio:16/9; display:block; height:auto; object-fit:cover; width:100%; }
-.hero-copy { background:#2e2926; box-sizing:border-box; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:clamp(1.25rem,2.4vw,2rem); }
+.hero-media { aspect-ratio:16/9; min-width:0; overflow:hidden; }
+.hero-media>img { aspect-ratio:16/9; display:block; height:100%; object-fit:cover; width:100%; }
+.hero-copy { align-self:stretch; background:#2e2926; box-sizing:border-box; color:#fff; display:flex; flex-direction:column; justify-content:space-between; min-height:0; overflow:hidden; padding:clamp(1.25rem,2.4vw,2rem); }
 .hero-heading-group>.eyebrow { color:#efb8b2; margin:0; }
 .hero-heading-group>h1 { margin:.35rem 0 0; }
 .eyebrow { color:#e29e7d; font-size:.64rem; font-weight:750; letter-spacing:.19em; text-transform:uppercase; }
@@ -35,6 +36,7 @@ dl { display:grid; gap:.8rem; margin:1.25rem 0; }
 .experience-panel section { margin-top:1.6rem; padding-top:1.2rem; border-top:1px solid #ddd5cf; }
 .experience-panel h3 { margin-bottom:.3rem; font-size:1.4rem; }
 .experience-panel section>p { color:#665d58; font-size:.9rem; line-height:1.65; }
+.included-materials { white-space:pre-line; }
 .series-date-row { align-items:center; background:#fbf7f4; border:1px solid #e3d7d0; border-radius:.5rem; display:grid; gap:1rem; grid-template-columns:minmax(0,1fr) auto auto; margin-top:.7rem; padding:1rem 1.15rem; }
 .series-date-row:hover { border-color:#d3b5aa; }
 .series-date-row time { font-family:'Cormorant Garamond',serif; font-size:1.12rem; font-weight:600; }
@@ -61,6 +63,7 @@ dl { display:grid; gap:.8rem; margin:1.25rem 0; }
 .detail-footer__ornament span:nth-child(3) { left:.45rem; top:2.35rem; transform:rotate(72deg); }
 .detail-state { margin:6rem auto; max-width:38rem; padding:clamp(1.25rem,4vw,2.5rem); border:1px solid #e5dfda; background:#fff; text-align:center; }
 a:focus-visible,button:focus-visible { outline:3px solid #d3938c; outline-offset:4px; }
-@media(max-width:960px){.hero-composition{grid-template-columns:1fr}.detail-page{padding-block:3rem}.experience-wrap{margin-block:2.75rem}.gallery{margin-bottom:3rem}.series-date-row{grid-template-columns:1fr auto}.series-date-actions{grid-column:1/-1}.detail-footer{grid-template-columns:auto 1fr}.detail-footer a{grid-column:2;justify-self:start}}
-@media(max-width:640px){.detail-page{padding-top:2.5rem;padding-right:max(1rem,env(safe-area-inset-right));padding-bottom:3rem;padding-left:max(1rem,env(safe-area-inset-left))}.breadcrumb{margin-bottom:10px}.experience-panel{padding:1.5rem 1.25rem}.gallery>div{grid-template-columns:1fr 1fr}.series-date-row{align-items:start;grid-template-columns:1fr}.series-date-actions{grid-column:auto;width:100%;white-space:normal}.series-date-actions a{flex:1}.detail-footer{grid-template-columns:1fr;padding:1.75rem 1.35rem}.detail-footer__ornament{height:3.25rem;transform:scale(.8);transform-origin:left top}.detail-footer a{grid-column:1;justify-self:stretch;white-space:normal}.detail-state{margin-block:4rem}}
-@media(max-width:390px){h1{font-size:2.65rem}.gallery>div{grid-template-columns:1fr}.series-date-actions{align-items:stretch;flex-direction:column}.series-date-actions a{text-align:center}.detail-footer h2{font-size:1.8rem}}
+@media(max-width:1180px) and (min-width:961px){.hero-copy{padding:1.2rem}h1{font-size:clamp(1.9rem,2.8vw,2.75rem)}.hero-facts{margin:.5rem 0}.hero-facts dd{font-size:1rem}.hero-facts>div:last-child dd{font-size:1.35rem}.primary-action{min-height:2.45rem}}
+@media(max-width:960px){.detail-page{padding-block:3rem}.hero{background:#342c28;box-shadow:none;padding:0}.hero-composition{grid-template-columns:1fr}.hero-copy{aspect-ratio:auto;background:transparent;overflow:visible; padding: 1.2rem;}.experience-wrap{margin-block:2.75rem}.gallery{margin-bottom:3rem}.series-date-row{grid-template-columns:1fr auto}.series-date-actions{grid-column:1/-1}.detail-footer{grid-template-columns:auto 1fr}.detail-footer a{grid-column:2;justify-self:start}}
+@media(max-width:640px){.detail-page{padding-top:2.5rem;padding-bottom:3rem}.breadcrumb{font-size:.82rem;margin-bottom:10px}h1{font-size:clamp(2rem,10vw,2.7rem);letter-spacing:0}.eyebrow{font-size:.58rem;letter-spacing:.14em}.hero-facts dd{font-size:1rem}.hero-facts>div:last-child dd{font-size:1.3rem}.experience-panel{padding:1.35rem 1.1rem}.experience-panel h2,.gallery h2{font-size:clamp(1.9rem,9vw,2.55rem)}section>p{font-size:.86rem}.gallery>div{grid-template-columns:1fr 1fr}.series-date-row{align-items:start;grid-template-columns:1fr}.series-date-actions{grid-column:auto;width:100%;white-space:normal}.series-date-actions a{flex:1}.detail-footer{grid-template-columns:1fr;padding:1.65rem 1.25rem}.detail-footer h2{font-size:clamp(1.75rem,8vw,2.25rem)}.detail-footer a{grid-column:1;justify-self:stretch;white-space:normal}}
+@media(max-width:390px){h1{font-size:2.25rem}.gallery>div{grid-template-columns:1fr}.series-date-actions{align-items:stretch;flex-direction:column}.series-date-actions a{text-align:center}.detail-footer h2{font-size:1.75rem}}

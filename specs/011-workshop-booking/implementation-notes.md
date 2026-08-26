@@ -1868,3 +1868,44 @@ recorded here as their tasks complete.
   gate remains blocked by the user's separate public workshop-detail stylesheet
   exceeding the 8 kB component budget by 279 bytes. The roster stylesheet no
   longer exceeds its error budget after compaction.
+
+## 2026-08-26 - T196 workshop responsive refinement
+
+- Reworked the public `/workshops` featured panel so the image side stretches
+  with the grid row on desktop/laptop, the copy side uses a smaller laptop
+  scale and internal overflow, and the stacked tablet/mobile state returns to
+  natural image height.
+- Changed the `/workshops/{event}` and `/workshops/{event}/{date}` hero media
+  and copy contract so desktop/laptop copy cannot exceed the adjacent image
+  presentation. Tablet/mobile detail heroes now drop the boxed translucent
+  treatment around the hero container/copy and use a flatter stacked layout.
+- Converted `/workshops` phone upcoming rows into full-width editorial cards
+  with the date badge over the image, preventing long workshop titles from
+  collapsing into one-character vertical columns. Reduced mobile typography
+  across discovery, detail, reservation, terms, and booking-status workshop
+  surfaces.
+- Focused workshop coverage passed 31/31 tests:
+  `npx ng test --watch=false --browsers=ChromeHeadlessNoSandbox --include=src/app/components/public/workshops/workshops.component.spec.ts --include=src/app/components/public/workshop-detail/workshop-detail.component.spec.ts --include=src/app/components/workshop-booking/workshop-reservation/workshop-reservation.component.spec.ts --include=src/app/components/public/workshop-terms-and-conditions/workshop-terms-and-conditions.component.spec.ts --include=src/app/components/workshop-booking/workshop-booking-status/workshop-booking-status.component.spec.ts`.
+- `npm run build` passed after allowing Google Fonts network access. The build
+  still logs prerender fetch failures for the placeholder Supabase host
+  `example.supabase.co` and existing size warnings, but no hard budget errors
+  remain; `workshop-detail.component.scss` compiled at 8.91 kB under the 9 kB
+  error limit.
+
+## 2026-08-26 - T197 final workshop hero and content refinements
+
+- Restored the workshop detail hero image to intrinsic `height:auto` with
+  `aspect-ratio:16/9` so the image is never stretched by the adjacent copy
+  panel. The side-by-side hero copy now has its own bounded aspect-ratio box and
+  scrolls internally when copy is longer than the available panel height.
+- Kept the mobile/tablet hero media and copy sections transparent while adding
+  padding back around the hero copy, preserving the unboxed treatment without
+  making the content press against the viewport.
+- Reduced the `/workshops` mobile `All upcoming dates` heading again and added
+  `white-space:pre-line` rendering for the detail page's `What is included`
+  content so textarea line breaks display as separate lines.
+- Focused workshop coverage passed 31/31 tests with the same public
+  workshop/detail/reservation/terms/status include set. `npm run build` passed
+  after allowing Google Fonts network access; prerender still logs expected
+  placeholder Supabase fetch failures for `example.supabase.co`, and the detail
+  stylesheet remains below the 9 kB hard error limit at 8.97 kB.
