@@ -35,6 +35,7 @@ describe('WorkshopDetailComponent', () => {
     const detail = publicWorkshopOccurrenceFixture({
       slug: 'summer-workshop',
       advertisingLine: 'Design something beautiful together',
+      includedMaterials: 'One green compote\nDahlias\nEtc\nEtc',
       remainingSeats: 3,
       media: [
         { role: 'hero', url: '/hero.webp', altText: 'Hero flowers', displayOrder: 0 },
@@ -97,7 +98,7 @@ describe('WorkshopDetailComponent', () => {
     ).display).toBe('grid');
     expect(getComputedStyle(
       fixture.nativeElement.querySelector('.hero-composition'),
-    ).alignItems).toBe('stretch');
+    ).alignItems).toBe('start');
     expect(getComputedStyle(
       fixture.nativeElement.querySelector('.hero-composition'),
     ).maxWidth).toBe('1440px');
@@ -107,9 +108,12 @@ describe('WorkshopDetailComponent', () => {
     expect(getComputedStyle(
       fixture.nativeElement.querySelector('.breadcrumb'),
     ).marginBottom).toBe(
-      window.matchMedia('(max-width: 640px)').matches ? '10px' : '51.6px',
+      window.matchMedia('(max-width: 640px)').matches ? '10px' : '21.6px',
     );
+    const tabletHero = window.matchMedia('(max-width: 960px)').matches;
     const hero = fixture.nativeElement.querySelector('.hero') as HTMLElement;
+    const heroMedia = fixture.nativeElement.querySelector('.hero-media') as HTMLElement;
+    const heroImage = fixture.nativeElement.querySelector('.hero-media > img') as HTMLElement;
     const heroCopy = fixture.nativeElement.querySelector('.hero-copy') as HTMLElement;
     const heroFacts = fixture.nativeElement.querySelector('.hero-facts') as HTMLElement;
     const firstFact = fixture.nativeElement.querySelector('.hero-facts > div') as HTMLElement;
@@ -118,10 +122,18 @@ describe('WorkshopDetailComponent', () => {
     const seatPrice = fixture.nativeElement.querySelector('.hero-facts > div:last-child dd') as HTMLElement;
     expect(getComputedStyle(hero).backgroundImage).toBe('none');
     expect(getComputedStyle(hero).borderTopWidth).toBe('0px');
-    expect(getComputedStyle(heroCopy).backgroundColor).toBe('rgb(46, 41, 38)');
+    expect(getComputedStyle(heroMedia).aspectRatio).toBe('16 / 9');
+    expect(Number.parseFloat(getComputedStyle(heroImage).height)).toBeGreaterThan(0);
+    expect(getComputedStyle(heroImage).height).toBe(getComputedStyle(heroMedia).height);
+    expect(getComputedStyle(heroImage).objectFit).toBe('cover');
+    expect(getComputedStyle(heroCopy).backgroundColor)
+      .toBe(tabletHero ? 'rgba(0, 0, 0, 0)' : 'rgb(46, 41, 38)');
     expect(getComputedStyle(heroCopy).display).toBe('flex');
     expect(getComputedStyle(heroCopy).flexDirection).toBe('column');
     expect(getComputedStyle(heroCopy).justifyContent).toBe('space-between');
+    expect(getComputedStyle(heroCopy).aspectRatio).toBe(tabletHero ? 'auto' : '1 / 1');
+    expect(getComputedStyle(heroCopy).overflowY).toBe(tabletHero ? 'visible' : 'auto');
+    expect(Number.parseFloat(getComputedStyle(heroCopy).paddingTop)).toBeGreaterThan(0);
     const headingGroup = heroCopy.querySelector('.hero-heading-group') as HTMLElement;
     expect(heroCopy.firstElementChild).toBe(headingGroup);
     expect(headingGroup.firstElementChild?.classList.contains('eyebrow')).toBeTrue();
@@ -139,6 +151,9 @@ describe('WorkshopDetailComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.hero-facts > div').length).toBe(3);
     expect(fixture.nativeElement.querySelector('.detail-shell')).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('100 Flower Lane');
+    const includedMaterials = fixture.nativeElement.querySelector('.included-materials') as HTMLElement;
+    expect(includedMaterials.textContent).toContain('One green compote\nDahlias\nEtc\nEtc');
+    expect(getComputedStyle(includedMaterials).whiteSpace).toBe('pre-line');
     expect(fixture.nativeElement.querySelectorAll('.gallery img').length).toBe(2);
     expect(fixture.nativeElement.textContent).toContain('Reserve seats');
     expect(fixture.nativeElement.querySelector('.hero-upcoming-action')).toBeNull();

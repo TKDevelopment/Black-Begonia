@@ -63,7 +63,7 @@
         <p class="eyebrow">The experience</p>
         <h2>{{ item.advertisingLine | titlecase }}</h2>
         <p class="description">{{ item.description }}</p>
-        <section><h3>What is included</h3><p>{{ item.includedMaterials }}</p></section>
+        <section><h3>What is included</h3><p class="included-materials">{{ item.includedMaterials }}</p></section>
         <section *ngIf="seriesPage()" #upcomingEvents id="upcoming-workshop-events" class="series-dates" aria-labelledby="series-dates-title">
           <p class="eyebrow">Choose your date</p>
           <h3 id="series-dates-title">Upcoming workshop events</h3>
