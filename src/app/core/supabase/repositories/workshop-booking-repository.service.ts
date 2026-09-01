@@ -6,7 +6,6 @@ import {
   WorkshopCustomerStatus,
   WorkshopHeldBooking,
   WorkshopPaymentHandoff,
-  WorkshopPaymentMethod,
   WorkshopStatusAccessAccepted,
   WorkshopStatusAccessRequest,
 } from '../../models/workshop-booking';
@@ -41,7 +40,6 @@ export interface WorkshopBookingRepository {
   createHold(request: CreateWorkshopBookingRequest): Promise<WorkshopHeldBooking>;
   choosePayment(
     bookingToken: string,
-    method: WorkshopPaymentMethod,
     commandKey: string,
   ): Promise<WorkshopPaymentHandoff>;
   getStatus(bookingToken: string): Promise<WorkshopCustomerStatus>;
@@ -69,7 +67,7 @@ export class WorkshopBookingRepositoryService implements WorkshopBookingReposito
       contact: {
         name: request.contactName.trim(),
         email: request.contactEmail.trim().toLowerCase(),
-        phone: request.contactPhone?.trim() || null,
+        phone: request.contactPhone.trim(),
       },
       termsVersion: request.acceptedTermsVersion,
       commandKey: request.commandKey,
@@ -90,7 +88,6 @@ export class WorkshopBookingRepositoryService implements WorkshopBookingReposito
 
   async choosePayment(
     bookingToken: string,
-    method: WorkshopPaymentMethod,
     commandKey: string,
   ): Promise<WorkshopPaymentHandoff> {
     const data = await this.invoke(
@@ -98,7 +95,7 @@ export class WorkshopBookingRepositoryService implements WorkshopBookingReposito
       {
         command: 'choose_payment',
         bookingToken,
-        method,
+        method: 'stripe',
         commandKey,
       },
       'We could not start that payment option.',
@@ -236,23 +233,17 @@ function isHeldBooking(value: unknown): value is WorkshopHeldBooking {
     && typeof value['totalMinor'] === 'number'
     && value['currency'] === 'USD'
     && typeof value['effectiveExpiresAt'] === 'string'
-    && Array.isArray(value['methods']);
+    && Array.isArray(value['methods'])
+    && value['methods'].length === 1
+    && value['methods'][0] === 'stripe';
 }
 
 function isPaymentHandoff(value: unknown): value is WorkshopPaymentHandoff {
-  if (!isRecord(value)) return false;
-  if (value['state'] === 'redirect') {
-    return value['method'] === 'stripe'
-      && typeof value['url'] === 'string'
-      && value['url'].startsWith('https://checkout.stripe.com/')
-      && typeof value['effectiveExpiresAt'] === 'string';
-  }
-  return value['state'] === 'pending_manual_payment'
-    && value['method'] === 'direct_venmo'
-    && typeof value['approvedTarget'] === 'string'
-    && typeof value['amountMinor'] === 'number'
-    && value['currency'] === 'USD'
-    && typeof value['reference'] === 'string'
+  return isRecord(value)
+    && value['state'] === 'redirect'
+    && value['method'] === 'stripe'
+    && typeof value['url'] === 'string'
+    && value['url'].startsWith('https://checkout.stripe.com/')
     && typeof value['effectiveExpiresAt'] === 'string';
 }
 

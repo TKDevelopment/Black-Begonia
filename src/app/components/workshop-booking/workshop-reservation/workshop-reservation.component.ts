@@ -5,7 +5,6 @@ import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 
 import { PublicWorkshopOccurrence } from '../../../core/models/workshop';
-import { WorkshopPaymentHandoff } from '../../../core/models/workshop-booking';
 import { WebsiteAnalyticsService } from '../../../core/analytics/website-analytics.service';
 import { WorkshopPublicRepositoryService } from '../../../core/supabase/repositories/workshop-public-repository.service';
 import { WorkshopBookingService } from '../../../core/supabase/services/workshop-booking.service';
@@ -15,7 +14,7 @@ type ReservationControlName =
   | 'firstName'
   | 'lastName'
   | 'contactEmail'
-  | 'paymentMethod'
+  | 'contactPhone'
   | 'acceptedTerms';
 
 @Component({
@@ -39,8 +38,6 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
-  readonly handoff = signal<WorkshopPaymentHandoff | null>(null);
-  readonly statusAccessCode = signal<string | null>(null);
   readonly invalidTooltips: Partial<Record<ReservationControlName, 'hidden' | 'visible' | 'fading'>> = {};
   private readonly tooltipTimers: Partial<Record<ReservationControlName, ReturnType<typeof setTimeout>>> = {};
 
@@ -49,8 +46,7 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
     firstName: ['', [Validators.required, Validators.maxLength(79)]],
     lastName: ['', [Validators.required, Validators.maxLength(79)]],
     contactEmail: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
-    contactPhone: ['', [Validators.maxLength(40)]],
-    paymentMethod: ['stripe' as 'stripe' | 'direct_venmo', Validators.required],
+    contactPhone: ['', [Validators.required, Validators.maxLength(40)]],
     acceptedTerms: [false, Validators.requiredTrue],
   });
 
@@ -86,9 +82,6 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
       this.form.controls.quantity.addValidators(
         Validators.max(workshop.perBookingLimit),
       );
-      if (!workshop.stripeEnabled && workshop.venmoEnabled) {
-        this.form.controls.paymentMethod.setValue('direct_venmo');
-      }
     } catch {
       this.error.set('This workshop could not be loaded right now.');
     } finally {
@@ -120,19 +113,14 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
         quantity: value.quantity,
         contactName: `${value.firstName.trim()} ${value.lastName.trim()}`,
         contactEmail: value.contactEmail,
-        contactPhone: value.contactPhone || undefined,
+        contactPhone: value.contactPhone,
         acceptedTermsVersion: workshop.termsVersion,
-        paymentMethod: value.paymentMethod,
       });
-      this.handoff.set(result.handoff);
-      this.statusAccessCode.set(result.held.bookingToken);
       this.analytics.trackWorkshopCheckoutStart(
-        value.paymentMethod,
+        'stripe',
         value.quantity,
       );
-      if (result.handoff.state === 'redirect') {
-        this.redirectToStripe(result.handoff.url);
-      }
+      this.redirectToStripe(result.handoff.url);
     } catch {
       this.error.set(
         'We could not reserve those seats. Please review the form and try again.',
@@ -146,18 +134,6 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
     if (/^https:\/\/checkout\.stripe\.com\//.test(url)) {
       this.document.defaultView?.location.assign(url);
     }
-  }
-
-  openBookingStatus(): void {
-    const accessCode = this.statusAccessCode();
-    if (accessCode) {
-      this.redirectToStatus(accessCode);
-    }
-  }
-
-  redirectToStatus(accessCode: string): void {
-    const target = `/workshop-booking/status#access=${encodeURIComponent(accessCode)}`;
-    this.document.defaultView?.location.assign(target);
   }
 
   formatMoney(minor: number, currency: string): string {
@@ -198,13 +174,13 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
   private canReserve(workshop: PublicWorkshopOccurrence): boolean {
     return workshop.lifecycleStatus === 'published_open'
       && ['available', 'limited'].includes(workshop.availability)
-      && (workshop.stripeEnabled || workshop.venmoEnabled);
+      && workshop.stripeEnabled;
   }
 
   private showInvalidTooltips(): void {
     const controls: ReservationControlName[] = [
       'quantity', 'firstName', 'lastName', 'contactEmail',
-      'paymentMethod', 'acceptedTerms',
+      'contactPhone', 'acceptedTerms',
     ];
     controls.forEach((name) => {
       const control = this.form.controls[name];

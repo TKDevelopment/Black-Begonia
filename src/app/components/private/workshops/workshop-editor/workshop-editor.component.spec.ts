@@ -290,7 +290,7 @@ describe('WorkshopEditorComponent', () => {
     );
   });
 
-  it('always enables checkout, direct Venmo, waitlist, and carousel promotion', async () => {
+  it('always enables Stripe checkout, waitlist, and carousel promotion', async () => {
     component.form.patchValue(component.validExample());
 
     await component.save(false);
@@ -299,7 +299,7 @@ describe('WorkshopEditorComponent', () => {
     expect(repository.saveOccurrence).toHaveBeenCalledWith(
       jasmine.objectContaining({
         stripeEnabled: true,
-        venmoEnabled: true,
+        venmoEnabled: false,
         waitlistEnabled: true,
         isFeatured: true,
       }),

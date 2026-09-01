@@ -1909,3 +1909,108 @@ recorded here as their tasks complete.
   after allowing Google Fonts network access; prerender still logs expected
   placeholder Supabase fetch failures for `example.supabase.co`, and the detail
   stylesheet remains below the 9 kB hard error limit at 8.97 kB.
+
+## 2026-09-01 - T195 featured controls and Stripe-only reservations
+
+- Moved featured-workshop carousel controls into the `featured-copy` panel
+  immediately after the View workshop action, with responsive positioning that
+  keeps the controls within the copy panel at every supported breakpoint.
+- Removed the public payment-method fieldset and direct-Venmo handoff. New
+  reservations now require seat quantity, first name, last name, email, phone,
+  and occurrence-specific terms acceptance, then always create a Stripe hold
+  and redirect to Stripe Checkout.
+- Enforced the same Stripe-only rule at the repository, service, standalone
+  booking Edge Function, declarative SQL, occurrence publishing/editing, and
+  database-constraint layers. The additive
+  `20260901000000_workshop_stripe_only_checkout.sql` migration disables new
+  workshop Venmo configuration and closes open legacy occurrences that cannot
+  use Stripe without deleting historical bookings, payment facts, or internal
+  reconciliation evidence. Unrelated project-payment behavior is unchanged.
+- Focused Angular coverage passed 61/61 tests. The production build passed and
+  prerendered 24 routes after allowing Google Fonts network access; it retained
+  expected placeholder `example.supabase.co` fetch messages and existing soft
+  size-budget warnings.
+- The full Angular suite completed 836/838 tests. Its two failures reproduce in
+  unchanged workshop-detail and booking-status computed-style expectations:
+  detail expects `align-items: start` but receives `stretch`, and status expects
+  a specific pending-Venmo font family/weight. Neither failed suite exercises
+  the changed reservation or featured-carousel paths.
+- pgTAP contracts were updated for Stripe-only checkout and historical Venmo
+  privacy, but could not execute locally because Supabase CLI is unavailable
+  and Docker Desktop's daemon is not running. Standalone Deno checking was also
+  unavailable because Deno is not installed; the Edge source received a static
+  boundary review, and the Angular build does not compile standalone Edge
+  Functions.
+
+## 2026-09-01 - T198 reservation summary refinement
+
+- Reflowed the reservation facts into a balanced two-column desktop layout so
+  When and Where share the first row, with Per seat and Booking limit beneath.
+  Narrow screens retain a separated one-column fact stack.
+- Moved Total into the summary breakdown's final row so its prominent amount is
+  right-aligned directly beneath the tax amount, reduced the workshop title's
+  responsive display scale, and right-aligned the checkout action.
+- Changed the resting action label to `Continue to Secure Checkout` and applied
+  the site's loaded Raleway action font with title-case presentation. The
+  disabled/submitting state and Stripe-only behavior are unchanged.
+- Focused reservation coverage passed 9/9 tests. The production build passed
+  and prerendered 24 routes after allowing Google Fonts access; expected
+  placeholder `example.supabase.co` fetch messages and existing soft bundle and
+  component-style budget warnings remain.
+
+## 2026-09-01 - T199 featured carousel geometry refinement
+
+- Added a dedicated featured-image frame whose dimensions are governed by
+  `aspect-ratio: 16 / 9`; the image fills that frame with cover cropping instead
+  of stretching to the copy panel's height at desktop breakpoints.
+- Isolated featured copy from grid sizing so the media frame determines the
+  desktop section height. Stacked layouts reserve a responsive fixed copy
+  footprint, with long slide content scrolling inside it, so switching between
+  short and long workshops does not move the following page content.
+- Wrapped the variable copy separately from the controls and centered the
+  controls in their own stable grid row inside `featured-copy`.
+- Focused carousel plus shared responsive coverage passed 13/13 tests,
+  including a short-to-long slide change with a one-pixel geometry tolerance.
+  The production build passed and prerendered 24 routes. The component compiled
+  at 8.96 kB, below its 9 kB hard limit; expected placeholder Supabase fetch
+  messages and existing soft size-budget warnings remain.
+
+## 2026-09-01 - T200 featured carousel no-scroll refinement
+
+- Removed the featured copy content's internal vertical scrolling and enlarged
+  the stable stacked copy footprint so the deliberately long carousel fixture
+  fits without overflow while slide changes remain height-stable.
+- Reduced the copy panel's lower padding to place the centered controls closer
+  to its bottom edge and reclaim vertical space for workshop copy. Phone layouts
+  receive an additional bounded height allowance for their larger display type.
+- Focused carousel plus shared responsive coverage passed 13/13 tests. The
+  geometry regression verifies visible copy overflow, no content overflow on
+  the long slide, a controls bottom inset of at most 12 pixels, stable section
+  height, centered controls, and the 16:9 media ratio.
+- The production build passed and prerendered 24 routes. The workshops component
+  compiled at 8.95 kB, below its 9 kB hard limit; expected placeholder Supabase
+  fetch messages and existing soft size-budget warnings remain. Browser-control
+  discovery found no connected browser session, so no live screenshot review
+  was available and no alternate browser backend was substituted.
+
+## 2026-09-01 - T201 mobile workshops spacing and legibility refinement
+
+- Used the supplied phone screenshot as the acceptance reference and removed
+  the roughly 111-pixel blank interval between View workshop and the carousel
+  controls. The stable copy area now distributes its available room through the
+  mobile copy stack, leaving the action and controls at their normal spacing
+  without changing the fixed carousel footprint or introducing a scrollbar.
+- Increased upcoming-card supporting copy, detail metadata, theme, availability,
+  urgency, and detail-action type modestly for phone legibility. Date badges now
+  use a bounded 4.25-rem width and sit 0.75 rem from the image's right edge.
+- Extended the compact side-by-side carousel treatment through 1400 pixels and
+  tightened its action spacing so the deliberately long slide also fits at the
+  laptop checkpoint without clipping or internal scrolling.
+- Focused component and shared responsive coverage passed 84/84 assertions
+  across the 375-pixel iPhone, 412-pixel Android, tablet, laptop, desktop, and
+  ultrawide launchers. The matrix retains stable slide height, 16:9 media,
+  centered controls, and no-overflow coverage in addition to the new mobile
+  spacing, type-size, and right-aligned badge assertions.
+- The production build passed and prerendered 24 routes. The workshops component
+  compiled at 8.77 kB, below its 9 kB hard limit; expected placeholder Supabase
+  fetch messages and existing soft size-budget warnings remain.

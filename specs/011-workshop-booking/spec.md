@@ -17,6 +17,38 @@ and is explicitly outside this specification."
 
 ## Clarifications
 
+### Session 2026-09-01
+
+- Q: Which payment methods may a customer choose for a new public workshop
+  reservation? A: None. The reservation form MUST show no payment-option
+  election and MUST proceed directly to Stripe Checkout after validation.
+- Q: Which reservation fields remain required? A: Seat quantity, first name,
+  last name, email, phone, and explicit acceptance of the occurrence-specific
+  Workshop Terms & Conditions are all required.
+- Q: What happens to the earlier workshop direct-Venmo design? A: It is retired
+  for all new workshop reservations. Historical workshop Venmo facts and
+  reconciliation remain readable, and unrelated project direct-Venmo behavior
+  remains unchanged. This session supersedes earlier references to offering or
+  switching to direct Venmo during workshop checkout.
+- Q: How should the reservation summary and checkout action be composed? A:
+  When and Where MUST share one horizontal row where space permits; the large
+  total amount MUST align in the amount column beneath tax; the workshop title
+  MUST use a reduced display size; and the title-case Continue to Secure
+  Checkout action MUST use the approved sans-serif action style and align right.
+- Q: What layout invariants apply to the featured-workshop carousel? A: Every
+  featured hero image MUST render inside an immutable 16:9 frame at every
+  breakpoint; switching slides MUST NOT resize the featured section; and the
+  carousel controls MUST remain horizontally centered inside featured-copy.
+- Q: May the featured-workshop section use an internal scrollbar for longer
+  slides? A: No. Featured copy MUST fit without an internal scrollbar, and the
+  centered carousel controls MUST sit lower in featured-copy to maximize the
+  copy's available vertical space while the stable section footprint remains.
+- Q: How should the mobile workshops listing use the space shown in the visual
+  reference? A: The featured carousel controls MUST follow the View workshop
+  action without a large blank gap. Supporting text inside upcoming-date cards
+  MUST be slightly larger, and each date badge MUST overlay the right side of
+  its workshop image.
+
 ### Session 2026-07-29
 
 - Q: How long should seats remain reserved while a direct Venmo payment awaits
@@ -804,7 +836,8 @@ verify search signals remain accurate.
   per-booking limit and current sellable capacity.
 - **FR-021**: Before checkout, the system MUST display seat quantity, pre-tax
   per-seat price, subtotal, selected-state tax amount and rate, calculated total,
-  contact information being collected, and the payment method selected. The reservation page MUST
+  and contact information being collected. The reservation page MUST NOT show a
+  payment-method selector and MUST proceed directly to Stripe Checkout. It MUST
   link to occurrence-specific Workshop Terms & Conditions, MUST NOT render the
   full terms inline, and MUST require explicit checkbox acceptance of the exact
   displayed terms version before continuing. On larger screens, First Name and
@@ -825,20 +858,18 @@ verify search signals remain accurate.
   intervention.
 - **FR-024**: The booking flow MUST collect only the booking contact and
   attendee information required for confirmation, operations, accessibility,
-  fraud prevention, and legal or financial records. Booking-contact name and
-  email are required; phone, individual attendee names, and accommodation
-  details are optional.
-- **FR-025**: Customers MUST be offered a secure, occurrence-specific Stripe
-  Checkout Session and the florist's approved direct Venmo business destination
-  for every bookable workshop occurrence.
+  fraud prevention, and legal or financial records. Booking-contact first name,
+  last name, email, and phone are required; individual attendee names and
+  accommodation details are optional.
+- **FR-025**: Every bookable workshop occurrence MUST use a secure,
+  occurrence-specific Stripe Checkout Session. Customers MUST NOT be offered a
+  direct-Venmo or other payment-method alternative.
 - **FR-026**: A booking MUST become confirmed only from trusted verification of
   full payment or an explicit authorized florist action, never from a browser
   redirect, query parameter, screenshot, or unverified customer claim.
-- **FR-027**: The direct Venmo handoff MUST be clearly described as pending
-  manual verification, MUST use the approved florist-owned destination and safe
-  amount/reference instructions, and MUST create a 24-hour provisional seat
-  hold unless registration close or workshop start produces an earlier
-  effective deadline under FR-080.
+- **FR-027**: New workshop booking holds and payment attempts MUST reject direct
+  Venmo. Historical direct-Venmo workshop records and their authorized internal
+  reconciliation workflows MUST remain intact and non-public.
 - **FR-028**: Payment processing MUST be idempotent so repeated or out-of-order
   confirmation, refund, reversal, and retry messages cannot duplicate a
   booking, receipt, financial entry, or seat count.
@@ -1001,10 +1032,10 @@ verify search signals remain accurate.
   Session tied to the authoritative seat hold, occurrence, quantity, and
   snapshotted total; reusable generic Payment Links MUST NOT determine workshop
   capacity or booking fulfillment.
-- **FR-067**: Across the entire Black Begonia application, Venmo MUST be offered
-  only as a direct handoff to the florist's approved Venmo business destination
-  followed by manual reconciliation; PayPal-hosted or PayPal-powered Venmo
-  approval and capture MUST NOT be offered.
+- **FR-067**: Public workshop reservations MUST be Stripe-only and MUST NOT
+  offer Venmo. Existing project direct-Venmo behavior remains unchanged, and
+  PayPal-hosted or PayPal-powered Venmo approval and capture MUST NOT be
+  reintroduced.
 - **FR-068**: The implementation plan MUST inventory and safely retire existing
   PayPal client configuration, scripts, buttons, orders, callbacks, webhooks,
   secrets, provider states, and customer copy while preserving historical
@@ -1012,11 +1043,9 @@ verify search signals remain accurate.
 - **FR-069**: Removing PayPal-powered Venmo MUST NOT mark old pending payments
   as paid, erase historical provider references, duplicate manual receipts, or
   interrupt Stripe, cash, check, or direct-Venmo payment records and reminders.
-- **FR-070**: Every workshop payment surface that offers direct Venmo MUST show
-  the florist-approved destination, exact expected amount, a safe reconciliation
-  reference, pending status, effective verification deadline, and workshop
-  seat-release outcome when payment is not verified before that deadline. The
-  effective deadline MUST follow FR-027 and FR-080.
+- **FR-070**: No public workshop payment surface may offer direct Venmo.
+  Internal legacy reconciliation may display only the historical facts needed
+  to resolve a pre-cutover payment safely.
 - **FR-071**: A direct Venmo payment received after hold expiration MUST NOT
   restore or exceed capacity automatically. The florist MAY confirm it only
   when sellable seats remain; otherwise the system MUST create an urgent payment
@@ -1063,9 +1092,8 @@ verify search signals remain accurate.
   nevertheless completes after cancellation MUST be recorded exactly once,
   MUST NOT confirm or recreate a booking, and MUST create an urgent,
   florist-controlled refund exception.
-- **FR-078**: A booking MUST have only one active payment choice at a time.
-  Switching methods MUST invalidate the prior Stripe Checkout Session and mark
-  prior direct Venmo instructions as superseded. If multiple payments
+- **FR-078**: A new booking MUST have only one active Stripe payment attempt at
+  a time and MUST NOT support payment-method switching. If multiple payments
   nevertheless succeed for the same intended booking, the system MUST confirm
   at most one booking, record every transaction exactly once, consume no
   additional seats, and create an urgent exception for refunding each duplicate

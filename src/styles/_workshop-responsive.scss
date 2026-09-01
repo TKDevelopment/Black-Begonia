@@ -144,10 +144,8 @@
   @container workshops-public (max-width: 53.125rem) {
     app-workshops .featured.featured { grid-template-columns: 1fr; }
     app-workshops .carousel-controls.carousel-controls {
-      grid-column: 1 / -1;
       justify-content: center;
-      position: static;
-      padding: 0 1rem 1rem;
+      padding: 0;
     }
     app-workshops .workshop-row.workshop-row { grid-template-columns: 3.2rem 6rem minmax(0, 1fr); }
     app-workshops .workshop-action.workshop-action { align-items: flex-start; grid-column: 3; text-align: start; }
@@ -164,13 +162,22 @@
       overflow: hidden;
     }
     app-workshops .featured-image.featured-image { padding: 0; }
-    app-workshops .featured-copy.featured-copy { padding: 1.65rem 1.35rem 1.35rem; }
+    app-workshops .featured-copy.featured-copy {
+      block-size: clamp(29rem, 130vw, 31rem);
+      padding: 1.65rem 1.35rem .65rem;
+    }
+    app-workshops .featured-copy-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
     app-workshops .featured-copy .featured-count { margin-top: 1rem; }
     app-workshops .featured-copy h2 { font-size: clamp(2.45rem, 12vw, 3.45rem); }
     app-workshops .featured-copy .primary-button { inline-size: 100%; margin-top: 1.35rem; }
     app-workshops .carousel-controls.carousel-controls {
       border-top: 1px solid rgb(255 255 255 / .12);
-      padding-block: .8rem;
+      inline-size: 100%;
+      padding-block: .8rem 0;
     }
     app-workshops .section-heading.section-heading { margin-bottom: 1.35rem; }
     app-workshops .section-heading h2 { font-size: clamp(2.6rem, 13vw, 3.5rem); line-height: .94; }
@@ -203,21 +210,24 @@
       box-shadow: 0 .45rem 1rem rgb(28 22 19 / .2);
       display: grid;
       inset-block-start: .75rem;
-      inset-inline-start: .75rem;
+      inset-inline-end: .75rem;
+      inset-inline-start: auto;
+      inline-size: 4.25rem;
       min-inline-size: 3.7rem;
       padding: .5rem .65rem .55rem;
       position: absolute;
       text-align: center;
       z-index: 1;
     }
-    app-workshops .date-block span { color: #efb8b2; font-size: .62rem; }
+    app-workshops .date-block span { color: #efb8b2; font-size: .7rem; }
     app-workshops .date-block strong { color: #fff; font-size: 2rem; }
     app-workshops .workshop-copy.workshop-copy {
       grid-column: 1;
       padding: 1.35rem 1.2rem .75rem;
     }
+    app-workshops .workshop-copy .theme { font-size: .74rem; }
     app-workshops .workshop-copy h3 { font-size: clamp(1.85rem, 9vw, 2.35rem); }
-    app-workshops .workshop-copy > p:not(.theme) { font-size: .9rem; }
+    app-workshops .workshop-copy > p:not(.theme) { font-size: .94rem; }
     app-workshops .workshop-action.workshop-action {
       align-items: center;
       display: flex;
@@ -229,8 +239,8 @@
       padding: 0 1.2rem 1.2rem;
       text-align: start;
     }
-    app-workshops .workshop-action .seat-urgency { flex: 1 0 100%; margin: 0; }
-    app-workshops .workshop-action .availability { margin-inline-end: auto; }
+    app-workshops .workshop-action .seat-urgency { flex: 1 0 100%; font-size: .72rem; margin: 0; }
+    app-workshops .workshop-action .availability { font-size: .72rem; margin-inline-end: auto; }
     app-workshops .workshop-action > strong {
       font-family: 'Cormorant Garamond', serif;
       font-size: 1.45rem;
@@ -276,9 +286,8 @@
   @container workshop-reservation (max-width: 37.5rem) {
     app-workshop-reservation .reservation-panel.reservation-panel { gap: 1.25rem; padding: clamp(.8rem, 3vw, 1rem); }
     app-workshop-reservation .form-row.form-row { grid-template-columns: 1fr; gap: 0; }
-    app-workshop-reservation .summary-total.summary-total { align-items: flex-start; flex-direction: column; }
-    app-workshop-reservation .booking-form.booking-form,
-    app-workshop-reservation .venmo-handoff.venmo-handoff { padding: clamp(.8rem, 3vw, 1rem); }
+    app-workshop-reservation .summary-total.summary-total { align-items: stretch; }
+    app-workshop-reservation .booking-form.booking-form { padding: clamp(.8rem, 3vw, 1rem); }
   }
 
   @container workshop-status (max-width: 43.75rem) {

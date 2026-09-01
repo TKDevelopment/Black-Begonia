@@ -1,5 +1,11 @@
 # Quickstart: Workshop Events and Booking
 
+> **2026-09-01 checkout refinement:** New workshop reservations require phone
+> and proceed directly to Stripe Checkout after terms acceptance. Do not
+> configure, enable, or smoke-test a new workshop direct-Venmo handoff. Retain
+> historical workshop Venmo reconciliation checks and the separate project
+> direct-Venmo regression boundary.
+
 **Branch**: `011-workshop-booking`  
 **Date**: 2026-07-29
 
@@ -70,6 +76,7 @@ supabase/migrations/20260820000000_workshop_occurrence_edit_management.sql
 supabase/migrations/20260821000000_workshop_concept_updates.sql
 supabase/migrations/20260821010000_workshop_refund_webhook_reconciliation.sql
 supabase/migrations/20260826000000_workshop_pre_tax_pricing.sql
+supabase/migrations/20260901000000_workshop_stripe_only_checkout.sql
 supabase/schemas/public/tables/workshop_*.sql
 supabase/schemas/public/functions/workshop_*.sql
 supabase/schemas/public/functions/update_workshop_concept.sql

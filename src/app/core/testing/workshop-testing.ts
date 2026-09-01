@@ -175,7 +175,7 @@ export function publicWorkshopOccurrenceFixture(
     country: 'US',
     perBookingLimit: 4,
     stripeEnabled: true,
-    venmoEnabled: true,
+    venmoEnabled: false,
     waitlistEligible: false,
     media: [],
     seoStatus: 'index',

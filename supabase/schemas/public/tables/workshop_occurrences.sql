@@ -58,6 +58,12 @@ create table public.workshop_occurrences (
   constraint workshop_occurrences_stripe_price check (
     not stripe_enabled or stripe_price_version_id is not null
   ),
+  constraint workshop_occurrences_stripe_only check (
+    not venmo_enabled
+  ),
+  constraint workshop_occurrences_open_requires_stripe check (
+    status <> 'published_open' or stripe_enabled
+  ),
   constraint workshop_occurrences_tax_region_rate check (
     (tax_region = 'RI' and tax_rate_basis_points = 700)
     or (tax_region = 'CT' and tax_rate_basis_points = 635)
