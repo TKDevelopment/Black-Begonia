@@ -7,47 +7,37 @@
 .reservation-summary { align-self:start; }
 .eyebrow { color:#a75c54; font-size:.64rem; font-weight:750; letter-spacing:.18em; text-transform:uppercase; }
 h1,h2 { font-family:'Cormorant Garamond',serif; line-height:1; }
-h1 { margin:.55rem 0 .8rem; font-size:clamp(2.5rem,5vw,3.8rem); }
+h1 { margin:.55rem 0 .8rem; font-size:clamp(2.1rem,4vw,3rem); }
 h2 { margin-bottom:1.2rem; font-size:1.8rem; }
 .summary-line { color:#716761; font-size:.92rem; line-height:1.6; }
 .seat-urgency { margin-top:.75rem; color:#a3453e; font-size:.72rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
 .summary-facts { display:grid; grid-template-columns:1fr 1fr; margin-top:1.5rem; border-block:1px solid #ded5cf; }
 .summary-fact { padding:.75rem 0; }
-.summary-fact--wide { grid-column:1/-1; border-bottom:1px solid #e7dfda; }
-.summary-fact:not(.summary-fact--wide)+.summary-fact { padding-left:1rem; border-left:1px solid #e7dfda; }
+.summary-fact:nth-child(-n+2) { border-bottom:1px solid #e7dfda; }
+.summary-fact:nth-child(even) { padding-left:1rem; border-left:1px solid #e7dfda; }
 .summary-total { display:grid; gap:.45rem; padding:1rem 1.15rem; border-bottom:1px solid #dccdc6; background:linear-gradient(135deg,#f8efeb 0%,#f3e5e0 100%); box-shadow:inset 3px 0 0 #c46f67; color:#3f3430; }
 .summary-total-breakdown { display:grid; gap:.3rem; margin:0; }
-.summary-total-breakdown div { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.summary-total-breakdown div { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:1rem; }
 .summary-total-breakdown dt,.summary-total-breakdown dd { margin:0; }
-.summary-total-breakdown dd { color:#4f4540; font-weight:700; }
+.summary-total-breakdown dd { color:#4f4540; font-weight:700; text-align:right; }
+.summary-total-breakdown .summary-total-final { align-items:end; margin-top:.15rem; padding-top:.4rem; border-top:1px solid rgb(196 111 103/.24); }
 .summary-total-label,.summary-total-amount { font-family:'Cormorant Garamond',serif; font-size:clamp(1.5rem,2.4vw,1.85rem); font-weight:700; line-height:1; }
 .summary-total-amount { color:#92544e; }
 dt { color:#8a7e77; font-size:.6rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; }
 dd { margin-top:.2rem; font-size:.88rem; line-height:1.45; }
-.booking-form,.venmo-handoff { padding:clamp(1rem,2.5vw,1.8rem); border:1px solid #e6ddd7; background:rgb(255 255 255/.8); }
+.booking-form { display:grid; padding:clamp(1rem,2.5vw,1.8rem); border:1px solid #e6ddd7; background:rgb(255 255 255/.8); }
 label { display:grid; gap:.4rem; margin-bottom:1rem; font-size:.73rem; font-weight:700; }
-.field,.payment-options,.terms { position:relative; }
+.field,.terms { position:relative; }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
 input[type='text'],input[type='email'],input[type='tel'],input[type='number'] { width:100%; min-height:2.75rem; padding:.7rem; border:1px solid #cfc5bf; border-radius:.2rem; background:#fff; font:inherit; }
-fieldset { margin:1.2rem 0; padding:.8rem; border:1px solid #ded5cf; }
-legend { padding:0 .35rem; font-family:'Cormorant Garamond',serif; font-size:1.1rem; font-weight:600; }
 .choice { display:flex; align-items:flex-start; gap:.6rem; font-weight:500; line-height:1.45; }
 .choice input { flex:0 0 auto; margin-top:.2rem; }
 .terms { padding-top:1rem; border-top:1px solid #e4dcd7; }
 .terms a { color:#92544e; font-weight:750; text-decoration:underline; text-underline-offset:.18em; }
-button,.venmo-handoff>a[href^='https://'] { display:inline-flex; min-height:2.75rem; align-items:center; justify-content:center; border:0; border-radius:.35rem; background:#c46f67; color:#fff; cursor:pointer; font-weight:750; padding:.8rem 1rem; }
-.venmo-handoff { display:grid; align-content:start; gap:1rem; }
-.venmo-handoff h2,.venmo-handoff p { margin:0; }
-.venmo-amount { color:#4f4540; font-size:1rem; line-height:1.6; }
-.venmo-amount strong { color:#302a27; font-size:1.15rem; }
-.venmo-note { display:grid; gap:.35rem; padding:1rem; border-left:3px solid #c46f67; background:#f7efeb; color:#625650; font-size:.78rem; line-height:1.55; }
-.venmo-note strong { color:#3c332f; font-family:'Cormorant Garamond',serif; font-size:1.15rem; }
-.venmo-link { width:100%; }
-.venmo-handoff .status-link { width:100%; border:1px solid #c46f67; background:transparent; color:#92544e; }
-.venmo-handoff .status-link:hover { background:#fbf1ef; }
+button { display:inline-flex; min-height:2.75rem; align-items:center; justify-content:center; border:0; border-radius:.35rem; background:#c46f67; color:#fff; cursor:pointer; font-weight:750; padding:.8rem 1rem; }
+.booking-form > button { justify-self:end; font-family:'Raleway',sans-serif; font-size:.78rem; font-weight:500; letter-spacing:.035em; text-transform:none; }
 .booking-form .validation-tooltip { transform:translateX(-50%); }
 .booking-form .field .validation-tooltip { bottom:calc(2.75rem + .25rem); }
-.booking-form .payment-options .validation-tooltip,
 .booking-form .terms .validation-tooltip { bottom:calc(100% + .3rem); }
 .booking-form .tooltip-fade-in { animation:reservationTooltipFadeIn .25s ease-out forwards; }
 .booking-form .tooltip-fade-out { animation:reservationTooltipFadeOut .4s ease-in forwards; }
@@ -55,9 +45,8 @@ button,.venmo-handoff>a[href^='https://'] { display:inline-flex; min-height:2.75
 @keyframes reservationTooltipFadeOut { from { opacity:1; transform:translate(-50%,0); } to { opacity:0; transform:translate(-50%,.3rem); } }
 button:disabled { opacity:.55; }
 .form-error { color:#9a3029; }
-.fine-print { color:#716761; font-size:.72rem; line-height:1.55; }
 .state { margin:2.5rem auto; max-width:38rem; padding:clamp(1.25rem,4vw,2.5rem); border:1px solid rgb(255 255 255/.72); border-radius:1rem; background:rgb(254 252 250/.92); text-align:center; backdrop-filter:blur(12px); }
 input:focus-visible,a:focus-visible,button:focus-visible { outline:3px solid #d3938c; outline-offset:3px; }
-@media(max-width:960px){.reservation-page{padding-block:3rem}.reservation-panel{grid-template-columns:1fr;max-width:46rem;margin-inline:auto}.booking-form,.venmo-handoff{padding:1.5rem}}
-@media(max-width:600px){.reservation-page{padding-top:2rem;padding-right:max(.75rem,env(safe-area-inset-right));padding-bottom:2rem;padding-left:max(.75rem,env(safe-area-inset-left))}.back-link{font-size:.64rem}.reservation-panel{gap:1.15rem;padding:1rem;border-radius:.75rem}.form-row{grid-template-columns:1fr;gap:0}.booking-form,.venmo-handoff{padding:1rem}.eyebrow{font-size:.58rem;letter-spacing:.14em}h1{font-size:clamp(2rem,10vw,2.55rem)}h2{font-size:1.45rem}.summary-line{font-size:.86rem;line-height:1.55}.summary-facts{grid-template-columns:1fr}.summary-fact:not(.summary-fact--wide)+.summary-fact{border-left:0;border-top:1px solid #e7dfda;padding-left:0}.summary-total{padding:.9rem 1rem}.summary-total-label,.summary-total-amount{font-size:1.45rem}.summary-total-breakdown div{gap:.75rem}dd{font-size:.84rem}label{font-size:.7rem}.fine-print,.venmo-note{font-size:.72rem}.state{margin-block:2rem}}
-@media(max-width:380px){.reservation-panel{padding:.8rem}.booking-form,.venmo-handoff{padding:.8rem}h1{font-size:2.1rem}button{width:100%;justify-content:center}}
+@media(max-width:960px){.reservation-page{padding-block:3rem}.reservation-panel{grid-template-columns:1fr;max-width:46rem;margin-inline:auto}.booking-form{padding:1.5rem}}
+@media(max-width:600px){.reservation-page{padding-top:2rem;padding-right:max(.75rem,env(safe-area-inset-right));padding-bottom:2rem;padding-left:max(.75rem,env(safe-area-inset-left))}.back-link{font-size:.64rem}.reservation-panel{gap:1.15rem;padding:1rem;border-radius:.75rem}.form-row{grid-template-columns:1fr;gap:0}.booking-form{padding:1rem}.eyebrow{font-size:.58rem;letter-spacing:.14em}h1{font-size:clamp(1.85rem,8vw,2.25rem)}h2{font-size:1.45rem}.summary-line{font-size:.86rem;line-height:1.55}.summary-facts{grid-template-columns:1fr}.summary-fact:nth-child(-n+2){border-bottom:0}.summary-fact:nth-child(even){padding-left:0;border-left:0}.summary-fact+.summary-fact{border-top:1px solid #e7dfda}.summary-total{padding:.9rem 1rem}.summary-total-label,.summary-total-amount{font-size:1.45rem}.summary-total-breakdown div{gap:.75rem}dd{font-size:.84rem}label{font-size:.7rem}.state{margin-block:2rem}}
+@media(max-width:380px){.reservation-panel{padding:.8rem}.booking-form{padding:.8rem}h1{font-size:1.9rem}}

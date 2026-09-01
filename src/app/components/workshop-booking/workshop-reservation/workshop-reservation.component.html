@@ -19,10 +19,10 @@
           Only {{ item.remainingSeats }} {{ item.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
         </p>
         <dl class="summary-facts">
-          <div class="summary-fact summary-fact--wide">
+          <div class="summary-fact">
             <dt>When</dt><dd>{{ formatDate(item.startAt, item.timezone) }}</dd>
           </div>
-          <div class="summary-fact summary-fact--wide">
+          <div class="summary-fact">
             <dt>Where</dt><dd>{{ item.venueName }}<br />{{ item.locality }}, {{ item.region }}</dd>
           </div>
           <div class="summary-fact">
@@ -42,15 +42,17 @@
               <dt>Tax ({{ item.taxRegion }} {{ taxRateLabel(item) }})</dt>
               <dd>{{ formatMoney(orderTaxMinor(item), item.currency) }}</dd>
             </div>
+            <div class="summary-total-final">
+              <dt class="summary-total-label">Total</dt>
+              <dd class="summary-total-amount">
+                {{ formatMoney(orderTotalMinor(item), item.currency) }}
+              </dd>
+            </div>
           </dl>
-          <span class="summary-total-label">Total</span>
-          <strong class="summary-total-amount">
-            {{ formatMoney(orderTotalMinor(item), item.currency) }}
-          </strong>
         </div>
       </header>
 
-      <form *ngIf="!handoff()" class="booking-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <form class="booking-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <h2>Your reservation</h2>
         <label class="field seats-field">
           Number of seats
@@ -96,25 +98,13 @@
           <label class="field">
             Phone
             <input type="tel" formControlName="contactPhone" autocomplete="tel" placeholder="(555) 555-5555" />
+            <span *ngIf="invalidTooltips['contactPhone'] !== 'hidden' && invalidTooltips['contactPhone']"
+              class="validation-tooltip" role="alert"
+              [ngClass]="{ 'tooltip-fade-in': invalidTooltips['contactPhone'] === 'visible', 'tooltip-fade-out': invalidTooltips['contactPhone'] === 'fading' }">
+              Phone number is required
+            </span>
           </label>
         </div>
-
-        <fieldset class="payment-options">
-          <legend>Payment option</legend>
-          <label *ngIf="item.stripeEnabled" class="choice">
-            <input type="radio" formControlName="paymentMethod" value="stripe" />
-            <span>Secure card checkout with Stripe</span>
-          </label>
-          <label *ngIf="item.venmoEnabled" class="choice">
-            <input type="radio" formControlName="paymentMethod" value="direct_venmo" />
-            <span>Pay the florist directly through Venmo</span>
-          </label>
-          <span *ngIf="invalidTooltips['paymentMethod'] !== 'hidden' && invalidTooltips['paymentMethod']"
-            class="validation-tooltip" role="alert"
-            [ngClass]="{ 'tooltip-fade-in': invalidTooltips['paymentMethod'] === 'visible', 'tooltip-fade-out': invalidTooltips['paymentMethod'] === 'fading' }">
-            Choose a payment option
-          </span>
-        </fieldset>
 
         <label class="choice terms">
           <input type="checkbox" formControlName="acceptedTerms" />
@@ -133,31 +123,9 @@
 
         <p *ngIf="error()" class="form-error" role="alert">{{ error() }}</p>
         <button type="submit" [disabled]="submitting()">
-          {{ submitting() ? 'Reserving seats...' : 'Continue to payment' }}
+          {{ submitting() ? 'Reserving seats...' : 'Continue to Secure Checkout' }}
         </button>
       </form>
-
-      <section *ngIf="handoff()?.state === 'pending_manual_payment' && handoff() as payment"
-        class="venmo-handoff" aria-live="polite">
-        <p class="eyebrow">Seats held temporarily</p>
-        <h2>Complete your direct Venmo payment</h2>
-        <p class="venmo-amount">Send
-          <strong>{{ formatMoney($any(payment).amountMinor, $any(payment).currency) }}</strong>
-          directly to Black Begonia Florals.</p>
-        <div class="venmo-note">
-          <strong>Add a note with your payment</strong>
-          <span>Include the name and email address used for this reservation in your Venmo note so we can match your payment to your seats.</span>
-        </div>
-        <a class="venmo-link" [href]="$any(payment).approvedTarget" target="_blank"
-          rel="noopener noreferrer">Open the florist's Venmo</a>
-        <p class="fine-print">
-          Your booking is confirmed only after the florist verifies the payment.
-          The disclosed hold deadline is {{ $any(payment).effectiveExpiresAt | date:'medium' }}.
-        </p>
-        <button class="status-link" type="button" (click)="openBookingStatus()">
-          I sent the Venmo payment
-        </button>
-      </section>
     </div>
   </div>
 </main>

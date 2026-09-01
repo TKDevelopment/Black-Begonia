@@ -20,6 +20,12 @@ declare
   v_stripe_price_id text;
   v_attempt_id uuid := gen_random_uuid();
 begin
+  if p_method <> 'stripe'
+    or p_stripe_hold_minutes not between 1 and 30
+  then
+    raise exception 'invalid_request';
+  end if;
+
   select * into v_attempt
   from public.workshop_payment_attempts
   where command_key = p_command_key;
@@ -57,13 +63,6 @@ begin
     );
   end if;
 
-  if p_method not in ('stripe', 'direct_venmo')
-    or p_stripe_hold_minutes not between 1 and 30
-    or p_venmo_hold_hours not between 1 and 24
-  then
-    raise exception 'invalid_request';
-  end if;
-
   select * into v_booking
   from public.workshop_bookings
   where status_token_digest = p_status_token_digest
@@ -92,27 +91,20 @@ begin
     raise exception 'unavailable';
   end if;
 
-  if (p_method = 'stripe' and not v_occurrence.stripe_enabled)
-    or (p_method = 'direct_venmo' and not v_occurrence.venmo_enabled)
-    or (p_method = 'direct_venmo' and char_length(btrim(coalesce(p_venmo_target, ''))) = 0)
-  then
+  if not v_occurrence.stripe_enabled then
     raise exception 'payment_method_unavailable';
   end if;
 
-  if p_method = 'stripe' then
-    select price.stripe_price_id into v_stripe_price_id
-    from public.workshop_stripe_price_versions price
-    where price.workshop_stripe_price_version_id = v_occurrence.stripe_price_version_id
-      and price.state = 'active';
+  select price.stripe_price_id into v_stripe_price_id
+  from public.workshop_stripe_price_versions price
+  where price.workshop_stripe_price_version_id = v_occurrence.stripe_price_version_id
+    and price.state = 'active';
 
-    if v_stripe_price_id is null then
-      raise exception 'payment_method_unavailable';
-    end if;
-
-    v_normal_expires_at := now() + make_interval(mins => p_stripe_hold_minutes);
-  else
-    v_normal_expires_at := now() + make_interval(hours => p_venmo_hold_hours);
+  if v_stripe_price_id is null then
+    raise exception 'payment_method_unavailable';
   end if;
+
+  v_normal_expires_at := now() + make_interval(mins => p_stripe_hold_minutes);
 
   v_effective_expires_at := least(
     v_normal_expires_at,
@@ -158,7 +150,7 @@ begin
     v_hold.workshop_seat_hold_id,
     p_method,
     v_stripe_price_id,
-    case when p_method = 'direct_venmo' then btrim(p_venmo_target) end,
+    null,
     v_booking.booking_reference || '-'
       || upper(substr(replace(v_attempt_id::text, '-', ''), 1, 6)),
     v_booking.purchased_quantity,

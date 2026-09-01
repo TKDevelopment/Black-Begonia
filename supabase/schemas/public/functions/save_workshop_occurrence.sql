@@ -90,7 +90,7 @@ begin
       upper(p_draft->>'currency'),
       nullif(p_draft->>'stripePriceVersionId','')::uuid,
       coalesce((p_draft->>'stripeEnabled')::boolean,false),
-      coalesce((p_draft->>'venmoEnabled')::boolean,false),
+      false,
       coalesce((p_draft->>'waitlistEnabled')::boolean,false),
       coalesce((p_draft->>'isFeatured')::boolean,false),
       nullif(p_draft->>'featuredOrder','')::smallint, auth.uid(), auth.uid()
@@ -124,7 +124,7 @@ begin
       currency = upper(p_draft->>'currency'),
       stripe_price_version_id = nullif(p_draft->>'stripePriceVersionId','')::uuid,
       stripe_enabled = coalesce((p_draft->>'stripeEnabled')::boolean,false),
-      venmo_enabled = coalesce((p_draft->>'venmoEnabled')::boolean,false),
+      venmo_enabled = false,
       waitlist_enabled = coalesce((p_draft->>'waitlistEnabled')::boolean,false),
       is_featured = coalesce((p_draft->>'isFeatured')::boolean,false),
       featured_order = nullif(p_draft->>'featuredOrder','')::smallint,

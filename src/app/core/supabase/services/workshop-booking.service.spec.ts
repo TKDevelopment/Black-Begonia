@@ -65,8 +65,8 @@ describe('WorkshopBookingService', () => {
       quantity: 2,
       contactName: 'Customer',
       contactEmail: 'customer@example.test',
+      contactPhone: '(555) 555-0100',
       acceptedTermsVersion: 3,
-      paymentMethod: 'stripe',
     });
 
     expect(result.handoff.state).toBe('redirect');
@@ -76,27 +76,23 @@ describe('WorkshopBookingService', () => {
     }));
     expect(repository.choosePayment).toHaveBeenCalledWith(
       'raw-booking-token',
-      'stripe',
       jasmine.any(String),
     );
     const holdKey = repository.createHold.calls.mostRecent().args[0].commandKey;
-    const paymentKey = repository.choosePayment.calls.mostRecent().args[2];
+    const paymentKey = repository.choosePayment.calls.mostRecent().args[1];
     expect(holdKey).not.toBe(paymentKey);
     expect(localSet).not.toHaveBeenCalled();
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
 
-  it('keeps the booking token in memory while switching payment methods', async () => {
+  it('always starts Stripe checkout without accepting a payment choice', async () => {
     repository.createHold.and.resolveTo(heldFixture());
     repository.choosePayment.and.resolveTo({
-      state: 'pending_manual_payment',
-      method: 'direct_venmo',
-      approvedTarget: 'https://venmo.com/u/approved-business',
-      amountMinor: 18190,
-      currency: 'USD',
-      reference: 'BBW-2026-TEST-A1B2C3',
-      effectiveExpiresAt: '2026-10-02T16:00:00Z',
+      state: 'redirect',
+      method: 'stripe',
+      url: 'https://checkout.stripe.com/c/pay/cs_test',
+      effectiveExpiresAt: '2026-10-01T16:30:00Z',
     });
 
     await service.startReservation({
@@ -104,13 +100,14 @@ describe('WorkshopBookingService', () => {
       quantity: 2,
       contactName: 'Customer',
       contactEmail: 'customer@example.test',
+      contactPhone: '(555) 555-0100',
       acceptedTermsVersion: 3,
-      paymentMethod: 'direct_venmo',
     });
-    await service.switchPaymentMethod('stripe');
 
-    expect(repository.choosePayment.calls.mostRecent().args[0])
-      .toBe('raw-booking-token');
+    expect(repository.choosePayment).toHaveBeenCalledOnceWith(
+      'raw-booking-token',
+      jasmine.any(String),
+    );
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
@@ -192,37 +189,24 @@ describe('WorkshopBookingService', () => {
     expect(repository.performCustomerAction).not.toHaveBeenCalled();
   });
 
-  it('accepts a waitlist offer token and keeps only the returned booking token in memory', async () => {
+  it('accepts a waitlist offer token and keeps the returned booking access in memory', async () => {
     repository.performCustomerAction.and.resolveTo({
       state: 'accepted',
       quantity: 1,
       bookingToken: 'new-booking-token',
     });
-    repository.choosePayment.and.resolveTo({
-      state: 'pending_manual_payment',
-      method: 'direct_venmo',
-      approvedTarget: 'https://venmo.com/u/approved-business',
-      amountMinor: 8500,
-      currency: 'USD',
-      reference: 'BBW-2026-WAITLIST',
-      effectiveExpiresAt: '2026-10-01T16:30:00Z',
-    });
-
     await service.performCustomerAction(
       'respond_to_waitlist',
       { response: 'accept', termsVersion: 3 },
       'raw-offer-token',
     );
-    await service.switchPaymentMethod('direct_venmo');
-
     expect(repository.performCustomerAction).toHaveBeenCalledWith(
       'respond_to_waitlist',
       'raw-offer-token',
       { response: 'accept', termsVersion: 3 },
       jasmine.any(String),
     );
-    expect(repository.choosePayment.calls.mostRecent().args[0])
-      .toBe('new-booking-token');
+    expect(repository.choosePayment).not.toHaveBeenCalled();
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
@@ -349,6 +333,6 @@ function heldFixture(): WorkshopHeldBooking {
     totalMinor: 18190,
     currency: 'USD',
     effectiveExpiresAt: '2026-10-01T16:30:00Z',
-    methods: ['stripe', 'direct_venmo'],
+    methods: ['stripe'],
   };
 }

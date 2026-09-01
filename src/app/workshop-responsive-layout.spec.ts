@@ -119,7 +119,10 @@ describe('workshop feature responsive layout contract', () => {
       expect(rowStyles.position).toBe('relative');
       expect(rowStyles.overflow).toBe('hidden');
       expect(Number.parseFloat(rowStyles.borderRadius)).toBeGreaterThan(0);
-      expect(getComputedStyle(date).position).toBe('absolute');
+      const dateStyles = getComputedStyle(date);
+      expect(dateStyles.position).toBe('absolute');
+      expect(Number.parseFloat(dateStyles.right)).toBe(12);
+      expect(Number.parseFloat(dateStyles.width)).toBe(68);
       expect(image.clientWidth).toBeGreaterThanOrEqual(row.clientWidth - 1);
       expect(detailLink.clientWidth).toBeGreaterThanOrEqual(row.clientWidth * .8);
     } else {

@@ -57,7 +57,7 @@ describe('WorkshopBookingRepositoryService', () => {
     });
   });
 
-  it('maps Stripe and direct Venmo selection as a separate token-body command', async () => {
+  it('maps Stripe selection as a separate token-body command', async () => {
     const redirect = {
       state: 'redirect',
       method: 'stripe',
@@ -67,7 +67,7 @@ describe('WorkshopBookingRepositoryService', () => {
     invoke.and.resolveTo({ data: redirect, error: null });
 
     await expectAsync(
-      service.choosePayment('raw-booking-token', 'stripe', 'command-payment'),
+      service.choosePayment('raw-booking-token', 'command-payment'),
     ).toBeResolvedTo(redirect);
 
     expect(invoke).toHaveBeenCalledWith('create-workshop-booking', {
@@ -80,6 +80,23 @@ describe('WorkshopBookingRepositoryService', () => {
     });
     expect(JSON.stringify(invoke.calls.mostRecent().args[0]))
       .not.toContain('raw-booking-token');
+  });
+
+  it('rejects a hold response that advertises a non-Stripe checkout method', async () => {
+    invoke.and.resolveTo({
+      data: { ...heldFixture(), methods: ['direct_venmo'] },
+      error: null,
+    });
+
+    await expectAsync(service.createHold({
+      occurrenceSlug: 'garden-workshop',
+      quantity: 2,
+      contactName: 'Customer Name',
+      contactEmail: 'customer@example.test',
+      contactPhone: '(555) 555-0100',
+      acceptedTermsVersion: 3,
+      commandKey: 'command-hold',
+    })).toBeRejectedWith(jasmine.any(WorkshopBookingApiError));
   });
 
   it('accepts only clean canonical public paths from confirmed status', async () => {
@@ -275,6 +292,7 @@ describe('WorkshopBookingRepositoryService', () => {
         quantity: 2,
         contactName: 'Customer',
         contactEmail: 'customer@example.test',
+        contactPhone: '(555) 555-0100',
         acceptedTermsVersion: 3,
         commandKey: 'command-hold',
       });
@@ -306,6 +324,6 @@ function heldFixture(): WorkshopHeldBooking {
     totalMinor: 18190,
     currency: 'USD',
     effectiveExpiresAt: '2026-10-01T16:30:00Z',
-    methods: ['stripe', 'direct_venmo'],
+    methods: ['stripe'],
   };
 }

@@ -174,7 +174,8 @@ returned.
 
 ### `POST /functions/v1/create-workshop-booking`
 
-This standalone function supports only hold creation and payment-method choice.
+This standalone function supports only hold creation and Stripe Checkout
+creation.
 It validates origin, rate, input, and token boundaries, then delegates durable
 capacity and payment-attempt transitions to authoritative database commands.
 
@@ -188,7 +189,7 @@ capacity and payment-attempt transitions to authoritative database commands.
   "contact": {
     "name": "Customer Name",
     "email": "customer@example.com",
-    "phone": null
+    "phone": "+1 555 555 0100"
   },
   "termsVersion": 3,
   "commandKey": "uuid"
@@ -211,14 +212,14 @@ Successful response:
   "totalMinor": 18190,
   "currency": "USD",
   "effectiveExpiresAt": "2026-10-01T16:30:00Z",
-  "methods": ["stripe", "direct_venmo"]
+  "methods": ["stripe"]
 }
 ```
 
 Safe error states: `unavailable`, `quantity_changed`, `registration_closed`,
 `terms_changed`, `rate_limited`, `invalid_request`.
 
-#### Choose or switch payment method
+#### Start Stripe Checkout
 
 ```json
 {
@@ -239,22 +240,9 @@ Stripe response:
 }
 ```
 
-Direct Venmo response:
-
-```json
-{
-  "state": "pending_manual_payment",
-  "approvedTarget": "https://venmo.com/u/approved-business",
-  "amountMinor": 17000,
-  "currency": "USD",
-  "reference": "BBW-2026-000001",
-  "effectiveExpiresAt": "2026-10-02T16:00:00Z"
-}
-```
-
-Switching invalidates an open Stripe Session where possible and marks prior
-Venmo instructions superseded. A later payment against a superseded attempt is
-recorded as an exception.
+The `method` value is fixed to `stripe`; `direct_venmo` and every other value
+return `invalid_request`. The public reservation form does not expose this fixed
+value as a choice.
 
 ### `POST /functions/v1/manage-workshop-booking-access`
 

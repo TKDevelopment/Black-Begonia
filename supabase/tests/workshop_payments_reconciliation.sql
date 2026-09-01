@@ -132,7 +132,7 @@ insert into public.workshop_occurrences(
   (now()+interval '10 days')::timestamp,(now()+interval '10 days 2 hours')::timestamp,
   0,now()+interval '10 days',now()+interval '10 days 2 hours',
   now()-interval '1 day',now()+interval '9 days',4,4,7500,'USD',
-  '31000000-0000-4000-8000-000000000002',true,true,false
+  '31000000-0000-4000-8000-000000000002',true,false,false
 );
 
 select lives_ok(

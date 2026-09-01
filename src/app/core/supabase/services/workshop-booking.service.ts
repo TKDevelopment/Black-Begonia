@@ -7,7 +7,6 @@ import {
   WorkshopCustomerStatus,
   WorkshopHeldBooking,
   WorkshopPaymentHandoff,
-  WorkshopPaymentMethod,
   WorkshopStatusAccessAccepted,
   WorkshopStatusAccessRequest,
 } from '../../models/workshop-booking';
@@ -19,10 +18,10 @@ import { SupabaseService } from '../clients/supabase.service';
 export const WORKSHOP_ANALYTICS_OUTCOME_SESSION_KEY =
   'bb.workshop.pendingAnalyticsOutcome';
 
-export interface StartWorkshopReservationRequest
-  extends Omit<CreateWorkshopBookingRequest, 'commandKey'> {
-  paymentMethod: WorkshopPaymentMethod;
-}
+export type StartWorkshopReservationRequest = Omit<
+  CreateWorkshopBookingRequest,
+  'commandKey'
+>;
 
 export interface StartedWorkshopReservation {
   held: WorkshopHeldBooking;
@@ -54,20 +53,9 @@ export class WorkshopBookingService {
 
     const handoff = await this.repository.choosePayment(
       held.bookingToken,
-      request.paymentMethod,
       crypto.randomUUID(),
     );
     return { held, handoff };
-  }
-
-  async switchPaymentMethod(
-    method: WorkshopPaymentMethod,
-  ): Promise<WorkshopPaymentHandoff> {
-    return this.repository.choosePayment(
-      this.requireActiveToken(),
-      method,
-      crypto.randomUUID(),
-    );
   }
 
   async getStatus(bookingToken?: string): Promise<WorkshopCustomerStatus> {

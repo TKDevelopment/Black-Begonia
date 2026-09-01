@@ -94,14 +94,22 @@ insert into public.workshop_media(
   'https://example.test/capacity/hero.webp','Workshop arrangement',0,true,
   1200,800,100000,'image/webp'
 );
+insert into public.workshop_stripe_price_versions(
+  workshop_stripe_price_version_id,workshop_definition_id,stripe_product_id,
+  stripe_price_id,amount_minor,currency,state,provider_created_at
+) values (
+  '30000000-0000-4000-8000-000000000002',
+  '30000000-0000-4000-8000-000000000001',
+  'prod_capacity_test','price_capacity_5000',5000,'USD','active',now()
+);
 insert into public.workshop_occurrences(
   workshop_occurrence_id,workshop_definition_id,slug,status,title_snapshot,
   advertising_line_snapshot,description_snapshot,included_materials_snapshot,
   terms_snapshot,terms_version,venue_name,address_line_1,locality,region,
   postal_code,country,timezone,local_start,local_end,utc_offset_minutes,
   start_at,end_at,registration_opens_at,registration_closes_at,capacity,
-  per_booking_limit,price_minor,currency,stripe_enabled,venmo_enabled,
-  waitlist_enabled
+  per_booking_limit,price_minor,currency,stripe_price_version_id,
+  stripe_enabled,venmo_enabled,waitlist_enabled
 )
 select fixture.id::uuid,'30000000-0000-4000-8000-000000000001',fixture.slug,
   fixture.status,'Capacity Workshop','Capacity projection test',
@@ -109,7 +117,8 @@ select fixture.id::uuid,'30000000-0000-4000-8000-000000000001',fixture.slug,
   '100 Flower Lane','Richmond','VA','23220','US','UTC',
   (now()+interval '10 days')::timestamp,(now()+interval '12 days')::timestamp,
   0,now()+interval '10 days',now()+interval '12 days',now()-interval '1 day',
-  now()+interval '9 days',10,4,5000,'USD',false,true,fixture.waitlist
+  now()+interval '9 days',10,4,5000,'USD',
+  '30000000-0000-4000-8000-000000000002',true,false,fixture.waitlist
 from (values
   ('30000000-0000-4000-8000-000000000010','capacity-available',false,'published_open'),
   ('30000000-0000-4000-8000-000000000011','capacity-limited',false,'published_open'),
@@ -239,32 +248,15 @@ select throws_ok(
   'quantity_changed',
   'per-booking quantity limit is enforced under the occurrence lock'
 );
-select lives_ok(
+select throws_ok(
   $$select public.switch_workshop_payment_method(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','direct_venmo',
     '30000000-0000-4000-8000-000000000042',
     'https://venmo.com/u/approved-business',15,24
   )$$,
-  'direct Venmo selection creates an attempt'
-);
-select ok(
-  (
-    select effective_expires_at <= now()+interval '24 hours 1 minute'
-      and effective_expires_at <= (
-        select least(registration_closes_at,start_at)
-        from public.workshop_occurrences where slug='capacity-available'
-      )
-    from public.workshop_payment_attempts
-    where command_key='30000000-0000-4000-8000-000000000042'
-  ),
-  'direct Venmo deadline is capped at 24 hours and the occurrence cutoffs'
-);
-select is(
-  public.get_workshop_booking_status(
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-  )->>'state',
-  'pending_venmo',
-  'token-scoped status exposes pending direct Venmo state'
+  'P0001',
+  'invalid_request',
+  'direct Venmo selection is rejected for new workshop bookings'
 );
 select ok(
   not (
@@ -279,7 +271,7 @@ select lives_ok(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','stripe',
     '30000000-0000-4000-8000-000000000043',null,15,24
   )$$,
-  'switching to Stripe creates a replacement attempt'
+  'Stripe creates the only authorized payment attempt'
 );
 select is(
   (
@@ -290,16 +282,7 @@ select is(
       and a.state in('creating','active','processing')
   ),
   1,
-  'only one payment attempt remains active after switching'
-);
-select is(
-  (
-    select state
-    from public.workshop_payment_attempts
-    where command_key='30000000-0000-4000-8000-000000000042'
-  ),
-  'superseded',
-  'the previous payment attempt is explicitly superseded'
+  'only one Stripe payment attempt is active'
 );
 select is(
   (
@@ -308,7 +291,7 @@ select is(
     where command_key='30000000-0000-4000-8000-000000000043'
   ),
   10700::bigint,
-  'Stripe and direct Venmo use the same immutable total'
+  'Stripe uses the immutable booking total'
 );
 select lives_ok(
   $$select public.attach_workshop_stripe_checkout(

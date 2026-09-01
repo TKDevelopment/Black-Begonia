@@ -1,5 +1,11 @@
 # Data Model: Workshop Events and Booking
 
+> **2026-09-01 checkout refinement:** `direct_venmo` values below describe
+> historical records only. New public workshop holds and payment attempts are
+> Stripe-only; open occurrences keep `venmo_enabled = false`. The public booking
+> contact requires a phone number in addition to first name, last name, and
+> email.
+
 **Branch**: `011-workshop-booking`  
 **Date**: 2026-07-29  
 **Specification**: [spec.md](./spec.md)  

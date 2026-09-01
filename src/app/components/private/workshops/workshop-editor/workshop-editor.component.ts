@@ -891,7 +891,7 @@ export class WorkshopEditorComponent implements OnInit {
       currency: 'USD',
       stripePriceVersionId,
       stripeEnabled: true,
-      venmoEnabled: true,
+      venmoEnabled: false,
       waitlistEnabled: true,
       isFeatured: true,
       featuredOrder: this.currentOccurrence()?.featured_order,
@@ -922,7 +922,7 @@ export class WorkshopEditorComponent implements OnInit {
       taxRateBasisPoints: workshopTaxRateBasisPoints(value.taxRegion),
       stripePriceVersionId: this.currentOccurrence()?.stripe_price_version_id,
       stripeEnabled: true,
-      venmoEnabled: true,
+      venmoEnabled: false,
       waitlistEnabled: true,
     } as const;
   }

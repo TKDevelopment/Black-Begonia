@@ -243,9 +243,9 @@ serve(async (request) => {
         contact["name"].trim().length < 1 ||
         contact["name"].trim().length > 160 ||
         !isEmail(contact["email"]) ||
-        (contact["phone"] != null &&
-          (typeof contact["phone"] !== "string" ||
-            contact["phone"].length > 40))
+        typeof contact["phone"] !== "string" ||
+        contact["phone"].trim().length < 1 ||
+        contact["phone"].trim().length > 40
       ) {
         return respond(origin, 400, { code: "invalid_request" });
       }
@@ -255,9 +255,7 @@ serve(async (request) => {
         p_quantity: quantity,
         p_contact_name: contact["name"].trim(),
         p_contact_email: String(contact["email"]).trim().toLowerCase(),
-        p_contact_phone: typeof contact["phone"] === "string"
-          ? contact["phone"].trim() || null
-          : null,
+        p_contact_phone: contact["phone"].trim(),
         p_terms_version: termsVersion,
         p_status_token_digest: await digest(bookingToken),
         p_command_key: commandKey,
@@ -283,7 +281,7 @@ serve(async (request) => {
         totalMinor: result.data.totalMinor,
         currency: result.data.currency,
         effectiveExpiresAt: result.data.effectiveExpiresAt,
-        methods: result.data.methods,
+        methods: ["stripe"],
       });
     }
 
@@ -293,17 +291,15 @@ serve(async (request) => {
       const commandKey = body["commandKey"];
       if (
         bookingToken.length < 32 || bookingToken.length > 256 ||
-        !["stripe", "direct_venmo"].includes(method) || !isUuid(commandKey)
+        method !== "stripe" || !isUuid(commandKey)
       ) {
         return respond(origin, 400, { code: "invalid_request" });
       }
       const attempt = await db.rpc("switch_workshop_payment_method", {
         p_status_token_digest: await digest(bookingToken),
-        p_method: method,
+        p_method: "stripe",
         p_command_key: commandKey,
-        p_venmo_target: method === "direct_venmo"
-          ? Deno.env.get("WORKSHOP_VENMO_TARGET") ?? null
-          : null,
+        p_venmo_target: null,
         p_stripe_hold_minutes: 30,
         p_venmo_hold_hours: 24,
       });
@@ -312,18 +308,6 @@ serve(async (request) => {
           code: safeDatabaseCode(attempt.error),
         });
       }
-      if (method === "direct_venmo") {
-        return respond(origin, 200, {
-          state: "pending_manual_payment",
-          method,
-          approvedTarget: attempt.data.approvedTarget,
-          amountMinor: attempt.data.amountMinor,
-          currency: attempt.data.currency,
-          reference: attempt.data.reference,
-          effectiveExpiresAt: attempt.data.effectiveExpiresAt,
-        });
-      }
-
       const session = await createStripeSession(attempt.data, String(commandKey));
       const attached = await db.rpc("attach_workshop_stripe_checkout", {
         p_payment_attempt_id: attempt.data.paymentAttemptId,
@@ -347,7 +331,7 @@ serve(async (request) => {
       }
       return respond(origin, 200, {
         state: "redirect",
-        method,
+        method: "stripe",
         url: session["url"],
         effectiveExpiresAt: attempt.data.effectiveExpiresAt,
       });

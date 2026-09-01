@@ -56,7 +56,10 @@ begin
   ) then
     raise exception 'effective hero image is required' using errcode='22023';
   end if;
-  if v_occurrence.stripe_enabled and not exists (
+  if not v_occurrence.stripe_enabled then
+    raise exception 'Stripe checkout is required' using errcode='22023';
+  end if;
+  if not exists (
     select 1 from public.workshop_stripe_price_versions p
     join public.workshop_definitions d using(workshop_definition_id)
     where p.workshop_stripe_price_version_id=v_occurrence.stripe_price_version_id
