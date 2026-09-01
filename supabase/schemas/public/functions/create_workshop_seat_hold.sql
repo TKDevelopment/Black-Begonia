@@ -61,13 +61,8 @@ begin
       'totalMinor', v_booking.total_minor_snapshot,
       'currency', v_booking.currency,
       'effectiveExpiresAt', v_existing.effective_expires_at,
-      'methods', case
-        when v_occurrence.stripe_enabled and v_occurrence.venmo_enabled
-          then jsonb_build_array('stripe', 'direct_venmo')
-        when v_occurrence.stripe_enabled then jsonb_build_array('stripe')
-        when v_occurrence.venmo_enabled then jsonb_build_array('direct_venmo')
-        else '[]'::jsonb
-      end
+      'methods', case when v_occurrence.stripe_enabled
+        then jsonb_build_array('stripe') else '[]'::jsonb end
     );
   end if;
 
@@ -102,6 +97,10 @@ begin
     or now() >= least(v_occurrence.registration_closes_at, v_occurrence.start_at)
   then
     raise exception 'registration_closed';
+  end if;
+
+  if not v_occurrence.stripe_enabled then
+    raise exception 'payment_method_unavailable';
   end if;
 
   if p_terms_version <> v_occurrence.terms_version then
@@ -211,13 +210,7 @@ begin
     'totalMinor', v_booking.total_minor_snapshot,
     'currency', v_booking.currency,
     'effectiveExpiresAt', v_hold.effective_expires_at,
-    'methods', case
-      when v_occurrence.stripe_enabled and v_occurrence.venmo_enabled
-        then jsonb_build_array('stripe', 'direct_venmo')
-      when v_occurrence.stripe_enabled then jsonb_build_array('stripe')
-      when v_occurrence.venmo_enabled then jsonb_build_array('direct_venmo')
-      else '[]'::jsonb
-    end
+    'methods', jsonb_build_array('stripe')
   );
 end;
 $$;

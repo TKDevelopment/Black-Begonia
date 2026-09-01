@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Validators } from '@angular/forms';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -33,7 +34,7 @@ describe('WorkshopReservationComponent', () => {
     publicRepository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
       slug: 'garden-workshop',
       stripeEnabled: true,
-      venmoEnabled: true,
+      venmoEnabled: false,
       perBookingLimit: 4,
       termsVersion: 3,
       remainingSeats: 2,
@@ -79,7 +80,6 @@ describe('WorkshopReservationComponent', () => {
       lastName: '',
       contactEmail: 'not-an-email',
       contactPhone: '',
-      paymentMethod: 'stripe',
       acceptedTerms: false,
     });
 
@@ -89,6 +89,9 @@ describe('WorkshopReservationComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.terms .validation-tooltip')?.textContent)
       .toContain('Accept the Workshop Terms & Conditions');
+    expect(fixture.nativeElement.querySelector(
+      '[formControlName="contactPhone"] + .validation-tooltip',
+    )?.textContent).toContain('Phone number is required');
     expect(bookingService.startReservation).not.toHaveBeenCalled();
   });
 
@@ -101,6 +104,11 @@ describe('WorkshopReservationComponent', () => {
     expect(contactRow.querySelector('[formControlName="contactEmail"]')).not.toBeNull();
     expect(contactRow.querySelector('[formControlName="contactPhone"]')).not.toBeNull();
     expect(contactRow.textContent).not.toContain('(optional)');
+    expect(component.form.controls.contactPhone.hasValidator(Validators.required)).toBeTrue();
+    expect(component.form.contains('paymentMethod')).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.payment-options')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Payment option');
+    expect(fixture.nativeElement.textContent).not.toContain('Venmo');
   });
 
   it('shows the bounded remaining-seat prompt on the reservation summary', () => {
@@ -137,6 +145,40 @@ describe('WorkshopReservationComponent', () => {
     expect(amount.textContent?.trim()).toBe('$90.95');
   });
 
+  it('uses the refined summary hierarchy and right-aligned checkout action', () => {
+    const summary = fixture.nativeElement.querySelector('.reservation-summary') as HTMLElement;
+    const facts = Array.from(
+      summary.querySelectorAll<HTMLElement>('.summary-fact'),
+    );
+    const taxAmount = summary.querySelector(
+      '.summary-total-breakdown > div:nth-child(2) dd',
+    ) as HTMLElement;
+    const totalAmount = summary.querySelector('.summary-total-amount') as HTMLElement;
+    const title = summary.querySelector('h1') as HTMLElement;
+    const form = fixture.nativeElement.querySelector('.booking-form') as HTMLFormElement;
+    const checkout = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+    expect(facts[0].querySelector('dt')?.textContent?.trim()).toBe('When');
+    expect(facts[1].querySelector('dt')?.textContent?.trim()).toBe('Where');
+    expect(facts[0].offsetTop).toBe(facts[1].offsetTop);
+    expect(facts[1].offsetLeft).toBeGreaterThan(facts[0].offsetLeft);
+    expect(totalAmount.closest('.summary-total-final')).not.toBeNull();
+    expect(totalAmount.getBoundingClientRect().top)
+      .toBeGreaterThan(taxAmount.getBoundingClientRect().top);
+    expect(Math.abs(
+      totalAmount.getBoundingClientRect().right - taxAmount.getBoundingClientRect().right,
+    )).toBeLessThanOrEqual(1);
+    expect(Number.parseFloat(getComputedStyle(title).fontSize)).toBeLessThan(40);
+    expect(checkout.textContent?.trim()).toBe('Continue to Secure Checkout');
+    expect(getComputedStyle(checkout).justifySelf).toBe('end');
+    expect(Math.abs(
+      checkout.getBoundingClientRect().right
+        - (form.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(form).paddingRight)),
+    )).toBeLessThanOrEqual(1);
+    expect(getComputedStyle(checkout).fontFamily).toContain('Raleway');
+    expect(getComputedStyle(checkout).textTransform).toBe('none');
+  });
+
   it('hands an exact valid reservation to Stripe without storing the booking token', async () => {
     bookingService.startReservation.and.resolveTo({
       held: {
@@ -152,7 +194,7 @@ describe('WorkshopReservationComponent', () => {
         totalMinor: 18190,
         currency: 'USD',
         effectiveExpiresAt: '2026-10-01T16:30:00Z',
-        methods: ['stripe', 'direct_venmo'],
+        methods: ['stripe'],
       },
       handoff: {
         state: 'redirect',
@@ -167,8 +209,7 @@ describe('WorkshopReservationComponent', () => {
       firstName: 'Customer',
       lastName: 'Name',
       contactEmail: 'customer@example.test',
-      contactPhone: '',
-      paymentMethod: 'stripe',
+      contactPhone: '(555) 555-0100',
       acceptedTerms: true,
     });
 
@@ -179,9 +220,8 @@ describe('WorkshopReservationComponent', () => {
       quantity: 2,
       contactName: 'Customer Name',
       contactEmail: 'customer@example.test',
-      contactPhone: undefined,
+      contactPhone: '(555) 555-0100',
       acceptedTermsVersion: 3,
-      paymentMethod: 'stripe',
     });
     expect(redirect).toHaveBeenCalledWith(
       'https://checkout.stripe.com/c/pay/cs_test',
@@ -197,64 +237,20 @@ describe('WorkshopReservationComponent', () => {
       .toHaveBeenCalledWith('summer-garden-centerpiece', '2026-08-15');
   });
 
-  it('renders direct Venmo instructions and a clean status route', async () => {
-    bookingService.startReservation.and.resolveTo({
-      held: {
-        state: 'held',
-        bookingToken: 'raw-booking-token',
-        supportReference: 'BBW-2026-TEST',
-        quantity: 1,
-        priceMinor: 8500,
-        subtotalMinor: 8500,
-        taxMinor: 595,
-        taxRateBasisPoints: 700,
-        taxRegion: 'RI',
-        totalMinor: 9095,
-        currency: 'USD',
-        effectiveExpiresAt: '2026-10-02T16:00:00Z',
-        methods: ['direct_venmo'],
-      },
-      handoff: {
-        state: 'pending_manual_payment',
-        method: 'direct_venmo',
-        approvedTarget: 'https://venmo.com/u/approved-business',
-        amountMinor: 9095,
-        currency: 'USD',
-        reference: 'BBW-2026-TEST-A1B2C3',
-        effectiveExpiresAt: '2026-10-02T16:00:00Z',
-      },
-    });
-    component.form.setValue({
-      quantity: 1,
-      firstName: 'Customer',
-      lastName: 'Name',
-      contactEmail: 'customer@example.test',
-      contactPhone: '',
-      paymentMethod: 'direct_venmo',
-      acceptedTerms: true,
-    });
+  it('does not accept reservations for a legacy Venmo-only occurrence', async () => {
+    publicRepository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
+      stripeEnabled: false,
+      venmoEnabled: true,
+    }));
 
-    await component.submit();
+    await component.load('summer-garden-centerpiece', '2026-08-15');
     fixture.detectChanges();
 
-    const link = fixture.nativeElement.querySelector(
-      '.venmo-handoff a[href^="https://venmo.com/"]',
-    ) as HTMLAnchorElement;
-    expect(link.href).toBe('https://venmo.com/u/approved-business');
-    expect(link.target).toBe('_blank');
-    expect(fixture.nativeElement.textContent).not.toContain('BBW-2026-TEST-A1B2C3');
-    expect(fixture.nativeElement.textContent).toContain(
-      'Include the name and email address used for this reservation in your Venmo note',
+    expect(component.workshop()).toBeNull();
+    expect(component.error()).toBe(
+      'This workshop is not currently accepting reservations.',
     );
-    expect(fixture.nativeElement.textContent).toContain("Open the florist's Venmo");
-    expect(fixture.nativeElement.innerHTML).not.toContain('raw-booking-token');
-    const statusButton = fixture.nativeElement.querySelector(
-      '.venmo-handoff .status-link',
-    ) as HTMLButtonElement;
-    expect(statusButton.textContent?.trim()).toBe('I sent the Venmo payment');
-    const redirect = spyOn(component, 'redirectToStatus');
-    statusButton.click();
-    expect(redirect).toHaveBeenCalledOnceWith('raw-booking-token');
+    expect(fixture.nativeElement.querySelector('.booking-form')).toBeNull();
   });
 
   it('uses plain loading copy without encoding artifacts', async () => {
@@ -264,8 +260,7 @@ describe('WorkshopReservationComponent', () => {
       firstName: 'Customer',
       lastName: 'Name',
       contactEmail: 'customer@example.test',
-      contactPhone: '',
-      paymentMethod: 'stripe',
+      contactPhone: '(555) 555-0100',
       acceptedTerms: true,
     });
 

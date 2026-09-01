@@ -40,6 +40,8 @@ describe('Public WorkshopsComponent', () => {
         workshopDate: '2026-11-01',
         startAt: '2026-11-01T17:00:00Z',
         featuredOrder: 3,
+        title: 'An Intentionally Longer Featured Workshop Title for Layout Stability',
+        advertisingLine: 'A deliberately longer featured workshop description that verifies carousel slides do not resize the surrounding section when their content lengths differ.',
       }),
     ]);
     await TestBed.configureTestingModule({
@@ -73,22 +75,37 @@ describe('Public WorkshopsComponent', () => {
     expect(fixture.nativeElement.querySelector('.carousel-controls')).not.toBeNull();
     const featured = fixture.nativeElement.querySelector('.featured');
     const featuredCopy = fixture.nativeElement.querySelector('.featured-copy');
-    const featuredImageFrame = fixture.nativeElement.querySelector('.featured-image');
+    const featuredAction = featuredCopy.querySelector('.primary-button');
+    const carouselControls = featuredCopy.querySelector('.carousel-controls');
+    expect(carouselControls).not.toBeNull();
+    expect(
+      featuredAction.compareDocumentPosition(carouselControls)
+        & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const featuredImageShell = fixture.nativeElement.querySelector('.featured-image');
+    const featuredImageFrame = featuredImageShell.querySelector('.featured-image-frame');
     const featuredImage = featuredImageFrame.querySelector('img');
-    const featuredFrameStyle = getComputedStyle(featuredImageFrame);
-    const featuredInset = Number.parseFloat(featuredFrameStyle.paddingTop);
+    const featuredShellStyle = getComputedStyle(featuredImageShell);
+    const featuredInset = Number.parseFloat(featuredShellStyle.paddingTop);
     expect(getComputedStyle(featured).alignItems).toBe('stretch');
     expect(getComputedStyle(featuredCopy).alignSelf).toBe('stretch');
-    expect(getComputedStyle(featuredImage).aspectRatio).toBe('16 / 9');
+    expect(getComputedStyle(featuredImageFrame).aspectRatio).toBe('16 / 9');
+    expect(Math.abs(
+      featuredImage.getBoundingClientRect().height
+        - featuredImageFrame.getBoundingClientRect().height,
+    )).toBeLessThanOrEqual(1);
+    expect(Math.abs(
+      featuredImage.getBoundingClientRect().width
+        - featuredImageFrame.getBoundingClientRect().width,
+    )).toBeLessThanOrEqual(1);
     expect(featuredInset).toBeGreaterThan(0);
-    expect(Number.parseFloat(featuredFrameStyle.paddingLeft)).toBe(featuredInset);
+    expect(Number.parseFloat(featuredShellStyle.paddingLeft)).toBe(featuredInset);
     if (window.matchMedia('(max-width: 850px)').matches) {
-      expect(getComputedStyle(featuredCopy).overflowY).toBe('visible');
-      expect(Number.parseFloat(featuredFrameStyle.paddingBottom)).toBe(0);
+      expect(getComputedStyle(featuredCopy).overflowY).toBe('hidden');
+      expect(Number.parseFloat(featuredShellStyle.paddingBottom)).toBe(0);
     } else {
-      expect(getComputedStyle(featuredCopy).overflowY).toBe('auto');
-      expect(getComputedStyle(featuredImage).height).toBe('100%');
-      expect(Number.parseFloat(featuredFrameStyle.paddingBottom)).toBe(featuredInset);
+      expect(getComputedStyle(featuredCopy).overflowY).toBe('hidden');
+      expect(Number.parseFloat(featuredShellStyle.paddingBottom)).toBe(featuredInset);
     }
     const rowCopy = fixture.nativeElement.querySelector('.workshop-copy');
     const rowTitle = rowCopy.querySelector('h3') as HTMLElement;
@@ -107,6 +124,64 @@ describe('Public WorkshopsComponent', () => {
       ['carousel', 'second-series'],
       ['list', 'earlier'],
     ]);
+  });
+
+  it('keeps featured media and section geometry stable while centering the controls', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const featured = fixture.nativeElement.querySelector('.featured') as HTMLElement;
+    const copy = featured.querySelector('.featured-copy') as HTMLElement;
+    const content = copy.querySelector('.featured-copy-content') as HTMLElement;
+    const controls = copy.querySelector('.carousel-controls') as HTMLElement;
+    const initialHeight = featured.getBoundingClientRect().height;
+    const copyCenter = copy.getBoundingClientRect().left + copy.getBoundingClientRect().width / 2;
+    const controlsCenter = controls.getBoundingClientRect().left
+      + controls.getBoundingClientRect().width / 2;
+    const controlsBottomInset = copy.getBoundingClientRect().bottom
+      - controls.getBoundingClientRect().bottom;
+
+    expect(Math.abs(copyCenter - controlsCenter)).toBeLessThanOrEqual(1);
+    expect(getComputedStyle(content).overflowY).toBe('visible');
+    expect(controlsBottomInset).toBeLessThanOrEqual(12);
+
+    component.nextFeatured();
+    fixture.detectChanges();
+
+    expect(Math.abs(featured.getBoundingClientRect().height - initialHeight))
+      .toBeLessThanOrEqual(1);
+    expect(content.scrollHeight).toBeLessThanOrEqual(content.clientHeight + 1);
+    const frame = featured.querySelector('.featured-image-frame') as HTMLElement | null;
+    expect(frame).not.toBeNull();
+    if (frame) {
+      const bounds = frame.getBoundingClientRect();
+      expect(Math.abs(bounds.width / bounds.height - 16 / 9)).toBeLessThanOrEqual(.01);
+    }
+  });
+
+  it('keeps mobile carousel controls close to the action and improves card legibility', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    if (!window.matchMedia('(max-width: 640px)').matches) {
+      expect(true).toBeTrue();
+      return;
+    }
+
+    const featuredCopy = fixture.nativeElement.querySelector('.featured-copy') as HTMLElement;
+    const action = featuredCopy.querySelector('.primary-button') as HTMLElement;
+    const controls = featuredCopy.querySelector('.carousel-controls') as HTMLElement;
+    const controlsGap = controls.getBoundingClientRect().top
+      - action.getBoundingClientRect().bottom;
+    expect(controlsGap).toBeLessThanOrEqual(32);
+
+    const row = fixture.nativeElement.querySelector('.workshop-row') as HTMLElement;
+    const bodyCopy = row.querySelector('.workshop-copy > p:not(.theme)') as HTMLElement;
+    const details = row.querySelector('.workshop-copy .details') as HTMLElement;
+    expect(Number.parseFloat(getComputedStyle(bodyCopy).fontSize)).toBeGreaterThanOrEqual(15);
+    expect(Number.parseFloat(getComputedStyle(details).fontSize)).toBeGreaterThanOrEqual(13);
   });
 
   it('keeps the original hero and introduction without the removed upcoming intro', async () => {

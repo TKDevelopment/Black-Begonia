@@ -50,41 +50,45 @@
   <ng-container *ngIf="!loading() && !error()">
     <section *ngIf="activeFeatured() as workshop" class="featured" aria-roledescription="carousel" aria-label="Featured workshops">
       <div class="featured-image">
-        <img [src]="workshop.heroImageUrl" [alt]="workshop.heroAltText"
-          fetchpriority="high" decoding="async" sizes="(max-width: 800px) 100vw, 60vw" />
+        <div class="featured-image-frame">
+          <img [src]="workshop.heroImageUrl" [alt]="workshop.heroAltText"
+            fetchpriority="high" decoding="async" sizes="(max-width: 800px) 100vw, 60vw" />
+        </div>
       </div>
       <div class="featured-copy" aria-live="polite">
-        <p class="eyebrow">Featured workshop</p>
-        <p class="featured-count">
-          {{ seriesEventCount(workshop.seriesSlug) }} upcoming
-          {{ seriesEventCount(workshop.seriesSlug) === 1 ? 'event' : 'events' }}
-        </p>
-        <p *ngIf="workshop.remainingSeats !== null" class="seat-urgency">
-          Only {{ workshop.remainingSeats }} {{ workshop.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
-        </p>
-        <h2>{{ workshop.title }}</h2>
-        <p class="featured-line">{{ workshop.advertisingLine }}</p>
-        <p>{{ workshop.venueName }} · {{ workshop.locality }}, {{ workshop.region }}</p>
-        <a
-          class="primary-button"
-          [routerLink]="['/workshops', workshop.seriesSlug]"
-          (click)="trackSelection(workshop, 'carousel')"
-          [appAnalyticsAction]="{ event: 'cta_select', location: 'workshops_featured' }"
-        >View workshop</a>
-      </div>
-      <div *ngIf="featured().length > 1" class="carousel-controls">
-        <button type="button" aria-label="Previous featured workshop" (click)="previousFeatured()">←</button>
-        <div class="carousel-dots" aria-label="Choose featured workshop">
-          <button
-            *ngFor="let item of featured(); let index = index"
-            type="button"
-            [class.active]="index === carouselIndex()"
-            [attr.aria-label]="'Show ' + item.title"
-            [attr.aria-current]="index === carouselIndex() ? 'true' : null"
-            (click)="showFeatured(index)"
-          ></button>
+        <div class="featured-copy-content">
+          <p class="eyebrow">Featured workshop</p>
+          <p class="featured-count">
+            {{ seriesEventCount(workshop.seriesSlug) }} upcoming
+            {{ seriesEventCount(workshop.seriesSlug) === 1 ? 'event' : 'events' }}
+          </p>
+          <p *ngIf="workshop.remainingSeats !== null" class="seat-urgency">
+            Only {{ workshop.remainingSeats }} {{ workshop.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
+          </p>
+          <h2>{{ workshop.title }}</h2>
+          <p class="featured-line">{{ workshop.advertisingLine }}</p>
+          <p>{{ workshop.venueName }} · {{ workshop.locality }}, {{ workshop.region }}</p>
+          <a
+            class="primary-button"
+            [routerLink]="['/workshops', workshop.seriesSlug]"
+            (click)="trackSelection(workshop, 'carousel')"
+            [appAnalyticsAction]="{ event: 'cta_select', location: 'workshops_featured' }"
+          >View workshop</a>
         </div>
-        <button type="button" aria-label="Next featured workshop" (click)="nextFeatured()">→</button>
+        <div *ngIf="featured().length > 1" class="carousel-controls">
+          <button type="button" aria-label="Previous featured workshop" (click)="previousFeatured()">←</button>
+          <div class="carousel-dots" aria-label="Choose featured workshop">
+            <button
+              *ngFor="let item of featured(); let index = index"
+              type="button"
+              [class.active]="index === carouselIndex()"
+              [attr.aria-label]="'Show ' + item.title"
+              [attr.aria-current]="index === carouselIndex() ? 'true' : null"
+              (click)="showFeatured(index)"
+            ></button>
+          </div>
+          <button type="button" aria-label="Next featured workshop" (click)="nextFeatured()">→</button>
+        </div>
       </div>
     </section>
 

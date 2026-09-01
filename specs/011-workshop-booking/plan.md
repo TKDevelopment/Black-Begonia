@@ -8,6 +8,24 @@
 
 ## Summary
 
+**2026-09-01 refinement**: New public workshop reservations are Stripe-only.
+The reservation form collects seat quantity, first name, last name, email,
+required phone, and required terms acceptance without showing a payment-method
+selector. Historical workshop direct-Venmo facts and unrelated project
+direct-Venmo workflows remain preserved, but no new workshop Venmo handoff is
+authorized. Featured carousel controls render inside the featured-copy panel,
+below the View workshop action.
+The reservation summary keeps When and Where in one horizontal row, aligns the
+prominent total beneath the tax amount, uses a smaller workshop title, and
+right-aligns a title-case secure-checkout action.
+The featured-workshop carousel reserves an immutable 16:9 media frame and a
+stable section footprint across slide changes, with controls centered inside
+the featured copy panel. Featured copy never scrolls internally; its reserved
+space accommodates longer slides while the controls sit closer to the panel's
+lower edge. On phones the controls follow the View workshop action without a
+large blank interval, upcoming-card supporting type is more legible, and image
+date badges align right.
+
 Add a complete public-workshop commerce and operations system to the existing
 Angular application: CRM definition/series/occurrence management, public
 listing and detail routes, atomic seat holds, Stripe Checkout, direct Venmo

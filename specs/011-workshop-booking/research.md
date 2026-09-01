@@ -1,5 +1,11 @@
 # Research: Workshop Events and Booking
 
+> **2026-09-01 decision update:** The customer workshop checkout is now
+> Stripe-only. Direct Venmo remains only as historical reconciliation data and
+> as an unrelated preserved project-payment workflow. This supersedes the
+> earlier workshop Venmo handoff decision while retaining its historical data
+> safeguards.
+
 **Branch**: `011-workshop-booking`  
 **Date**: 2026-07-29  
 **Specification**: [spec.md](./spec.md)

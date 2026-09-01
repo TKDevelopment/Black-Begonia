@@ -119,7 +119,7 @@ begin
     tax_rate_basis_points = case when p_patch ? 'taxRegion' then v_tax_rate_basis_points else tax_rate_basis_points end,
     stripe_price_version_id = case when p_patch ? 'stripePriceVersionId' then nullif(p_patch->>'stripePriceVersionId','')::uuid else stripe_price_version_id end,
     stripe_enabled = case when p_patch ? 'stripeEnabled' then (p_patch->>'stripeEnabled')::boolean else stripe_enabled end,
-    venmo_enabled = case when p_patch ? 'venmoEnabled' then (p_patch->>'venmoEnabled')::boolean else venmo_enabled end,
+    venmo_enabled = false,
     waitlist_enabled = case when p_patch ? 'waitlistEnabled' then (p_patch->>'waitlistEnabled')::boolean else waitlist_enabled end,
     updated_by = auth.uid()
   where workshop_occurrence_id = any(v_target_ids);

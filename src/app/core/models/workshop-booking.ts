@@ -406,7 +406,7 @@ export interface CreateWorkshopBookingRequest {
   quantity: number;
   contactName: string;
   contactEmail: string;
-  contactPhone?: string;
+  contactPhone: string;
   acceptedTermsVersion: number;
   commandKey: string;
 }
@@ -424,25 +424,15 @@ export interface WorkshopHeldBooking {
   totalMinor: number;
   currency: WorkshopCurrency;
   effectiveExpiresAt: string;
-  methods: WorkshopPaymentMethod[];
+  methods: ['stripe'];
 }
 
-export type WorkshopPaymentHandoff =
-  | {
-      state: 'redirect';
-      method: 'stripe';
-      url: string;
-      effectiveExpiresAt: string;
-    }
-  | {
-      state: 'pending_manual_payment';
-      method: 'direct_venmo';
-      approvedTarget: string;
-      amountMinor: number;
-      currency: WorkshopCurrency;
-      reference: string;
-      effectiveExpiresAt: string;
-    };
+export interface WorkshopPaymentHandoff {
+  state: 'redirect';
+  method: 'stripe';
+  url: string;
+  effectiveExpiresAt: string;
+}
 
 export interface WorkshopStatusAccessRequest {
   email: string;
