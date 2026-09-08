@@ -365,14 +365,14 @@
   }
 
   @container workshop-roster (max-width: 56.25rem) {
-    app-workshop-roster .metrics.metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    app-workshop-roster .metrics.metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     app-workshop-roster .two-column.two-column { grid-template-columns: 1fr; }
     app-workshop-roster .waitlist-header.waitlist-header { align-items: flex-start; flex-direction: column; }
     app-workshop-roster .waitlist-controls.waitlist-controls { inline-size: 100%; justify-content: flex-start; }
   }
 
   @container workshop-roster (max-width: 37.5rem) {
-    app-workshop-roster .roster-toolbar.roster-toolbar,
+    app-workshop-roster .roster-toolbar.roster-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     app-workshop-roster .form-grid.form-grid { grid-template-columns: 1fr; }
     app-workshop-roster .waitlist-controls.waitlist-controls,
     app-workshop-roster .modal-actions.modal-actions { align-items: stretch; flex-direction: column; }
@@ -380,10 +380,6 @@
     app-workshop-roster .seat-request,
     app-workshop-roster .waitlist-entry > .status-badge { grid-column: 2; }
     app-workshop-roster .modal-actions button { inline-size: 100%; }
-  }
-
-  @container workshop-roster (max-width: 26.875rem) {
-    app-workshop-roster .metrics.metrics { grid-template-columns: 1fr; }
   }
 
   @container workshop-financials (max-width: 47.5rem) {

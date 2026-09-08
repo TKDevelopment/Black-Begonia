@@ -682,6 +682,7 @@ The ordered migrations and declarative functions define at least:
 - `record_workshop_payment_exception`
 - `resolve_workshop_payment_exception`
 - `cancel_workshop_booking_quantity`
+- `delete_expired_workshop_booking`
 - `cancel_workshop_occurrence`
 - `begin_workshop_reschedule`
 - `respond_to_workshop_reschedule`
@@ -705,6 +706,12 @@ The ordered migrations and declarative functions define at least:
 - `approve_workshop_data_retention_policy`
 - `activate_workshop_data_retention_policy`
 - `retire_workshop_data_retention_policy`
+
+The expired-booking deletion command is the narrow exception to retained
+booking projections: it accepts only abandoned `expired` rows and refuses to
+cross immutable financial, delivered-communication, verified-privacy, or
+rescheduling references. It deletes removable dependent operational rows,
+detaches durable provider evidence, and appends a PII-free occurrence audit.
 
 Each command validates actor/purpose, locks required rows, enforces state
 transitions, applies a unique command key, appends audit facts, and returns a

@@ -39,6 +39,8 @@ export class WorkshopRosterComponent implements OnInit {
   readonly reservationBusy = signal(false);
   readonly cancellationBooking = signal<WorkshopBooking | null>(null);
   readonly cancellationBusy = signal(false);
+  readonly deletionBooking = signal<WorkshopBooking | null>(null);
+  readonly deletionBusy = signal(false);
   readonly venmoAttempts = signal<WorkshopVenmoPaymentAttempt[]>([]);
   readonly venmoApprovalBooking = signal<WorkshopBooking | null>(null);
   readonly venmoApprovalBusy = signal(false);
@@ -107,6 +109,8 @@ export class WorkshopRosterComponent implements OnInit {
         booking.payment_state,
       ].some((value) => value.toLowerCase().includes(query))));
   });
+  readonly exportableBookings = computed(() =>
+    this.filteredBookings().filter((booking) => booking.status === 'confirmed'));
   readonly activeSeatCount = computed(() =>
     this.bookings()
       .filter((booking) => !['expired', 'cancelled'].includes(booking.status))
@@ -179,6 +183,7 @@ export class WorkshopRosterComponent implements OnInit {
     this.error.set(null);
     this.closeVenmoApprovalModal();
     this.closeRefundModal();
+    this.closeDeletionModal();
     this.reservationModalOpen.set(true);
   }
 
@@ -197,6 +202,7 @@ export class WorkshopRosterComponent implements OnInit {
     this.reservationModalOpen.set(false);
     this.closeVenmoApprovalModal();
     this.closeRefundModal();
+    this.closeDeletionModal();
     this.cancellationBooking.set(booking);
     this.cancellationQuantityValue = 1;
   }
@@ -204,6 +210,43 @@ export class WorkshopRosterComponent implements OnInit {
   closeCancellationModal(): void {
     this.cancellationBooking.set(null);
     this.cancellationQuantityValue = 1;
+  }
+
+  openDeletionModal(booking: WorkshopBooking): void {
+    if (booking.status !== 'expired') return;
+    this.error.set(null);
+    this.reservationModalOpen.set(false);
+    this.closeCancellationModal();
+    this.closeVenmoApprovalModal();
+    this.closeRefundModal();
+    this.deletionBooking.set(booking);
+  }
+
+  closeDeletionModal(): void {
+    if (this.deletionBusy()) return;
+    this.deletionBooking.set(null);
+  }
+
+  async confirmExpiredBookingDeletion(): Promise<void> {
+    const booking = this.deletionBooking();
+    if (!booking || booking.status !== 'expired') return;
+    this.deletionBusy.set(true);
+    this.error.set(null);
+    try {
+      await this.operations.deleteExpiredBooking(
+        booking.workshop_booking_id,
+        crypto.randomUUID(),
+      );
+      this.deletionBooking.set(null);
+      this.actionMessage.set(`${booking.contact_name}'s expired booking was permanently deleted.`);
+      await this.load();
+    } catch {
+      this.error.set(
+        'We could not permanently delete that expired booking. Protected financial or communication history may need to be retained.',
+      );
+    } finally {
+      this.deletionBusy.set(false);
+    }
   }
 
   cancellationQuantity(): number {
@@ -289,6 +332,7 @@ export class WorkshopRosterComponent implements OnInit {
     this.reservationModalOpen.set(false);
     this.closeCancellationModal();
     this.closeVenmoApprovalModal();
+    this.closeDeletionModal();
     this.refundBooking.set(booking);
     this.refundCharge.set(charge);
     this.refundEligibility.set(null);
@@ -460,6 +504,7 @@ export class WorkshopRosterComponent implements OnInit {
     this.error.set(null);
     this.reservationModalOpen.set(false);
     this.closeCancellationModal();
+    this.closeDeletionModal();
     this.venmoApprovalBooking.set(booking);
     this.venmoProviderPaymentId = '';
     this.venmoAmountDollars = attempt.amount_minor / 100;
@@ -542,7 +587,7 @@ export class WorkshopRosterComponent implements OnInit {
   }
 
   exportRoster(): void {
-    const rows = this.filteredBookings().map((booking) => `
+    const rows = this.exportableBookings().map((booking) => `
       <tr>
         <td>${escapeHtml(booking.contact_name)}</td>
         <td>${escapeHtml(booking.contact_email ?? '—')}</td>
