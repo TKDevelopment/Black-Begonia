@@ -396,6 +396,7 @@ unique slug.
 - `create_manual_workshop_booking`
 - `cancel_workshop_booking_quantity`
 - `check_in_workshop_attendee`
+- `delete_expired_workshop_booking(booking_id, command_key)`
 - `join_workshop_waitlist`
 - `offer_workshop_waitlist_seats`
 - `begin_workshop_reschedule`
@@ -414,6 +415,12 @@ unique slug.
 
 Every command returns `replayed: boolean`, affected IDs, resulting states, and
 safe summary counts. Invalid transitions fail without partial side effects.
+Expired-booking deletion is internal-only, accepts only the `expired` state,
+and removes abandoned operational rows so the booking count updates on reload.
+It preserves detached provider evidence and payment exceptions, and fails when
+immutable financial transactions, delivered communications, personal-data
+requests, or reschedule responses require the booking identity to remain.
+Printable roster generation selects only `confirmed` booking rows.
 Personal-data correction/minimization requires an authenticated internal actor
 and a customer request verified by valid booking-status token or single-use
 24-hour link sent to the booking's current contact email. Support reference,

@@ -37,6 +37,10 @@ export interface WorkshopOperationsRepository {
     reason: string,
     commandKey: string,
   ): Promise<WorkshopRosterCommandResult>;
+  deleteExpiredBooking(
+    bookingId: string,
+    commandKey: string,
+  ): Promise<WorkshopRosterCommandResult>;
   checkIn(attendeeId: string, commandKey: string): Promise<WorkshopRosterCommandResult>;
   offerWaitlistSeats(
     occurrenceId: string,
@@ -176,6 +180,21 @@ export class WorkshopOperationsRepositoryService implements WorkshopOperationsRe
       quantity,
       reason: reason.trim(),
     }, commandKey);
+  }
+
+  async deleteExpiredBooking(
+    bookingId: string,
+    commandKey: string,
+  ): Promise<WorkshopRosterCommandResult> {
+    const { data, error } = await this.supabase.getClient().rpc(
+      'delete_expired_workshop_booking',
+      {
+        p_booking_id: bookingId,
+        p_command_key: commandKey,
+      },
+    );
+    if (error) throw error;
+    return data as WorkshopRosterCommandResult;
   }
 
   async checkIn(

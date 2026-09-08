@@ -177,6 +177,24 @@ describe('WorkshopReservationComponent', () => {
     )).toBeLessThanOrEqual(1);
     expect(getComputedStyle(checkout).fontFamily).toContain('Raleway');
     expect(getComputedStyle(checkout).textTransform).toBe('none');
+    expect(facts[3].classList).toContain('booking-limit');
+  });
+
+  it('defines the phone and larger-screen reservation refinements', () => {
+    const componentCss = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.textContent ?? '')
+      .filter((css) => css.includes('.reservation-panel'))
+      .join('')
+      .replaceAll(' ', '');
+
+    expect(componentCss).toContain('@media(min-width:961px)');
+    expect(componentCss).toContain('.summary-line');
+    expect(componentCss).toContain('font-size:1.38rem');
+    expect(componentCss).toContain('@media(max-width:600px)');
+    expect(componentCss).toContain('.booking-limit');
+    expect(componentCss).toContain('display:none');
+    expect(componentCss).toContain('margin-top:0.55rem');
+    expect(componentCss).toContain('min-height:2.2rem');
   });
 
   it('hands an exact valid reservation to Stripe without storing the booking token', async () => {

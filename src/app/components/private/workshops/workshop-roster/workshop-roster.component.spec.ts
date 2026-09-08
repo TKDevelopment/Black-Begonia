@@ -17,7 +17,7 @@ describe('WorkshopRosterComponent', () => {
       [
         'listMinimizedRoster', 'listBookings', 'listAttendeesForBookings', 'listWaitlist',
         'getOperationalState', 'createReservation', 'cancelSeats', 'checkIn',
-        'offerWaitlistSeats',
+        'offerWaitlistSeats', 'deleteExpiredBooking',
       ],
     );
     financials = jasmine.createSpyObj<WorkshopFinancialRepositoryService>(
@@ -100,6 +100,9 @@ describe('WorkshopRosterComponent', () => {
     operations.checkIn.and.resolveTo({
       replayed: false, bookingId: 'booking-1', attendeeId: 'attendee-1',
       attendanceState: 'checked_in',
+    });
+    operations.deleteExpiredBooking.and.resolveTo({
+      replayed: false, bookingId: 'booking-expired', status: 'deleted', activeQuantity: 0,
     });
     financials.listPendingVenmoAttempts.and.resolveTo([]);
     financials.listRefundableCharges.and.resolveTo([{
@@ -274,6 +277,49 @@ describe('WorkshopRosterComponent', () => {
     expect(labels).toEqual(['Refund Order']);
   });
 
+  it('permanently deletes an expired booking after explicit confirmation', async () => {
+    const expired = {
+      ...component.bookings()[0],
+      workshop_booking_id: 'booking-expired',
+      status: 'expired' as const,
+      payment_state: 'exception' as const,
+      active_quantity: 0,
+    };
+    component.bookings.set([expired]);
+    fixture.detectChanges();
+
+    const deleteButton = fixture.nativeElement.querySelector(
+      '.delete-expired-button',
+    ) as HTMLButtonElement;
+    expect(deleteButton.textContent?.trim()).toBe('Delete Booking');
+    deleteButton.click();
+    fixture.detectChanges();
+
+    const modal = fixture.nativeElement.querySelector('.deletion-modal') as HTMLElement;
+    expect(modal.textContent).toContain('permanently delete');
+    expect(modal.textContent).toContain('cannot be undone');
+    expect(modal.textContent).not.toContain('Keep Booking');
+    const modalActions = modal.querySelectorAll('.modal-actions button');
+    const permanentDeleteButton = modal.querySelector(
+      '.delete-expired-confirm-button',
+    ) as HTMLButtonElement;
+    expect(modalActions.length).toBe(1);
+    expect(permanentDeleteButton.textContent?.trim()).toBe('Permanently Delete');
+    expect(getComputedStyle(permanentDeleteButton).marginTop).toBe('16px');
+
+    operations.listBookings.and.resolveTo([]);
+    operations.listMinimizedRoster.and.resolveTo([]);
+    operations.listAttendeesForBookings.and.resolveTo([]);
+    await component.confirmExpiredBookingDeletion();
+
+    expect(operations.deleteExpiredBooking).toHaveBeenCalledWith(
+      'booking-expired', jasmine.any(String),
+    );
+    expect(component.bookings()).toEqual([]);
+    expect(component.deletionBooking()).toBeNull();
+    expect(component.actionMessage()).toContain('permanently deleted');
+  });
+
   it('submits an automatic Stripe seat refund and explains delayed seat release', async () => {
     await component.openRefundModal(component.bookings()[0]);
     fixture.detectChanges();
@@ -383,6 +429,23 @@ describe('WorkshopRosterComponent', () => {
       'Available seats', 'Checked in', 'Waitlist',
     ]);
     expect(values).toEqual(['1', '2', '12', '10', '0', '0']);
+  });
+
+  it('defines an ordered three-by-two metric grid across mobile widths and dense phone controls', () => {
+    const componentCss = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.textContent ?? '')
+      .filter((css) => css.includes('.roster-toolbar'))
+      .join('')
+      .replace(/\s/g, '');
+
+    expect(componentCss).toMatch(
+      /@media\(max-width:900px\)\{\.metrics\[[^\]]+\]\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,
+    );
+    expect(componentCss).toContain('@media(max-width:600px)');
+    expect(componentCss).toContain('.roster-toolbar');
+    expect(componentCss).toContain('min-height:2.15rem');
+    expect(componentCss).toContain('table');
+    expect(componentCss).toContain('min-width:46rem');
   });
 
   it('shows booking contact details, seat counts, and status in the roster', () => {
@@ -556,10 +619,27 @@ describe('WorkshopRosterComponent', () => {
     expect(waitlistCard.querySelector('.waitlist-title')?.textContent?.trim()).toBe('Waitlist');
   });
 
-  it('exports a printable Word roster without references or secret fields', async () => {
+  it('exports only confirmed bookings in a printable Word roster without secret fields', async () => {
     const createUrl = spyOn(URL, 'createObjectURL').and.returnValue('blob:roster');
     const revokeUrl = spyOn(URL, 'revokeObjectURL');
     const click = spyOn(HTMLAnchorElement.prototype, 'click');
+    component.bookings.set([
+      component.bookings()[0],
+      {
+        ...component.bookings()[0],
+        workshop_booking_id: 'booking-pending',
+        contact_name: 'Pending Guest',
+        status: 'pending_payment',
+        payment_state: 'pending',
+      },
+      {
+        ...component.bookings()[0],
+        workshop_booking_id: 'booking-expired',
+        contact_name: 'Expired Guest',
+        status: 'expired',
+        payment_state: 'exception',
+      },
+    ]);
 
     component.exportRoster();
 
@@ -570,6 +650,8 @@ describe('WorkshopRosterComponent', () => {
     expect(documentText).toContain('Garden Guest');
     expect(documentText).toContain('guest@example.test');
     expect(documentText).toContain('(555) 555-1212');
+    expect(documentText).not.toContain('Pending Guest');
+    expect(documentText).not.toContain('Expired Guest');
     expect(documentText).not.toContain('BBW-TEST');
     expect(documentText).not.toContain('status_token');
     expect(click).toHaveBeenCalled();
