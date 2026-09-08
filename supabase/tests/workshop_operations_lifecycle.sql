@@ -23,6 +23,10 @@ select has_function(
   'public','get_minimized_workshop_roster',array['uuid'],
   'minimized roster projection exists'
 );
+select has_function(
+  'public','delete_expired_workshop_booking',array['uuid','uuid'],
+  'guarded expired-booking deletion command exists'
+);
 
 insert into public.profiles(id,is_active)
 values('41000000-0000-4000-8000-000000000001',true)
@@ -1621,6 +1625,68 @@ select is(
     where workshop_booking_id='41000000-0000-4000-8000-000000000090'
       and communication_type='booking_confirmation'),
   1,'later confirmed-state updates do not duplicate confirmation email'
+);
+
+set local role authenticated;
+set local request.jwt.claims=
+  '{"sub":"41000000-0000-4000-8000-000000000001","role":"authenticated"}';
+select throws_ok(
+  $$select public.delete_expired_workshop_booking(
+    '41000000-0000-4000-8000-000000000090',
+    '41000000-0000-4000-8000-000000000093'
+  )$$,
+  '22023','only expired bookings can be deleted',
+  'confirmed bookings cannot be permanently deleted from the roster'
+);
+
+reset role;
+insert into public.workshop_bookings(
+  workshop_booking_id,workshop_occurrence_id,booking_reference,
+  status_token_digest,status_token_expires_at,contact_name,contact_email,
+  purchased_quantity,active_quantity,status,payment_state,
+  price_per_seat_minor_snapshot,subtotal_minor_snapshot,total_minor_snapshot,
+  required_charges_minor_snapshot,currency,terms_snapshot,terms_version,
+  payment_method
+) values (
+  '41000000-0000-4000-8000-000000000091',
+  '41000000-0000-4000-8000-000000000020','BBW-EXPIRED-DELETE',
+  'expired-delete-token-digest-abcdefghijklmnopqrstuvwxyz0123456789',
+  now()-interval '1 day','Expired Guest','expired@example.test',1,0,
+  'expired','exception',5000,5000,5000,0,'USD','Terms',1,'stripe'
+);
+insert into public.workshop_seat_holds(
+  workshop_seat_hold_id,workshop_occurrence_id,booking_id,quantity,state,
+  payment_method,normal_expires_at,effective_expires_at,resolved_at,
+  resolution_reason,command_key
+) values (
+  '41000000-0000-4000-8000-000000000092',
+  '41000000-0000-4000-8000-000000000020',
+  '41000000-0000-4000-8000-000000000091',1,'expired','stripe',
+  now()-interval '1 day',now()-interval '1 day',now()-interval '1 day',
+  'effective_deadline_elapsed','41000000-0000-4000-8000-000000000094'
+);
+
+set local role authenticated;
+set local request.jwt.claims=
+  '{"sub":"41000000-0000-4000-8000-000000000001","role":"authenticated"}';
+select is(
+  (public.delete_expired_workshop_booking(
+    '41000000-0000-4000-8000-000000000091',
+    '41000000-0000-4000-8000-000000000095'
+  )->>'status'),
+  'deleted','staff can permanently delete an expired abandoned booking'
+);
+select is(
+  (select count(*)::integer from public.workshop_bookings
+    where workshop_booking_id='41000000-0000-4000-8000-000000000091'),
+  0,'deleted expired bookings no longer contribute to roster booking counts'
+);
+select is(
+  (public.delete_expired_workshop_booking(
+    '41000000-0000-4000-8000-000000000091',
+    '41000000-0000-4000-8000-000000000095'
+  )->>'replayed')::boolean,
+  true,'expired-booking deletion is replay-safe'
 );
 select * from finish();
 rollback;

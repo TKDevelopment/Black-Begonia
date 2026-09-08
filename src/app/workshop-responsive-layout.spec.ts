@@ -72,6 +72,39 @@ describe('workshop feature responsive layout contract', () => {
     }
   });
 
+  it('keeps roster metrics three across and toolbar controls two across on phones', () => {
+    const host = document.createElement('app-workshop-roster');
+    const page = document.createElement('main');
+    page.className = 'roster-page';
+    page.style.width = '360px';
+    const metrics = document.createElement('section');
+    metrics.className = 'metrics';
+    metrics.style.display = 'grid';
+    for (let index = 0; index < 6; index += 1) {
+      metrics.appendChild(document.createElement('div'));
+    }
+    const toolbar = document.createElement('div');
+    toolbar.className = 'roster-toolbar';
+    toolbar.style.display = 'grid';
+    for (let index = 0; index < 4; index += 1) {
+      toolbar.appendChild(document.createElement('div'));
+    }
+    page.append(metrics, toolbar);
+    host.appendChild(page);
+    mounted.push(host);
+    document.body.appendChild(host);
+
+    const metricColumns = getComputedStyle(metrics).gridTemplateColumns
+      .split(' ')
+      .filter(Boolean);
+    const toolbarColumns = getComputedStyle(toolbar).gridTemplateColumns
+      .split(' ')
+      .filter(Boolean);
+
+    expect(metricColumns.length).toBe(3);
+    expect(toolbarColumns.length).toBe(2);
+  });
+
   it('contains long-form operational content at the active viewport', () => {
     const host = document.createElement('app-workshop-data-retention-policy');
     const page = document.createElement('main');

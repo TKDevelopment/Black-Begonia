@@ -9,7 +9,7 @@
 
   @if (loading()) {
     <p class="page-state" role="status">Loading workshop operations&hellip;</p>
-  } @else if (error() && !reservationModalOpen() && !cancellationBooking() && !venmoApprovalBooking() && !refundBooking()) {
+  } @else if (error() && !reservationModalOpen() && !cancellationBooking() && !deletionBooking() && !venmoApprovalBooking() && !refundBooking()) {
     <p class="error page-state" role="alert">{{ error() }}</p>
   } @else {
     <section class="metrics overflow-hidden" aria-label="Roster counts">
@@ -49,7 +49,7 @@
           </select>
         </label>
         <button class="secondary-button" type="button" (click)="exportRoster()"
-          [disabled]="!filteredBookings().length">
+          [disabled]="!exportableBookings().length">
           Export printable roster
         </button>
         <button class="primary-button" type="button" (click)="openReservationModal()">
@@ -85,7 +85,12 @@
                 </td>
                 <td>
                   <div class="booking-actions flex flex-wrap items-center gap-2">
-                    @if (booking.status === 'confirmed') {
+                    @if (booking.status === 'expired') {
+                      <button class="secondary-button danger-button delete-expired-button" type="button"
+                        (click)="openDeletionModal(booking)">
+                        Delete Booking
+                      </button>
+                    } @else if (booking.status === 'confirmed') {
                       <button class="secondary-button danger-button" type="button"
                         (click)="openRefundModal(booking)" [disabled]="!canRefundOrder(booking)"
                         [title]="canRefundOrder(booking) ? 'Refund selected seats' : 'No refundable payment is available'">
@@ -256,6 +261,39 @@
             [disabled]="cancellationBusy()">
             {{ cancellationBusy() ? 'Cancelling...' : 'Cancel ' + cancellationQuantity() +
               (cancellationQuantity() === 1 ? ' Seat' : ' Seats') }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (deletionBooking(); as booking) {
+    <div class="modal-backdrop" (click)="closeDeletionModal()">
+      <section class="reservation-modal cancellation-modal deletion-modal" role="alertdialog"
+        aria-modal="true" aria-labelledby="delete-expired-booking-title"
+        aria-describedby="delete-expired-booking-copy" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">{{ booking.contact_name }}</p>
+            <h2 id="delete-expired-booking-title">Permanently delete expired booking?</h2>
+          </div>
+          <button class="crm-destructive-close" type="button" aria-label="Close booking deletion"
+            (click)="closeDeletionModal()" [disabled]="deletionBusy()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </header>
+        <p id="delete-expired-booking-copy" class="cancellation-copy">
+          This will permanently delete the expired booking and remove it from the roster count.
+          This action cannot be undone. Bookings with protected financial, communication, privacy,
+          or rescheduling history cannot be deleted.
+        </p>
+        <p *ngIf="error()" class="error" role="alert">{{ error() }}</p>
+        <div class="modal-actions">
+          <button class="danger-confirm-button delete-expired-confirm-button mt-4" type="button"
+            (click)="confirmExpiredBookingDeletion()" [disabled]="deletionBusy()">
+            {{ deletionBusy() ? 'Deleting...' : 'Permanently Delete' }}
           </button>
         </div>
       </section>

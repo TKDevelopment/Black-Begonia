@@ -72,6 +72,20 @@ describe('WorkshopOperationsRepositoryService', () => {
     });
   });
 
+  it('maps permanent expired-booking deletion to its guarded database command', async () => {
+    rpc.and.resolveTo({
+      data: { replayed: false, bookingId: 'booking-expired', status: 'deleted' },
+      error: null,
+    });
+
+    await service.deleteExpiredBooking('booking-expired', 'command-delete');
+
+    expect(rpc).toHaveBeenCalledWith('delete_expired_workshop_booking', {
+      p_booking_id: 'booking-expired',
+      p_command_key: 'command-delete',
+    });
+  });
+
   it('loads only the minimized roster projection', async () => {
     const rows = [{
       booking_reference: 'BBW-2026-TEST',

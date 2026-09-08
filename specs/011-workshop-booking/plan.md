@@ -8,6 +8,13 @@
 
 ## Summary
 
+**2026-09-08 refinement**: Reservation pages hide Booking limit and compact the
+panel/action on phones while enlarging non-heading copy by 50 percent on larger
+screens. The CRM roster adds guarded permanent deletion for abandoned expired
+bookings, confirmed-only printable export, a compact ordered 3-by-2 phone metric
+grid, and denser phone toolbar/table presentation through an additive
+operations migration.
+
 **2026-09-01 refinement**: New public workshop reservations are Stripe-only.
 The reservation form collects seat quantity, first name, last name, email,
 required phone, and required terms acceptance without showing a payment-method

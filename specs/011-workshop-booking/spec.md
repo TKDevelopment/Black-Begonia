@@ -17,6 +17,27 @@ and is explicitly outside this specification."
 
 ## Clarifications
 
+### Session 2026-09-08
+
+- Q: How should the reservation page adapt across breakpoints? A: On phones,
+  hide the Booking limit summary fact, reduce the reservation panel's top gap,
+  and compact the Continue to Secure Checkout action. On larger screens,
+  increase all non-heading reservation text by 50 percent while retaining the
+  established heading scale.
+- Q: How are abandoned expired bookings managed in the CRM roster? A: An
+  authorized internal user may permanently delete an expired booking after an
+  explicit irreversible-action confirmation. The booking must immediately
+  disappear from the Bookings count, but immutable financial, delivered
+  communication, verified privacy, and rescheduling history remains protected
+  and blocks deletion.
+- Q: Which bookings appear in the printable roster? A: Only bookings whose
+  current booking status is `confirmed`.
+- Q: How should the roster adapt on phones? A: The six metric cards form a
+  compact 3-by-2 grid in their existing order, with Bookings, Active seats, and
+  Scheduled seats in row one and Available seats, Checked in, and Waitlist in
+  row two. The toolbar controls and horizontally contained booking table use a
+  significantly denser mobile scale.
+
 ### Session 2026-09-01
 
 - Q: Which payment methods may a customer choose for a new public workshop
@@ -432,9 +453,9 @@ capacity, filters, exports, and actions.
 4. **Given** the event is occurring, **When** attendees arrive, **Then** the
    florist can mark attendance without changing payment or financial history.
 5. **Given** roster information is exported, **When** the export is generated,
-   **Then** it contains only operationally necessary fields and excludes payment
-   credentials, provider payloads, analytics identifiers, and unrelated CRM
-   data.
+   **Then** it contains only currently confirmed bookings and operationally
+   necessary fields, and excludes payment credentials, provider payloads,
+   analytics identifiers, and unrelated CRM data.
 6. **Given** a customer requests cancellation of only some seats in a
    multi-seat booking, **When** the florist records the authorized outcome,
    **Then** exactly those seats are released, the remaining seats stay confirmed
@@ -829,6 +850,11 @@ verify search signals remain accurate.
 - **FR-019**: Published workshop destinations MUST provide discoverable,
   non-duplicative public metadata and must not expose private attendee,
   inventory-hold, financial, or CRM information.
+- **FR-019a**: On phone viewports, the reservation summary MUST omit the
+  Booking limit fact, reduce the reservation panel's top margin, and compact
+  the Continue to Secure Checkout action. Above the stacked reservation
+  breakpoint, every non-heading text treatment on the reservation page MUST be
+  150 percent of its prior approved size; heading sizes MUST remain unchanged.
 
 #### Capacity, Booking, and Payment
 
@@ -926,6 +952,23 @@ verify search signals remain accurate.
 - **FR-040**: The CRM MUST provide an event roster with booking, quantity,
   payment, waitlist, refund, contact, accommodation, and attendance states
   limited to operationally relevant data.
+- **FR-040a**: An authenticated internal CRM user MUST be able to permanently
+  delete an `expired` booking after explicit confirmation. The command MUST
+  reject every non-expired booking, be replay-safe, remove the deleted row from
+  roster counts, and refuse deletion when immutable financial, delivered
+  communication, verified privacy-request, or rescheduling history requires
+  retention. The confirmation dialog MUST present the permanent-delete action
+  as its only footer action, separated from the warning copy by top margin;
+  dismissal remains available through the dialog close control and backdrop.
+- **FR-040b**: Printable roster exports MUST contain only bookings whose
+  current booking status is `confirmed`, regardless of other rows visible in
+  the CRM table, and MUST retain the privacy exclusions in FR-040.
+- **FR-040c**: At mobile widths through the roster's 900px responsive
+  breakpoint, roster metrics MUST render as a compact 3-by-2 grid in this
+  order: Bookings, Active seats, Scheduled seats, Available seats,
+  Checked in, Waitlist. The roster toolbar and customer table MUST use reduced
+  spacing, control height, typography, and table width while preserving
+  readable horizontal containment and access to every action.
 - **FR-041**: The florist MUST be able to check attendees in independently of
   payment state and retain who performed each operational change and when.
 - **FR-042**: Material changes to date/time, venue, cancellation terms, or

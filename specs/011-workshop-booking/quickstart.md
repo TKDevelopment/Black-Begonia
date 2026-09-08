@@ -6,6 +6,11 @@
 > historical workshop Venmo reconciliation checks and the separate project
 > direct-Venmo regression boundary.
 
+> **2026-09-08 roster/responsive refinement:** Apply the additive expired-booking
+> deletion migration before deploying the matching CRM roster. Verify the
+> confirmed-only printable export and the phone-specific reservation and roster
+> density contracts at 360px and 390px.
+
 **Branch**: `011-workshop-booking`  
 **Date**: 2026-07-29
 
@@ -77,6 +82,7 @@ supabase/migrations/20260821000000_workshop_concept_updates.sql
 supabase/migrations/20260821010000_workshop_refund_webhook_reconciliation.sql
 supabase/migrations/20260826000000_workshop_pre_tax_pricing.sql
 supabase/migrations/20260901000000_workshop_stripe_only_checkout.sql
+supabase/migrations/20260908000000_workshop_expired_booking_deletion.sql
 supabase/schemas/public/tables/workshop_*.sql
 supabase/schemas/public/functions/workshop_*.sql
 supabase/schemas/public/functions/update_workshop_concept.sql
@@ -113,7 +119,8 @@ Migration order:
    variants serialize on the payment attempt before provider evidence takes a
    foreign-key lock, and simultaneous retries use conflict-safe event inserts.
 4. Operations/lifecycle: communications, audit, roster, occurrence lifecycle,
-   cancellation, rescheduling, and scheduled processors.
+   cancellation, rescheduling, scheduled processors, and finally the additive
+   guarded expired-booking deletion command.
 5. Privacy/analytics: outcome grants, personal-data requests, retention policy,
    privacy commands, and analytics digest commands.
 
@@ -363,6 +370,17 @@ At desktop and mobile widths:
   and visually separated, the reserve panel accommodates long workshop titles,
   name and contact controls form two paired rows, summary facts scan cleanly,
   and invalid terms acceptance uses the inquiry-style tooltip.
+- At 360px and 390px, confirm Reservation hides Booking limit, reduces the
+  panel-to-back-link gap, and uses the compact checkout action. At 1366px and
+  wider, confirm all non-heading reservation text is 50 percent larger while
+  headings retain their established size.
+- At 360px and 390px, confirm roster metrics form exactly two rows of three in
+  the specified order, toolbar controls are compact, and the denser customer
+  table remains horizontally reachable without page-level overflow.
+- From a mixed-status roster, confirm the printable export includes only
+  `confirmed` rows. Permanently delete an abandoned `expired` row, confirm the
+  Bookings count drops after reload, and confirm non-expired or history-protected
+  rows fail without partial deletion.
 
 Timed usability acceptance:
 

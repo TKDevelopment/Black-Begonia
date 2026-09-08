@@ -444,6 +444,10 @@ and brownfield regression gates across the completed feature.
 - [X] T199 [US3] Keep every featured-workshop hero inside an immutable 16:9 frame, prevent slide content from resizing the featured section, center carousel controls inside featured-copy, and cover the desktop/stacked layout invariants with focused Angular regression and a production build
 - [X] T200 [US3] Remove every internal featured-workshop scrollbar, reserve enough copy space for the longest carousel slide, lower the centered controls within featured-copy, and preserve the immutable 16:9 media and stable section footprint with focused Angular regression and a production build
 - [X] T201 [US3] Remove the excessive mobile gap between View workshop and the featured carousel controls, enlarge supporting text within mobile upcoming-date cards, right-align their image date badges, and preserve no-scroll, stable-height, centered-control, and 16:9 carousel invariants with focused responsive coverage and a production build
+- [X] T202 [US4] [US5] Hide Booking limit and compact the reservation panel/checkout action on phones, enlarge non-heading reservation text by 50 percent on larger screens, add guarded permanent deletion of expired roster bookings through additive migration `20260908000000_workshop_expired_booking_deletion.sql`, restrict printable exports to confirmed bookings, and compact phone roster metrics into an ordered 3-by-2 grid with denser toolbar/table presentation, covered by focused Angular/repository tests, authored PostgreSQL coverage, and production-build validation
+- [ ] T203 [US5] Execute the updated `supabase/tests/workshop_operations_lifecycle.sql` suite once the local Supabase Docker engine or an authorized PostgreSQL test connection is available
+- [X] T204 [US5] Keep roster metrics in the specified ordered 3-by-2 layout throughout the full mobile responsive range through 900px, correct the higher-specificity shared container-query rules that reverted phone metrics and toolbar controls to one column, and cover the effective CSS cascade with focused responsive regression
+- [X] T205 [US5] Remove the Keep Booking footer action from the expired-booking deletion dialog, retain close/backdrop dismissal, and add top spacing to the sole Permanently Delete action with focused modal regression coverage
 
 ---
 
@@ -630,3 +634,12 @@ foundation without accepting customer money.
 - Keep public, tokenized customer, payment, and CRM routes logically separated.
 - Preserve historical PayPal facts while removing only active PayPal runtime.
 - Do not commit or push through an AI workflow.
+
+## Refinement Validation (2026-09-08)
+
+- Focused reservation, roster, and operations-repository Angular tests: 45/45 passed.
+- Production build: passed; the roster component style bundle remains within its strict 9 kB budget at 8.96 kB.
+- Mobile-breakpoint and effective-cascade roster regression: 33/33 focused tests passed after extending the ordered 3-by-2 grid through 900px and removing the conflicting shared phone overrides.
+- Expired-booking deletion dialog refinement: 26/26 focused roster tests passed, including the single-action and 16px top-margin contract.
+- Full Angular suite: 841/843 passed. The two failures reproduce in isolation in untouched workshop detail and booking-status tests and are unrelated to this refinement.
+- PostgreSQL coverage was added to `supabase/tests/workshop_operations_lifecycle.sql`. Runtime execution remains pending because the local Supabase Docker engine is unavailable and the separate native PostgreSQL instance requires credentials not present in the workspace.

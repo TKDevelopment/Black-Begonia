@@ -262,7 +262,7 @@ export interface WorkshopRosterRow {
 export interface WorkshopRosterCommandResult {
   replayed: boolean;
   bookingId: string;
-  status?: WorkshopBookingStatus;
+  status?: WorkshopBookingStatus | 'deleted';
   activeQuantity?: number;
   attendeeId?: string;
   attendanceState?: WorkshopAttendanceState;
