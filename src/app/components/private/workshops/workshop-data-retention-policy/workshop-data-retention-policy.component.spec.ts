@@ -101,6 +101,12 @@ describe('WorkshopDataRetentionPolicyComponent', () => {
     fixture.detectChanges();
   });
 
+  it('renders one full-width CRM page shell', () => {
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+  });
+
   it('shows the safe no-active-policy state and only enables verified processing', () => {
     expect(component.activePolicy()).toBeNull();
     expect(component.canProcess(request)).toBeTrue();

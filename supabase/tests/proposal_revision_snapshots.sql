@@ -89,6 +89,7 @@ declare
   v_new_snapshot public.project_proposal_invoice_snapshots%rowtype;
   v_new_document public.project_proposal_document_versions%rowtype;
   v_count integer;
+  v_baseline_hash text;
 begin
   select enumlabel::public.service_type into v_service_type
   from pg_enum where enumtypid = 'public.service_type'::regtype order by enumsortorder limit 1;
@@ -105,6 +106,9 @@ begin
     '{"schema_version":2,"line_items":[{"item_name":"Baseline arrangement"}],"tax_region":{"tax_rate":0.06},"totals":{"subtotal":100,"taxAmount":6,"totalAmount":106}}',
     100, .06, 6, 106, 31.8, 74.2, true
   );
+  select md5(snapshot::text) into v_baseline_hash
+  from public.project_proposal_invoice_snapshots
+  where project_proposal_invoice_snapshot_id = v_snapshot_id;
   update public.projects set active_proposal_invoice_snapshot_id = v_snapshot_id where project_id = v_project_id;
 
   insert into public.project_proposal_revision_workspaces(
@@ -113,8 +117,8 @@ begin
     retainer_amount, final_balance_amount, pending_submission_key,
     pending_pdf_storage_path, pending_pdf_file_name
   ) values (
-    v_workspace_id, v_project_id, v_snapshot_id, 2,
-    '{"schema_version":2,"proposal_status":"draft","line_items":[{"item_name":"Revised arrangement"}],"tax_region":{"tax_rate":0.06},"totals":{"subtotal":150,"taxAmount":9,"totalAmount":159}}',
+    v_workspace_id, v_project_id, v_snapshot_id, 3,
+    '{"schema_version":3,"proposal_status":"draft","line_items":[{"line_item_type":"product","item_name":"Following arrangement","quantity":1,"calculated_unit_price":100,"actual_unit_price_override":null,"unit_price":100,"subtotal":100},{"line_item_type":"product","item_name":"Complimentary arrangement","quantity":1,"calculated_unit_price":75,"actual_unit_price_override":0,"unit_price":0,"subtotal":0},{"line_item_type":"product","item_name":"Overridden arrangement","quantity":2,"calculated_unit_price":20,"actual_unit_price_override":25,"unit_price":25,"subtotal":50},{"line_item_type":"labor","item_name":"Installation labor","quantity":1,"unit_price":0,"subtotal":0}],"tax_region":{"tax_rate":0.06},"totals":{"subtotal":150,"taxAmount":9,"totalAmount":159},"breakdown":{"productsTotal":150,"laborTotal":0,"manualLaborTotal":0,"feesTotal":0,"discountsTotal":0,"subtotal":150,"taxAmount":9,"totalAmount":159}}',
     150, .06, 9, 159, 47.7, 111.3, v_key,
     'projects/test/revision.pdf', 'revision.pdf'
   );
@@ -130,6 +134,40 @@ begin
     raise exception 'Direct lifecycle update unexpectedly succeeded.';
   exception when sqlstate '42501' then null;
   end;
+
+  update public.project_proposal_revision_workspaces
+  set draft_snapshot = jsonb_set(draft_snapshot, '{line_items,2,unit_price}', '20'::jsonb)
+  where project_proposal_revision_workspace_id = v_workspace_id;
+  begin
+    perform public.finalize_project_proposal_revision(
+      v_project_id, v_workspace_id, v_snapshot_id, v_key, 'floral-proposals',
+      'projects/test/revision.pdf', 'revision.pdf', 'application/pdf', 128,
+      null, clock_timestamp()
+    );
+    raise exception 'Inconsistent effective pricing unexpectedly finalized.';
+  exception when sqlstate '22023' then null;
+  end;
+
+  update public.project_proposal_revision_workspaces
+  set draft_snapshot = jsonb_set(
+    jsonb_set(draft_snapshot, '{line_items,2,unit_price}', '25'::jsonb),
+    '{labor_percent}',
+    '15'::jsonb
+  )
+  where project_proposal_revision_workspace_id = v_workspace_id;
+  begin
+    perform public.finalize_project_proposal_revision(
+      v_project_id, v_workspace_id, v_snapshot_id, v_key, 'floral-proposals',
+      'projects/test/revision.pdf', 'revision.pdf', 'application/pdf', 128,
+      null, clock_timestamp()
+    );
+    raise exception 'Percentage-bearing V3 snapshot unexpectedly finalized.';
+  exception when sqlstate '22023' then null;
+  end;
+
+  update public.project_proposal_revision_workspaces
+  set draft_snapshot = draft_snapshot - 'labor_percent'
+  where project_proposal_revision_workspace_id = v_workspace_id;
 
   v_result := public.finalize_project_proposal_revision(
     v_project_id, v_workspace_id, v_snapshot_id, v_key, 'floral-proposals',
@@ -155,6 +193,18 @@ begin
      or v_new_snapshot.submission_idempotency_key <> v_key
      or v_new_document.submission_idempotency_key <> v_key then
     raise exception 'Finalization did not install one linked active pair.';
+  end if;
+
+  if v_new_snapshot.snapshot->>'schema_version' <> '3'
+     or v_new_snapshot.snapshot->'line_items'->1->>'actual_unit_price_override' <> '0'
+     or v_new_snapshot.snapshot->'line_items'->2->>'unit_price' <> '25'
+     or v_new_snapshot.snapshot ? 'labor_percent' then
+    raise exception 'Finalized V3 snapshot did not preserve effective pricing safely.';
+  end if;
+
+  if (select md5(snapshot::text) from public.project_proposal_invoice_snapshots
+      where project_proposal_invoice_snapshot_id = v_snapshot_id) is distinct from v_baseline_hash then
+    raise exception 'Legacy immutable baseline content changed during finalization.';
   end if;
 
   select count(*) into v_count from public.project_proposal_revision_workspaces where project_id = v_project_id;

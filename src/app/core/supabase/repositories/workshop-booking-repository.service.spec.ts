@@ -84,7 +84,7 @@ describe('WorkshopBookingRepositoryService', () => {
 
   it('rejects a hold response that advertises a non-Stripe checkout method', async () => {
     invoke.and.resolveTo({
-      data: { ...heldFixture(), methods: ['direct_venmo'] },
+      data: { ...heldFixture(), methods: ['cash'] },
       error: null,
     });
 

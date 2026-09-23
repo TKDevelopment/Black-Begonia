@@ -30,6 +30,16 @@ begin
     raise exception 'provider_reference_mismatch';
   end if;
   if v_request.state = 'reconciled' then
+    perform public.queue_workshop_communication(
+      'refund_confirmation','booking_contact','v1',
+      v_request.workshop_booking_id,null,null,null,true,null,
+      v_request.workshop_refund_request_id
+    );
+    update public.workshop_message_queue
+    set message_context=jsonb_build_object(
+      'amountMinor',v_request.amount_minor,'currency',v_request.currency
+    )
+    where command_key=v_request.workshop_refund_request_id;
     return jsonb_build_object(
       'replayed', true, 'requestId', p_refund_request_id,
       'state', v_request.state
@@ -72,6 +82,17 @@ begin
     else 'partially_refunded'
   end
   where workshop_booking_id = v_charge.workshop_booking_id;
+
+  perform public.queue_workshop_communication(
+    'refund_confirmation','booking_contact','v1',
+    v_request.workshop_booking_id,null,null,null,true,null,
+    v_request.workshop_refund_request_id
+  );
+  update public.workshop_message_queue
+  set message_context=jsonb_build_object(
+    'amountMinor',v_request.amount_minor,'currency',v_request.currency
+  )
+  where command_key=v_request.workshop_refund_request_id;
 
   return jsonb_build_object(
     'replayed', false, 'requestId', p_refund_request_id,

@@ -20,4 +20,14 @@ describe('CrmPageHeaderComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('keeps header content fluid while retaining the intentional subtitle measure', () => {
+    component.subtitle = 'Readable supporting copy';
+    fixture.detectChanges();
+    const root = fixture.nativeElement.querySelector('.crm-page-header-root') as HTMLElement;
+    const subtitle = fixture.nativeElement.querySelector('.crm-page-header-subtitle') as HTMLElement;
+
+    expect(root.classList).toContain('lg:flex-row');
+    expect(subtitle.classList).toContain('max-w-3xl');
+  });
 });

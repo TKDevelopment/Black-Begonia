@@ -92,6 +92,12 @@ export class WorkshopsComponent implements OnInit {
     ]);
   }
 
+  openDetails(occurrence: WorkshopOccurrence): void {
+    void this.router.navigate([
+      '/admin/workshops', occurrence.workshop_occurrence_id,
+    ]);
+  }
+
   editWorkshop(occurrence: WorkshopOccurrence): void {
     void this.router.navigate(['/admin/workshops', occurrence.workshop_occurrence_id, 'edit']);
   }

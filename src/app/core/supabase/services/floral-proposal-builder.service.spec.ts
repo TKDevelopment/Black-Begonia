@@ -94,7 +94,7 @@ describe('FloralProposalBuilderService', () => {
     expect(result.quantity_per_unit).toBe(2);
     expect(result.extended_quantity).toBe(6);
     expect(result.subtotal).toBe(7.5);
-    expect(result.reserve_percent).toBe(12);
+    expect(result.reserve_units).toBe(12);
     expect(result.snapshot).toEqual(jasmine.objectContaining({
       color: 'Blush',
       variety: 'Juliet',
@@ -144,7 +144,7 @@ describe('FloralProposalBuilderService', () => {
     expect(discount.subtotal).toBe(-15);
   });
 
-  it('calculates totals with product labor, manual labor, fees, discounts, and tax', () => {
+  it('calculates totals with manual labor, fees, discounts, and tax without percentage labor', () => {
     const lines: FloralProposalBuilderLine[] = [
       { ...service.createEmptyLine(0), line_item_type: 'product', subtotal: 100 },
       { ...service.createFeeLine(1, 'Setup Labor', 1, 20), line_item_type: 'labor' },
@@ -152,11 +152,11 @@ describe('FloralProposalBuilderService', () => {
       service.createDiscountLine(3, 'Courtesy Credit', 1, 5),
     ];
 
-    const totals = service.calculateTotals(lines, taxRegion, 15);
+    const totals = service.calculateTotals(lines, taxRegion);
 
-    expect(totals.subtotal).toBe(140);
-    expect(totals.taxAmount).toBe(11.2);
-    expect(totals.totalAmount).toBe(151.2);
+    expect(totals.subtotal).toBe(125);
+    expect(totals.taxAmount).toBe(10);
+    expect(totals.totalAmount).toBe(135);
   });
 
   it('builds render payloads with normalized lines, filtered blanks, totals, and breakdowns', () => {
@@ -194,7 +194,6 @@ describe('FloralProposalBuilderService', () => {
       lines: [blankLine, product, fee],
       taxRegion,
       defaultMarkupPercent: 30,
-      laborPercent: 10,
       shoppingList: [],
     });
 
@@ -227,15 +226,15 @@ describe('FloralProposalBuilderService', () => {
       })
     );
     expect(payload.totals).toEqual({
-      subtotal: 98.92,
-      taxAmount: 7.91,
-      totalAmount: 106.83,
+      subtotal: 92.2,
+      taxAmount: 7.38,
+      totalAmount: 99.58,
     });
     expect(payload.breakdown).toEqual(
       jasmine.objectContaining({
         productsTotal: 67.2,
-        calculatedLaborAmount: 6.72,
-        laborTotal: 6.72,
+        laborTotal: 0,
+        manualLaborTotal: 0,
         feesTotal: 25,
         discountsTotal: 0,
       })
@@ -259,7 +258,7 @@ describe('FloralProposalBuilderService', () => {
           base_unit_cost: 4,
           purchase_unit_cost: 4,
           applied_markup_percent: 50,
-          reserve_percent: 10,
+          reserve_units: 10,
           item_type: 'flower',
           unit_type: 'stem',
           color: 'Blush',
@@ -306,6 +305,8 @@ describe('FloralProposalBuilderService', () => {
       source: 'builder',
       expanded: true,
       description: 'Bridal bouquet and boutonniere',
+      calculated_unit_price: 72,
+      actual_unit_price_override: null,
     });
     expect(componentMap['saved-line-001'].length).toBe(1);
     expect(componentMap['saved-line-001'][0]).toEqual(
@@ -352,7 +353,6 @@ describe('FloralProposalBuilderService', () => {
       ],
       taxRegion,
       defaultMarkupPercent: 30,
-      laborPercent: 15,
       shoppingList: [],
     });
 
@@ -432,12 +432,12 @@ describe('FloralProposalBuilderService', () => {
           ...service.createEmptyComponentRow(0, 20),
           catalog_item_id: 'catalog-rose-001',
           catalog_item_name: 'Garden Rose',
-          quantity_per_unit: 6,
-          extended_quantity: 12,
+          quantity_per_unit: 30,
+          extended_quantity: 60,
           base_unit_cost: 3,
           purchase_unit_cost: 30,
           applied_markup_percent: 20,
-          reserve_percent: 10,
+          reserve_units: 20,
           pack_quantity: 10,
           item_type: 'flower',
           unit_type: 'bunch',
@@ -452,12 +452,12 @@ describe('FloralProposalBuilderService', () => {
           ...service.createEmptyComponentRow(0, 20),
           catalog_item_id: 'catalog-rose-001',
           catalog_item_name: 'Garden Rose',
-          quantity_per_unit: 5,
-          extended_quantity: 5,
+          quantity_per_unit: 40,
+          extended_quantity: 40,
           base_unit_cost: 3,
           purchase_unit_cost: 30,
           applied_markup_percent: 20,
-          reserve_percent: 10,
+          reserve_units: 0,
           pack_quantity: 10,
           item_type: 'flower',
           unit_type: 'bunch',
@@ -472,16 +472,17 @@ describe('FloralProposalBuilderService', () => {
       jasmine.objectContaining({
         catalog_item_id: 'catalog-rose-001',
         item_name: 'Garden Rose',
-        required_units: 17,
-        reserve_percent: 10,
-        total_plus_reserve: 20,
-        reserve_units: 3,
-        total_units_to_buy: 20,
+        required_units: 100,
+        reserve_percent: 0,
+        requested_reserve_units: 20,
+        total_plus_reserve: 120,
+        reserve_units: 20,
+        total_units_to_buy: 120,
         units_per_pack: 10,
-        required_pack_count: 2,
+        required_pack_count: 12,
         pricing_unit_cost: 3,
         estimated_pack_cost: 30,
-        total_estimated_cost: 60,
+        total_estimated_cost: 360,
         notes: 'Buy in packs of 10.',
       })
     );
@@ -519,8 +520,10 @@ describe('FloralProposalBuilderService', () => {
       applied_markup_percent: 50,
       sell_unit_price: 12,
       subtotal: 36,
-      reserve_percent: 15,
+      reserve_percent: 0,
+      reserve_units: 1,
       snapshot: {
+        reserve_units: 1,
         pack_quantity: 5,
         purchase_unit_cost: 40,
         effective_pack_cost: 40,
@@ -652,7 +655,7 @@ describe('FloralProposalBuilderService', () => {
   it('adapts legacy snapshots losslessly without repricing retired catalog values', () => {
     const result = service.adaptProjectSnapshot({
       tax_region_id: 'inactive-tax', tax_region_name: 'Recorded County', tax_rate: .07,
-      default_markup_percent: 275, labor_percent: 12,
+      default_markup_percent: 275, labor_percent: 0,
       line_items: [{
         display_order: 0, line_item_type: 'product', item_name: 'Retired Rose Arrangement',
         quantity: 2, unit_price: 155, subtotal: 310,
@@ -667,7 +670,8 @@ describe('FloralProposalBuilderService', () => {
     expect(result.draft?.tax_region).toEqual(jasmine.objectContaining({ tax_region_id: 'inactive-tax', tax_rate: .07 }));
     expect(result.draft?.line_items[0]).toEqual(jasmine.objectContaining({ unit_price: 155, subtotal: 310 }));
     expect(result.draft?.line_items[0].components[0]).toEqual(jasmine.objectContaining({
-      catalog_item_id: 'retired-rose', base_unit_cost: 3.25, sell_unit_price: 12.19, subtotal: 243.8,
+      catalog_item_id: 'retired-rose', base_unit_cost: 3.25, sell_unit_price: 12.19,
+      subtotal: 243.8, reserve_units: 2,
     }));
   });
 
@@ -677,19 +681,207 @@ describe('FloralProposalBuilderService', () => {
     expect(service.adaptProjectSnapshot({ line_items: [{ item_name: '' }] }, financials).valid).toBeFalse();
   });
 
-  it('round-trips all supported v2 editable values', () => {
+  it('upgrades supported v2 editable values to v3 without active percentage labor', () => {
     const adapted = service.adaptProjectSnapshot({
       schema_version: 2,
       tax_region: { tax_region_id: 'tax-1', name: 'County', tax_rate: .06, was_active: false },
-      default_markup_percent: 300, labor_percent: 15,
+      default_markup_percent: 300, labor_percent: 0,
       line_items: [{ local_id: 'line-1', display_order: 0, line_item_type: 'fee', item_name: 'Delivery', description: 'Recorded', quantity: 1, unit_price: 50, subtotal: 50, components: [] }],
       shopping_list: [], breakdown: { feesTotal: 50 },
     }, { subtotal: 50, taxRate: .06, taxAmount: 3, totalAmount: 53, retainerAmount: 15.9, finalBalanceAmount: 53 });
     expect(adapted.valid).toBeTrue();
-    expect(adapted.warning).toBeNull();
-    expect(adapted.draft).toEqual(jasmine.objectContaining({ schema_version: 2, default_markup_percent: 300, labor_percent: 15 }));
+    expect(adapted.warning).toContain('older snapshot format');
+    expect(adapted.draft).toEqual(jasmine.objectContaining({ schema_version: 3, default_markup_percent: 300 }));
+    expect(adapted.draft as unknown as Record<string, unknown>).not.toEqual(
+      jasmine.objectContaining({ labor_percent: jasmine.anything() })
+    );
     expect(adapted.draft?.tax_region.was_active).toBeFalse();
     expect(adapted.draft?.line_items[0].description).toBe('Recorded');
+  });
+
+  it('follows calculated product pricing, preserves explicit zero/equal overrides, and clears to reset', () => {
+    const calculated = service.recalculateLine({
+      ...service.createEmptyLine(0),
+      item_name: 'Intentional Arrangement',
+      quantity: 3,
+      components: [{
+        ...service.createEmptyComponentRow(0, 100),
+        catalog_item_name: 'Stem',
+        quantity_per_unit: 1,
+        base_unit_cost: 50,
+        purchase_unit_cost: 50,
+      }],
+    });
+
+    expect(calculated.calculated_unit_price).toBe(100);
+    expect(calculated.actual_unit_price_override).toBeNull();
+    expect(calculated.unit_price).toBe(100);
+    expect(calculated.subtotal).toBe(300);
+
+    const overridden = service.applyActualUnitPriceInput(calculated, '125');
+    expect(overridden.actual_unit_price_override).toBe(125);
+    expect(overridden.actual_unit_price_input).toBe('125');
+    expect(overridden.unit_price).toBe(125);
+    expect(overridden.subtotal).toBe(375);
+
+    const equalOverride = service.applyActualUnitPriceInput(calculated, '100');
+    expect(equalOverride.actual_unit_price_override).toBe(100);
+
+    const zeroOverride = service.applyActualUnitPriceInput(calculated, '0');
+    expect(zeroOverride.actual_unit_price_override).toBe(0);
+    expect(zeroOverride.actual_unit_price_input).toBe('0');
+    expect(zeroOverride.unit_price).toBe(0);
+    expect(zeroOverride.subtotal).toBe(0);
+
+    const reset = service.applyActualUnitPriceInput(overridden, '');
+    expect(reset.actual_unit_price_override).toBeNull();
+    expect(reset.unit_price).toBe(100);
+    expect(reset.subtotal).toBe(300);
+  });
+
+  it('preserves valid in-progress currency text without injecting decimals between keystrokes', () => {
+    const line = service.recalculateLine(service.createEmptyLine(0));
+
+    const firstDigit = service.applyActualUnitPriceInput(line, '2');
+    const secondDigit = service.applyActualUnitPriceInput(firstDigit, '20');
+    const decimalInProgress = service.applyActualUnitPriceInput(secondDigit, '20.');
+
+    expect(firstDigit.actual_unit_price_input).toBe('2');
+    expect(secondDigit.actual_unit_price_input).toBe('20');
+    expect(decimalInProgress.actual_unit_price_input).toBe('20.');
+    expect(decimalInProgress.unit_price).toBe(20);
+  });
+
+  it('preserves raw invalid actual price input without changing effective price', () => {
+    const line = service.recalculateLine({
+      ...service.createEmptyLine(0),
+      quantity: 2,
+      components: [{
+        ...service.createEmptyComponentRow(0, 0),
+        catalog_item_name: 'Stem',
+        quantity_per_unit: 1,
+        base_unit_cost: 10,
+        purchase_unit_cost: 10,
+      }],
+    });
+
+    for (const invalid of ['-1', 'abc', 'Infinity', '12.345']) {
+      const result = service.applyActualUnitPriceInput(line, invalid);
+      expect(result.actual_unit_price_input).toBe(invalid);
+      expect(result.actual_unit_price_error).toBeTruthy();
+      expect(result.unit_price).toBe(10);
+      expect(result.subtotal).toBe(20);
+    }
+  });
+
+  it('keeps override edits isolated from composition and shopping-list facts at representative scale', () => {
+    const lines = Array.from({ length: 100 }, (_, lineIndex) =>
+      service.recalculateLine({
+        ...service.createEmptyLine(lineIndex),
+        item_name: `Arrangement ${lineIndex + 1}`,
+        components: Array.from({ length: 10 }, (_, componentIndex) => ({
+          ...service.createEmptyComponentRow(componentIndex, 100),
+          catalog_item_id: `item-${componentIndex}`,
+          catalog_item_name: `Stem ${componentIndex + 1}`,
+          quantity_per_unit: 1,
+          base_unit_cost: 1,
+          purchase_unit_cost: 1,
+          unit_type: 'stem' as const,
+        })),
+      })
+    );
+    const compositionBefore = structuredClone(lines[0].components);
+    const shoppingBefore = service.buildShoppingList(lines);
+    const samples = Array.from({ length: 20 }, (_, index) => {
+      const started = performance.now();
+      service.applyActualUnitPriceInput(lines[index], String(75 + index));
+      return performance.now() - started;
+    });
+
+    expect(lines[0].components).toEqual(compositionBefore);
+    expect(service.buildShoppingList(lines)).toEqual(shoppingBefore);
+    expect(samples.filter((elapsed) => elapsed < 200).length).toBeGreaterThanOrEqual(19);
+  });
+
+  it('converts nonzero legacy percentage labor exactly once and removes active percentage fields', () => {
+    const legacy = {
+      schema_version: 2,
+      labor_percent: 20,
+      line_items: [{
+        local_id: 'product-1', display_order: 0, line_item_type: 'product',
+        item_name: 'Arrangement', quantity: 1, unit_price: 100, subtotal: 100,
+        components: [],
+      }],
+      breakdown: { productsTotal: 100, calculatedLaborAmount: 20, subtotal: 120 },
+    };
+    const financials = {
+      subtotal: 120, taxRate: 0, taxAmount: 0, totalAmount: 120,
+      retainerAmount: 36, finalBalanceAmount: 120,
+    };
+
+    const immutableSource = structuredClone(legacy);
+    const first = service.adaptProjectSnapshot(legacy, financials);
+    expect(first.valid).toBeTrue();
+    expect(first.draft?.schema_version).toBe(3);
+    expect(first.draft?.line_items.filter((line) => line.line_item_type === 'labor').length).toBe(1);
+    expect(first.draft?.legacy_labor_conversion).toEqual(jasmine.objectContaining({
+      conversion_key: 'labor-percent-v1', converted_amount: 20, status: 'converted',
+    }));
+    expect(first.draft as unknown as Record<string, unknown>).not.toEqual(
+      jasmine.objectContaining({ labor_percent: jasmine.anything() })
+    );
+    expect(legacy).toEqual(immutableSource);
+
+    const second = service.adaptProjectSnapshot(first.draft as Record<string, unknown>, financials);
+    expect(second.valid).toBeTrue();
+    expect(second.draft?.line_items.filter((line) => line.line_item_type === 'labor').length).toBe(1);
+    expect(second.draft?.breakdown.laborTotal).toBe(20);
+  });
+
+  it('repairs marker-only and line-only partial legacy conversion state', () => {
+    const product = {
+      local_id: 'product-1', display_order: 0, line_item_type: 'product',
+      item_name: 'Arrangement', quantity: 1, calculated_unit_price: 100,
+      actual_unit_price_override: null, unit_price: 100, subtotal: 100, components: [],
+    };
+    const conversionLine = {
+      local_id: 'labor-1', display_order: 1, line_item_type: 'labor',
+      item_name: 'Labor (converted from legacy percentage)', quantity: 1,
+      unit_price: 20, subtotal: 20, components: [],
+      snapshot: { conversion_key: 'labor-percent-v1', origin: 'legacy_labor_percentage_conversion', source_labor_percent: 20, converted_amount: 20 },
+    };
+    const financials = { subtotal: 120, taxRate: 0, taxAmount: 0, totalAmount: 120, retainerAmount: 36, finalBalanceAmount: 120 };
+
+    const markerOnly = service.adaptProjectSnapshot({
+      schema_version: 3,
+      line_items: [product],
+      legacy_labor_conversion: { conversion_key: 'labor-percent-v1', source_labor_percent: 20, converted_amount: 20, status: 'converted' },
+    }, financials);
+    expect(markerOnly.valid).toBeTrue();
+    expect(markerOnly.draft?.line_items.length).toBe(2);
+
+    const lineOnly = service.adaptProjectSnapshot({
+      schema_version: 3,
+      line_items: [product, conversionLine],
+    }, financials);
+    expect(lineOnly.valid).toBeTrue();
+    expect(lineOnly.draft?.legacy_labor_conversion?.converted_amount).toBe(20);
+  });
+
+  it('blocks duplicate or mismatched legacy labor conversion records', () => {
+    const conversionLine = {
+      local_id: 'labor-1', display_order: 0, line_item_type: 'labor',
+      item_name: 'Converted labor', quantity: 1, unit_price: 20, subtotal: 20,
+      components: [], snapshot: { conversion_key: 'labor-percent-v1' },
+    };
+    const result = service.adaptProjectSnapshot({
+      schema_version: 3,
+      line_items: [conversionLine],
+      legacy_labor_conversion: { conversion_key: 'labor-percent-v1', source_labor_percent: 20, converted_amount: 30, status: 'converted' },
+    }, { subtotal: 20, taxRate: 0, taxAmount: 0, totalAmount: 20, retainerAmount: 6, finalBalanceAmount: 20 });
+
+    expect(result.valid).toBeFalse();
+    expect(result.repairMessage).toContain('reconcile');
   });
 
   it('recalculates a representative 100-line proposal within the 200 ms edit budget', () => {
@@ -699,7 +891,7 @@ describe('FloralProposalBuilderService', () => {
     }));
     const samples = Array.from({ length: 20 }, () => {
       const started = performance.now();
-      service.calculateTotals(lines, { tax_region_id: 'tax', name: 'Tax', tax_rate: .06, applies_to_products: true, applies_to_services: true, applies_to_delivery: true, is_active: true, created_at: '', updated_at: '' }, 10);
+      service.calculateTotals(lines, { tax_region_id: 'tax', name: 'Tax', tax_rate: .06, applies_to_products: true, applies_to_services: true, applies_to_delivery: true, is_active: true, created_at: '', updated_at: '' });
       return performance.now() - started;
     });
     expect(samples.filter((elapsed) => elapsed < 200).length).toBeGreaterThanOrEqual(19);

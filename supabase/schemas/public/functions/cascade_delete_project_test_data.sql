@@ -16,6 +16,8 @@ declare
   v_deleted_lead boolean := false;
   v_deleted_contacts integer := 0;
   v_deleted_organizations integer := 0;
+  v_deleted_payment_transactions integer := 0;
+  v_deleted_payment_records integer := 0;
 begin
   if not public.is_internal_crm_user() then
     raise exception 'Not authorized to delete projects.' using errcode = '42501';
@@ -33,31 +35,6 @@ begin
 
   if btrim(coalesce(p_confirmation, '')) <> v_project.project_name then
     raise exception 'Type the exact project name to confirm deletion.' using errcode = '22023';
-  end if;
-
-  if exists (
-    select 1 from public.payment_transactions where project_id = p_project_id
-  ) then
-    raise exception 'This project has payment ledger history and must be retained.' using errcode = '55000';
-  end if;
-
-  if exists (
-    select 1 from public.payment_legal_holds where project_id = p_project_id
-  ) then
-    raise exception 'This project has payment legal or dispute hold history and must be retained.' using errcode = '55000';
-  end if;
-
-  if exists (
-    select 1
-    from public.payment_provider_events provider_event
-    left join public.payment_checkout_attempts checkout_attempt
-      on checkout_attempt.payment_checkout_attempt_id = provider_event.payment_checkout_attempt_id
-    left join public.payment_transactions payment_transaction
-      on payment_transaction.payment_transaction_id = provider_event.payment_transaction_id
-    where checkout_attempt.project_id = p_project_id
-       or payment_transaction.project_id = p_project_id
-  ) then
-    raise exception 'This project has provider payment audit history and must be retained.' using errcode = '55000';
   end if;
 
   v_source_lead_id := v_project.source_lead_id;
@@ -93,7 +70,53 @@ begin
       and workspace.pending_pdf_storage_path is not null
   ) storage_paths;
 
-  -- Clear restrictive cross-links before deleting the project-owned rows.
+  -- This flag is transaction-local and permits only this guarded command to
+  -- remove immutable proposal and payment test data.
+  perform set_config('app.project_cascade_delete', 'on', true);
+
+  -- Clear payment references from the leaves inward so restrictive financial
+  -- foreign keys cannot leave a partial project scrub.
+  delete from public.payment_exceptions where project_id = p_project_id;
+
+  delete from public.payment_message_delivery_events delivery_event
+  where delivery_event.payment_message_delivery_id in (
+    select payment_message_delivery_id
+    from public.payment_message_deliveries
+    where project_id = p_project_id
+  );
+
+  delete from public.payment_message_deliveries where project_id = p_project_id;
+
+  delete from public.payment_provider_events provider_event
+  where provider_event.payment_checkout_attempt_id in (
+      select payment_checkout_attempt_id
+      from public.payment_checkout_attempts
+      where project_id = p_project_id
+    )
+     or provider_event.payment_transaction_id in (
+      select payment_transaction_id
+      from public.payment_transactions
+      where project_id = p_project_id
+    );
+
+  delete from public.payment_transaction_relationships
+  where project_id = p_project_id;
+
+  delete from public.payment_transaction_allocations allocation
+  where allocation.payment_transaction_id in (
+      select payment_transaction_id
+      from public.payment_transactions
+      where project_id = p_project_id
+    )
+     or allocation.obligation_id in (
+      select project_payment_record_id
+      from public.project_payment_records
+      where project_id = p_project_id
+    );
+
+  delete from public.payment_transactions where project_id = p_project_id;
+  get diagnostics v_deleted_payment_transactions = row_count;
+
   delete from public.payment_request_obligations request_obligation
   where request_obligation.payment_request_id in (
       select payment_request_id from public.payment_requests where project_id = p_project_id
@@ -102,23 +125,16 @@ begin
       select project_payment_record_id from public.project_payment_records where project_id = p_project_id
     );
 
-  delete from public.payment_message_delivery_events delivery_event
-  where delivery_event.payment_message_delivery_id in (
-    select payment_message_delivery_id
-    from public.payment_message_deliveries
-    where project_id = p_project_id
-  );
-  delete from public.payment_exceptions where project_id = p_project_id;
   delete from public.payment_intentions where project_id = p_project_id;
-  delete from public.payment_message_deliveries where project_id = p_project_id;
   delete from public.payment_checkout_attempts where project_id = p_project_id;
   delete from public.payment_requests where project_id = p_project_id;
+  delete from public.payment_legal_holds where project_id = p_project_id;
   delete from public.project_payment_records where project_id = p_project_id;
+  get diagnostics v_deleted_payment_records = row_count;
 
   delete from public.activity_log
   where entity_type = 'project' and entity_id = p_project_id;
 
-  perform set_config('app.project_cascade_delete', 'on', true);
   update public.projects
   set active_proposal_document_version_id = null,
       active_proposal_invoice_snapshot_id = null
@@ -185,6 +201,8 @@ begin
     'deletedSourceLead', v_deleted_lead,
     'deletedContacts', v_deleted_contacts,
     'deletedOrganizations', v_deleted_organizations,
+    'deletedPaymentTransactions', v_deleted_payment_transactions,
+    'deletedPaymentRecords', v_deleted_payment_records,
     'storageObjects', v_storage_objects
   );
 end;

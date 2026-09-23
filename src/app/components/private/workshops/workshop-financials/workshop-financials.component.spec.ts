@@ -18,7 +18,7 @@ describe('WorkshopFinancialsComponent', () => {
       'WorkshopFinancialRepositoryService',
       [
         'uploadReceipt', 'recordExpense', 'getRefundEligibility',
-        'requestStripeRefund', 'recordExternalRefund', 'resolveException',
+        'requestStripeRefund', 'resolveException',
         'exportEntries',
       ],
     );
@@ -115,6 +115,13 @@ describe('WorkshopFinancialsComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('renders one full-width CRM shell and keeps financial tables contained', () => {
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+    expect(fixture.nativeElement.querySelector('.table-wrap')).not.toBeNull();
   });
 
   it('presents distinguishable financial totals and dispute flags', () => {

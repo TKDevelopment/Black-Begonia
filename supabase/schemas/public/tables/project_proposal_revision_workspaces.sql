@@ -3,7 +3,7 @@ create table public.project_proposal_revision_workspaces (
   project_id uuid not null unique references public.projects(project_id) on delete cascade,
   baseline_invoice_snapshot_id uuid not null references public.project_proposal_invoice_snapshots(project_proposal_invoice_snapshot_id) on delete restrict,
   source_lead_id uuid null references public.leads(lead_id) on delete set null,
-  schema_version integer not null default 2 check (schema_version > 0),
+  schema_version integer not null default 3 check (schema_version > 0),
   draft_snapshot jsonb not null,
   subtotal numeric(12, 2) not null default 0,
   tax_rate numeric(8, 4) not null default 0,

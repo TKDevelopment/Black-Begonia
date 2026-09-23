@@ -74,3 +74,9 @@ verify_jwt = false
 # the worker enforces this boundary before claiming any queued messages.
 entrypoint = "./edge_functions/process-workshop-messages/index.ts"
 verify_jwt = false
+
+[functions.process-workshop-cancellation-refunds]
+# Cron/service invocations authenticate inside the standalone worker before
+# claiming durable automatic cancellation-refund jobs.
+entrypoint = "./edge_functions/process-workshop-cancellation-refunds/index.ts"
+verify_jwt = false

@@ -1,6 +1,6 @@
 import { WorkshopCurrency } from './workshop';
 
-export type WorkshopPaymentMethod = 'stripe' | 'direct_venmo';
+export type WorkshopPaymentMethod = 'stripe';
 export type WorkshopSeatHoldState =
   | 'active'
   | 'confirmed'
@@ -172,7 +172,7 @@ export interface WorkshopOccurrenceCancellationResult {
   checkoutExpirationsQueued: number;
   affectedBookings: number;
   customerNoticesQueued: number;
-  refundReviews: number;
+  refundRequestsQueued: number;
   raceReviews: number;
   closedWaitlistEntries: number;
 }
@@ -288,7 +288,6 @@ export interface WorkshopReplacementEmailVerification {
 
 export type WorkshopCustomerStatus =
   | { state: 'processing'; supportReference: string }
-  | { state: 'pending_venmo'; supportReference: string; expiresAt: string }
   | {
       state: 'confirmed';
       publicWorkshopPath: string;
@@ -425,6 +424,24 @@ export interface WorkshopHeldBooking {
   currency: WorkshopCurrency;
   effectiveExpiresAt: string;
   methods: ['stripe'];
+}
+
+export interface WorkshopScheduleRescheduleResult {
+  replayed: boolean;
+  occurrenceId: string;
+  previousStartAt: string;
+  previousEndAt: string;
+  startAt: string;
+  endAt: string;
+  customerNoticesQueued: number;
+}
+
+export interface WorkshopCompletionResult {
+  replayed: boolean;
+  occurrenceId: string;
+  lifecycle: 'archived';
+  customerThankYousQueued: number;
+  recommendationCount: number;
 }
 
 export interface WorkshopPaymentHandoff {

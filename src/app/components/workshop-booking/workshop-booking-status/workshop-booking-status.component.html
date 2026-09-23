@@ -10,21 +10,6 @@
           <p>We are waiting for the payment provider’s verified result.</p>
           <p>Support reference: {{ $any(current).supportReference }}</p>
         </div>
-        <div *ngSwitchCase="'pending_venmo'" class="pending-venmo-status">
-          <h1>Waiting for Venmo confirmation</h1>
-          <p>The florist will confirm your booking after matching the direct payment.</p>
-          <aside class="pending-help">
-            <h2>Still waiting after 24 hours?</h2>
-            <p>
-              If you have not received a confirmation within 24 hours, please
-              email Becca or send her a text so she can check your payment.
-            </p>
-            <div class="pending-contact-links">
-              <a href="mailto:becca@blackbegoniaflorals.com">becca&#64;blackbegoniaflorals.com</a>
-              <a href="sms:+14018714996">Text (401) 871-4996</a>
-            </div>
-          </aside>
-        </div>
         <div *ngSwitchCase="'confirmed'" class="confirmed-status">
           <h1>You’re confirmed for {{ $any(current).workshopTitle }}!</h1>
           <p class="celebration-copy">

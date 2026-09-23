@@ -40,6 +40,13 @@ describe('WorkshopsComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('renders one full-width CRM page shell', () => {
+    fixture.detectChanges();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+  });
+
   it('loads occurrences and supports lifecycle filtering', async () => {
     await component.load();
     expect(component.loading()).toBeFalse();

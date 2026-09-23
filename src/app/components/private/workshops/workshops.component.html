@@ -1,5 +1,5 @@
 <main class="workshops-admin min-h-screen">
-  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+  <div class="crm-page-frame py-5 md:py-8" data-crm-page-shell>
     <app-crm-page-header
       title="Workshops"
       primaryActionLabel="Create Workshop"
@@ -61,13 +61,20 @@
                 </dl>
               </div>
               <div class="flex flex-wrap gap-1.5">
+                <button type="button" class="secondary-action" (click)="openDetails(occurrence)">Lifecycle</button>
                 <button type="button" class="secondary-action" (click)="openRoster(occurrence)">Roster</button>
                 <button type="button" class="secondary-action" (click)="editWorkshop(occurrence)">Edit</button>
-                <button *ngIf="occurrence.published_at" type="button" class="secondary-action" (click)="previewWorkshop(occurrence)">Public preview</button>
+                <button *ngIf="occurrence.published_at && occurrence.status !== 'archived'" type="button" class="secondary-action" (click)="previewWorkshop(occurrence)">Public preview</button>
                 <button *ngIf="occurrence.status === 'draft'" type="button" class="primary-action" [disabled]="busyId() === occurrence.workshop_occurrence_id" (click)="publish(occurrence)">Publish</button>
-                <button type="button" class="danger-action" [disabled]="busyId() === occurrence.workshop_occurrence_id" (click)="remove(occurrence)">
-                  {{ occurrence.status === 'draft' && !occurrence.published_at ? 'Delete draft' : 'Archive' }}
-                </button>
+                @if (occurrence.status === 'draft' && !occurrence.published_at) {
+                  <button type="button" class="danger-action" [disabled]="busyId() === occurrence.workshop_occurrence_id" (click)="remove(occurrence)">
+                    Delete draft
+                  </button>
+                } @else if (['completed', 'cancelled', 'rescheduled'].includes(occurrence.status)) {
+                  <button type="button" class="danger-action" [disabled]="busyId() === occurrence.workshop_occurrence_id" (click)="remove(occurrence)">
+                    Archive
+                  </button>
+                }
               </div>
             </div>
           </section>

@@ -34,7 +34,6 @@ describe('WorkshopReservationComponent', () => {
     publicRepository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
       slug: 'garden-workshop',
       stripeEnabled: true,
-      venmoEnabled: false,
       perBookingLimit: 4,
       termsVersion: 3,
       remainingSeats: 2,
@@ -108,7 +107,6 @@ describe('WorkshopReservationComponent', () => {
     expect(component.form.contains('paymentMethod')).toBeFalse();
     expect(fixture.nativeElement.querySelector('.payment-options')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Payment option');
-    expect(fixture.nativeElement.textContent).not.toContain('Venmo');
   });
 
   it('shows the bounded remaining-seat prompt on the reservation summary', () => {
@@ -255,10 +253,9 @@ describe('WorkshopReservationComponent', () => {
       .toHaveBeenCalledWith('summer-garden-centerpiece', '2026-08-15');
   });
 
-  it('does not accept reservations for a legacy Venmo-only occurrence', async () => {
+  it('does not accept reservations when Stripe checkout is unavailable', async () => {
     publicRepository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
       stripeEnabled: false,
-      venmoEnabled: true,
     }));
 
     await component.load('summer-garden-centerpiece', '2026-08-15');

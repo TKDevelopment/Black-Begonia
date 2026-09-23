@@ -146,7 +146,7 @@ select lives_ok(
 select lives_ok(
   $$select public.switch_workshop_payment_method(
     'ddddddddddddddddddddddddddddddddddddddddddd','stripe',
-    '31000000-0000-4000-8000-000000000011',null,15,24
+    '31000000-0000-4000-8000-000000000011',15
   )$$,
   'Stripe fixture attempt is active'
 );
@@ -295,7 +295,7 @@ select lives_ok(
 select lives_ok(
   $$select public.switch_workshop_payment_method(
     'ggggggggggggggggggggggggggggggggggggggggggg','stripe',
-    '31000000-0000-4000-8000-000000000021',null,15,24
+    '31000000-0000-4000-8000-000000000021',15
   )$$,
   'mismatch fixture attempt is active'
 );
@@ -873,83 +873,28 @@ select is(
   1,'failed Stripe refunds create one urgent CRM exception'
 );
 
-insert into public.workshop_payment_transactions(
-  workshop_booking_id,workshop_occurrence_id,transaction_type,provider,
-  provider_transaction_id,payment_reference,amount_minor,currency,occurred_at,
-  state,command_key,actor_type
-)
-select workshop_booking_id,workshop_occurrence_id,'charge','direct_venmo',
-  'venmo_external_charge','VENMO-EXTERNAL-CHARGE',3000,'USD',now(),'paid',
-  '32000000-0000-4000-8000-000000000040','internal'
-from public.workshop_bookings where contact_email='stripe@example.test';
 set local role authenticated;
-select lives_ok(
-  $$select public.manage_workshop_financials(
-    'record_external_refund',
-    jsonb_build_object(
-      'transactionId',(select workshop_payment_transaction_id
-        from public.workshop_payment_transactions
-        where provider_transaction_id='venmo_external_charge'),
-      'amountMinor',1000,'currency','USD','reference','VENMO-REFUND-EXT-1',
-      'reason','customer_requested','occurredAt',now()
-    ),
-    '32000000-0000-4000-8000-000000000041'
-  )$$,'externally completed Venmo refund appends a separate fact'
-);
 select lives_ok(
   $$select public.manage_workshop_financials(
     'record_correction',
     jsonb_build_object(
       'transactionId',(select workshop_payment_transaction_id
         from public.workshop_payment_transactions
-        where provider_transaction_id='venmo_external_charge'),
+        where provider_transaction_id='pi_workshop_success'),
       'amountMinor',-200,'currency','USD','reference','CORRECTION-EXT-1',
       'reason','reconciliation','occurredAt',now()
     ),
     '32000000-0000-4000-8000-000000000042'
   )$$,'manual correction appends rather than rewriting its source'
 );
-select is(
-  (select count(*)::integer from public.workshop_payment_transactions
-    where normalized_facts->>'originalTransactionId'=(select
-      workshop_payment_transaction_id::text
-      from public.workshop_payment_transactions
-      where provider_transaction_id='venmo_external_charge')),
-  2,'external refund and correction remain traceable to the original receipt'
-);
-
-insert into public.workshop_payment_transactions(
-  workshop_booking_id,workshop_occurrence_id,transaction_type,provider,
-  provider_transaction_id,payment_reference,amount_minor,currency,occurred_at,
-  state,command_key,actor_type
-)
-select workshop_booking_id,workshop_occurrence_id,'charge','direct_venmo',
-  'venmo_roster_charge','VENMO-ROSTER-CHARGE',7500,'USD',now(),'paid',
-  '32000000-0000-4000-8000-000000000060','internal'
-from public.workshop_bookings where contact_email='stripe@example.test';
-select lives_ok(
-  $$select public.manage_workshop_refund_order(
-    'record_venmo',
-    jsonb_build_object(
-      'transactionId',(select workshop_payment_transaction_id
+select ok(
+  exists(select 1 from public.workshop_payment_transactions
+    where command_key='32000000-0000-4000-8000-000000000042'
+      and normalized_facts->>'originalTransactionId'=(select
+        workshop_payment_transaction_id::text
         from public.workshop_payment_transactions
-        where provider_transaction_id='venmo_roster_charge'),
-      'amountMinor',7500,'seatQuantity',1,'currency','USD',
-      'reference','VENMO-ROSTER-REFUND','reason','customer_requested',
-      'occurredAt',now()
-    ),
-    '32000000-0000-4000-8000-000000000061'
-  )$$,'confirmed manual Venmo refund records money and releases seats atomically'
-);
-select is(
-  (select active_quantity from public.workshop_bookings
-    where contact_email='stripe@example.test'),
-  0,'manual Venmo refund releases exactly its selected seat'
-);
-select is(
-  (select amount_minor_delta from public.workshop_booking_adjustments
-    where command_key='32000000-0000-4000-8000-000000000061'),
-  -7500::bigint,'Venmo refund seat adjustment records the financial delta'
+        where provider_transaction_id='pi_workshop_success')),
+  'manual correction remains traceable to the original Stripe charge'
 );
 
 select lives_ok(

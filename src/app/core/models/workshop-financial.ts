@@ -30,7 +30,7 @@ export interface WorkshopPaymentTransaction {
   workshop_occurrence_id: string;
   workshop_payment_attempt_id: string | null;
   transaction_type: WorkshopTransactionType;
-  provider: 'stripe' | 'direct_venmo' | 'manual';
+  provider: 'stripe' | 'manual';
   provider_transaction_id: string | null;
   payment_reference: string;
   amount_minor: number;
@@ -40,26 +40,6 @@ export interface WorkshopPaymentTransaction {
   actor_type: 'provider' | 'internal' | 'system';
   note: string | null;
   created_at: string;
-}
-
-export interface WorkshopVenmoPaymentAttempt {
-  workshop_payment_attempt_id: string;
-  workshop_booking_id: string;
-  provider: 'direct_venmo';
-  reconciliation_reference: string;
-  state: 'active' | 'processing';
-  amount_minor: number;
-  currency: WorkshopCurrency;
-  effective_expires_at: string;
-  created_at: string;
-}
-
-export interface WorkshopVenmoReceiptResult {
-  replayed: boolean;
-  state: 'confirmed' | 'exception' | 'unmatched' | 'paid';
-  exceptionType?: string | null;
-  bookingId?: string;
-  transactionId?: string;
 }
 
 export interface WorkshopPaymentException {
@@ -135,7 +115,7 @@ export interface WorkshopRefundEligibility {
   currency: WorkshopCurrency;
   remainingRefundableMinor: number;
   providerChargeId: string;
-  provider: 'stripe' | 'direct_venmo';
+  provider: 'stripe';
   bookingId: string;
   occurrenceId: string;
 }

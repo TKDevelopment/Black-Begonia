@@ -8,6 +8,8 @@ export interface ProjectCascadeDeleteResult {
   deletedSourceLead: boolean;
   deletedContacts: number;
   deletedOrganizations: number;
+  deletedPaymentTransactions: number;
+  deletedPaymentRecords: number;
   storageObjects: Array<{ bucket: string; path: string }>;
   storageCleanupFailures: number;
 }

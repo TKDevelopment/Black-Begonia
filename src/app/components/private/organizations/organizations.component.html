@@ -1,5 +1,5 @@
 <div *ngIf="!isDetailView()" class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+  <div class="crm-page-frame py-5 md:py-8" data-crm-page-shell>
     <app-crm-page-header title="Organizations" subtitle="Manage venues, planners, vendors, and other businesses connected to CRM work." primaryActionLabel="Create Organization" (primaryAction)="openCreateModal()" />
 
     <app-search-filter-bar searchPlaceholder="Search by organization name, email, or phone" [searchValue]="searchTerm()" [filters]="filters()" (searchChange)="onSearchChange($event)" (filterChange)="onFilterChange($event)" (reset)="resetFilters()" />
@@ -30,7 +30,7 @@
 </div>
 
 <div *ngIf="isDetailView()" class="min-h-screen bg-[#f7f4f1]">
-  <div class="mx-auto w-full max-w-[1880px] px-3 py-5 sm:px-4 md:px-6 md:py-8 2xl:px-8">
+  <div class="crm-page-frame py-5 md:py-8" data-crm-page-shell>
     <app-loading-state-block *ngIf="detailLoading()" title="Loading organization" description="Please wait while we load the organization record and related activity." minHeightClass="min-h-[520px]" />
     <app-error-state-block *ngIf="!detailLoading() && detailError()" title="Unable to load organization" [description]="detailError()!" (retry)="retryDetail()" minHeightClass="min-h-[520px]" />
 
@@ -154,7 +154,7 @@
           <div class="mt-5 space-y-5">
             <ng-container *ngIf="activityLog().length; else noActivity">
               <div *ngFor="let activity of activityLog()" class="flex gap-4">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold" [class]="getActivityIconClasses(activity.activity_type)">•</div>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold" [class]="getActivityIconClasses(activity.activity_type)">â€¢</div>
                 <div class="min-w-0 flex-1 border-b border-black/10 pb-5 last:border-b-0 last:pb-0">
                   <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <h4 class="text-sm font-semibold text-stone-900">{{ activity.activity_label }}</h4>

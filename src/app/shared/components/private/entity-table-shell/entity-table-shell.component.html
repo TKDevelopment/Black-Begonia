@@ -20,8 +20,32 @@
                 scope="col"
                 class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-600 sm:px-3.5 md:px-5 md:py-3 md:text-[11px]"
                 [ngClass]="column.headerClassName"
+                [attr.aria-sort]="getAriaSort(column)"
               >
-                {{ column.label | titlecase}}
+                <button
+                  *ngIf="column.sortable; else staticColumnLabel"
+                  type="button"
+                  class="group inline-flex items-center gap-1.5 text-left uppercase tracking-[0.16em] transition hover:text-[#c46f67] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ea938c] focus-visible:ring-offset-2"
+                  [attr.data-sort-key]="column.key"
+                  [attr.aria-label]="'Sort by ' + column.label + ' ' + (sortKey === column.key && sortDirection === 'asc' ? 'descending' : 'ascending')"
+                  (click)="onSort(column)"
+                >
+                  <span>{{ column.label | titlecase }}</span>
+                  <span class="inline-flex flex-col" aria-hidden="true">
+                    <svg viewBox="0 0 8 5" class="h-1.5 w-2" fill="currentColor"
+                      [ngClass]="sortKey === column.key && sortDirection === 'asc' ? 'text-[#c46f67]' : 'text-stone-300 group-hover:text-stone-400'">
+                      <path d="M4 0 8 5H0L4 0Z" />
+                    </svg>
+                    <svg viewBox="0 0 8 5" class="h-1.5 w-2" fill="currentColor"
+                      [ngClass]="sortKey === column.key && sortDirection === 'desc' ? 'text-[#c46f67]' : 'text-stone-300 group-hover:text-stone-400'">
+                      <path d="m4 5 4-5H0l4 5Z" />
+                    </svg>
+                  </span>
+                </button>
+
+                <ng-template #staticColumnLabel>
+                  {{ column.label | titlecase }}
+                </ng-template>
               </th>
             </tr>
           </thead>

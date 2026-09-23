@@ -15,10 +15,13 @@ declare
   v_checkout_count integer:=0;
   v_booking_count integer:=0;
   v_notice_count integer:=0;
-  v_refund_review_count integer:=0;
+  v_refund_request_count integer:=0;
   v_race_review_count integer:=0;
   v_waitlist_count integer:=0;
   v_booking record;
+  v_refund record;
+  v_refund_result jsonb;
+  v_refund_command uuid;
 begin
   if not public.is_internal_crm_user() then
     raise exception 'not authorized' using errcode='42501';
@@ -85,32 +88,47 @@ begin
     );
   get diagnostics v_race_review_count=row_count;
 
-  insert into public.workshop_payment_exceptions(
-    workshop_booking_id,workshop_occurrence_id,
-    exception_type,urgency,amount_minor,currency,summary,safe_detail,command_key
-  )
-  select b.workshop_booking_id,p_occurrence_id,
-    'occurrence_cancellation_refund_review','normal',
-    greatest(coalesce((
-      select sum(case
-        when t.transaction_type='charge' and t.state='paid' then t.amount_minor
-        when t.transaction_type in('refund','external_refund') then -t.amount_minor
-        else 0 end)
-      from public.workshop_payment_transactions t
-      where t.workshop_booking_id=b.workshop_booking_id
-    ),0),0),b.currency,
-    'Paid booking requires florist-controlled cancellation review.',
-    'No refund or transfer has been initiated automatically.',gen_random_uuid()
-  from public.workshop_bookings b
-  where b.workshop_occurrence_id=p_occurrence_id
-    and b.payment_state in('paid','partially_refunded','disputed','exception')
-    and not exists(
-      select 1 from public.workshop_payment_exceptions e
-      where e.workshop_booking_id=b.workshop_booking_id
-        and e.exception_type='occurrence_cancellation_refund_review'
-        and e.state in('open','acknowledged')
-    );
-  get diagnostics v_refund_review_count=row_count;
+  for v_refund in
+    select t.*,
+      greatest(t.amount_minor-coalesce((
+        select sum(r.amount_minor)
+        from public.workshop_refund_requests r
+        where r.workshop_payment_transaction_id=
+          t.workshop_payment_transaction_id
+          and r.state in('requested','provider_accepted','reconciled')
+      ),0),0) as remaining_minor
+    from public.workshop_payment_transactions t
+    join public.workshop_bookings b
+      on b.workshop_booking_id=t.workshop_booking_id
+    where b.workshop_occurrence_id=p_occurrence_id
+      and b.status in('confirmed','checked_in')
+      and b.active_quantity>0
+      and t.transaction_type='charge'
+      and t.provider='stripe'
+      and t.state in('paid','partially_refunded')
+    order by t.workshop_payment_transaction_id
+    for update of t
+  loop
+    if v_refund.remaining_minor>0 then
+      v_refund_command:=gen_random_uuid();
+      v_refund_result:=public.manage_workshop_financials(
+        'request_refund',
+        jsonb_build_object(
+          'transactionId',v_refund.workshop_payment_transaction_id,
+          'amountMinor',v_refund.remaining_minor,
+          'currency',v_refund.currency,
+          'reason','event_cancelled'
+        ),
+        v_refund_command
+      );
+      insert into public.workshop_cancellation_refund_jobs(
+        workshop_refund_request_id,workshop_occurrence_id,command_key
+      ) values(
+        (v_refund_result->>'requestId')::uuid,p_occurrence_id,v_refund_command
+      ) on conflict(workshop_refund_request_id) do nothing;
+      v_refund_request_count:=v_refund_request_count+1;
+    end if;
+  end loop;
 
   update public.workshop_payment_attempts a
   set state='cancelled',resolved_at=now()
@@ -177,7 +195,8 @@ begin
       'reasonCategory',p_reason_category,'invalidatedHolds',v_hold_count,
       'checkoutExpirationsQueued',v_checkout_count,
       'affectedBookings',v_booking_count,'customerNoticesQueued',v_notice_count,
-      'refundReviews',v_refund_review_count,'raceReviews',v_race_review_count,
+      'refundRequestsQueued',v_refund_request_count,
+      'raceReviews',v_race_review_count,
       'closedWaitlistEntries',v_waitlist_count
     )
   ) returning * into v_existing;

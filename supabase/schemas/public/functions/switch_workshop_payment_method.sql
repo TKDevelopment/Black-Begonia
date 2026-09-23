@@ -2,9 +2,7 @@ create or replace function public.switch_workshop_payment_method(
   p_status_token_digest text,
   p_method text,
   p_command_key uuid,
-  p_venmo_target text default null,
-  p_stripe_hold_minutes integer default 15,
-  p_venmo_hold_hours integer default 24
+  p_stripe_hold_minutes integer default 15
 ) returns jsonb
 language plpgsql
 security definer
@@ -51,7 +49,6 @@ begin
       'currency', v_attempt.currency,
       'reference', v_attempt.reconciliation_reference,
       'effectiveExpiresAt', v_attempt.effective_expires_at,
-      'approvedTarget', v_attempt.venmo_target_snapshot,
       'stripePriceId', v_attempt.stripe_price_id,
       'workshopTitle', v_occurrence.title_snapshot,
       'advertisingLine', v_occurrence.advertising_line_snapshot,
@@ -182,7 +179,6 @@ begin
     'currency', v_attempt.currency,
     'reference', v_attempt.reconciliation_reference,
     'effectiveExpiresAt', v_attempt.effective_expires_at,
-    'approvedTarget', v_attempt.venmo_target_snapshot,
     'stripePriceId', v_attempt.stripe_price_id,
     'workshopTitle', v_occurrence.title_snapshot,
     'advertisingLine', v_occurrence.advertising_line_snapshot,
@@ -196,8 +192,8 @@ end;
 $$;
 
 revoke all on function public.switch_workshop_payment_method(
-  text, text, uuid, text, integer, integer
+  text, text, uuid, integer
 ) from public;
 grant execute on function public.switch_workshop_payment_method(
-  text, text, uuid, text, integer, integer
+  text, text, uuid, integer
 ) to service_role;

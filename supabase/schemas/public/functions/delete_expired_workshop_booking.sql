@@ -32,8 +32,8 @@ begin
   if not found then
     raise exception 'booking unavailable' using errcode = 'P0001';
   end if;
-  if v_booking.status <> 'expired' then
-    raise exception 'only expired bookings can be deleted' using errcode = '22023';
+  if v_booking.status not in ('expired', 'cancelled') then
+    raise exception 'only expired or cancelled bookings can be deleted' using errcode = '22023';
   end if;
 
   if exists (
@@ -107,6 +107,7 @@ begin
     jsonb_build_object(
       'bookingId', p_booking_id,
       'status', 'deleted',
+      'previousStatus', v_booking.status,
       'activeQuantity', 0
     )
   );
@@ -115,6 +116,7 @@ begin
     'replayed', false,
     'bookingId', p_booking_id,
     'status', 'deleted',
+    'previousStatus', v_booking.status,
     'activeQuantity', 0
   );
 end;

@@ -44,4 +44,46 @@ describe('FloralProposalRendererService', () => {
       'Renderer failed.'
     );
   });
+
+  it('passes effective customer pricing and explicit manual labor without private price state', () => {
+    sceneRenderer.render.and.returnValue('<html>Customer-safe proposal</html>');
+    const contract = {
+      ...testRenderContract,
+      line_items: [
+        {
+          ...testRenderContract.line_items[0],
+          unit_price: 125,
+          subtotal: 250,
+        },
+        {
+          ...testRenderContract.line_items[0],
+          display_order: 1,
+          line_item_type: 'labor' as const,
+          line_type_label: 'Labor',
+          item_name: 'Installation labor',
+          quantity: 1,
+          unit_price: 50,
+          subtotal: 50,
+          components: [],
+        },
+      ],
+    };
+
+    service.renderHtml(contract);
+
+    const renderedContract = sceneRenderer.render.calls.mostRecent().args[0];
+    expect(renderedContract.line_items[0]).toEqual(
+      jasmine.objectContaining({ unit_price: 125, subtotal: 250 })
+    );
+    expect(renderedContract.line_items[0]).not.toEqual(
+      jasmine.objectContaining({ calculated_unit_price: jasmine.anything() })
+    );
+    expect(renderedContract.line_items[1]).toEqual(
+      jasmine.objectContaining({
+        line_item_type: 'labor',
+        item_name: 'Installation labor',
+        unit_price: 50,
+      })
+    );
+  });
 });

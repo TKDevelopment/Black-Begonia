@@ -62,7 +62,7 @@ describe('FloralProposalWorkflowService', () => {
             applied_markup_percent: 50,
             sell_unit_price: 4.5,
             subtotal: 45,
-            reserve_percent: 10,
+            reserve_units: 10,
             pack_quantity: 10,
             effective_pack_cost: 30,
             purchase_unit_cost: 30,

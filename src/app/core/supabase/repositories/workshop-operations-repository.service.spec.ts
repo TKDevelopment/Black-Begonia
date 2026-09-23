@@ -72,13 +72,13 @@ describe('WorkshopOperationsRepositoryService', () => {
     });
   });
 
-  it('maps permanent expired-booking deletion to its guarded database command', async () => {
+  it('maps permanent inactive-booking deletion to its guarded database command', async () => {
     rpc.and.resolveTo({
       data: { replayed: false, bookingId: 'booking-expired', status: 'deleted' },
       error: null,
     });
 
-    await service.deleteExpiredBooking('booking-expired', 'command-delete');
+    await service.deleteInactiveBooking('booking-expired', 'command-delete');
 
     expect(rpc).toHaveBeenCalledWith('delete_expired_workshop_booking', {
       p_booking_id: 'booking-expired',
@@ -180,7 +180,7 @@ describe('WorkshopOperationsRepositoryService', () => {
     expect(JSON.stringify(queue)).not.toContain('recipient_email');
   });
 
-  it('maps lifecycle, cancellation, and reschedule commands to their boundaries', async () => {
+  it('maps lifecycle, cancellation, in-place reschedule, and completion commands', async () => {
     rpc.and.resolveTo({ data: { replayed: false }, error: null });
 
     await service.getOperationalState('occurrence-1');
@@ -190,13 +190,11 @@ describe('WorkshopOperationsRepositoryService', () => {
     await service.cancelOccurrence(
       'occurrence-1', 'weather', 'command-cancel',
     );
-    await service.beginReschedule(
-      'occurrence-1', 'occurrence-2',
-      '2026-09-01T12:00:00Z', 'command-reschedule',
+    await service.rescheduleOccurrenceSchedule(
+      'occurrence-1', '2026-10-15T13:00', '2026-10-15T15:00', -240,
+      '2026-10-14T23:59:00Z', 'command-reschedule',
     );
-    await service.resolveRescheduleNonresponse(
-      'response-1', 'command-resolve',
-    );
+    await service.completeAndArchiveOccurrence('occurrence-1', 'command-complete');
 
     expect(rpc.calls.argsFor(0)).toEqual([
       'get_workshop_occurrence_operational_state',
@@ -212,21 +210,22 @@ describe('WorkshopOperationsRepositoryService', () => {
     ]);
     expect(rpc.calls.argsFor(2)[0]).toBe('cancel_workshop_occurrence');
     expect(rpc.calls.argsFor(3)).toEqual([
-      'manage_workshop_reschedule',
+      'reschedule_workshop_occurrence_schedule',
       {
-        p_action: 'begin',
-        p_payload: {
-          sourceOccurrenceId: 'occurrence-1',
-          replacementOccurrenceId: 'occurrence-2',
-          responseDeadline: '2026-09-01T12:00:00Z',
-        },
+        p_occurrence_id: 'occurrence-1',
+        p_local_start: '2026-10-15T13:00',
+        p_local_end: '2026-10-15T15:00',
+        p_utc_offset_minutes: -240,
+        p_registration_closes_at: '2026-10-14T23:59:00Z',
         p_command_key: 'command-reschedule',
       },
     ]);
-    expect(rpc.calls.argsFor(4)[1]).toEqual({
-      p_action: 'resolve_nonresponse',
-      p_payload: { responseId: 'response-1', resolution: 'cancel' },
-      p_command_key: 'command-resolve',
-    });
+    expect(rpc.calls.argsFor(4)).toEqual([
+      'complete_and_archive_workshop_occurrence',
+      {
+        p_occurrence_id: 'occurrence-1',
+        p_command_key: 'command-complete',
+      },
+    ]);
   });
 });

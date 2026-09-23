@@ -87,41 +87,6 @@ describe('WorkshopBookingStatusComponent', () => {
       .toBe('grid');
   });
 
-  it('gives pending Venmo customers a reference-free 24-hour contact path and workshop button', async () => {
-    bookingService.getStatus.and.resolveTo({
-      state: 'pending_venmo',
-      supportReference: 'BBW-PRIVATE-REFERENCE',
-      expiresAt: '2026-08-16T17:00:00.000Z',
-    });
-    createComponent();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Waiting for Venmo confirmation');
-    expect(text).toContain('within 24 hours');
-    expect(text).not.toContain('Support reference');
-    expect(text).not.toContain('BBW-PRIVATE-REFERENCE');
-    expect(fixture.nativeElement.querySelector(
-      'a[href="mailto:becca@blackbegoniaflorals.com"]',
-    )).not.toBeNull();
-    expect(fixture.nativeElement.querySelector(
-      'a[href="sms:+14018714996"]',
-    )).not.toBeNull();
-    const pendingLinks = Array.from(
-      fixture.nativeElement.querySelectorAll('.pending-contact-links a'),
-    ) as HTMLElement[];
-    expect(pendingLinks).toHaveSize(2);
-    expect(pendingLinks.every((link) => getComputedStyle(link).fontWeight === '500'))
-      .toBeTrue();
-    expect(pendingLinks.every((link) => getComputedStyle(link).fontFamily.includes('Arial')))
-      .toBeTrue();
-
-    const browse = fixture.nativeElement.querySelector('.browse-button') as HTMLAnchorElement;
-    expect(browse.getAttribute('href')).toBe('/workshops');
-    expect(getComputedStyle(browse).backgroundColor).toBe('rgb(196, 111, 103)');
-  });
-
   it('consumes an emailed access token from the URL fragment and removes it immediately', async () => {
     const token = 'emailed-access-token-abcdefghijklmnopqrstuvwxyz0123456789';
     window.history.replaceState({}, '', `${window.location.pathname}#access=${token}`);
@@ -156,7 +121,7 @@ describe('WorkshopBookingStatusComponent', () => {
   });
 
   it('uses the approved workshop photograph behind the secure status card', async () => {
-    bookingService.getStatus.and.resolveTo({ state: 'pending_venmo', supportReference: 'hidden', expiresAt: '2026-08-16T17:00:00Z' });
+    bookingService.getStatus.and.resolveTo({ state: 'processing', supportReference: 'hidden' });
     createComponent();
     await fixture.whenStable();
     fixture.detectChanges();

@@ -35,7 +35,7 @@ select ok(
 );
 select has_function(
   'public','switch_workshop_payment_method',
-  array['text','text','uuid','text','integer','integer'],
+  array['text','text','uuid','integer'],
   'payment method switching is authoritative'
 );
 select has_function('public','expire_workshop_holds',array['integer'],'hold expiration command exists');
@@ -250,13 +250,13 @@ select throws_ok(
 );
 select throws_ok(
   $$select public.switch_workshop_payment_method(
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','direct_venmo',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','cash',
     '30000000-0000-4000-8000-000000000042',
-    'https://venmo.com/u/approved-business',15,24
+    15
   )$$,
   'P0001',
   'invalid_request',
-  'direct Venmo selection is rejected for new workshop bookings'
+  'non-Stripe selection is rejected for new workshop bookings'
 );
 select ok(
   not (
@@ -269,7 +269,7 @@ select ok(
 select lives_ok(
   $$select public.switch_workshop_payment_method(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','stripe',
-    '30000000-0000-4000-8000-000000000043',null,15,24
+    '30000000-0000-4000-8000-000000000043',15
   )$$,
   'Stripe creates the only authorized payment attempt'
 );

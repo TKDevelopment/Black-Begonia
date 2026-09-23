@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       fontFamily: {
         oswald: ['"Oswald"', ...defaultTheme.fontFamily.sans],
+        sidebar: ['"DM Sans"', ...defaultTheme.fontFamily.sans],
         display: ['"Great Vibes"', ...defaultTheme.fontFamily.serif],
         nav: ['"Marcellus"', ...defaultTheme.fontFamily.sans],
         body: ['"Raleway"', ...defaultTheme.fontFamily.sans],
