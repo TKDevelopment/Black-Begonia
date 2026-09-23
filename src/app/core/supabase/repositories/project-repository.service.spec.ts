@@ -143,6 +143,8 @@ describe('ProjectRepositoryService', () => {
         deletedSourceLead: true,
         deletedContacts: 1,
         deletedOrganizations: 0,
+        deletedPaymentTransactions: 2,
+        deletedPaymentRecords: 2,
         storageObjects: [
           { bucket: 'floral-proposals', path: 'projects/test/one.pdf' },
           { bucket: 'floral-proposals', path: 'projects/test/two.pdf' },

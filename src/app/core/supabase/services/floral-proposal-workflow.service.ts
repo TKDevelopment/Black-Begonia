@@ -9,6 +9,83 @@ import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
 import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
 
+export interface ProposalSnapshotValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export function validateEditableProposalSnapshotV3(
+  snapshot: Record<string, unknown>
+): ProposalSnapshotValidationResult {
+  const errors: string[] = [];
+  const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+  const record = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : {};
+  const finiteMoney = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 && round2(value) === value;
+
+  if (snapshot['schema_version'] !== 3) errors.push('Snapshot schema_version must be 3.');
+  if ('labor_percent' in snapshot) errors.push('Active labor_percent is not allowed in V3.');
+  const breakdown = record(snapshot['breakdown']);
+  if ('calculatedLaborAmount' in breakdown) {
+    errors.push('Calculated percentage labor is not allowed in V3.');
+  }
+
+  const lines = Array.isArray(snapshot['line_items']) ? snapshot['line_items'] : [];
+  if (!Array.isArray(snapshot['line_items'])) errors.push('Snapshot line_items must be an array.');
+  let subtotal = 0;
+  lines.forEach((rawLine, index) => {
+    const line = record(rawLine);
+    const type = line['line_item_type'];
+    const quantity = line['quantity'];
+    const unitPrice = line['unit_price'];
+    const lineSubtotal = line['subtotal'];
+    if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity < 0) {
+      errors.push(`Line ${index + 1} has an invalid quantity.`);
+      return;
+    }
+    if (!finiteMoney(unitPrice)) errors.push(`Line ${index + 1} has an invalid unit price.`);
+    if (typeof lineSubtotal !== 'number' || !Number.isFinite(lineSubtotal)) {
+      errors.push(`Line ${index + 1} has an invalid subtotal.`);
+      return;
+    }
+    if (type === 'product') {
+      const calculated = line['calculated_unit_price'];
+      const override = line['actual_unit_price_override'];
+      if (!finiteMoney(calculated)) errors.push(`Line ${index + 1} has an invalid calculated unit price.`);
+      if (override !== null && !finiteMoney(override)) errors.push(`Line ${index + 1} has an invalid actual unit price override.`);
+      const effective = override === null ? calculated : override;
+      if (typeof effective === 'number' && unitPrice !== round2(effective)) {
+        errors.push(`Line ${index + 1} effective unit price is inconsistent.`);
+      }
+    } else if ('calculated_unit_price' in line || 'actual_unit_price_override' in line) {
+      errors.push(`Line ${index + 1} contains product-only pricing metadata.`);
+    }
+    const expectedSubtotal = round2(quantity * Number(unitPrice));
+    const signedExpected = type === 'discount' ? -Math.abs(expectedSubtotal) : expectedSubtotal;
+    if (round2(lineSubtotal) !== signedExpected) {
+      errors.push(`Line ${index + 1} subtotal is inconsistent.`);
+    }
+    subtotal = round2(subtotal + lineSubtotal);
+  });
+
+  const totals = record(snapshot['totals']);
+  if (round2(Number(totals['subtotal'])) !== subtotal) {
+    errors.push('Snapshot subtotal does not equal the sum of line subtotals.');
+  }
+  const taxAmount = Number(totals['taxAmount']);
+  const totalAmount = Number(totals['totalAmount']);
+  if (!finiteMoney(taxAmount) || !finiteMoney(totalAmount)) {
+    errors.push('Snapshot tax and total amounts must be valid currency values.');
+  } else if (round2(subtotal + taxAmount) !== totalAmount) {
+    errors.push('Snapshot total amount is inconsistent.');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 export interface SubmitFloralProposalPayload {
   floral_proposal_id?: string | null;
   lead_id: string;
@@ -35,7 +112,7 @@ export interface SubmitFloralProposalPayload {
       applied_markup_percent: number;
       sell_unit_price: number;
       subtotal: number;
-      reserve_percent?: number;
+      reserve_units?: number;
       pack_quantity?: number | null;
       effective_pack_cost?: number | null;
       snapshot?: Record<string, unknown>;
@@ -294,9 +371,15 @@ export class FloralProposalWorkflowService {
       existingSnapshot = {},
       lifecycle,
     } = args;
+    const {
+      labor_percent: _laborPercent,
+      legacy_labor_percent: _legacyLaborPercent,
+      ...compatibleExistingSnapshot
+    } = existingSnapshot;
 
-    return {
-      ...existingSnapshot,
+    const snapshot: Record<string, unknown> = {
+      ...compatibleExistingSnapshot,
+      schema_version: 3,
       proposal_status: proposalStatus,
       finalized_at:
         lifecycle?.finalizedAt ??
@@ -311,7 +394,6 @@ export class FloralProposalWorkflowService {
       tax_region_id: renderPayload.tax_region_id,
       tax_region_name: renderPayload.tax_region_name,
       default_markup_percent: renderPayload.default_markup_percent,
-      labor_percent: renderPayload.labor_percent,
       tax_rate: renderPayload.tax_rate,
       line_items: renderPayload.line_items.map((line) => ({
         display_order: line.display_order,
@@ -320,6 +402,12 @@ export class FloralProposalWorkflowService {
         description: line.description ?? null,
         quantity: line.quantity,
         unit_price: line.unit_price,
+        ...(line.line_item_type === 'product'
+          ? {
+              calculated_unit_price: line.calculated_unit_price ?? line.unit_price,
+              actual_unit_price_override: line.actual_unit_price_override ?? null,
+            }
+          : {}),
         subtotal: line.subtotal,
         image_storage_path: line.image_storage_path ?? null,
         image_alt_text: line.image_alt_text ?? null,
@@ -333,7 +421,7 @@ export class FloralProposalWorkflowService {
           applied_markup_percent: component.applied_markup_percent,
           sell_unit_price: component.sell_unit_price,
            subtotal: component.subtotal,
-          reserve_percent: component.reserve_percent,
+          reserve_units: component.reserve_units,
           pack_quantity: component.pack_quantity ?? null,
           effective_pack_cost: component.effective_pack_cost ?? null,
           snapshot: {
@@ -348,6 +436,15 @@ export class FloralProposalWorkflowService {
       totals: renderPayload.totals,
       breakdown: renderPayload.breakdown,
     };
+
+    const validation = validateEditableProposalSnapshotV3(snapshot);
+    if (!validation.valid) {
+      throw new Error(
+        `The proposal pricing snapshot is inconsistent: ${validation.errors.join(' ')}`
+      );
+    }
+
+    return snapshot;
   }
 
   buildEditableProposalSnapshot(
@@ -433,11 +530,14 @@ export class FloralProposalWorkflowService {
                 applied_markup_percent: component.applied_markup_percent,
                 sell_unit_price: component.sell_unit_price,
                 subtotal: component.subtotal,
-                reserve_percent: component.reserve_percent ?? 0,
+                reserve_percent: 0,
+                reserve_units: component.reserve_units ?? 0,
                 pack_quantity: component.pack_quantity ?? null,
                 effective_pack_cost: component.effective_pack_cost ?? null,
                 snapshot: {
                   ...(component.snapshot ?? {}),
+                  reserve_percent: undefined,
+                  reserve_units: component.reserve_units ?? 0,
                   pack_quantity: component.pack_quantity ?? null,
                   effective_pack_cost: component.effective_pack_cost ?? null,
                   purchase_unit_cost: component.purchase_unit_cost,

@@ -8,6 +8,7 @@ declare
   v_job_id bigint;
   v_hold_job_id bigint;
   v_message_job_id bigint;
+  v_refund_job_id bigint;
 begin
   if to_regclass('cron.job') is null or to_regnamespace('net') is null then
     raise exception 'Workshop schedules require the pg_cron and pg_net extensions';
@@ -41,7 +42,8 @@ begin
     select jobid from cron.job
      where jobname in (
        'expire-workshop-holds-1m',
-       'process-workshop-messages-1m'
+       'process-workshop-messages-1m',
+       'process-workshop-cancellation-refunds-1m'
      )
   loop
     perform cron.unschedule(v_job_id);
@@ -57,10 +59,16 @@ begin
     '* * * * *',
     'select public.enqueue_workshop_message_processor(25);'
   );
+  v_refund_job_id := cron.schedule(
+    'process-workshop-cancellation-refunds-1m',
+    '* * * * *',
+    'select public.enqueue_workshop_cancellation_refund_processor(25);'
+  );
 
   return jsonb_build_object(
     'expireWorkshopHoldsJobId', v_hold_job_id,
-    'processWorkshopMessagesJobId', v_message_job_id
+    'processWorkshopMessagesJobId', v_message_job_id,
+    'processWorkshopCancellationRefundsJobId', v_refund_job_id
   );
 end;
 $$;

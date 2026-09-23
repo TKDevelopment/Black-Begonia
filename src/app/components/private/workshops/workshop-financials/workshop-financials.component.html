@@ -1,4 +1,4 @@
-<main class="financial-page">
+<main class="financial-page crm-page-frame" data-crm-page-shell>
   <a [routerLink]="['/admin/workshops', occurrenceId]">← Workshop operations</a>
   <header>
     <div>
@@ -100,17 +100,6 @@
       }
     </section>
   </div>
-
-  <section aria-labelledby="external-heading">
-    <h2 id="external-heading">Record external Venmo refund</h2>
-    <form class="inline-form" [formGroup]="externalRefundForm" (ngSubmit)="submitExternalRefund()">
-      <label>Original transaction ID <input formControlName="transactionId" /></label>
-      <label>Amount in cents <input type="number" min="1" step="1" formControlName="amountMinor" /></label>
-      <label>External reference <input formControlName="reference" /></label>
-      <label>Completed at <input type="datetime-local" formControlName="occurredAt" /></label>
-      <button type="submit" [disabled]="busy()">Record completed refund</button>
-    </form>
-  </section>
 
   <section aria-labelledby="exceptions-heading">
     <h2 id="exceptions-heading">Payment exceptions</h2>

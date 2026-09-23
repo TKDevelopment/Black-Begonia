@@ -501,7 +501,9 @@ export class ProjectDetailsComponent implements OnInit {
           'error'
         );
       } else {
-        this.toast.showToast(`Project "${project.project_name}" and its test data were deleted.`);
+        this.toast.showToast(
+          `Project "${project.project_name}" and all associated payment data were permanently deleted.`
+        );
       }
       await this.router.navigate(['/admin/projects']);
     } catch (error) {

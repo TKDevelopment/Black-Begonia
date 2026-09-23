@@ -71,6 +71,15 @@ select,
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Shared routed CRM page boundary. Page-specific components may retain focused
+   inner widths, but the route shell itself consumes the available main area. */
+.crm-page-frame {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding-inline: clamp(0.75rem, 1.5vw, 2rem);
+}
+
 .carousel-fade {
   /* Fade out left/right edges at ~15% */
   -webkit-mask-image: linear-gradient(

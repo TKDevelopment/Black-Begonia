@@ -79,4 +79,18 @@ describe('SidebarComponent', () => {
     );
     expect(fixture.nativeElement.textContent).toContain('Workshops');
   });
+
+  it('uses the soft sans-serif font throughout the sidebar', () => {
+    const sidebar = fixture.nativeElement.querySelector('.crm-sidebar') as HTMLElement;
+    const navigationLabels = Array.from(
+      fixture.nativeElement.querySelectorAll('.crm-sidebar-link')
+    ) as HTMLElement[];
+
+    expect(sidebar.classList.contains('font-sidebar')).toBeTrue();
+    expect(navigationLabels.length).toBeGreaterThan(0);
+    expect(navigationLabels.every((label) => label.classList.contains('font-sidebar')))
+      .toBeTrue();
+    expect(sidebar.querySelector('.font-body, .font-cormorant, .font-nav, .font-oswald'))
+      .toBeNull();
+  });
 });

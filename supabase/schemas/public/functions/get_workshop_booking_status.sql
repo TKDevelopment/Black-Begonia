@@ -111,17 +111,6 @@ begin
     );
   end if;
 
-  if v_booking.payment_method = 'direct_venmo'
-    and v_attempt.state = 'active'
-    and v_attempt.effective_expires_at > now()
-  then
-    return jsonb_build_object(
-      'state', 'pending_venmo',
-      'supportReference', v_booking.booking_reference,
-      'expiresAt', v_attempt.effective_expires_at
-    );
-  end if;
-
   return jsonb_build_object('state', 'unavailable');
 end;
 $$;

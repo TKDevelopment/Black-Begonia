@@ -44,8 +44,39 @@ select unlike(
 select has_function('public','set_payment_reminder_control',array['uuid','uuid','boolean','timestamptz','text'],'audited reminder control exists');
 select has_function('public','set_payment_legal_hold',array['uuid','text','text','text','uuid'],'idempotent legal hold command exists');
 select has_function('public','recalculate_project_obligations_for_snapshot',array['uuid','uuid'],'proposal revision obligation recalculation exists');
+select like(
+  pg_get_functiondef('public.finalize_project_proposal_revision(uuid,uuid,uuid,uuid,text,text,text,text,bigint,uuid,timestamp with time zone)'::regprocedure),
+  '%schema_version <> 3%',
+  'proposal revision finalization requires mutable V3 pricing'
+);
+select like(
+  pg_get_functiondef('public.finalize_project_proposal_revision(uuid,uuid,uuid,uuid,text,text,text,text,bigint,uuid,timestamp with time zone)'::regprocedure),
+  '%actual_unit_price_override%',
+  'proposal revision finalization validates effective product pricing'
+);
+select like(
+  pg_get_functiondef('public.convert_lead_to_project_with_payments(uuid,jsonb,jsonb,uuid,text)'::regprocedure),
+  '%total_amount%',
+  'initial conversion continues to derive obligations from the submitted effective proposal total'
+);
 select has_function('public','get_payment_operational_health',array[]::text[],'operational health query exists');
 select has_function('public','purge_expired_payment_secrets',array['timestamptz'],'secret-only retention cleanup exists');
+select has_function('public','cascade_delete_project_test_data',array['uuid','text'],'guarded project scrub command exists');
+select like(
+  pg_get_functiondef('public.cascade_delete_project_test_data(uuid,text)'::regprocedure),
+  '%delete from public.payment_transactions where project_id = p_project_id%',
+  'guarded project scrub deletes project-scoped payment transactions'
+);
+select like(
+  pg_get_functiondef('public.cascade_delete_project_test_data(uuid,text)'::regprocedure),
+  '%delete from public.payment_provider_events%',
+  'guarded project scrub deletes associated provider audit events'
+);
+select like(
+  pg_get_functiondef('public.prevent_payment_financial_mutation()'::regprocedure),
+  '%app.project_cascade_delete%',
+  'immutable payment triggers permit only the guarded project scrub context'
+);
 select col_is_pk('public','payment_transactions','payment_transaction_id','transaction identity is immutable');
 select col_is_pk('public','payment_legal_holds','payment_legal_hold_id','hold events are append-only identities');
 select has_trigger('public','payment_transactions','trg_payment_transactions_immutable','transaction updates and deletes are rejected');

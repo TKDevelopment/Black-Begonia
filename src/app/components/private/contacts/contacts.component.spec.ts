@@ -86,12 +86,17 @@ describe('ContactsComponent', () => {
         { provide: ContactService, useValue: contactService },
         { provide: ToastService, useValue: toast },
       ],
-    })
-      .overrideComponent(ContactsComponent, { set: { template: '' } })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ContactsComponent);
     component = fixture.componentInstance;
+  });
+
+  it('renders one full-width CRM page shell for the active route branch', () => {
+    fixture.detectChanges();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
   });
 
   it('loads contacts for the list view and exposes empty state when no rows return', async () => {

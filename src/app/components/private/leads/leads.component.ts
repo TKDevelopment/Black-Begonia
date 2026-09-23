@@ -10,6 +10,8 @@ import {
 } from '../../../shared/components/private/search-filter-bar/search-filter-bar.component';
 import {
   AdminTableColumn,
+  EntityTableSortChange,
+  EntityTableSortDirection,
   EntityTableShellComponent,
 } from '../../../shared/components/private/entity-table-shell/entity-table-shell.component';
 import { EntityTableCellDirective } from '../../../shared/components/private/entity-table-shell/entity-table-cell.directive';
@@ -67,18 +69,18 @@ export class LeadsComponent implements OnInit {
   statusFilter = signal('all');
   eventTypeFilter = signal('all');
   serviceTypeFilter = signal('all');
-  sortBy = signal<'created_desc' | 'created_asc' | 'event_date_asc' | 'event_date_desc'>('created_desc');
+  sortColumn = signal<'lead' | 'inquiry_date' | 'event_date' | null>(null);
+  sortDirection = signal<EntityTableSortDirection>('asc');
 
   leads = signal<Lead[]>([]);
   proposals = signal<FloralProposal[]>([]);
   proposalResponseActivities = signal<LeadActivity[]>([]);
 
   columns: AdminTableColumn[] = [
-    { key: 'lead', label: 'Lead' },
+    { key: 'lead', label: 'Lead', sortable: true },
     { key: 'service_type', label: 'Service Type' },
-    { key: 'proposal', label: 'Proposal' },
-    { key: 'proposal_response', label: 'Client Response' },
-    { key: 'event_date', label: 'Event Date' },
+    { key: 'inquiry_date', label: 'Inquiry Date', sortable: true },
+    { key: 'event_date', label: 'Event Date', sortable: true },
     { key: 'status', label: 'Status' },
     { key: 'action', label: 'Actions' },
   ];
@@ -151,7 +153,7 @@ export class LeadsComponent implements OnInit {
     const eventType = this.eventTypeFilter();
     const serviceType = this.serviceTypeFilter();
 
-    return this.leads().filter((lead) => {
+    const filtered = this.leads().filter((lead) => {
       const fullName = `${lead.first_name} ${lead.last_name}`.toLowerCase();
       const proposal = this.getProposalForLead(lead.lead_id);
       const response = this.getProposalResponseForLead(lead.lead_id);
@@ -183,6 +185,32 @@ export class LeadsComponent implements OnInit {
         matchesEventType &&
         matchesServiceType
       );
+    });
+
+    const sortColumn = this.sortColumn();
+    if (!sortColumn) return filtered;
+
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    return [...filtered].sort((left, right) => {
+      if (sortColumn === 'lead') {
+        return this.formatLeadName(left).localeCompare(
+          this.formatLeadName(right),
+          undefined,
+          { sensitivity: 'base' }
+        ) * direction;
+      }
+
+      if (sortColumn === 'inquiry_date') {
+        return (new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
+          * direction;
+      }
+
+      const leftDate = left.event_date?.trim() || null;
+      const rightDate = right.event_date?.trim() || null;
+      if (!leftDate && !rightDate) return 0;
+      if (!leftDate) return 1;
+      if (!rightDate) return -1;
+      return leftDate.localeCompare(rightDate) * direction;
     });
   });
 
@@ -266,6 +294,16 @@ export class LeadsComponent implements OnInit {
     if (event.key === 'service_type') {
       this.serviceTypeFilter.set(event.value);
     }
+  }
+
+  onSortChange(event: EntityTableSortChange): void {
+    if (
+      event.key !== 'lead' &&
+      event.key !== 'inquiry_date' &&
+      event.key !== 'event_date'
+    ) return;
+    this.sortColumn.set(event.key);
+    this.sortDirection.set(event.direction);
   }
 
   resetFilters(): void {

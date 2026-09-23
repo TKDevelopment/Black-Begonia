@@ -17,14 +17,13 @@ describe('WorkshopRosterComponent', () => {
       [
         'listMinimizedRoster', 'listBookings', 'listAttendeesForBookings', 'listWaitlist',
         'getOperationalState', 'createReservation', 'cancelSeats', 'checkIn',
-        'offerWaitlistSeats', 'deleteExpiredBooking',
+        'offerWaitlistSeats', 'deleteInactiveBooking',
       ],
     );
     financials = jasmine.createSpyObj<WorkshopFinancialRepositoryService>(
       'WorkshopFinancialRepositoryService',
       [
-        'listPendingVenmoAttempts', 'recordVenmoReceipt', 'listRefundableCharges',
-        'getRefundEligibility', 'requestStripeRefund', 'recordExternalRefund',
+        'listRefundableCharges', 'getRefundEligibility', 'requestStripeRefund',
       ],
     );
     operations.listMinimizedRoster.and.resolveTo([{
@@ -101,10 +100,9 @@ describe('WorkshopRosterComponent', () => {
       replayed: false, bookingId: 'booking-1', attendeeId: 'attendee-1',
       attendanceState: 'checked_in',
     });
-    operations.deleteExpiredBooking.and.resolveTo({
+    operations.deleteInactiveBooking.and.resolveTo({
       replayed: false, bookingId: 'booking-expired', status: 'deleted', activeQuantity: 0,
     });
-    financials.listPendingVenmoAttempts.and.resolveTo([]);
     financials.listRefundableCharges.and.resolveTo([{
       workshop_payment_transaction_id: 'transaction-1',
       workshop_booking_id: 'booking-1',
@@ -136,9 +134,6 @@ describe('WorkshopRosterComponent', () => {
       state: 'provider_accepted', requestId: 'refund-1', amountMinor: 5000,
       currency: 'USD',
     });
-    financials.recordVenmoReceipt.and.resolveTo({
-      replayed: false, state: 'confirmed', bookingId: 'booking-venmo',
-    });
     await TestBed.configureTestingModule({
       imports: [WorkshopRosterComponent],
       providers: [
@@ -157,62 +152,11 @@ describe('WorkshopRosterComponent', () => {
     fixture.detectChanges();
   });
 
-  it('confirms a pending direct-Venmo receipt from the roster through the financial command', async () => {
-    const pendingBooking = {
-      ...component.bookings()[0],
-      workshop_booking_id: 'booking-venmo',
-      status: 'pending_payment' as const,
-      payment_state: 'pending' as const,
-      payment_method: 'direct_venmo' as const,
-      confirmed_at: null,
-    };
-    component.bookings.set([pendingBooking]);
-    component.venmoAttempts.set([{
-      workshop_payment_attempt_id: 'attempt-venmo',
-      workshop_booking_id: 'booking-venmo',
-      provider: 'direct_venmo',
-      reconciliation_reference: 'BBW-HIDDEN-REFERENCE',
-      state: 'active',
-      amount_minor: 10000,
-      currency: 'USD',
-      effective_expires_at: '2026-08-16T17:00:00Z',
-      created_at: '2026-08-04T17:00:00Z',
-    }]);
-    fixture.detectChanges();
-
-    const confirmButton = fixture.nativeElement.querySelector(
-      '.venmo-confirm-button',
-    ) as HTMLButtonElement;
-    const actions = confirmButton.closest('.booking-actions') as HTMLElement;
-    const actionLabels = Array.from(
-      actions.querySelectorAll('button'),
-      (button: unknown) => (button as HTMLButtonElement).textContent?.trim(),
-    );
-    expect(actionLabels).toEqual(['Cancel Seats', 'Confirm Venmo Payment']);
-    expect(actions.classList).toContain('gap-2');
-    expect(confirmButton.textContent).toContain('Confirm Venmo Payment');
-    confirmButton.click();
-    fixture.detectChanges();
-    const modal = fixture.nativeElement.querySelector(
-      '.venmo-confirmation-modal',
-    ) as HTMLElement;
-    const title = modal.querySelector('#confirm-venmo-title') as HTMLElement;
-    const guidance = modal.querySelector('.venmo-confirmation-copy') as HTMLElement;
-    expect(modal).not.toBeNull();
-    expect(parseFloat(getComputedStyle(title).fontSize)).toBeGreaterThanOrEqual(36);
-    expect(parseFloat(getComputedStyle(guidance).marginBottom)).toBeGreaterThanOrEqual(24);
-
-    component.venmoProviderPaymentId = ' VENMO-TRANSACTION-123 ';
-    component.venmoAmountDollars = 100;
-    component.venmoOccurredAt = '2026-08-04T14:30';
-    await component.confirmVenmoPayment();
-
-    expect(financials.recordVenmoReceipt).toHaveBeenCalledWith(
-      'BBW-HIDDEN-REFERENCE', 'VENMO-TRANSACTION-123', 10000,
-      jasmine.any(String), jasmine.any(String),
-    );
-    expect(component.actionMessage()).toContain('confirmed');
-    expect(component.venmoApprovalBooking()).toBeNull();
+  it('renders one full-width CRM shell and keeps table overflow contained', () => {
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+    expect(fixture.nativeElement.querySelector('.table-wrap')).not.toBeNull();
   });
 
   it('loads minimized counts and filters the roster', () => {
@@ -289,7 +233,7 @@ describe('WorkshopRosterComponent', () => {
     fixture.detectChanges();
 
     const deleteButton = fixture.nativeElement.querySelector(
-      '.delete-expired-button',
+      '.delete-booking-button',
     ) as HTMLButtonElement;
     expect(deleteButton.textContent?.trim()).toBe('Delete Booking');
     deleteButton.click();
@@ -301,7 +245,7 @@ describe('WorkshopRosterComponent', () => {
     expect(modal.textContent).not.toContain('Keep Booking');
     const modalActions = modal.querySelectorAll('.modal-actions button');
     const permanentDeleteButton = modal.querySelector(
-      '.delete-expired-confirm-button',
+      '.delete-booking-confirm-button',
     ) as HTMLButtonElement;
     expect(modalActions.length).toBe(1);
     expect(permanentDeleteButton.textContent?.trim()).toBe('Permanently Delete');
@@ -310,14 +254,47 @@ describe('WorkshopRosterComponent', () => {
     operations.listBookings.and.resolveTo([]);
     operations.listMinimizedRoster.and.resolveTo([]);
     operations.listAttendeesForBookings.and.resolveTo([]);
-    await component.confirmExpiredBookingDeletion();
+    await component.confirmBookingDeletion();
 
-    expect(operations.deleteExpiredBooking).toHaveBeenCalledWith(
+    expect(operations.deleteInactiveBooking).toHaveBeenCalledWith(
       'booking-expired', jasmine.any(String),
     );
     expect(component.bookings()).toEqual([]);
     expect(component.deletionBooking()).toBeNull();
     expect(component.actionMessage()).toContain('permanently deleted');
+  });
+
+  it('permanently deletes a cancelled booking through the same confirmation flow', async () => {
+    const cancelled = {
+      ...component.bookings()[0],
+      workshop_booking_id: 'booking-cancelled',
+      status: 'cancelled' as const,
+      active_quantity: 0,
+    };
+    component.bookings.set([cancelled]);
+    fixture.detectChanges();
+
+    const deleteButton = fixture.nativeElement.querySelector(
+      '.delete-booking-button',
+    ) as HTMLButtonElement;
+    expect(deleteButton.textContent?.trim()).toBe('Delete Booking');
+    deleteButton.click();
+    fixture.detectChanges();
+
+    const modal = fixture.nativeElement.querySelector('.deletion-modal') as HTMLElement;
+    expect(modal.textContent).toContain('Permanently delete cancelled booking?');
+    expect(modal.textContent).toContain('remove it from the roster count');
+
+    operations.listBookings.and.resolveTo([]);
+    operations.listMinimizedRoster.and.resolveTo([]);
+    operations.listAttendeesForBookings.and.resolveTo([]);
+    await component.confirmBookingDeletion();
+
+    expect(operations.deleteInactiveBooking).toHaveBeenCalledWith(
+      'booking-cancelled', jasmine.any(String),
+    );
+    expect(component.bookings()).toEqual([]);
+    expect(component.actionMessage()).toContain('cancelled booking was permanently deleted');
   });
 
   it('submits an automatic Stripe seat refund and explains delayed seat release', async () => {
@@ -345,45 +322,6 @@ describe('WorkshopRosterComponent', () => {
     expect(component.actionMessage()).toContain('verified');
     expect(component.bookings()[0].active_quantity).toBe(1);
     expect(component.bookings()[0].payment_state).toBe('partially_refunded');
-  });
-
-  it('records a manual Venmo refund only after the florist confirms it was sent', async () => {
-    const booking = {
-      ...component.bookings()[0],
-      payment_method: 'direct_venmo' as const,
-    };
-    component.bookings.set([booking]);
-    component.refundableCharges.set([{
-      ...component.refundableCharges()[0],
-      provider: 'direct_venmo' as const,
-      provider_transaction_id: 'venmo-charge-1',
-    }]);
-    financials.getRefundEligibility.and.resolveTo({
-      eligible: true,
-      transactionId: 'transaction-1',
-      currency: 'USD',
-      remainingRefundableMinor: 10000,
-      providerChargeId: 'venmo-charge-1',
-      bookingId: 'booking-1',
-      occurrenceId: 'occurrence-1',
-      provider: 'direct_venmo',
-    });
-
-    await component.openRefundModal(booking);
-    fixture.detectChanges();
-    const modal = fixture.nativeElement.querySelector('.refund-modal') as HTMLElement;
-    expect(modal.textContent).toContain('Send the refund in Venmo first');
-
-    component.refundReference = ' VENMO-REFUND-123 ';
-    component.refundOccurredAt = '2026-08-04T14:30';
-    component.refundConfirmation = true;
-    await component.refundSelectedSeats();
-
-    expect(financials.recordExternalRefund).toHaveBeenCalledWith(
-      'transaction-1', 5000, 'VENMO-REFUND-123', 'customer_requested',
-      jasmine.any(String), jasmine.any(String), 1,
-    );
-    expect(component.actionMessage()).toContain('Venmo refund recorded');
   });
 
   it('excludes expired and cancelled bookings from active seats while retaining pending holds', () => {

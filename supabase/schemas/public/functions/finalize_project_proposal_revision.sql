@@ -28,6 +28,16 @@ declare
   v_active_snapshot_count integer;
   v_line_count integer;
   v_total_line_count integer;
+  v_line jsonb;
+  v_line_index integer := 0;
+  v_line_type text;
+  v_line_quantity numeric;
+  v_line_unit_price numeric;
+  v_line_subtotal numeric;
+  v_line_calculated_price numeric;
+  v_line_override_price numeric;
+  v_expected_line_subtotal numeric;
+  v_computed_subtotal numeric(12,2) := 0;
   v_json_subtotal numeric(12,2);
   v_json_tax_amount numeric(12,2);
   v_json_total numeric(12,2);
@@ -119,12 +129,17 @@ begin
     raise exception 'The project must have exactly one active invoice snapshot.' using errcode = '55000';
   end if;
 
-  if v_workspace.schema_version <> 2
-     or coalesce((v_workspace.draft_snapshot->>'schema_version')::integer, 0) <> 2
-     or jsonb_typeof(v_workspace.draft_snapshot->'line_items') <> 'array'
-     or jsonb_typeof(v_workspace.draft_snapshot->'tax_region') <> 'object'
-     or jsonb_typeof(v_workspace.draft_snapshot->'totals') <> 'object' then
+  if v_workspace.schema_version <> 3
+     or coalesce((v_workspace.draft_snapshot->>'schema_version')::integer, 0) <> 3
+     or jsonb_typeof(v_workspace.draft_snapshot->'line_items') is distinct from 'array'
+     or jsonb_typeof(v_workspace.draft_snapshot->'tax_region') is distinct from 'object'
+     or jsonb_typeof(v_workspace.draft_snapshot->'totals') is distinct from 'object' then
     raise exception 'The saved revision uses an unsupported proposal schema.' using errcode = '22023';
+  end if;
+
+  if v_workspace.draft_snapshot ? 'labor_percent'
+     or coalesce(v_workspace.draft_snapshot->'breakdown', '{}'::jsonb) ? 'calculatedLaborAmount' then
+    raise exception 'Percentage-based labor is not allowed in proposal schema V3.' using errcode = '22023';
   end if;
 
   select count(*) into v_line_count
@@ -138,6 +153,68 @@ begin
     raise exception 'The saved revision requires at least one valid line item.' using errcode = '22023';
   end if;
 
+  for v_line in
+    select value from jsonb_array_elements(v_workspace.draft_snapshot->'line_items')
+  loop
+    v_line_index := v_line_index + 1;
+    v_line_type := v_line->>'line_item_type';
+
+    if v_line_type is null
+       or v_line_type not in ('product', 'labor', 'fee', 'discount')
+       or jsonb_typeof(v_line->'quantity') is distinct from 'number'
+       or jsonb_typeof(v_line->'unit_price') is distinct from 'number'
+       or jsonb_typeof(v_line->'subtotal') is distinct from 'number' then
+      raise exception 'Proposal line % has invalid pricing fields.', v_line_index using errcode = '22023';
+    end if;
+
+    v_line_quantity := (v_line->>'quantity')::numeric;
+    v_line_unit_price := (v_line->>'unit_price')::numeric;
+    v_line_subtotal := (v_line->>'subtotal')::numeric;
+
+    if v_line_quantity < 0
+       or v_line_unit_price < 0
+       or round(v_line_unit_price, 2) is distinct from v_line_unit_price
+       or round(v_line_subtotal, 2) is distinct from v_line_subtotal then
+      raise exception 'Proposal line % contains invalid currency values.', v_line_index using errcode = '22023';
+    end if;
+
+    if v_line_type = 'product' then
+      if jsonb_typeof(v_line->'calculated_unit_price') is distinct from 'number'
+         or not (v_line ? 'actual_unit_price_override')
+         or jsonb_typeof(v_line->'actual_unit_price_override') not in ('number', 'null') then
+        raise exception 'Product line % is missing V3 price state.', v_line_index using errcode = '22023';
+      end if;
+
+      v_line_calculated_price := (v_line->>'calculated_unit_price')::numeric;
+      v_line_override_price := case
+        when jsonb_typeof(v_line->'actual_unit_price_override') = 'null' then null
+        else (v_line->>'actual_unit_price_override')::numeric
+      end;
+
+      if v_line_calculated_price < 0
+         or round(v_line_calculated_price, 2) is distinct from v_line_calculated_price
+         or (v_line_override_price is not null and (
+           v_line_override_price < 0
+           or round(v_line_override_price, 2) is distinct from v_line_override_price
+         ))
+         or v_line_unit_price is distinct from coalesce(v_line_override_price, v_line_calculated_price) then
+        raise exception 'Product line % effective price is inconsistent.', v_line_index using errcode = '22023';
+      end if;
+    elsif v_line ? 'calculated_unit_price' or v_line ? 'actual_unit_price_override' then
+      raise exception 'Manual line % contains product-only price state.', v_line_index using errcode = '22023';
+    end if;
+
+    v_expected_line_subtotal := round(v_line_quantity * v_line_unit_price, 2);
+    if v_line_type = 'discount' then
+      v_expected_line_subtotal := -abs(v_expected_line_subtotal);
+    end if;
+    if v_line_subtotal is distinct from v_expected_line_subtotal then
+      raise exception 'Proposal line % subtotal is inconsistent.', v_line_index using errcode = '22023';
+    end if;
+
+    v_computed_subtotal := round(v_computed_subtotal + v_line_subtotal, 2);
+  end loop;
+
   if nullif(v_workspace.draft_snapshot->'tax_region'->>'tax_rate', '') is null then
     raise exception 'The saved revision requires recorded tax context.' using errcode = '22023';
   end if;
@@ -147,10 +224,11 @@ begin
   v_json_total := round((v_workspace.draft_snapshot->'totals'->>'totalAmount')::numeric, 2);
 
   if v_json_subtotal is distinct from round(v_workspace.subtotal, 2)
+     or v_json_subtotal is distinct from v_computed_subtotal
      or v_json_tax_amount is distinct from round(v_workspace.tax_amount, 2)
      or v_json_total is distinct from round(v_workspace.total_amount, 2)
      or round(v_workspace.subtotal + v_workspace.tax_amount, 2) is distinct from round(v_workspace.total_amount, 2)
-     or round(v_workspace.subtotal * v_workspace.tax_rate, 2) is distinct from round(v_workspace.tax_amount, 2)
+     or round(greatest(v_workspace.subtotal, 0) * v_workspace.tax_rate, 2) is distinct from round(v_workspace.tax_amount, 2)
      or round((v_workspace.draft_snapshot->'tax_region'->>'tax_rate')::numeric, 6) is distinct from round(v_workspace.tax_rate, 6)
      or least(v_workspace.subtotal, v_workspace.tax_amount, v_workspace.total_amount, v_workspace.retainer_amount, v_workspace.final_balance_amount) < 0 then
     raise exception 'The saved revision totals are inconsistent.' using errcode = '22023';

@@ -24,6 +24,12 @@ interface BookingMessageFacts {
   activeQuantity: number;
 }
 
+interface WorkshopRecommendation {
+  title: string;
+  url: string;
+  startAt: string;
+}
+
 const encoder = new TextEncoder();
 const b64url = (bytes: Uint8Array) =>
   btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_")
@@ -92,6 +98,7 @@ function renderMessage(
   message: ClaimedMessage,
   token: string | null,
   facts: BookingMessageFacts | null,
+  context: Record<string, unknown> = {},
 ) {
   const origin = envValue("WORKSHOP_PUBLIC_ORIGIN").replace(/\/+$/, "");
   if (!/^https?:\/\/[^/]+$/.test(origin)) {
@@ -119,8 +126,8 @@ function renderMessage(
       "Use this code to confirm this address before it becomes your workshop contact email.",
     ],
     cancellation_notice: [
-      "Your workshop booking was updated",
-      "A cancellation was recorded for your workshop booking.",
+      "Your Black Begonia workshop was cancelled",
+      "This workshop occurrence was cancelled. If your card payment was captured, its refund is being processed and you will receive a separate confirmation when it is verified.",
     ],
     reschedule_prompt: [
       "Your workshop schedule changed",
@@ -130,14 +137,35 @@ function renderMessage(
       "Your workshop refund was updated",
       "A refund update is available for your workshop booking.",
     ],
+    reschedule_confirmation: [
+      "Your Black Begonia workshop has a new date",
+      "Your reservation remains confirmed. Please review the updated workshop schedule below.",
+    ],
+    refund_confirmation: [
+      "Your Black Begonia workshop refund is confirmed",
+      "Your workshop refund has been confirmed and returned to your original payment method.",
+    ],
+    workshop_thank_you: [
+      "Thank you for joining Black Begonia Florals",
+      "Thank you for spending time creating with us. We hope to welcome you back to another workshop soon.",
+    ],
   };
   const selected = templates[message.communication_type];
   if (!selected) throw new Error("template unavailable");
   const isConfirmation = message.communication_type === "booking_confirmation";
+  const isThankYou = message.communication_type === "workshop_thank_you";
+  const isRefundConfirmation =
+    message.communication_type === "refund_confirmation";
   const subject = isConfirmation && facts
     ? `Your ${facts.workshopTitle} workshop is confirmed!`
+    : isThankYou && facts
+    ? `Thank you for joining us for ${facts.workshopTitle}`
     : selected[0];
-  const headline = isConfirmation ? "Your workshop is confirmed!" : selected[0];
+  const headline = isConfirmation
+    ? "Your workshop is confirmed!"
+    : isThankYou
+    ? "Thank you for joining us!"
+    : selected[0];
   const introduction = isConfirmation
     ? "Your payment is confirmed and your seats are reserved. We’re so excited to design beautiful arrangements with you!"
     : selected[1];
@@ -154,18 +182,47 @@ function renderMessage(
     }`;
   }
 
+  const includeSeatCount = isConfirmation ||
+    message.communication_type === "reschedule_confirmation";
   const factLines = facts
     ? [
       facts.workshopTitle,
       `${formatWorkshopDate(facts)} at ${formatWorkshopTime(facts)}`,
       `${facts.venueName}, ${facts.locality}, ${facts.region}`,
-      `${facts.activeQuantity} ${
+      ...(includeSeatCount ? [`${facts.activeQuantity} ${
         facts.activeQuantity === 1 ? "seat" : "seats"
-      } booked`,
+      } booked`] : []),
     ]
+    : [];
+  const refundAmount = Number(context["amountMinor"]);
+  const refundCurrency = String(context["currency"] ?? "USD");
+  const refundLabel = isRefundConfirmation && Number.isSafeInteger(refundAmount)
+    ? new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: refundCurrency,
+    }).format(refundAmount / 100)
+    : null;
+  const recommendations = Array.isArray(context["recommendations"])
+    ? (context["recommendations"] as Array<Record<string, unknown>>)
+      .map((item) => ({
+        title: String(item["title"] ?? "").trim(),
+        url: String(item["url"] ?? "").trim(),
+        startAt: String(item["startAt"] ?? "").trim(),
+      }))
+      .filter((item): item is WorkshopRecommendation =>
+        item.title.length > 0 && /^\/workshops\/[a-z0-9-]+$/.test(item.url)
+      ).slice(0, 3)
     : [];
   let text = `${introduction}\n\n`;
   if (factLines.length) text += `${factLines.join("\n")}\n\n`;
+  if (refundLabel) text += `Confirmed refund: ${refundLabel}\n\n`;
+  if (recommendations.length) {
+    text += "Explore another workshop:\n";
+    for (const item of recommendations) {
+      text += `${item.title}: ${origin}${item.url}\n`;
+    }
+    text += "\n";
+  }
   if (token) {
     text += message.token_purpose === "status_access"
       ? `Open your secure booking confirmation directly:\n${destination}\n\n`
@@ -189,15 +246,31 @@ function renderMessage(
         <tr><td style="padding:16px 20px;border-bottom:1px solid #eadfd9"><strong style="color:#9a625b">Where:</strong> ${
       escapeHtml(facts.venueName)
     }, ${escapeHtml(facts.locality)}, ${escapeHtml(facts.region)}</td></tr>
-        <tr><td style="padding:16px 20px"><strong style="color:#9a625b">Seats:</strong> ${facts.activeQuantity} ${
-      facts.activeQuantity === 1 ? "seat" : "seats"
-    } booked</td></tr>
+        ${includeSeatCount
+      ? `<tr><td style="padding:16px 20px"><strong style="color:#9a625b">Seats:</strong> ${facts.activeQuantity} ${
+        facts.activeQuantity === 1 ? "seat" : "seats"
+      } booked</td></tr>`
+      : ""}
       </table>`
     : "";
   const tokenHtml = token && message.token_purpose !== "status_access"
     ? `<p style="margin:18px 0;padding:14px;background:#f6efeb;border:1px solid #e4d6cf;border-radius:8px;font-family:monospace;overflow-wrap:anywhere">${
       escapeHtml(token)
     }</p>`
+    : "";
+  const refundHtml = refundLabel
+    ? `<p style="margin:22px 0;padding:16px;background:#fbf7f4;border:1px solid #eadfd9;border-radius:8px;text-align:center"><span style="display:block;color:#9a625b;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">Confirmed refund</span><strong style="display:block;margin-top:6px;color:#332a27;font-family:Georgia,serif;font-size:26px">${
+      escapeHtml(refundLabel)
+    }</strong></p>`
+    : "";
+  const recommendationsHtml = recommendations.length
+    ? `<div style="margin:26px 0;padding-top:20px;border-top:1px solid #eadfd9"><h2 style="margin:0 0 14px;color:#332a27;font-family:Georgia,serif;font-size:22px;font-weight:normal;text-align:center">Create with us again</h2>${
+      recommendations.map((item) =>
+        `<p style="margin:10px 0;text-align:center"><a href="${
+          escapeHtml(origin + item.url)
+        }" style="color:#9a554e;font-weight:700">${escapeHtml(item.title)}</a></p>`
+      ).join("")
+    }</div>`
     : "";
   const buttonLabel = message.token_purpose === "status_access"
     ? "View my workshop confirmation"
@@ -211,7 +284,7 @@ function renderMessage(
     }</h1></td></tr>
         <tr><td style="padding:12px 34px 34px"><p style="margin:0;color:#655a55;font-size:16px;line-height:1.7;text-align:center">${
       escapeHtml(introduction)
-    }</p>${factsHtml}${tokenHtml}${
+    }</p>${factsHtml}${refundHtml}${recommendationsHtml}${tokenHtml}${
       token
         ? `<p style="margin:26px 0;text-align:center"><a href="${
           escapeHtml(destination)
@@ -365,12 +438,30 @@ serve(async (request) => {
         throw new Error("recipient unavailable");
       }
       rawToken = message.token_purpose ? newToken() : null;
-      const bookingFacts =
-        message.communication_type === "booking_confirmation" ||
-          message.communication_type === "replacement_status_access"
+      const bookingFacts = [
+        "booking_confirmation",
+        "replacement_status_access",
+        "cancellation_notice",
+        "reschedule_confirmation",
+        "refund_confirmation",
+        "workshop_thank_you",
+      ].includes(message.communication_type)
           ? await loadBookingMessageFacts(db, message.booking_id)
           : null;
-      const rendered = renderMessage(message, rawToken, bookingFacts);
+      const contextResult = await db.from("workshop_message_queue")
+        .select("message_context")
+        .eq("workshop_message_queue_id", message.queue_id)
+        .maybeSingle();
+      const messageContext = contextResult.data?.message_context &&
+          typeof contextResult.data.message_context === "object"
+        ? contextResult.data.message_context as Record<string, unknown>
+        : {};
+      const rendered = renderMessage(
+        message,
+        rawToken,
+        bookingFacts,
+        messageContext,
+      );
       const payloadDigest = await digest(
         `${rendered.subject}\n${rendered.text}\n${rendered.html}`,
       );

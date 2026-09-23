@@ -117,7 +117,7 @@ describe('WebsiteAnalyticsService', () => {
     service.trackWorkshopSelection('carousel', 'garden-workshop');
     service.trackWorkshopSelection('carousel', 'garden-workshop');
     service.trackWorkshopReservationStart('garden-workshop', 3);
-    service.trackWorkshopCheckoutStart('direct_venmo', 3);
+    service.trackWorkshopCheckoutStart('stripe', 3);
 
     expect(google.send.calls.allArgs()).toEqual([
       ['workshop_detail_view', {
@@ -140,7 +140,7 @@ describe('WebsiteAnalyticsService', () => {
       ['workshop_checkout_start', {
         page_category: 'workshop_detail',
         content_category: 'workshop',
-        provider: 'direct_venmo',
+        provider: 'stripe',
         quantity_band: 'three_plus',
       }],
     ]);

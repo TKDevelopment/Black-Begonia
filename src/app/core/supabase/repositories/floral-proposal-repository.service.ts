@@ -343,7 +343,7 @@ export class FloralProposalRepositoryService {
           image_storage_path: lineItem.image_storage_path ?? null,
           image_alt_text: lineItem.image_alt_text ?? null,
           image_caption: lineItem.image_caption ?? null,
-          snapshot: lineItem.snapshot ?? {},
+          snapshot: this.buildPrivateLineSnapshot(lineItem),
         }))
       )
       .select(this.lineItemSelect)
@@ -358,6 +358,37 @@ export class FloralProposalRepositoryService {
     }
 
     return (data ?? []) as FloralProposalLineItem[];
+  }
+
+  private buildPrivateLineSnapshot(
+    lineItem: Omit<
+      FloralProposalLineItem,
+      'floral_proposal_line_item_id' | 'floral_proposal_id' | 'created_at' | 'updated_at'
+    >
+  ): Record<string, unknown> {
+    const {
+      calculated_unit_price: calculatedUnitPrice,
+      actual_unit_price_override: actualUnitPriceOverride,
+      actual_unit_price_input: _actualUnitPriceInput,
+      actual_unit_price_error: _actualUnitPriceError,
+      ...snapshot
+    } = lineItem.snapshot ?? {};
+
+    if (lineItem.line_item_type !== 'product') {
+      return snapshot;
+    }
+
+    return {
+      ...snapshot,
+      calculated_unit_price:
+        typeof calculatedUnitPrice === 'number'
+          ? calculatedUnitPrice
+          : lineItem.unit_price,
+      actual_unit_price_override:
+        typeof actualUnitPriceOverride === 'number'
+          ? actualUnitPriceOverride
+          : null,
+    };
   }
 
   async replaceFloralProposalComponents(
@@ -395,8 +426,13 @@ export class FloralProposalRepositoryService {
           applied_markup_percent: component.applied_markup_percent,
           sell_unit_price: component.sell_unit_price,
           subtotal: component.subtotal,
-          reserve_percent: component.reserve_percent ?? 0,
-          snapshot: component.snapshot ?? {},
+          reserve_percent: 0,
+          snapshot: {
+            ...(component.snapshot ?? {}),
+            reserve_percent: undefined,
+            reserve_units:
+              component.reserve_units ?? component.snapshot?.['reserve_units'] ?? 0,
+          },
         })
       )
     );
@@ -534,7 +570,7 @@ export class FloralProposalRepositoryService {
           item_type: item.item_type,
           unit_type: item.unit_type,
           required_units: item.required_units,
-          reserve_percent: item.reserve_percent,
+          reserve_percent: 0,
           reserve_units: item.reserve_units,
           total_units_to_buy: item.total_units_to_buy,
           units_per_pack: item.units_per_pack ?? null,

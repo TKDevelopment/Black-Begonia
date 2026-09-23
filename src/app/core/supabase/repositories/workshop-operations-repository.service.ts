@@ -7,9 +7,11 @@ import {
   WorkshopCommunicationQueueItem,
   WorkshopManualReservation,
   WorkshopLifecycleCommandResult,
+  WorkshopCompletionResult,
   WorkshopOccurrenceCancellationResult,
   WorkshopOccurrenceOperationalState,
   WorkshopRescheduleCommandResult,
+  WorkshopScheduleRescheduleResult,
   WorkshopRescheduleResponse,
   WorkshopRosterCommandResult,
   WorkshopRosterRow,
@@ -37,7 +39,7 @@ export interface WorkshopOperationsRepository {
     reason: string,
     commandKey: string,
   ): Promise<WorkshopRosterCommandResult>;
-  deleteExpiredBooking(
+  deleteInactiveBooking(
     bookingId: string,
     commandKey: string,
   ): Promise<WorkshopRosterCommandResult>;
@@ -60,6 +62,18 @@ export interface WorkshopOperationsRepository {
     reasonCategory: string,
     commandKey: string,
   ): Promise<WorkshopOccurrenceCancellationResult>;
+  completeAndArchiveOccurrence(
+    occurrenceId: string,
+    commandKey: string,
+  ): Promise<WorkshopCompletionResult>;
+  rescheduleOccurrenceSchedule(
+    occurrenceId: string,
+    localStart: string,
+    localEnd: string,
+    utcOffsetMinutes: number,
+    registrationClosesAt: string,
+    commandKey: string,
+  ): Promise<WorkshopScheduleRescheduleResult>;
   listRescheduleResponses(
     occurrenceId: string,
   ): Promise<WorkshopRescheduleResponse[]>;
@@ -182,7 +196,7 @@ export class WorkshopOperationsRepositoryService implements WorkshopOperationsRe
     }, commandKey);
   }
 
-  async deleteExpiredBooking(
+  async deleteInactiveBooking(
     bookingId: string,
     commandKey: string,
   ): Promise<WorkshopRosterCommandResult> {
@@ -264,6 +278,41 @@ export class WorkshopOperationsRepositoryService implements WorkshopOperationsRe
     );
     if (error) throw error;
     return data as WorkshopOccurrenceCancellationResult;
+  }
+
+  async completeAndArchiveOccurrence(
+    occurrenceId: string,
+    commandKey: string,
+  ): Promise<WorkshopCompletionResult> {
+    const { data, error } = await this.supabase.getClient().rpc(
+      'complete_and_archive_workshop_occurrence',
+      { p_occurrence_id: occurrenceId, p_command_key: commandKey },
+    );
+    if (error) throw error;
+    return data as WorkshopCompletionResult;
+  }
+
+  async rescheduleOccurrenceSchedule(
+    occurrenceId: string,
+    localStart: string,
+    localEnd: string,
+    utcOffsetMinutes: number,
+    registrationClosesAt: string,
+    commandKey: string,
+  ): Promise<WorkshopScheduleRescheduleResult> {
+    const { data, error } = await this.supabase.getClient().rpc(
+      'reschedule_workshop_occurrence_schedule',
+      {
+        p_occurrence_id: occurrenceId,
+        p_local_start: localStart,
+        p_local_end: localEnd,
+        p_utc_offset_minutes: utcOffsetMinutes,
+        p_registration_closes_at: registrationClosesAt,
+        p_command_key: commandKey,
+      },
+    );
+    if (error) throw error;
+    return data as WorkshopScheduleRescheduleResult;
   }
 
   async listRescheduleResponses(

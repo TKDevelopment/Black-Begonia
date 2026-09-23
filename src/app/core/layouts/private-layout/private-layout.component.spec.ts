@@ -50,6 +50,18 @@ describe('PrivateLayoutComponent', () => {
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 
+  it('defines the routed measurement boundary after navigation without changing navigation geometry', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const main = compiled.querySelector('main');
+    const sidebar = compiled.querySelector('.crm-sidebar-rail');
+
+    expect(main).toBeTruthy();
+    expect(main?.classList.contains('min-w-0')).toBeTrue();
+    expect(main?.classList.contains('flex-1')).toBeTrue();
+    expect(sidebar?.classList.contains('lg:fixed')).toBeTrue();
+    expect(main?.querySelector('router-outlet')).toBeTruthy();
+  });
+
   it('should toggle the mobile sidebar', () => {
     component.openMobileSidebar();
     expect(component.mobileSidebarOpen).toBeTrue();

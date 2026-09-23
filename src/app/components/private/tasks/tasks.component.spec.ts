@@ -57,12 +57,17 @@ describe('TasksComponent', () => {
         { provide: InternalUserRepositoryService, useValue: internalUserRepository },
         { provide: ToastService, useValue: toast },
       ],
-    })
-      .overrideComponent(TasksComponent, { set: { template: '' } })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TasksComponent);
     component = fixture.componentInstance;
+  });
+
+  it('renders one full-width CRM page shell', () => {
+    fixture.detectChanges();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
   });
 
   it('loads tasks and internal users for the table', async () => {

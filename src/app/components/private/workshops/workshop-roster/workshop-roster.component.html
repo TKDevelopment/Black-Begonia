@@ -1,4 +1,4 @@
-<main class="roster-page">
+<main class="roster-page crm-page-frame" data-crm-page-shell>
   <header class="page-header">
     <div>
       <a class="back-link" routerLink="/admin/workshops">&larr; Workshops</a>
@@ -9,7 +9,7 @@
 
   @if (loading()) {
     <p class="page-state" role="status">Loading workshop operations&hellip;</p>
-  } @else if (error() && !reservationModalOpen() && !cancellationBooking() && !deletionBooking() && !venmoApprovalBooking() && !refundBooking()) {
+  } @else if (error() && !reservationModalOpen() && !cancellationBooking() && !deletionBooking() && !refundBooking()) {
     <p class="error page-state" role="alert">{{ error() }}</p>
   } @else {
     <section class="metrics overflow-hidden" aria-label="Roster counts">
@@ -85,8 +85,8 @@
                 </td>
                 <td>
                   <div class="booking-actions flex flex-wrap items-center gap-2">
-                    @if (booking.status === 'expired') {
-                      <button class="secondary-button danger-button delete-expired-button" type="button"
+                    @if (booking.status === 'expired' || booking.status === 'cancelled') {
+                      <button class="secondary-button danger-button delete-booking-button" type="button"
                         (click)="openDeletionModal(booking)">
                         Delete Booking
                       </button>
@@ -100,12 +100,6 @@
                       <button class="secondary-button danger-button" type="button"
                         (click)="openCancellationModal(booking)" [disabled]="booking.active_quantity < 1">
                         Cancel Seats
-                      </button>
-                    }
-                    @if (canConfirmVenmoPayment(booking)) {
-                      <button class="venmo-confirm-button primary-button" type="button"
-                        (click)="openVenmoApprovalModal(booking)">
-                        Confirm Venmo Payment
                       </button>
                     }
                   </div>
@@ -270,12 +264,12 @@
   @if (deletionBooking(); as booking) {
     <div class="modal-backdrop" (click)="closeDeletionModal()">
       <section class="reservation-modal cancellation-modal deletion-modal" role="alertdialog"
-        aria-modal="true" aria-labelledby="delete-expired-booking-title"
-        aria-describedby="delete-expired-booking-copy" (click)="$event.stopPropagation()">
+        aria-modal="true" aria-labelledby="delete-booking-title"
+        aria-describedby="delete-booking-copy" (click)="$event.stopPropagation()">
         <header class="modal-header">
           <div>
             <p class="eyebrow">{{ booking.contact_name }}</p>
-            <h2 id="delete-expired-booking-title">Permanently delete expired booking?</h2>
+            <h2 id="delete-booking-title">Permanently delete {{ booking.status }} booking?</h2>
           </div>
           <button class="crm-destructive-close" type="button" aria-label="Close booking deletion"
             (click)="closeDeletionModal()" [disabled]="deletionBusy()">
@@ -284,68 +278,18 @@
             </svg>
           </button>
         </header>
-        <p id="delete-expired-booking-copy" class="cancellation-copy">
-          This will permanently delete the expired booking and remove it from the roster count.
+        <p id="delete-booking-copy" class="cancellation-copy">
+          This will permanently delete the {{ booking.status }} booking and remove it from the roster count.
           This action cannot be undone. Bookings with protected financial, communication, privacy,
           or rescheduling history cannot be deleted.
         </p>
         <p *ngIf="error()" class="error" role="alert">{{ error() }}</p>
         <div class="modal-actions">
-          <button class="danger-confirm-button delete-expired-confirm-button mt-4" type="button"
-            (click)="confirmExpiredBookingDeletion()" [disabled]="deletionBusy()">
+          <button class="danger-confirm-button delete-booking-confirm-button mt-4" type="button"
+            (click)="confirmBookingDeletion()" [disabled]="deletionBusy()">
             {{ deletionBusy() ? 'Deleting...' : 'Permanently Delete' }}
           </button>
         </div>
-      </section>
-    </div>
-  }
-
-  @if (venmoApprovalBooking(); as booking) {
-    <div class="modal-backdrop" (click)="closeVenmoApprovalModal()">
-      <section class="reservation-modal venmo-confirmation-modal" role="dialog" aria-modal="true"
-        aria-labelledby="confirm-venmo-title" (click)="$event.stopPropagation()">
-        <header class="modal-header">
-          <div>
-            <p class="eyebrow">{{ booking.contact_name }}</p>
-            <h2 id="confirm-venmo-title" class="venmo-modal-title text-4xl">
-              Confirm Venmo Payment
-            </h2>
-          </div>
-          <button class="crm-destructive-close" type="button" aria-label="Close Confirm Venmo Payment"
-            (click)="closeVenmoApprovalModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd" />
-            </svg>
-          </button>
-        </header>
-        <p class="venmo-confirmation-copy cancellation-copy mb-6">
-          Verify this payment in Venmo, then record the exact transaction details below.
-          Matching, on-time payments confirm the booking automatically; discrepancies are
-          held for financial review.
-        </p>
-        <form class="form-grid" (ngSubmit)="confirmVenmoPayment()">
-          <label class="full-width">Venmo transaction ID
-            <input name="venmoProviderPaymentId" [(ngModel)]="venmoProviderPaymentId"
-              placeholder="Transaction ID shown in Venmo" required />
-          </label>
-          <label>Amount received (USD)
-            <input name="venmoAmountDollars" [(ngModel)]="venmoAmountDollars"
-              type="number" min="0.01" step="0.01" required />
-          </label>
-          <label>Received at
-            <input name="venmoOccurredAt" [(ngModel)]="venmoOccurredAt"
-              type="datetime-local" required />
-          </label>
-          <p *ngIf="error()" class="error full-width" role="alert">{{ error() }}</p>
-          <div class="modal-actions full-width">
-            <button class="secondary-button" type="button" (click)="closeVenmoApprovalModal()"
-              [disabled]="venmoApprovalBusy()">Not Yet</button>
-            <button class="primary-button" type="submit"
-              [disabled]="venmoApprovalBusy() || !venmoProviderPaymentId.trim() || venmoAmountDollars < 0.01 || !venmoOccurredAt">
-              {{ venmoApprovalBusy() ? 'Recording payment...' : 'Confirm Payment Received' }}
-            </button>
-          </div>
-        </form>
       </section>
     </div>
   }
@@ -374,7 +318,7 @@
           @if (refundEligibility(); as eligibility) {
           <div class="content-card mb-5 grid gap-3 sm:grid-cols-2">
             <div><span class="muted">Payment method</span>
-              <strong>{{ eligibility.provider === 'stripe' ? 'Stripe' : 'Direct Venmo' }}</strong></div>
+              <strong>Stripe</strong></div>
             <div><span class="muted">Refundable balance</span>
               <strong>{{ formatCurrency(eligibility.remainingRefundableMinor) }}</strong></div>
             <div><span class="muted">Active seats</span>
@@ -383,18 +327,11 @@
               <strong>{{ formatCurrency(booking.price_per_seat_minor_snapshot) }}</strong></div>
           </div>
 
-          @if (eligibility.provider === 'stripe') {
-            <p class="cancellation-copy mb-5">
-              Stripe processes this refund automatically. Seats are released only after a
-              verified Stripe confirmation, protecting the roster if the provider rejects or
-              delays the refund.
-            </p>
-          } @else {
-            <p class="cancellation-copy mb-5">
-              Send the refund in Venmo first, then confirm the completed transaction here.
-              Recording it will release the selected seats and preserve an auditable reference.
-            </p>
-          }
+          <p class="cancellation-copy mb-5">
+            Stripe processes this refund automatically. Seats are released only after a
+            verified Stripe confirmation, protecting the roster if the provider rejects or
+            delays the refund.
+          </p>
 
           <form class="form-grid" (ngSubmit)="refundSelectedSeats()">
             <label>Seats to refund
@@ -417,25 +354,11 @@
                 <option value="other">Other</option>
               </select>
             </label>
-            @if (eligibility.provider === 'direct_venmo') {
-              <label>Venmo refund transaction ID
-                <input name="refundReference" [(ngModel)]="refundReference"
-                  placeholder="Completed Venmo refund ID" required />
-              </label>
-              <label>Refund sent at
-                <input name="refundOccurredAt" [(ngModel)]="refundOccurredAt"
-                  type="datetime-local" required />
-              </label>
-            }
             <label class="full-width flex !grid-cols-none grid-flow-col items-start gap-3 rounded-lg border p-4">
               <input class="!min-h-0 !w-auto mt-1" name="refundConfirmation"
                 [(ngModel)]="refundConfirmation" type="checkbox" required />
               <span>
-                @if (eligibility.provider === 'stripe') {
-                  I confirm Stripe should process this {{ formatCurrency(refundAmountMinor()) }} refund.
-                } @else {
-                  I confirm I already sent this {{ formatCurrency(refundAmountMinor()) }} refund in Venmo.
-                }
+                I confirm Stripe should process this {{ formatCurrency(refundAmountMinor()) }} refund.
               </span>
             </label>
             <p *ngIf="error()" class="error full-width" role="alert">{{ error() }}</p>

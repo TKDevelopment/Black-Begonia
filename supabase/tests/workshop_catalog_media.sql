@@ -110,7 +110,6 @@ select lives_ok(
       "priceMinor":8500,
       "currency":"USD",
       "stripeEnabled":false,
-      "venmoEnabled":true,
       "waitlistEnabled":true,
       "isFeatured":true
     }'::jsonb,
@@ -147,7 +146,7 @@ select lives_ok(
       'registrationOpensAt','2026-09-01T12:00:00Z',
       'registrationClosesAt','2026-11-08T17:00:00Z',
       'capacity',12,'perBookingLimit',4,'priceMinor',8500,'currency','USD',
-      'stripeEnabled',false,'venmoEnabled',true,'waitlistEnabled',true,
+      'stripeEnabled',false,'waitlistEnabled',true,
       'isFeatured',true
     ),
     '20000000-0000-4000-8000-000000000020'
@@ -188,7 +187,6 @@ select lives_ok(
       "priceMinor":8500,
       "currency":"USD",
       "stripeEnabled":false,
-      "venmoEnabled":true,
       "waitlistEnabled":true,
       "isFeatured":true
     }'::jsonb,
@@ -215,7 +213,7 @@ select throws_ok(
       'utcOffsetMinutes',-300,'registrationOpensAt','2026-06-01T12:00:00Z',
       'registrationClosesAt','2026-07-10T16:00:00Z','capacity',12,
       'perBookingLimit',4,'priceMinor',8500,'currency','USD',
-      'stripeEnabled',false,'venmoEnabled',true,'waitlistEnabled',false,
+      'stripeEnabled',false,'waitlistEnabled',false,
       'isFeatured',false
     ),
     '20000000-0000-4000-8000-000000000021'
@@ -316,7 +314,7 @@ select lives_ok(
         'registrationOpensAt','2026-12-01T12:00:00Z',
         'registrationClosesAt','2027-01-16T17:00:00Z',
         'capacity',12,'perBookingLimit',4,'priceMinor',8500,'currency','USD',
-        'stripeEnabled',false,'venmoEnabled',true,'waitlistEnabled',true,
+        'stripeEnabled',false,'waitlistEnabled',true,
         'isFeatured',false
       ),
       jsonb_build_object(
@@ -332,7 +330,7 @@ select lives_ok(
         'registrationOpensAt','2027-05-01T12:00:00Z',
         'registrationClosesAt','2027-06-19T16:00:00Z',
         'capacity',12,'perBookingLimit',4,'priceMinor',8500,'currency','USD',
-        'stripeEnabled',false,'venmoEnabled',true,'waitlistEnabled',true,
+        'stripeEnabled',false,'waitlistEnabled',true,
         'isFeatured',false
       )
     ),

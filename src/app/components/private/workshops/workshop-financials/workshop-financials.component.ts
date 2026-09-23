@@ -63,13 +63,6 @@ export class WorkshopFinancialsComponent {
     amountMinor: [0, [Validators.required, Validators.min(1)]],
     reason: ['customer_requested', Validators.required],
   });
-  readonly externalRefundForm = this.fb.nonNullable.group({
-    transactionId: ['', Validators.required],
-    amountMinor: [0, [Validators.required, Validators.min(1)]],
-    reference: ['', Validators.required],
-    reason: ['customer_requested', Validators.required],
-    occurredAt: [new Date().toISOString().slice(0, 16), Validators.required],
-  });
 
   constructor() {
     void this.load();
@@ -170,27 +163,6 @@ export class WorkshopFinancialsComponent {
         ? 'Stripe accepted the refund request. Webhook reconciliation is pending.'
         : `Refund outcome: ${result.state.replaceAll('_', ' ')}.`);
       this.refundEligibility.set(null);
-    });
-  }
-
-  async submitExternalRefund(): Promise<void> {
-    const raw = this.externalRefundForm.getRawValue();
-    if (
-      this.externalRefundForm.invalid ||
-      !Number.isSafeInteger(raw.amountMinor) || raw.amountMinor <= 0
-    ) {
-      this.error.set('Enter the externally completed refund amount and reference.');
-      return;
-    }
-    if (!window.confirm(
-      'Record this externally completed refund? This records money only and does not cancel seats.',
-    )) return;
-    await this.run(async () => {
-      await this.financials.recordExternalRefund(
-        raw.transactionId, raw.amountMinor, raw.reference.trim(), raw.reason,
-        new Date(raw.occurredAt).toISOString(), crypto.randomUUID(),
-      );
-      this.message.set('External refund added to immutable financial history.');
     });
   }
 

@@ -29,50 +29,6 @@ describe('WorkshopFinancialRepositoryService', () => {
     service = TestBed.inject(WorkshopFinancialRepositoryService);
   });
 
-  it('loads active direct-Venmo attempts and records receipt facts through the authoritative command', async () => {
-    const attempts = [{
-      workshop_payment_attempt_id: 'attempt-1',
-      workshop_booking_id: 'booking-1',
-      provider: 'direct_venmo',
-      reconciliation_reference: 'BBW-ATTEMPT-1',
-      state: 'active',
-      amount_minor: 10000,
-      currency: 'USD',
-      effective_expires_at: '2026-08-16T17:00:00Z',
-      created_at: '2026-08-04T17:00:00Z',
-    }];
-    const order = jasmine.createSpy('order').and.resolveTo({ data: attempts, error: null });
-    const stateFilter = jasmine.createSpy('stateFilter').and.returnValue({ order });
-    const providerFilter = jasmine.createSpy('providerFilter').and.returnValue({ in: stateFilter });
-    const bookingFilter = jasmine.createSpy('bookingFilter').and.returnValue({ eq: providerFilter });
-    const select = jasmine.createSpy('select').and.returnValue({ in: bookingFilter });
-    from.and.returnValue({ select });
-    rpc.and.resolveTo({
-      data: { replayed: false, state: 'confirmed', bookingId: 'booking-1' },
-      error: null,
-    });
-
-    await expectAsync(service.listPendingVenmoAttempts(['booking-1']))
-      .toBeResolvedTo(attempts as never);
-    await service.recordVenmoReceipt(
-      'BBW-ATTEMPT-1', 'VENMO-TRANSACTION-123', 10000,
-      '2026-08-04T18:30:00Z', 'command-venmo',
-    );
-
-    expect(from).toHaveBeenCalledOnceWith('workshop_payment_attempts');
-    expect(bookingFilter).toHaveBeenCalledWith('workshop_booking_id', ['booking-1']);
-    expect(providerFilter).toHaveBeenCalledWith('provider', 'direct_venmo');
-    expect(stateFilter).toHaveBeenCalledWith('state', ['active', 'processing']);
-    expect(rpc).toHaveBeenCalledWith('record_workshop_venmo_receipt', {
-      p_reference: 'BBW-ATTEMPT-1',
-      p_provider_payment_id: 'VENMO-TRANSACTION-123',
-      p_amount_minor: 10000,
-      p_currency: 'USD',
-      p_occurred_at: '2026-08-04T18:30:00Z',
-      p_command_key: 'command-venmo',
-    });
-  });
-
   it('maps occurrence and series summaries without combining capability rules', async () => {
     rpc.and.resolveTo({
       data: {
@@ -142,8 +98,10 @@ describe('WorkshopFinancialRepositoryService', () => {
     }];
     const order = jasmine.createSpy('order').and.resolveTo({ data: charges, error: null });
     const stateFilter = jasmine.createSpy('stateFilter').and.returnValue({ order });
-    const transactionFilter = jasmine.createSpy('transactionFilter')
+    const providerFilter = jasmine.createSpy('providerFilter')
       .and.returnValue({ in: stateFilter });
+    const transactionFilter = jasmine.createSpy('transactionFilter')
+      .and.returnValue({ eq: providerFilter });
     const bookingFilter = jasmine.createSpy('bookingFilter')
       .and.returnValue({ eq: transactionFilter });
     const select = jasmine.createSpy('select').and.returnValue({ in: bookingFilter });
@@ -155,6 +113,7 @@ describe('WorkshopFinancialRepositoryService', () => {
     expect(from).toHaveBeenCalledWith('workshop_payment_transactions');
     expect(bookingFilter).toHaveBeenCalledWith('workshop_booking_id', ['booking-1']);
     expect(transactionFilter).toHaveBeenCalledWith('transaction_type', 'charge');
+    expect(providerFilter).toHaveBeenCalledWith('provider', 'stripe');
     expect(stateFilter).toHaveBeenCalledWith('state', ['paid', 'partially_refunded']);
   });
 
@@ -187,28 +146,12 @@ describe('WorkshopFinancialRepositoryService', () => {
     });
   });
 
-  it('maps external refunds and exception resolution without a capacity command', async () => {
-    await service.recordExternalRefund(
-      'transaction-1', 1000, 'VENMO-REFUND-1', 'customer_requested',
-      '2026-08-01T12:00:00Z', 'command-external',
-    );
+  it('maps exception resolution without a capacity command', async () => {
     await service.resolveException(
       'exception-1', 'provider_resolved', 'CRM-1', 'command-resolve',
     );
 
     expect(rpc.calls.argsFor(0)[1]).toEqual({
-      p_action: 'record_external_refund',
-      p_payload: {
-        transactionId: 'transaction-1',
-        amountMinor: 1000,
-        currency: 'USD',
-        reference: 'VENMO-REFUND-1',
-        reason: 'customer_requested',
-        occurredAt: '2026-08-01T12:00:00Z',
-      },
-      p_command_key: 'command-external',
-    });
-    expect(rpc.calls.argsFor(1)[1]).toEqual({
       p_action: 'resolve_exception',
       p_payload: {
         exceptionId: 'exception-1',
@@ -218,24 +161,6 @@ describe('WorkshopFinancialRepositoryService', () => {
       p_command_key: 'command-resolve',
     });
     expect(JSON.stringify(rpc.calls.allArgs())).not.toContain('cancel');
-  });
-
-  it('records a manually completed Venmo refund with its selected seat quantity', async () => {
-    await service.recordExternalRefund(
-      'transaction-1', 5000, 'VENMO-REFUND-2', 'customer_requested',
-      '2026-08-04T12:00:00Z', 'command-refund-order', 1,
-    );
-
-    expect(rpc).toHaveBeenCalledWith('manage_workshop_refund_order', {
-      p_action: 'record_venmo',
-      p_payload: jasmine.objectContaining({
-        transactionId: 'transaction-1',
-        amountMinor: 5000,
-        seatQuantity: 1,
-        reference: 'VENMO-REFUND-2',
-      }),
-      p_command_key: 'command-refund-order',
-    });
   });
 
   it('exports normalized reporting fields without attendee or receipt evidence', () => {

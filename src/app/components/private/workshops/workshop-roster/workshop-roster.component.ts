@@ -14,7 +14,6 @@ import {
 import {
   WorkshopPaymentTransaction,
   WorkshopRefundEligibility,
-  WorkshopVenmoPaymentAttempt,
 } from '../../../../core/models/workshop-financial';
 import { WorkshopFinancialRepositoryService } from '../../../../core/supabase/repositories/workshop-financial-repository.service';
 import { WorkshopOperationsRepositoryService } from '../../../../core/supabase/repositories/workshop-operations-repository.service';
@@ -41,9 +40,6 @@ export class WorkshopRosterComponent implements OnInit {
   readonly cancellationBusy = signal(false);
   readonly deletionBooking = signal<WorkshopBooking | null>(null);
   readonly deletionBusy = signal(false);
-  readonly venmoAttempts = signal<WorkshopVenmoPaymentAttempt[]>([]);
-  readonly venmoApprovalBooking = signal<WorkshopBooking | null>(null);
-  readonly venmoApprovalBusy = signal(false);
   readonly refundableCharges = signal<WorkshopPaymentTransaction[]>([]);
   readonly refundBooking = signal<WorkshopBooking | null>(null);
   readonly refundCharge = signal<WorkshopPaymentTransaction | null>(null);
@@ -65,13 +61,8 @@ export class WorkshopRosterComponent implements OnInit {
   manualType: 'manual' | 'complimentary' = 'manual';
   manualReason = '';
   cancellationQuantityValue = 1;
-  venmoProviderPaymentId = '';
-  venmoAmountDollars = 0;
-  venmoOccurredAt = '';
   refundQuantityValue = 1;
   refundReason = 'customer_requested';
-  refundReference = '';
-  refundOccurredAt = '';
   refundConfirmation = false;
   offerMinutes = 1440;
 
@@ -136,15 +127,13 @@ export class WorkshopRosterComponent implements OnInit {
         this.operations.getOperationalState(this.occurrenceId),
       ]);
       const bookingIds = bookings.map((booking) => booking.workshop_booking_id);
-      const [attendees, venmoAttempts, refundableCharges] = await Promise.all([
+      const [attendees, refundableCharges] = await Promise.all([
         this.operations.listAttendeesForBookings(bookingIds),
-        this.financials.listPendingVenmoAttempts(bookingIds),
         this.financials.listRefundableCharges(bookingIds),
       ]);
       this.roster.set(roster);
       this.bookings.set(bookings);
       this.attendees.set(attendees);
-      this.venmoAttempts.set(venmoAttempts);
       this.refundableCharges.set(refundableCharges);
       this.waitlist.set(waitlist);
       this.operationalState.set(operationalState);
@@ -181,7 +170,6 @@ export class WorkshopRosterComponent implements OnInit {
 
   openReservationModal(): void {
     this.error.set(null);
-    this.closeVenmoApprovalModal();
     this.closeRefundModal();
     this.closeDeletionModal();
     this.reservationModalOpen.set(true);
@@ -200,7 +188,6 @@ export class WorkshopRosterComponent implements OnInit {
   openCancellationModal(booking: WorkshopBooking): void {
     this.error.set(null);
     this.reservationModalOpen.set(false);
-    this.closeVenmoApprovalModal();
     this.closeRefundModal();
     this.closeDeletionModal();
     this.cancellationBooking.set(booking);
@@ -213,11 +200,10 @@ export class WorkshopRosterComponent implements OnInit {
   }
 
   openDeletionModal(booking: WorkshopBooking): void {
-    if (booking.status !== 'expired') return;
+    if (!['expired', 'cancelled'].includes(booking.status)) return;
     this.error.set(null);
     this.reservationModalOpen.set(false);
     this.closeCancellationModal();
-    this.closeVenmoApprovalModal();
     this.closeRefundModal();
     this.deletionBooking.set(booking);
   }
@@ -227,22 +213,24 @@ export class WorkshopRosterComponent implements OnInit {
     this.deletionBooking.set(null);
   }
 
-  async confirmExpiredBookingDeletion(): Promise<void> {
+  async confirmBookingDeletion(): Promise<void> {
     const booking = this.deletionBooking();
-    if (!booking || booking.status !== 'expired') return;
+    if (!booking || !['expired', 'cancelled'].includes(booking.status)) return;
     this.deletionBusy.set(true);
     this.error.set(null);
     try {
-      await this.operations.deleteExpiredBooking(
+      await this.operations.deleteInactiveBooking(
         booking.workshop_booking_id,
         crypto.randomUUID(),
       );
       this.deletionBooking.set(null);
-      this.actionMessage.set(`${booking.contact_name}'s expired booking was permanently deleted.`);
+      this.actionMessage.set(
+        `${booking.contact_name}'s ${booking.status} booking was permanently deleted.`,
+      );
       await this.load();
     } catch {
       this.error.set(
-        'We could not permanently delete that expired booking. Protected financial or communication history may need to be retained.',
+        'We could not permanently delete that booking. Protected financial or communication history may need to be retained.',
       );
     } finally {
       this.deletionBusy.set(false);
@@ -286,19 +274,6 @@ export class WorkshopRosterComponent implements OnInit {
     }
   }
 
-  venmoAttemptFor(booking: WorkshopBooking): WorkshopVenmoPaymentAttempt | undefined {
-    return this.venmoAttempts().find(
-      (attempt) => attempt.workshop_booking_id === booking.workshop_booking_id,
-    );
-  }
-
-  canConfirmVenmoPayment(booking: WorkshopBooking): boolean {
-    return booking.payment_method === 'direct_venmo'
-      && booking.status === 'pending_payment'
-      && ['pending', 'processing'].includes(booking.payment_state)
-      && !!this.venmoAttemptFor(booking);
-  }
-
   chargeFor(booking: WorkshopBooking): WorkshopPaymentTransaction | undefined {
     return this.refundableCharges().find(
       (charge) => charge.workshop_booking_id === booking.workshop_booking_id,
@@ -331,15 +306,12 @@ export class WorkshopRosterComponent implements OnInit {
     this.error.set(null);
     this.reservationModalOpen.set(false);
     this.closeCancellationModal();
-    this.closeVenmoApprovalModal();
     this.closeDeletionModal();
     this.refundBooking.set(booking);
     this.refundCharge.set(charge);
     this.refundEligibility.set(null);
     this.refundQuantityValue = 1;
     this.refundReason = 'customer_requested';
-    this.refundReference = '';
-    this.refundOccurredAt = localDateTimeValue(new Date());
     this.refundConfirmation = false;
     this.refundLoading.set(true);
     try {
@@ -365,8 +337,6 @@ export class WorkshopRosterComponent implements OnInit {
     this.refundEligibility.set(null);
     this.refundQuantityValue = 1;
     this.refundReason = 'customer_requested';
-    this.refundReference = '';
-    this.refundOccurredAt = '';
     this.refundConfirmation = false;
   }
 
@@ -419,54 +389,28 @@ export class WorkshopRosterComponent implements OnInit {
     this.refundBusy.set(true);
     this.error.set(null);
     try {
-      if (charge.provider === 'stripe') {
-        await this.financials.requestStripeRefund(
-          charge.workshop_payment_transaction_id,
-          amountMinor,
-          this.refundReason,
-          crypto.randomUUID(),
-          quantity,
-        );
-        this.actionMessage.set(
-          `Stripe refund requested for ${quantity} ${quantity === 1 ? 'seat' : 'seats'} `
-          + `(${this.formatCurrency(amountMinor)}). Seats will be released after Stripe's `
-          + 'verified refund confirmation arrives.',
-        );
-      } else {
-        const reference = this.refundReference.trim();
-        const occurredAt = new Date(this.refundOccurredAt);
-        if (!reference || Number.isNaN(occurredAt.getTime())) {
-          this.error.set('Enter the completed Venmo refund transaction ID and sent time.');
-          return;
-        }
-        await this.financials.recordExternalRefund(
-          charge.workshop_payment_transaction_id,
-          amountMinor,
-          reference,
-          this.refundReason,
-          occurredAt.toISOString(),
-          crypto.randomUUID(),
-          quantity,
-        );
-        this.actionMessage.set(
-          `Venmo refund recorded for ${quantity} ${quantity === 1 ? 'seat' : 'seats'} `
-          + `(${this.formatCurrency(amountMinor)}). The selected seats are now available.`,
-        );
-      }
+      await this.financials.requestStripeRefund(
+        charge.workshop_payment_transaction_id,
+        amountMinor,
+        this.refundReason,
+        crypto.randomUUID(),
+        quantity,
+      );
+      this.actionMessage.set(
+        `Stripe refund requested for ${quantity} ${quantity === 1 ? 'seat' : 'seats'} `
+        + `(${this.formatCurrency(amountMinor)}). Seats will be released after Stripe's `
+        + 'verified refund confirmation arrives.',
+      );
       this.closeRefundModal();
-      if (charge.provider === 'stripe') {
-        const reconciled = await this.waitForStripeRefundReconciliation(
-          booking.workshop_booking_id,
-          booking.active_quantity - quantity,
+      const reconciled = await this.waitForStripeRefundReconciliation(
+        booking.workshop_booking_id,
+        booking.active_quantity - quantity,
+      );
+      if (!reconciled) {
+        this.actionMessage.set(
+          `Stripe accepted the ${this.formatCurrency(amountMinor)} refund. `
+          + 'The roster is still waiting for Stripe webhook confirmation; refresh shortly.',
         );
-        if (!reconciled) {
-          this.actionMessage.set(
-            `Stripe accepted the ${this.formatCurrency(amountMinor)} refund. `
-            + 'The roster is still waiting for Stripe webhook confirmation; refresh shortly.',
-          );
-        }
-      } else {
-        await this.load();
       }
     } catch {
       this.error.set(
@@ -496,64 +440,6 @@ export class WorkshopRosterComponent implements OnInit {
       }
     }
     return false;
-  }
-
-  openVenmoApprovalModal(booking: WorkshopBooking): void {
-    const attempt = this.venmoAttemptFor(booking);
-    if (!attempt) return;
-    this.error.set(null);
-    this.reservationModalOpen.set(false);
-    this.closeCancellationModal();
-    this.closeDeletionModal();
-    this.venmoApprovalBooking.set(booking);
-    this.venmoProviderPaymentId = '';
-    this.venmoAmountDollars = attempt.amount_minor / 100;
-    this.venmoOccurredAt = localDateTimeValue(new Date());
-  }
-
-  closeVenmoApprovalModal(): void {
-    this.venmoApprovalBooking.set(null);
-    this.venmoProviderPaymentId = '';
-    this.venmoAmountDollars = 0;
-    this.venmoOccurredAt = '';
-  }
-
-  async confirmVenmoPayment(): Promise<void> {
-    const booking = this.venmoApprovalBooking();
-    const attempt = booking ? this.venmoAttemptFor(booking) : undefined;
-    const providerPaymentId = this.venmoProviderPaymentId.trim();
-    const amountMinor = Math.round(Number(this.venmoAmountDollars) * 100);
-    const occurredAt = new Date(this.venmoOccurredAt);
-    if (!booking || !attempt || !providerPaymentId || amountMinor < 1
-      || Number.isNaN(occurredAt.getTime())) {
-      this.error.set('Enter the Venmo transaction ID, amount received, and received time.');
-      return;
-    }
-
-    this.venmoApprovalBusy.set(true);
-    this.error.set(null);
-    try {
-      const result = await this.financials.recordVenmoReceipt(
-        attempt.reconciliation_reference,
-        providerPaymentId,
-        amountMinor,
-        occurredAt.toISOString(),
-        crypto.randomUUID(),
-      );
-      this.actionMessage.set(
-        ['confirmed', 'paid'].includes(result.state)
-          ? `Venmo payment confirmed for ${booking.contact_name}. The booking is now confirmed.`
-          : `Venmo payment recorded for ${booking.contact_name} and sent for financial review. The booking remains pending.`,
-      );
-      this.closeVenmoApprovalModal();
-      await this.load();
-    } catch {
-      this.error.set(
-        'We could not record that Venmo payment. No booking or financial state was changed.',
-      );
-    } finally {
-      this.venmoApprovalBusy.set(false);
-    }
   }
 
   async checkIn(attendee: WorkshopAttendee): Promise<void> {
@@ -620,7 +506,6 @@ export class WorkshopRosterComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 }
-
 function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -632,9 +517,4 @@ function escapeHtml(value: string): string {
 
 function safeFilenameSegment(value: string): string {
   return value.replace(/[^a-z0-9-]+/gi, '-').replace(/^-|-$/g, '') || 'event';
-}
-
-function localDateTimeValue(date: Date): string {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
 }
