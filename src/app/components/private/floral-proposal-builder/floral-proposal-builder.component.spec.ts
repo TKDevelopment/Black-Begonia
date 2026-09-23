@@ -331,7 +331,7 @@ describe('FloralProposalBuilderComponent', () => {
     component.updateShoppingListReserve(component.shoppingList()[0], '25');
     await fixture.whenStable();
 
-    expect(component.lineItems()[0].components[0].reserve_percent).toBe(25);
+    expect(component.lineItems()[0].components[0].reserve_units).toBe(25);
   });
 
   it('keeps recorded pricing when component text is edited and reprices only through explicit replacement', () => {
@@ -646,6 +646,103 @@ describe('FloralProposalBuilderComponent', () => {
     expect(text()).not.toContain('Line Item Image');
     expect(text()).not.toContain('Line Description');
     expect(text()).toContain('Internal Catalog Composition');
+  });
+
+  it('renders the full-width CRM shell and product pricing columns in contract order', () => {
+    createSubmittableComponent();
+    renderLoadedFixture();
+
+    const shell = fixture.nativeElement.querySelector('[data-crm-page-shell]') as HTMLElement;
+    const headings = Array.from(
+      fixture.nativeElement.querySelectorAll('.line-items-table-header th')
+    ).map((heading: any) => heading.textContent.trim()).filter(Boolean);
+    const table = fixture.nativeElement.querySelector('.line-items-table-shell table') as HTMLTableElement;
+    const itemInput = fixture.nativeElement.querySelector('input[placeholder="Bridal Bouquet"]') as HTMLInputElement;
+    const actionsCell = fixture.nativeElement.querySelector('.line-item-actions-cell') as HTMLTableCellElement;
+
+    expect(shell).not.toBeNull();
+    expect(shell.classList).toContain('crm-page-frame');
+    expect(table.classList).toContain('table-fixed');
+    expect(itemInput.classList).toContain('flex-1');
+    expect(Array.from(itemInput.classList).some((className) => className.startsWith('max-w-'))).toBeFalse();
+    expect(actionsCell.classList).toContain('align-middle');
+    expect(headings).toEqual([
+      'Item', 'Qty', 'Calc. Unit Price', 'Actual Unit Price', 'Subtotal',
+    ]);
+    expect(text()).not.toContain('Labor Percentage');
+    expect(text()).not.toContain('Calculated labor');
+  });
+
+  it('edits Actual Unit Price locally with accessible state and no text below the input', () => {
+    createSubmittableComponent();
+    const line = component.lineItems()[0];
+    renderLoadedFixture();
+
+    const input = fixture.nativeElement.querySelector('.actual-unit-price-input') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).toContain('Actual Unit Price for Bridal Bouquet');
+    expect(input.getAttribute('aria-label')).toContain('Following calculated price');
+    expect(fixture.nativeElement.querySelector('.actual-price-state')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.actual-price-error')).toBeNull();
+
+    component.updateActualUnitPrice(line.local_id, String(line.calculated_unit_price));
+    fixture.detectChanges();
+    expect(component.lineItems()[0].actual_unit_price_override).toBe(line.calculated_unit_price!);
+    expect(component.productPriceStateLabel(component.lineItems()[0])).toBe('Manual override');
+    expect(input.getAttribute('aria-label')).toContain('Manual override');
+    expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
+    expect(proposalWorkflow.submitProposal).not.toHaveBeenCalled();
+
+    component.updateActualUnitPrice(line.local_id, '');
+    expect(component.lineItems()[0].actual_unit_price_override).toBeNull();
+    expect(component.productPriceStateLabel(component.lineItems()[0])).toBe('Following calculated price');
+  });
+
+  it('keeps currency typing natural and formats a valid value on blur', () => {
+    createSubmittableComponent();
+    const lineId = component.lineItems()[0].local_id;
+
+    component.updateActualUnitPrice(lineId, '2');
+    expect(component.lineItems()[0].actual_unit_price_input).toBe('2');
+    component.updateActualUnitPrice(lineId, '20');
+    expect(component.lineItems()[0].actual_unit_price_input).toBe('20');
+
+    component.formatActualUnitPrice(lineId);
+    expect(component.lineItems()[0].actual_unit_price_input).toBe('20.00');
+  });
+
+  it('preserves invalid Actual Unit Price text and blocks save and finalization', async () => {
+    createSubmittableComponent();
+    const lineId = component.lineItems()[0].local_id;
+
+    component.updateActualUnitPrice(lineId, '12.345');
+    renderLoadedFixture();
+
+    const input = fixture.nativeElement.querySelector('.actual-unit-price-input') as HTMLInputElement;
+    expect(input.value).toBe('12.345');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.title).toContain('no more than two decimal places');
+    expect(input.getAttribute('aria-label')).toContain('no more than two decimal places');
+    expect(fixture.nativeElement.querySelector('.actual-price-error')).toBeNull();
+    expect(component.canFinalize()).toBeFalse();
+
+    await component.saveDraft();
+    await component.finalizeProposal();
+    expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
+    expect(component.submissionModalOpen()).toBeFalse();
+    expect(toast.showToast).toHaveBeenCalledWith('Correct the highlighted prices before saving.', 'error');
+    expect(toast.showToast).toHaveBeenCalledWith('Correct the highlighted prices before finalizing.', 'error');
+  });
+
+  it('retains a single editable Unit Price control for manual labor, fee, and discount lines', () => {
+    createLoadedComponent();
+    component.addLineItem();
+    const lineId = component.lineItems()[0].local_id;
+    component.updateLineName(lineId, 'Additional Labor');
+    component.updateLineType(lineId, 'labor');
+    renderLoadedFixture();
+
+    expect(fixture.nativeElement.querySelector('.actual-unit-price-input')).toBeNull();
+    expect(fixture.nativeElement.querySelector('input[aria-label="Unit price for Additional Labor"]')).not.toBeNull();
   });
 
   it('saves drafts through repositories, activity logging, toast feedback, and reload', async () => {

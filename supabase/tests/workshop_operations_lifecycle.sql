@@ -5,6 +5,19 @@ select ok(to_regclass('public.workshop_reschedule_responses') is not null,'resch
 select ok(to_regclass('public.workshop_waitlist_entries') is not null,'waitlist entries exist');
 select ok(to_regclass('public.workshop_waitlist_offers') is not null,'waitlist offers exist');
 select ok(to_regclass('public.workshop_communications') is not null,'communication history exists');
+select ok(to_regclass('public.workshop_cancellation_refund_jobs') is not null,
+  'cancellation refund jobs are durable');
+select ok(to_regclass('public.workshop_occurrence_route_aliases') is not null,
+  'rescheduled dated routes retain redirect aliases');
+select has_function(
+  'public','reschedule_workshop_occurrence_schedule',
+  array['uuid','timestamp without time zone','timestamp without time zone','smallint','timestamp with time zone','uuid'],
+  'in-place schedule rescheduling command exists'
+);
+select has_function(
+  'public','complete_and_archive_workshop_occurrence',array['uuid','uuid'],
+  'complete and archive command exists'
+);
 select has_index('public','workshop_reschedule_responses','uq_workshop_reschedule_pending_booking','one pending transfer response per booking');
 select has_index('public','workshop_waitlist_entries','idx_workshop_waitlist_queue','waitlist FIFO facts are indexed');
 select has_index('public','workshop_waitlist_offers','uq_workshop_waitlist_active_offer','one active offer per entry');
@@ -1179,28 +1192,34 @@ select is(
   'withdrawn','cancellation closes the occurrence waitlist'
 );
 select is(
-  (select count(*)::integer from public.workshop_payment_exceptions
+  (select count(*)::integer from public.workshop_refund_requests
     where workshop_occurrence_id='41000000-0000-4000-8000-000000000090'
-      and exception_type='occurrence_cancellation_refund_review'),
-  1,'paid booking is preserved for florist-controlled refund review'
+      and reason='event_cancelled' and state='requested'),
+  1,'paid booking receives an automatic durable refund request'
 );
 select is(
-  (select amount_minor from public.workshop_payment_exceptions
+  (select amount_minor from public.workshop_refund_requests
     where workshop_occurrence_id='41000000-0000-4000-8000-000000000090'
-      and exception_type='occurrence_cancellation_refund_review'),
-  5000::bigint,'refund review records the remaining trusted paid amount'
+      and reason='event_cancelled'),
+  5000::bigint,'automatic refund request records the remaining trusted amount'
+);
+select is(
+  (select count(*)::integer from public.workshop_cancellation_refund_jobs
+    where workshop_occurrence_id='41000000-0000-4000-8000-000000000090'
+      and state='queued'),
+  1,'automatic Stripe refund processing is queued durably'
 );
 select is(
   (select count(*)::integer from public.workshop_payment_transactions
     where workshop_occurrence_id='41000000-0000-4000-8000-000000000090'),
-  1,'occurrence cancellation never moves money automatically'
+  1,'cancellation does not invent a refund transaction before provider evidence'
 );
 select is(
   (public.cancel_workshop_occurrence(
     '41000000-0000-4000-8000-000000000090','weather',
     '42000000-0000-4000-8000-000000000005'
   )->>'replayed')::boolean,
-  true,'cancellation replay does not duplicate notices or exceptions'
+  true,'cancellation replay does not duplicate notices or refund work'
 );
 select is(
   (select count(*)::integer from public.workshop_message_queue
@@ -1599,15 +1618,15 @@ insert into public.workshop_bookings(
   payment_method
 ) values (
   '41000000-0000-4000-8000-000000000090',
-  '41000000-0000-4000-8000-000000000020','BBW-VENMO-UPDATE',
+  '41000000-0000-4000-8000-000000000020','BBW-PENDING-UPDATE',
   'confirmed-transition-digest-abcdefghijklmnopqrstuvwxyz0123456789',
-  now()+interval '40 days','Venmo Guest','venmo@example.test',1,1,
-  'pending_payment','pending',5000,5000,5000,0,'USD','Terms',1,'direct_venmo'
+  now()+interval '40 days','Pending Guest','pending@example.test',1,1,
+  'pending_payment','pending',5000,5000,5000,0,'USD','Terms',1,'stripe'
 );
 select is(
   (select count(*)::integer from public.workshop_message_queue
     where workshop_booking_id='41000000-0000-4000-8000-000000000090'),
-  0,'pending Venmo booking does not receive a false confirmation'
+  0,'pending payment booking does not receive a false confirmation'
 );
 update public.workshop_bookings
 set status='confirmed',payment_state='paid',confirmed_at=now()
@@ -1635,7 +1654,7 @@ select throws_ok(
     '41000000-0000-4000-8000-000000000090',
     '41000000-0000-4000-8000-000000000093'
   )$$,
-  '22023','only expired bookings can be deleted',
+  '22023','only expired or cancelled bookings can be deleted',
   'confirmed bookings cannot be permanently deleted from the roster'
 );
 
@@ -1680,6 +1699,38 @@ select is(
   (select count(*)::integer from public.workshop_bookings
     where workshop_booking_id='41000000-0000-4000-8000-000000000091'),
   0,'deleted expired bookings no longer contribute to roster booking counts'
+);
+
+reset role;
+insert into public.workshop_bookings(
+  workshop_booking_id,workshop_occurrence_id,booking_reference,
+  status_token_digest,status_token_expires_at,contact_name,contact_email,
+  purchased_quantity,active_quantity,status,payment_state,
+  price_per_seat_minor_snapshot,subtotal_minor_snapshot,total_minor_snapshot,
+  required_charges_minor_snapshot,currency,terms_snapshot,terms_version,
+  payment_method,cancelled_at
+) values (
+  '44000000-0000-4000-8000-000000000091',
+  '41000000-0000-4000-8000-000000000020','BBW-CANCELLED-DELETE',
+  'cancelled-delete-token-digest-abcdefghijklmnopqrstuvwxyz0123456789',
+  now()+interval '30 days','Cancelled Guest','cancelled@example.test',1,0,
+  'cancelled','unselected',5000,5000,5000,0,'USD','Terms',1,null,now()
+);
+
+set local role authenticated;
+set local request.jwt.claims=
+  '{"sub":"41000000-0000-4000-8000-000000000001","role":"authenticated"}';
+select is(
+  (public.delete_expired_workshop_booking(
+    '44000000-0000-4000-8000-000000000091',
+    '44000000-0000-4000-8000-000000000095'
+  )->>'previousStatus'),
+  'cancelled','staff can permanently delete a cancelled booking without protected history'
+);
+select is(
+  (select count(*)::integer from public.workshop_bookings
+    where workshop_booking_id='44000000-0000-4000-8000-000000000091'),
+  0,'deleted cancelled bookings no longer contribute to roster booking counts'
 );
 select is(
   (public.delete_expired_workshop_booking(

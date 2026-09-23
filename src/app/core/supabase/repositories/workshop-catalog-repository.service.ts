@@ -324,7 +324,6 @@ export class WorkshopCatalogRepositoryService implements WorkshopCatalogReposito
       currency: occurrence.currency,
       stripePriceVersionId: occurrence.stripe_price_version_id,
       stripeEnabled: occurrence.stripe_enabled,
-      venmoEnabled: occurrence.venmo_enabled,
       waitlistEnabled: occurrence.waitlist_enabled,
       isFeatured: occurrence.is_featured,
       featuredOrder: occurrence.featured_order,

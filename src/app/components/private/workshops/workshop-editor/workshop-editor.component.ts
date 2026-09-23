@@ -51,7 +51,7 @@ const WORKSHOP_TAX_OPTIONS: Array<{
 ];
 
 const DEFAULT_WORKSHOP_TERMS = `Reservation and payment
-Your reservation applies only to the workshop date, time, and number of seats shown in your confirmation. A reservation is confirmed only after full payment is verified. Stripe payments are verified electronically. Direct Venmo payments remain pending until Black Begonia Florals manually verifies the payment before the stated deadline; unverified or expired reservations may release their seats.
+Your reservation applies only to the workshop date, time, and number of seats shown in your confirmation. A reservation is confirmed only after full payment is verified electronically through Stripe; unverified or expired reservations may release their seats.
 
 Customer cancellations, transfers, and no-shows
 Please contact Black Begonia Florals as soon as possible if your plans change. Cancellations received at least 7 calendar days before the workshop are eligible for a refund to the original payment method. Cancellations received 2 to 6 calendar days before the workshop may be transferred to another available workshop or attendee, subject to availability. Cancellations received less than 48 hours before the workshop and no-shows are non-refundable, except where applicable law requires otherwise. Approved refunds may require processing time from the payment provider.
@@ -891,7 +891,6 @@ export class WorkshopEditorComponent implements OnInit {
       currency: 'USD',
       stripePriceVersionId,
       stripeEnabled: true,
-      venmoEnabled: false,
       waitlistEnabled: true,
       isFeatured: true,
       featuredOrder: this.currentOccurrence()?.featured_order,
@@ -922,7 +921,6 @@ export class WorkshopEditorComponent implements OnInit {
       taxRateBasisPoints: workshopTaxRateBasisPoints(value.taxRegion),
       stripePriceVersionId: this.currentOccurrence()?.stripe_price_version_id,
       stripeEnabled: true,
-      venmoEnabled: false,
       waitlistEnabled: true,
     } as const;
   }

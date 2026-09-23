@@ -83,9 +83,8 @@ describe('Workshop CRM representative scale performance', () => {
     });
     const financials = jasmine.createSpyObj<WorkshopFinancialRepositoryService>(
       'WorkshopFinancialRepositoryService',
-      ['listPendingVenmoAttempts', 'listRefundableCharges'],
+      ['listRefundableCharges'],
     );
-    financials.listPendingVenmoAttempts.and.resolveTo([]);
     financials.listRefundableCharges.and.resolveTo([]);
 
     await TestBed.configureTestingModule({

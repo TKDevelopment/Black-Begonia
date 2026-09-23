@@ -65,4 +65,13 @@ describe('SearchFilterBarComponent', () => {
 
     expect(fixture.nativeElement.querySelector('button')).toBeNull();
   });
+
+  it('keeps controls fluid and switches to a horizontal toolbar only at the wide breakpoint', () => {
+    const toolbar = fixture.nativeElement.querySelector('.crm-filter-bar > div') as HTMLElement;
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+
+    expect(toolbar.classList).toContain('flex-col');
+    expect(toolbar.classList).toContain('xl:flex-row');
+    expect(input.classList).toContain('w-full');
+  });
 });

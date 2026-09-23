@@ -9,6 +9,45 @@ export type FloralProposalStatus =
   | 'expired';
 
 export type FloralProposalLineItemType = 'product' | 'fee' | 'discount' | 'labor';
+export const FLORAL_PROPOSAL_EDITABLE_SCHEMA_VERSION = 3 as const;
+export const LEGACY_LABOR_CONVERSION_KEY = 'labor-percent-v1' as const;
+
+export interface ProductPriceState {
+  calculated_unit_price: number;
+  actual_unit_price_override: number | null;
+  /** Effective customer-facing price. */
+  unit_price: number;
+  /** Raw editor value; never persisted. */
+  actual_unit_price_input?: string | null;
+  /** Editor validation state; never persisted. */
+  actual_unit_price_error?: string | null;
+}
+
+export interface LegacyLaborConversionMetadata {
+  conversion_key: typeof LEGACY_LABOR_CONVERSION_KEY;
+  source_labor_percent: number;
+  converted_amount: number;
+  status: 'converted' | 'not_required';
+}
+
+export interface LegacyLaborConversionLineMetadata {
+  origin: 'legacy_labor_percentage_conversion';
+  conversion_key: typeof LEGACY_LABOR_CONVERSION_KEY;
+  source_labor_percent: number;
+  converted_amount: number;
+}
+
+export type LegacyLaborConversionResult<T> =
+  | { valid: true; value: T; converted: boolean; warning?: string | null }
+  | { valid: false; repairMessage: string };
+
+/** Read-only compatibility input for mutable V1/V2 data and immutable history. */
+export interface LegacyEditableProposalSnapshot extends Record<string, unknown> {
+  schema_version?: 1 | 2;
+  labor_percent?: number;
+  line_items?: Record<string, unknown>[];
+  breakdown?: Record<string, unknown>;
+}
 export type FloralProposalShoppingListStatus = 'generated' | 'exported';
 export type DocumentTemplateKind = 'floral_proposal';
 export type DocumentTemplateHeaderLayout = 'editorial' | 'minimal' | 'classic';
@@ -81,7 +120,8 @@ export interface FloralProposalRenderLineComponent {
   applied_markup_percent: number;
   sell_unit_price: number;
   subtotal: number;
-  reserve_percent?: number;
+  /** Absolute reserve stems/units requested for this contribution. */
+  reserve_units?: number;
   pack_quantity?: number | null;
   /** Derived cent-valued cost for the row's snapshotted pack quantity. */
   effective_pack_cost?: number | null;
@@ -117,7 +157,6 @@ export interface FloralProposalRenderContract {
   };
   pricing: {
     default_markup_percent: number;
-    labor_percent: number;
   };
   line_items: FloralProposalRenderLineItem[];
   shopping_list: FloralProposalShoppingListItem[];
@@ -231,7 +270,10 @@ export interface FloralProposalComponent {
   applied_markup_percent: number;
   sell_unit_price: number;
   subtotal: number;
+  /** Legacy normalized column retained for historical compatibility. */
   reserve_percent: number;
+  /** Active absolute reserve value stored in the private component snapshot. */
+  reserve_units?: number;
   snapshot: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -255,8 +297,12 @@ export interface FloralProposalShoppingListItem {
   item_type: CatalogItemType;
   unit_type: CatalogUnitType;
   required_units: number;
-  reserve_percent: number;
+  /** Legacy persisted value; active builders write zero. */
+  reserve_percent?: number;
+  /** Florist-entered reserve stems/units before pack rounding. */
+  requested_reserve_units?: number;
   total_plus_reserve?: number;
+  /** Total extra units purchased after pack rounding. */
   reserve_units: number;
   total_units_to_buy: number;
   units_per_pack?: number | null;

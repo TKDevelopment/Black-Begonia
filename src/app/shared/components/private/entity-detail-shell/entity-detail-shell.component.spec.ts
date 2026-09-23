@@ -62,4 +62,12 @@ describe('EntityDetailShellComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.crm-detail-sidebar')).toBeNull();
   });
+
+  it('keeps the fluid main and bounded aside shrinkable on wide pages', () => {
+    const main = fixture.nativeElement.querySelector('.crm-detail-main') as HTMLElement;
+    const aside = fixture.nativeElement.querySelector('.crm-detail-sidebar') as HTMLElement;
+
+    expect(main.classList).toContain('min-w-0');
+    expect(aside.classList).toContain('min-w-0');
+  });
 });

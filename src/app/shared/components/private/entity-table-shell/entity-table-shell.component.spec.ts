@@ -15,7 +15,7 @@ describe('EntityTableShellComponent', () => {
     fixture = TestBed.createComponent(EntityTableShellComponent);
     component = fixture.componentInstance;
     component.columns = [
-      { key: 'name', label: 'Name' },
+      { key: 'name', label: 'Name', sortable: true },
       { key: 'status', label: 'Status' },
     ];
     component.rows = [
@@ -54,5 +54,42 @@ describe('EntityTableShellComponent', () => {
     component.clickableRows = true;
     component.onRowClicked(row);
     expect(emitted).toEqual([row]);
+  });
+
+  it('contains wide table overflow inside the shell', () => {
+    const shell = fixture.nativeElement.querySelector('.crm-table-shell') as HTMLElement;
+    const overflow = shell.querySelector('.overflow-x-auto') as HTMLElement;
+    const table = overflow.querySelector('table') as HTMLTableElement;
+
+    expect(shell.classList).toContain('overflow-hidden');
+    expect(overflow).not.toBeNull();
+    expect(table.classList).toContain('min-w-full');
+  });
+
+  it('emits ascending then descending sorts and exposes the active direction', () => {
+    const emitted: unknown[] = [];
+    component.sortChange.subscribe((value) => emitted.push(value));
+    let nameHeader = fixture.nativeElement.querySelector(
+      '[data-sort-key="name"]'
+    ) as HTMLButtonElement;
+
+    expect(nameHeader.closest('th')?.getAttribute('aria-sort')).toBe('none');
+    nameHeader.click();
+    expect(emitted).toEqual([{ key: 'name', direction: 'asc' }]);
+
+    component.sortKey = 'name';
+    component.sortDirection = 'asc';
+    fixture.detectChanges();
+    nameHeader = fixture.nativeElement.querySelector(
+      '[data-sort-key="name"]'
+    ) as HTMLButtonElement;
+
+    expect(nameHeader.closest('th')?.getAttribute('aria-sort')).toBe('ascending');
+    nameHeader.click();
+    expect(emitted).toEqual([
+      { key: 'name', direction: 'asc' },
+      { key: 'name', direction: 'desc' },
+    ]);
+    expect(fixture.nativeElement.querySelector('[data-sort-key="status"]')).toBeNull();
   });
 });

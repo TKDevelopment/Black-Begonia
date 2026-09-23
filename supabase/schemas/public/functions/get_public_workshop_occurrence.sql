@@ -21,7 +21,7 @@ as $$
     'taxRateBasisPoints', o.tax_rate_basis_points,
     'currency', o.currency,
     'perBookingLimit', o.per_booking_limit, 'stripeEnabled', o.stripe_enabled,
-    'venmoEnabled', o.venmo_enabled, 'waitlistEligible', false,
+    'waitlistEligible', false,
     'availability', public.get_workshop_public_availability(
       o.workshop_occurrence_id
     ),

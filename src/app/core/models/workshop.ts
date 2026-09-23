@@ -106,7 +106,6 @@ export interface WorkshopSeriesUpdatePatch {
   taxRateBasisPoints?: number;
   stripePriceVersionId?: string | null;
   stripeEnabled?: boolean;
-  venmoEnabled?: boolean;
   waitlistEnabled?: boolean;
 }
 
@@ -153,7 +152,6 @@ export interface WorkshopOccurrence {
   currency: WorkshopCurrency;
   stripe_price_version_id: string | null;
   stripe_enabled: boolean;
-  venmo_enabled: boolean;
   waitlist_enabled: boolean;
   waitlist_offer_duration_minutes: number;
   is_featured: boolean;
@@ -250,7 +248,6 @@ export interface PublicWorkshopOccurrence extends PublicWorkshopSummary {
   country: string;
   perBookingLimit: number;
   stripeEnabled: boolean;
-  venmoEnabled: boolean;
   waitlistEligible: boolean;
   media: WorkshopPublicMedia[];
   seoStatus: 'index' | 'noindex' | 'redirect';
@@ -292,7 +289,6 @@ export interface WorkshopOccurrenceDraft {
   currency: WorkshopCurrency;
   stripePriceVersionId?: string | null;
   stripeEnabled: boolean;
-  venmoEnabled: boolean;
   waitlistEnabled: boolean;
   isFeatured: boolean;
   featuredOrder?: number | null;

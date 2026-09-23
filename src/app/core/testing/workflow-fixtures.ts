@@ -15,6 +15,7 @@ import {
   FloralProposalShoppingListItem,
 } from '../models/floral-proposal';
 import { Project } from '../models/project';
+import type { EditableProposalSnapshotV3 } from '../models/project-proposal-revision-workspace';
 import type { ProjectPaymentRecord } from '../models/project-payment-record';
 import { TaxRegion } from '../models/tax-region';
 import { Task } from '../models/task';
@@ -427,8 +428,10 @@ export const testProposalComponent: FloralProposalComponent = {
   applied_markup_percent: 50,
   sell_unit_price: 4.5,
   subtotal: 45,
-  reserve_percent: 10,
+  reserve_percent: 0,
+  reserve_units: 1,
   snapshot: {
+    reserve_units: 1,
     pack_quantity: testCatalogItem.pack_quantity,
     purchase_unit_cost: testCatalogItem.base_unit_cost,
     item_type: testCatalogItem.item_type,
@@ -448,7 +451,8 @@ export const testProposalShoppingListItem: FloralProposalShoppingListItem = {
   item_type: testCatalogItem.item_type,
   unit_type: testCatalogItem.unit_type,
   required_units: 10,
-  reserve_percent: 10,
+  reserve_percent: 0,
+  requested_reserve_units: 1,
   total_plus_reserve: 11,
   reserve_units: 1,
   total_units_to_buy: 20,
@@ -508,7 +512,6 @@ export const testRenderContract: FloralProposalRenderContract = {
   },
   pricing: {
     default_markup_percent: 30,
-    labor_percent: 20,
   },
   line_items: [
     {
@@ -535,7 +538,7 @@ export const testRenderContract: FloralProposalRenderContract = {
           applied_markup_percent: testProposalComponent.applied_markup_percent,
           sell_unit_price: testProposalComponent.sell_unit_price,
           subtotal: testProposalComponent.subtotal,
-          reserve_percent: testProposalComponent.reserve_percent,
+          reserve_units: testProposalComponent.reserve_units,
           snapshot: testProposalComponent.snapshot,
         },
       ],
@@ -572,3 +575,162 @@ export const LEGACY_PAYMENT_RECORDS: ProjectPaymentRecord[] = [{
   due_date: '2026-01-01', paid_date: '2026-01-01T15:00:00Z', payment_method: 'venmo',
   payment_source: 'manual', created_at: '2026-01-01T15:00:00Z', updated_at: '2026-01-01T15:00:00Z',
 }];
+
+export const followingProductPriceFixture = {
+  calculated_unit_price: 100,
+  actual_unit_price_override: null,
+  unit_price: 100,
+  actual_unit_price_input: '100.00',
+  actual_unit_price_error: null,
+} as const;
+
+export const overriddenProductPriceFixture = {
+  calculated_unit_price: 100,
+  actual_unit_price_override: 125,
+  unit_price: 125,
+  actual_unit_price_input: '125.00',
+  actual_unit_price_error: null,
+} as const;
+
+export const zeroProductPriceFixture = {
+  calculated_unit_price: 100,
+  actual_unit_price_override: 0,
+  unit_price: 0,
+  actual_unit_price_input: '0',
+  actual_unit_price_error: null,
+} as const;
+
+export const invalidProductPriceFixture = {
+  calculated_unit_price: 100,
+  actual_unit_price_override: null,
+  unit_price: 100,
+  actual_unit_price_input: '12.345',
+  actual_unit_price_error: 'Use a nonnegative price with no more than two decimal places.',
+} as const;
+
+export const legacyLaborSnapshotFixture = {
+  schema_version: 2,
+  proposal_status: 'draft',
+  labor_percent: 20,
+  line_items: [{
+    local_id: 'legacy-product-1',
+    display_order: 0,
+    line_item_type: 'product',
+    item_name: 'Legacy Arrangement',
+    quantity: 1,
+    unit_price: 100,
+    subtotal: 100,
+    components: [],
+  }],
+  totals: { subtotal: 120, taxAmount: 9.9, totalAmount: 129.9 },
+  breakdown: {
+    productsTotal: 100,
+    calculatedLaborAmount: 20,
+    manualLaborTotal: 0,
+    laborTotal: 20,
+    feesTotal: 0,
+    discountsTotal: 0,
+    subtotal: 120,
+    taxAmount: 9.9,
+    totalAmount: 129.9,
+  },
+} as const;
+
+export const partialLegacyLaborConversionFixture = {
+  ...legacyLaborSnapshotFixture,
+  line_items: [
+    ...legacyLaborSnapshotFixture.line_items,
+    {
+      local_id: 'legacy-labor-conversion',
+      display_order: 1,
+      line_item_type: 'labor',
+      item_name: 'Labor (converted from legacy percentage)',
+      quantity: 1,
+      unit_price: 20,
+      subtotal: 20,
+      components: [],
+      snapshot: {
+        origin: 'legacy_labor_percentage_conversion',
+        conversion_key: 'labor-percent-v1',
+        source_labor_percent: 20,
+        converted_amount: 20,
+      },
+    },
+  ],
+} as const;
+
+export const immutableLegacyHistoryFixture = Object.freeze({
+  snapshotId: 'immutable-v2-snapshot-001',
+  snapshot: Object.freeze(structuredClone(legacyLaborSnapshotFixture)),
+});
+
+export function createLargeProposalFixture(): {
+  lines: Array<Record<string, unknown>>;
+  componentCount: number;
+} {
+  const lines = Array.from({ length: 100 }, (_, lineIndex) => ({
+    local_id: `scale-line-${lineIndex}`,
+    display_order: lineIndex,
+    line_item_type: 'product',
+    item_name: `Scale Arrangement ${lineIndex + 1}`,
+    quantity: 1,
+    calculated_unit_price: 20,
+    actual_unit_price_override: null,
+    unit_price: 20,
+    subtotal: 20,
+    components: Array.from({ length: 10 }, (_, componentIndex) => ({
+      local_id: `scale-component-${lineIndex}-${componentIndex}`,
+      display_order: componentIndex,
+      catalog_item_name: `Scale Stem ${componentIndex + 1}`,
+      quantity_per_unit: 1,
+      extended_quantity: 1,
+      base_unit_cost: 1,
+      applied_markup_percent: 100,
+      sell_unit_price: 2,
+      subtotal: 2,
+      reserve_units: 0,
+      purchase_unit_cost: 1,
+    })),
+  }));
+
+  return { lines, componentCount: 1_000 };
+}
+
+export const v3ProposalSnapshotFixture: EditableProposalSnapshotV3 = {
+  schema_version: 3,
+  proposal_status: 'draft',
+  tax_region: {
+    tax_region_id: testTaxRegion.tax_region_id,
+    name: testTaxRegion.name,
+    tax_rate: testTaxRegion.tax_rate,
+    was_active: true,
+  },
+  default_markup_percent: 300,
+  financial_terms: { retainer_amount: 0, final_balance_amount: 108.25 },
+  line_items: [{
+    local_id: 'v3-product-1',
+    display_order: 0,
+    line_item_type: 'product',
+    item_name: 'V3 Arrangement',
+    quantity: 1,
+    calculated_unit_price: 100,
+    actual_unit_price_override: null,
+    unit_price: 100,
+    subtotal: 100,
+    components: [],
+    snapshot: {},
+  }],
+  shopping_list: [],
+  totals: { subtotal: 100, taxAmount: 8.25, totalAmount: 108.25 },
+  breakdown: {
+    productsTotal: 100,
+    laborTotal: 0,
+    manualLaborTotal: 0,
+    feesTotal: 0,
+    discountsTotal: 0,
+    subtotal: 100,
+    taxAmount: 8.25,
+    totalAmount: 108.25,
+  },
+  legacy_labor_conversion: null,
+};

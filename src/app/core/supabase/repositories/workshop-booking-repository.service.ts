@@ -275,7 +275,6 @@ function isCustomerStatus(value: unknown): value is WorkshopCustomerStatus {
   }
   return [
     'processing',
-    'pending_venmo',
     'expired',
     'cancelled',
     'refunded',

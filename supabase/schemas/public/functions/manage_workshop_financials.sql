@@ -328,7 +328,7 @@ begin
     );
   end if;
 
-  if p_action in ('record_external_refund', 'record_correction') then
+  if p_action = 'record_correction' then
     select * into v_charge from public.workshop_payment_transactions
     where workshop_payment_transaction_id =
       nullif(p_payload->>'transactionId', '')::uuid
@@ -349,9 +349,6 @@ begin
     v_reference := btrim(coalesce(p_payload->>'reference', ''));
     if v_amount is null or v_amount = 0 or v_currency <> v_charge.currency
       or v_reference = '' then raise exception 'invalid_request'; end if;
-    if p_action = 'record_external_refund' and (
-      v_charge.provider <> 'direct_venmo' or v_amount < 0
-    ) then raise exception 'invalid_request'; end if;
     insert into public.workshop_payment_transactions(
       workshop_booking_id, workshop_occurrence_id,
       workshop_payment_attempt_id, transaction_type, provider,
@@ -361,14 +358,12 @@ begin
     ) values (
       v_charge.workshop_booking_id, v_charge.workshop_occurrence_id,
       v_charge.workshop_payment_attempt_id,
-      case when p_action = 'record_external_refund'
-        then 'external_refund' else 'correction' end,
-      case when p_action = 'record_external_refund'
-        then 'direct_venmo' else 'manual' end,
-      case when p_action = 'record_external_refund' then v_reference end,
+      'correction',
+      'manual',
+      null,
       v_reference, v_amount, v_currency,
       coalesce((p_payload->>'occurredAt')::timestamptz, now()),
-      case when p_action = 'record_external_refund' then 'refunded' else 'paid' end,
+      'paid',
       p_command_key,
       jsonb_build_object(
         'originalTransactionId', v_charge.workshop_payment_transaction_id,

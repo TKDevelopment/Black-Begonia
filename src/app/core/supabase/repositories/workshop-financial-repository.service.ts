@@ -8,8 +8,6 @@ import {
   WorkshopPaymentException,
   WorkshopRefundEligibility,
   WorkshopRefundRequestResult,
-  WorkshopVenmoPaymentAttempt,
-  WorkshopVenmoReceiptResult,
 } from '../../models/workshop-financial';
 import { SupabaseService } from '../clients/supabase.service';
 
@@ -21,25 +19,6 @@ export type WorkshopFinancialScope =
 export class WorkshopFinancialRepositoryService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async listPendingVenmoAttempts(
-    bookingIds: string[],
-  ): Promise<WorkshopVenmoPaymentAttempt[]> {
-    if (!bookingIds.length) return [];
-    const { data, error } = await this.supabase.getClient()
-      .from('workshop_payment_attempts')
-      .select(
-        'workshop_payment_attempt_id,workshop_booking_id,provider,' +
-        'reconciliation_reference,state,amount_minor,currency,' +
-        'effective_expires_at,created_at',
-      )
-      .in('workshop_booking_id', bookingIds)
-      .eq('provider', 'direct_venmo')
-      .in('state', ['active', 'processing'])
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return (data ?? []) as unknown as WorkshopVenmoPaymentAttempt[];
-  }
-
   async listRefundableCharges(
     bookingIds: string[],
   ): Promise<WorkshopPaymentTransaction[]> {
@@ -49,6 +28,7 @@ export class WorkshopFinancialRepositoryService {
       .select('*')
       .in('workshop_booking_id', bookingIds)
       .eq('transaction_type', 'charge')
+      .eq('provider', 'stripe')
       .in('state', ['paid', 'partially_refunded'])
       .order('occurred_at', { ascending: false });
     if (error) throw error;
@@ -59,28 +39,6 @@ export class WorkshopFinancialRepositoryService {
         seen.add(charge.workshop_booking_id);
         return true;
       });
-  }
-
-  async recordVenmoReceipt(
-    reference: string,
-    providerPaymentId: string,
-    amountMinor: number,
-    occurredAt: string,
-    commandKey: string,
-  ): Promise<WorkshopVenmoReceiptResult> {
-    const { data, error } = await this.supabase.getClient().rpc(
-      'record_workshop_venmo_receipt',
-      {
-        p_reference: reference,
-        p_provider_payment_id: providerPaymentId.trim(),
-        p_amount_minor: amountMinor,
-        p_currency: 'USD',
-        p_occurred_at: occurredAt,
-        p_command_key: commandKey,
-      },
-    );
-    if (error) throw error;
-    return data as WorkshopVenmoReceiptResult;
   }
 
   async listEntries(scope: WorkshopFinancialScope): Promise<WorkshopFinancialEntry[]> {
@@ -195,35 +153,6 @@ export class WorkshopFinancialRepositoryService {
       );
     if (error) throw error;
     return path;
-  }
-
-  async recordExternalRefund(
-    transactionId: string,
-    amountMinor: number,
-    reference: string,
-    reason: string,
-    occurredAt: string,
-    commandKey: string,
-    seatQuantity?: number,
-  ): Promise<unknown> {
-    const { data, error } = seatQuantity === undefined
-      ? await this.runFinancialCommand(
-        'record_external_refund',
-        {
-          transactionId, amountMinor, currency: 'USD', reference, reason, occurredAt,
-        },
-        commandKey,
-      )
-      : await this.runRefundOrderCommand(
-        'record_venmo',
-      {
-        transactionId, amountMinor, currency: 'USD', reference, reason, occurredAt,
-        seatQuantity,
-      },
-      commandKey,
-      );
-    if (error) throw error;
-    return data;
   }
 
   async resolveException(

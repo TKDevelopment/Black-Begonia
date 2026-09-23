@@ -13,7 +13,7 @@ import {
 import { Lead } from '../../../core/models/lead';
 import { Project } from '../../../core/models/project';
 import {
-  EditableProposalSnapshotV2,
+  EditableProposalSnapshotV3,
   ProjectProposalRevisionWorkspace,
 } from '../../../core/models/project-proposal-revision-workspace';
 import { TaxRegion } from '../../../core/models/tax-region';
@@ -92,7 +92,6 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly shoppingList = signal<FloralProposalShoppingListItem[]>([]);
   readonly selectedTaxRegionId = signal<string>('');
   readonly defaultMarkupPercent = signal(300);
-  readonly laborPercent = signal(0);
   readonly draggingLineId = signal<string | null>(null);
   readonly dragOverImageLineId = signal<string | null>(null);
   readonly isDarkMode = computed(() => this.crmThemeService.mode() === 'dark');
@@ -109,8 +108,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly totals = computed(() =>
     this.floralProposalBuilderService.calculateTotals(
       this.lineItems(),
-      this.selectedTaxRegion(),
-      this.laborPercent()
+      this.selectedTaxRegion()
     )
   );
 
@@ -146,6 +144,7 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   readonly hasComponentPriceErrors = computed(() =>
     this.lineItems().some((line) =>
+      !!line.actual_unit_price_error ||
       line.components.some((component) => !!component.unit_price_error)
     )
   );
@@ -223,7 +222,6 @@ export class FloralProposalBuilderComponent implements OnInit {
       this.taxRegions.set(this.withRecordedTaxRegion(taxRegions, draft));
       this.selectedTaxRegionId.set(draft.tax_region.tax_region_id ?? '');
       this.defaultMarkupPercent.set(draft.default_markup_percent);
-      this.laborPercent.set(draft.labor_percent);
       this.lineItems.set(await this.populateLineItemSignedUrls(draft.line_items.map((line) => ({
         ...line,
         expanded: false,
@@ -277,7 +275,6 @@ export class FloralProposalBuilderComponent implements OnInit {
       this.activeProposal.set(activeProposal);
       this.selectedTaxRegionId.set(activeProposal?.tax_region_id ?? '');
       this.defaultMarkupPercent.set(this.getInitialDefaultMarkupPercent(activeProposal));
-      this.laborPercent.set(this.getInitialLaborPercent(activeProposal));
 
       if (activeProposal) {
         const [lineItems, components] = await Promise.all([
@@ -438,7 +435,12 @@ export class FloralProposalBuilderComponent implements OnInit {
   }
 
   updateLineType(lineId: string, value: FloralProposalLineItemType): void {
-    this.patchAndRecalculateLine(lineId, { line_item_type: value });
+    this.patchAndRecalculateLine(lineId, {
+      line_item_type: value,
+      actual_unit_price_override: null,
+      actual_unit_price_input: null,
+      actual_unit_price_error: null,
+    });
   }
 
 
@@ -446,6 +448,36 @@ export class FloralProposalBuilderComponent implements OnInit {
   updateManualUnitPrice(lineId: string, value: string): void {
     const unitPrice = Math.max(Number(value || 0), 0);
     this.patchAndRecalculateLine(lineId, { unit_price: unitPrice });
+  }
+
+  updateActualUnitPrice(lineId: string, value: string): void {
+    if (!this.canEdit()) return;
+    this.lineItems.update((lines) =>
+      lines.map((line) =>
+        line.local_id === lineId
+          ? this.floralProposalBuilderService.applyActualUnitPriceInput(line, value)
+          : line
+      )
+    );
+  }
+
+  formatActualUnitPrice(lineId: string): void {
+    this.lineItems.update((lines) =>
+      lines.map((line) => {
+        if (line.local_id !== lineId || line.actual_unit_price_error) return line;
+        return {
+          ...line,
+          actual_unit_price_input: line.unit_price.toFixed(2),
+        };
+      })
+    );
+  }
+
+  productPriceStateLabel(line: FloralProposalBuilderLine): string {
+    return line.actual_unit_price_override === null ||
+      line.actual_unit_price_override === undefined
+      ? 'Following calculated price'
+      : 'Manual override';
   }
 
   addComponentRow(lineId: string): void {
@@ -555,7 +587,7 @@ export class FloralProposalBuilderComponent implements OnInit {
           }
           return {
             ...this.floralProposalBuilderService.applyCatalogItemToComponent(
-              component, item, line.quantity, this.defaultMarkupPercent(), this.getDefaultReservePercent()
+              component, item, line.quantity, this.defaultMarkupPercent(), this.getDefaultReserveUnits()
             ),
             catalog_item_name: this.formatCatalogItemOptionLabel(item),
           };
@@ -611,7 +643,7 @@ export class FloralProposalBuilderComponent implements OnInit {
                   item,
                   candidateLine.quantity,
                   this.defaultMarkupPercent(),
-                  this.getDefaultReservePercent()
+                  this.getDefaultReserveUnits()
                 ),
                 catalog_item_name: this.formatCatalogItemOptionLabel(item),
               }
@@ -638,7 +670,7 @@ export class FloralProposalBuilderComponent implements OnInit {
       item,
       1,
       this.defaultMarkupPercent(),
-      this.getDefaultReservePercent()
+      this.getDefaultReserveUnits()
     );
 
     return component.base_unit_cost !== catalogDefaults.base_unit_cost ||
@@ -690,27 +722,25 @@ export class FloralProposalBuilderComponent implements OnInit {
     void this.refreshShoppingList();
   }
 
-  onLaborPercentChange(value: string): void {
-    this.laborPercent.set(Math.max(Number(value || 0), 0));
-  }
-
   onTaxRegionChange(value: string): void {
     this.selectedTaxRegionId.set(value);
   }
 
   updateShoppingListReserve(item: FloralProposalShoppingListItem, rawValue: string): void {
-    const reservePercent = Math.max(Number(rawValue || 0), 0);
+    const reserveUnits = Math.max(Math.round(Number(rawValue || 0)), 0);
     const itemKey = this.getShoppingListItemKey(item);
+    let reserveApplied = false;
 
     this.lineItems.update((lines) =>
       lines.map((line) =>
         this.floralProposalBuilderService.recalculateLine({
           ...line,
-          components: line.components.map((component) =>
-            this.getComponentShoppingKey(component) === itemKey
-              ? { ...component, reserve_percent: reservePercent }
-              : component
-          ),
+          components: line.components.map((component) => {
+            if (this.getComponentShoppingKey(component) !== itemKey) return component;
+            const nextReserveUnits = reserveApplied ? 0 : reserveUnits;
+            reserveApplied = true;
+            return { ...component, reserve_units: nextReserveUnits };
+          }),
         })
       )
     );
@@ -720,7 +750,7 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   async saveDraft(): Promise<void> {
     if (this.hasComponentPriceErrors()) {
-      this.toast.showToast('Correct the highlighted row unit prices before saving.', 'error');
+      this.toast.showToast('Correct the highlighted prices before saving.', 'error');
       return;
     }
     const workspace = this.revisionWorkspace();
@@ -758,6 +788,11 @@ export class FloralProposalBuilderComponent implements OnInit {
   async finalizeProposal(): Promise<void> {
     const lead = this.lead();
     if (!lead || this.saving() || (!this.revisionWorkspace() && this.isReadOnly(lead.status))) return;
+
+    if (this.hasComponentPriceErrors()) {
+      this.toast.showToast('Correct the highlighted prices before finalizing.', 'error');
+      return;
+    }
 
     if (!this.selectedTaxRegionId()) {
       this.toast.showToast('Choose a tax region before finalizing the Floral Proposal.', 'error');
@@ -1415,7 +1450,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     );
   }
 
-  private buildRevisionDraft(workspace: ProjectProposalRevisionWorkspace): EditableProposalSnapshotV2 {
+  private buildRevisionDraft(workspace: ProjectProposalRevisionWorkspace): EditableProposalSnapshotV3 {
     const renderPayload = this.buildRenderPayload();
     const total = Number(renderPayload.totals.totalAmount.toFixed(2));
     return this.floralProposalBuilderService.buildEditableProjectSnapshot({
@@ -1431,7 +1466,7 @@ export class FloralProposalBuilderComponent implements OnInit {
 
   private withRecordedTaxRegion(
     regions: TaxRegion[],
-    draft: EditableProposalSnapshotV2
+    draft: EditableProposalSnapshotV3
   ): TaxRegion[] {
     const recordedId = draft.tax_region.tax_region_id;
     if (!recordedId || regions.some((region) => region.tax_region_id === recordedId)) {
@@ -1490,7 +1525,6 @@ export class FloralProposalBuilderComponent implements OnInit {
       lines: this.lineItems(),
       taxRegion: this.selectedTaxRegion(),
       defaultMarkupPercent: this.defaultMarkupPercent(),
-      laborPercent: this.laborPercent(),
       shoppingList: this.shoppingList(),
     });
   }
@@ -1524,16 +1558,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     return 300;
   }
 
-  private getInitialLaborPercent(proposal: FloralProposal | null): number {
-    const snapshotValue = proposal?.snapshot?.['labor_percent'];
-    if (typeof snapshotValue === 'number' && Number.isFinite(snapshotValue)) {
-      return snapshotValue;
-    }
-
-    return 0;
-  }
-
-  private getDefaultReservePercent(): number {
+  private getDefaultReserveUnits(): number {
     return 0;
   }
 

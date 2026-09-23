@@ -67,10 +67,17 @@ describe('WorkshopEditorComponent', () => {
         { provide: WorkshopMediaService, useValue: mediaService },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['showToast']) },
       ],
-    }).overrideComponent(WorkshopEditorComponent, { set: { template: '' } }).compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(WorkshopEditorComponent);
     component = fixture.componentInstance;
+  });
+
+  it('renders one full-width CRM page shell', () => {
+    fixture.detectChanges();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
   });
 
   it('requires content, venue, schedule, capacity, price, and terms', () => {
@@ -299,14 +306,12 @@ describe('WorkshopEditorComponent', () => {
     expect(repository.saveOccurrence).toHaveBeenCalledWith(
       jasmine.objectContaining({
         stripeEnabled: true,
-        venmoEnabled: false,
         waitlistEnabled: true,
         isFeatured: true,
       }),
       jasmine.any(String),
     );
     expect(component.form.contains('stripeEnabled')).toBeFalse();
-    expect(component.form.contains('venmoEnabled')).toBeFalse();
     expect(component.form.contains('waitlistEnabled')).toBeFalse();
     expect(component.form.contains('isFeatured')).toBeFalse();
   });

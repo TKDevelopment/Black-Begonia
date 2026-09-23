@@ -158,7 +158,6 @@ as $$
     'currency', o.currency,
     'perBookingLimit', o.per_booking_limit,
     'stripeEnabled', o.stripe_enabled,
-    'venmoEnabled', o.venmo_enabled,
     'waitlistEligible', false,
     'availability', case when o.status <> 'published_open' or o.registration_closes_at <= now() then 'closed' else 'available' end,
     'isFeatured', o.is_featured,

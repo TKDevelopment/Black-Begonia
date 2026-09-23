@@ -18,6 +18,14 @@ export interface AdminTableColumn {
   label: string;
   className?: string;
   headerClassName?: string;
+  sortable?: boolean;
+}
+
+export type EntityTableSortDirection = 'asc' | 'desc';
+
+export interface EntityTableSortChange {
+  key: string;
+  direction: EntityTableSortDirection;
 }
 
 @Component({
@@ -34,11 +42,14 @@ export class EntityTableShellComponent implements AfterContentInit, OnChanges {
   @Input() clickableRows = false;
   @Input() trackByField = 'id';
   @Input() pageSize = 15;
+  @Input() sortKey: string | null = null;
+  @Input() sortDirection: EntityTableSortDirection = 'asc';
 
   @Input() emptyTitle = 'No records found';
   @Input() emptyDescription = 'There is nothing to display yet.';
 
   @Output() rowClick = new EventEmitter<any>();
+  @Output() sortChange = new EventEmitter<EntityTableSortChange>();
 
   @ContentChildren(EntityTableCellDirective)
   cellTemplates!: QueryList<EntityTableCellDirective>;
@@ -120,6 +131,24 @@ export class EntityTableShellComponent implements AfterContentInit, OnChanges {
     if (this.clickableRows) {
       this.rowClick.emit(row);
     }
+  }
+
+  onSort(column: AdminTableColumn): void {
+    if (!column.sortable) return;
+
+    this.sortChange.emit({
+      key: column.key,
+      direction:
+        this.sortKey === column.key && this.sortDirection === 'asc'
+          ? 'desc'
+          : 'asc',
+    });
+  }
+
+  getAriaSort(column: AdminTableColumn): 'ascending' | 'descending' | 'none' | null {
+    if (!column.sortable) return null;
+    if (this.sortKey !== column.key) return 'none';
+    return this.sortDirection === 'asc' ? 'ascending' : 'descending';
   }
 
   private ensureValidCurrentPage(): void {

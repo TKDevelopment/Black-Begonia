@@ -34,8 +34,14 @@ describe('FloralProposalRepositoryService', () => {
     applied_markup_percent: 50,
     sell_unit_price: 4.5,
     subtotal: 45,
-    reserve_percent: 10,
-    snapshot: { pack_quantity: 12, effective_pack_cost: 35, purchase_unit_cost: 35 },
+    reserve_percent: 0,
+    reserve_units: 2,
+    snapshot: {
+      reserve_units: 2,
+      pack_quantity: 12,
+      effective_pack_cost: 35,
+      purchase_unit_cost: 35,
+    },
     created_at: '2026-06-02T12:00:00.000Z',
     updated_at: '2026-06-02T12:00:00.000Z',
   };
@@ -332,7 +338,11 @@ describe('FloralProposalRepositoryService', () => {
           image_storage_path: 'proposal-images/meadow.jpg',
           image_alt_text: 'Ceremony meadow',
           image_caption: 'A meadow arrangement',
-          snapshot: { description: 'Lush aisle florals' },
+          snapshot: {
+            description: 'Lush aisle florals',
+            calculated_unit_price: 250,
+            actual_unit_price_override: 300,
+          },
         },
       ]
     );
@@ -348,9 +358,62 @@ describe('FloralProposalRepositoryService', () => {
         display_order: 0,
         item_name: 'Ceremony Meadow',
         image_storage_path: 'proposal-images/meadow.jpg',
+        unit_price: 300,
+        subtotal: 600,
+        snapshot: jasmine.objectContaining({
+          description: 'Lush aisle florals',
+          calculated_unit_price: 250,
+          actual_unit_price_override: 300,
+        }),
       }),
     ]);
     expect(lineItems).toEqual([testProposalLineItem]);
+  });
+
+  it('retains a zero product override and omits product price metadata from manual lines', async () => {
+    const deleteQuery = createDeleteEqQuery({ error: null });
+    const insertQuery = createInsertSelectOrderQuery({ data: [], error: null });
+    client.from.and.returnValues(deleteQuery, insertQuery);
+
+    await service.replaceFloralProposalLineItems(
+      testFloralProposal.floral_proposal_id,
+      [
+        {
+          display_order: 0,
+          line_item_type: 'product',
+          item_name: 'Complimentary bouquet',
+          quantity: 1,
+          unit_price: 0,
+          subtotal: 0,
+          snapshot: {
+            retained_note: 'customer courtesy',
+            calculated_unit_price: 125,
+            actual_unit_price_override: 0,
+          },
+        },
+        {
+          display_order: 1,
+          line_item_type: 'labor',
+          item_name: 'Installation labor',
+          quantity: 1,
+          unit_price: 50,
+          subtotal: 50,
+          snapshot: {
+            retained_note: 'crew of two',
+            calculated_unit_price: 999,
+            actual_unit_price_override: 999,
+          },
+        },
+      ]
+    );
+
+    const insertedRows = insertQuery.insert.calls.mostRecent().args[0];
+    expect(insertedRows[0].snapshot).toEqual({
+      retained_note: 'customer courtesy',
+      calculated_unit_price: 125,
+      actual_unit_price_override: 0,
+    });
+    expect(insertedRows[1].snapshot).toEqual({ retained_note: 'crew of two' });
   });
 
   it('skips line item insertion when replacement payload is empty', async () => {
@@ -385,8 +448,9 @@ describe('FloralProposalRepositoryService', () => {
           testProposalLineItem.floral_proposal_line_item_id,
          catalog_item_name: 'Garden Rose',
         base_unit_cost: 2.9167,
-        reserve_percent: 10,
+        reserve_percent: 0,
         snapshot: jasmine.objectContaining({
+          reserve_units: 2,
           pack_quantity: 12,
           effective_pack_cost: 35,
         }),
@@ -441,7 +505,8 @@ describe('FloralProposalRepositoryService', () => {
       item_type: 'flower',
       unit_type: 'bunch',
       required_units: 12,
-      reserve_percent: 10,
+      reserve_percent: 0,
+      requested_reserve_units: 8,
       reserve_units: 8,
       total_units_to_buy: 20,
       units_per_pack: 10,

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ActivityRepositoryService } from '../../../../core/supabase/repositories/activity-repository.service';
 import { LeadRepositoryService } from '../../../../core/supabase/repositories/lead-repository.service';
@@ -16,13 +16,15 @@ import { LeadConversionService } from '../../../../core/supabase/services/lead-c
 
 describe('ProjectDetailsComponent active proposal contracts', () => {
   let component: ProjectDetailsComponent;
+  let fixture: ComponentFixture<ProjectDetailsComponent>;
   const resolver = new ProjectProposalRevisionService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
   const paymentRepository = jasmine.createSpyObj('ProjectPaymentRecordRepositoryService', ['getProjectPaymentRecords','getProjectFinancialSummary']);
   const activityRepository = jasmine.createSpyObj('ActivityRepositoryService', ['getProjectActivity']);
   const deliveryService = jasmine.createSpyObj('PaymentDeliveryService', ['getProjectDeliveries','setReminderControl','retry']);
   const documentRepository = jasmine.createSpyObj('ProjectProposalDocumentVersionRepositoryService', ['getProjectDocumentVersions']);
   const snapshotRepository = jasmine.createSpyObj('ProjectProposalInvoiceSnapshotRepositoryService', ['getProjectSnapshots']);
-  const projectRepository = jasmine.createSpyObj('ProjectRepositoryService', ['cascadeDeleteProjectTestData']);
+  const projectRepository = jasmine.createSpyObj('ProjectRepositoryService', ['getProjectById', 'cascadeDeleteProjectTestData']);
+  const leadRepository = jasmine.createSpyObj('LeadRepositoryService', ['getLeadById']);
   const router = jasmine.createSpyObj('Router', ['navigate']);
   const toast = jasmine.createSpyObj('ToastService', ['showToast']);
   const leadConversion = jasmine.createSpyObj('LeadConversionService', ['issueDepositRequest']);
@@ -49,8 +51,11 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
     activityRepository.getProjectActivity.and.resolveTo([]);deliveryService.getProjectDeliveries.and.resolveTo([]);deliveryService.setReminderControl.and.resolveTo();deliveryService.retry.and.resolveTo({} as any);documentRepository.getProjectDocumentVersions.and.resolveTo([]);snapshotRepository.getProjectSnapshots.and.resolveTo([]);
     projectRepository.cascadeDeleteProjectTestData.and.resolveTo({
       projectId: 'project-1', projectName: 'Wedding', deletedSourceLead: true,
-      deletedContacts: 1, deletedOrganizations: 0, storageObjects: [], storageCleanupFailures: 0,
+      deletedContacts: 1, deletedOrganizations: 0, deletedPaymentTransactions: 2,
+      deletedPaymentRecords: 2, storageObjects: [], storageCleanupFailures: 0,
     });
+    projectRepository.getProjectById.and.resolveTo(project);
+    leadRepository.getLeadById.and.resolveTo(null);
     router.navigate.and.resolveTo(true);
     leadConversion.issueDepositRequest.and.resolveTo('queued');
     await TestBed.configureTestingModule({
@@ -58,7 +63,7 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
       providers: [
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'project-1' } } } },
         { provide: Router, useValue: router },
-        { provide: ProjectRepositoryService, useValue: projectRepository }, { provide: LeadRepositoryService, useValue: {} },
+        { provide: ProjectRepositoryService, useValue: projectRepository }, { provide: LeadRepositoryService, useValue: leadRepository },
         { provide: ProjectPaymentRecordRepositoryService, useValue: paymentRepository }, { provide: ActivityRepositoryService, useValue: activityRepository },
         { provide: ProjectProposalDocumentVersionRepositoryService, useValue: documentRepository },
         { provide: ProjectProposalInvoiceSnapshotRepositoryService, useValue: snapshotRepository },
@@ -68,9 +73,35 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
         { provide: ToastService, useValue: toast },
         { provide: LeadConversionService, useValue: leadConversion },
       ],
-    }).overrideComponent(ProjectDetailsComponent, { set: { template: '' } }).compileComponents();
-    component = TestBed.createComponent(ProjectDetailsComponent).componentInstance;
+    }).compileComponents();
+    fixture = TestBed.createComponent(ProjectDetailsComponent);
+    component = fixture.componentInstance;
     component.project.set(project);
+  });
+
+  it('renders one fluid CRM shell with a responsive split view and contained payment table', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.payments.set([{
+      project_payment_record_id: 'deposit',
+      project_id: 'project-1',
+      payment_kind: 'deposit',
+      status: 'due',
+      target_amount: 30,
+      credited_principal: 0,
+      outstanding_amount: 30,
+    } as any]);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const shells = root.querySelectorAll('[data-crm-page-shell]');
+    const splitView = root.querySelector('.xl\\:grid-cols-\\[minmax\\(0\\,1fr\\)_420px\\]');
+    const paymentTable = root.querySelector('table.crm-table');
+
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+    expect(splitView).not.toBeNull();
+    expect(paymentTable?.parentElement?.classList).toContain('overflow-x-auto');
   });
 
   it('uses only the exact project-pointer active snapshot and never latest history', () => {
@@ -189,7 +220,9 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
     await component.deleteProject();
 
     expect(projectRepository.cascadeDeleteProjectTestData).toHaveBeenCalledWith('project-1', 'Wedding');
-    expect(toast.showToast).toHaveBeenCalledWith('Project "Wedding" and its test data were deleted.');
+    expect(toast.showToast).toHaveBeenCalledWith(
+      'Project "Wedding" and all associated payment data were permanently deleted.'
+    );
     expect(router.navigate).toHaveBeenCalledWith(['/admin/projects']);
   });
 });

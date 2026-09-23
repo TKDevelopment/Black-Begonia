@@ -161,6 +161,13 @@ describe('LeadDetailComponent', () => {
     consoleErrorSpy = spyOn(console, 'error');
   });
 
+  it('renders one full-width CRM page shell while detail state loads', () => {
+    createComponent();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+  });
+
   it('loads the lead detail workflow on init', async () => {
     createComponent();
     await fixture.whenStable();

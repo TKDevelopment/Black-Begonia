@@ -1,8 +1,13 @@
 import { ProjectStatus } from './project';
 import { ProjectProposalDocumentVersion } from './project-proposal-document-version';
 import { ProjectProposalInvoiceSnapshot } from './project-proposal-invoice-snapshot';
+import {
+  FLORAL_PROPOSAL_EDITABLE_SCHEMA_VERSION,
+  LegacyLaborConversionMetadata,
+} from './floral-proposal';
 
-export const PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION = 2 as const;
+export const PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION =
+  FLORAL_PROPOSAL_EDITABLE_SCHEMA_VERSION;
 
 export type ProposalRevisionSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -22,7 +27,8 @@ export interface EditableProposalComponentSnapshot {
   applied_markup_percent: number;
   sell_unit_price: number;
   subtotal: number;
-  reserve_percent: number;
+  /** Absolute reserve stems/units requested for this contribution. */
+  reserve_units: number;
   pack_quantity?: number | null;
   /** Derived cent-valued cost for the recorded pack quantity. */
   effective_pack_cost?: number | null;
@@ -35,10 +41,9 @@ export interface EditableProposalComponentSnapshot {
   snapshot?: Record<string, unknown>;
 }
 
-export interface EditableProposalLineSnapshot {
+interface EditableProposalLineSnapshotBase {
   local_id: string;
   display_order: number;
-  line_item_type: 'product' | 'fee' | 'discount' | 'labor';
   item_name: string;
   description?: string | null;
   quantity: number;
@@ -51,8 +56,24 @@ export interface EditableProposalLineSnapshot {
   snapshot?: Record<string, unknown>;
 }
 
+export interface EditableProposalProductLineSnapshot
+  extends EditableProposalLineSnapshotBase {
+  line_item_type: 'product';
+  calculated_unit_price: number;
+  actual_unit_price_override: number | null;
+}
+
+export interface EditableProposalManualLineSnapshot
+  extends EditableProposalLineSnapshotBase {
+  line_item_type: 'fee' | 'discount' | 'labor';
+}
+
+export type EditableProposalLineSnapshot =
+  | EditableProposalProductLineSnapshot
+  | EditableProposalManualLineSnapshot;
+
 export interface EditableProposalSnapshotV2 extends Record<string, unknown> {
-  schema_version: typeof PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION;
+  schema_version: 2;
   proposal_status: 'draft';
   tax_region: {
     tax_region_id?: string | null;
@@ -78,13 +99,54 @@ export interface EditableProposalSnapshotV2 extends Record<string, unknown> {
   breakdown: Record<string, number>;
 }
 
+export interface EditableProposalSnapshotV3 extends Record<string, unknown> {
+  schema_version: typeof PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION;
+  proposal_status: 'draft';
+  tax_region: {
+    tax_region_id?: string | null;
+    name?: string | null;
+    tax_rate: number;
+    was_active?: boolean;
+  };
+  default_markup_percent: number;
+  financial_terms: {
+    retainer_amount: number;
+    final_balance_amount: number;
+    retainer_due_date?: string | null;
+    final_balance_due_date?: string | null;
+  };
+  line_items: EditableProposalLineSnapshot[];
+  shopping_list: Record<string, unknown>[];
+  totals: {
+    subtotal: number;
+    taxAmount: number;
+    totalAmount: number;
+  };
+  breakdown: {
+    productsTotal: number;
+    laborTotal: number;
+    manualLaborTotal: number;
+    feesTotal: number;
+    discountsTotal: number;
+    subtotal: number;
+    taxAmount: number;
+    totalAmount: number;
+  };
+  legacy_labor_conversion: LegacyLaborConversionMetadata | null;
+}
+
+export type EditableProposalCompatibilityInput =
+  | EditableProposalSnapshotV2
+  | EditableProposalSnapshotV3
+  | Record<string, unknown>;
+
 export interface ProjectProposalRevisionWorkspace {
   project_proposal_revision_workspace_id: string;
   project_id: string;
   baseline_invoice_snapshot_id: string;
   source_lead_id?: string | null;
   schema_version: number;
-  draft_snapshot: EditableProposalSnapshotV2;
+  draft_snapshot: EditableProposalSnapshotV3;
   subtotal: number;
   tax_rate: number;
   tax_amount: number;

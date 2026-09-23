@@ -4,7 +4,7 @@ import { Project } from '../../models/project';
 import {
   ActiveProposalDocumentState,
   ActiveProposalSnapshotState,
-  EditableProposalSnapshotV2,
+  EditableProposalSnapshotV3,
   ProjectProposalRevisionWorkspace,
   ProposalRevisionSaveState,
   SaveProjectProposalRevisionWorkspaceInput,
@@ -17,6 +17,7 @@ import { ProjectProposalInvoiceSnapshotRepositoryService } from '../repositories
 import { ProjectProposalRevisionWorkspaceRepositoryService } from '../repositories/project-proposal-revision-workspace-repository.service';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalBuilderService } from './floral-proposal-builder.service';
+import { validateEditableProposalSnapshotV3 } from './floral-proposal-workflow.service';
 
 export interface LoadedProjectProposalRevision {
   project: Project;
@@ -139,7 +140,36 @@ export class ProjectProposalRevisionService {
       if (existingWorkspace.baseline_invoice_snapshot_id !== activeSnapshot.project_proposal_invoice_snapshot_id) {
         throw new Error('The active proposal changed after this saved revision was created. Discard it before starting again.');
       }
-      return { project, activeSnapshot, documentState, workspace: existingWorkspace, compatibilityWarning: null };
+      const existingDraft = existingWorkspace.draft_snapshot as unknown as Record<string, unknown>;
+      const adaptation = this.builderService.adaptProjectSnapshot(existingDraft, {
+        subtotal: existingWorkspace.subtotal,
+        taxRate: existingWorkspace.tax_rate,
+        taxAmount: existingWorkspace.tax_amount,
+        totalAmount: existingWorkspace.total_amount,
+        retainerAmount: existingWorkspace.retainer_amount,
+        finalBalanceAmount: existingWorkspace.final_balance_amount,
+        retainerDueDate: existingWorkspace.retainer_due_date,
+        finalBalanceDueDate: existingWorkspace.final_balance_due_date,
+      });
+      if (!adaptation.valid || !adaptation.draft) {
+        throw new Error(
+          adaptation.repairMessage ??
+            'The saved proposal revision cannot be upgraded safely. Repair it before editing.'
+        );
+      }
+      const requiresPersistence =
+        existingWorkspace.schema_version !== adaptation.draft.schema_version ||
+        JSON.stringify(existingDraft) !== JSON.stringify(adaptation.draft);
+      const workspace = requiresPersistence
+        ? await this.saveWorkspace(existingWorkspace, adaptation.draft, existingWorkspace.updated_by ?? null)
+        : existingWorkspace;
+      return {
+        project,
+        activeSnapshot,
+        documentState,
+        workspace,
+        compatibilityWarning: adaptation.warning ?? null,
+      };
     }
 
     const adaptation = this.builderService.adaptProjectSnapshot(activeSnapshot.snapshot, {
@@ -174,7 +204,7 @@ export class ProjectProposalRevisionService {
 
   queueAutosave(
     workspace: ProjectProposalRevisionWorkspace,
-    draft: EditableProposalSnapshotV2,
+    draft: EditableProposalSnapshotV3,
     updatedBy?: string | null
   ): void {
     if (this.autosaveTimer) clearTimeout(this.autosaveTimer);
@@ -211,7 +241,7 @@ export class ProjectProposalRevisionService {
 
   async retryAutosave(
     workspace: ProjectProposalRevisionWorkspace,
-    draft: EditableProposalSnapshotV2,
+    draft: EditableProposalSnapshotV3,
     updatedBy?: string | null
   ): Promise<ProjectProposalRevisionWorkspace | null> {
     this.pendingSave = () => this.saveWorkspace(workspace, draft, updatedBy ?? null);
@@ -257,9 +287,20 @@ export class ProjectProposalRevisionService {
 
   private saveWorkspace(
     workspace: ProjectProposalRevisionWorkspace,
-    draft: EditableProposalSnapshotV2,
+    draft: EditableProposalSnapshotV3,
     updatedBy: string | null
   ): Promise<ProjectProposalRevisionWorkspace> {
+    const validation = validateEditableProposalSnapshotV3(
+      draft as unknown as Record<string, unknown>
+    );
+    if (!validation.valid) {
+      return Promise.reject(
+        new Error(
+          `The proposal revision pricing is inconsistent: ${validation.errors.join(' ')}`
+        )
+      );
+    }
+
     return this.workspaceRepository.update(
       workspace.project_proposal_revision_workspace_id,
       workspace.project_id,
@@ -285,7 +326,7 @@ export class ProjectProposalRevisionService {
   private workspaceInput(
     project: Project,
     snapshot: ProjectProposalInvoiceSnapshot,
-    draft: EditableProposalSnapshotV2,
+    draft: EditableProposalSnapshotV3,
     userId: string | null
   ): SaveProjectProposalRevisionWorkspaceInput {
     return {

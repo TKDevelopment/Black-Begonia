@@ -3,7 +3,6 @@ import { ActivatedRoute } from '@angular/router';
 
 import { workshopOccurrenceFixture } from '../../../../core/testing/workshop-testing';
 import { WorkshopAdminFacadeService } from '../../../../core/supabase/repositories/workshop-admin-facade.service';
-import { WorkshopCatalogRepositoryService } from '../../../../core/supabase/repositories/workshop-catalog-repository.service';
 import { WorkshopOperationsRepositoryService } from '../../../../core/supabase/repositories/workshop-operations-repository.service';
 import {
   WorkshopOccurrenceDetailComponent,
@@ -46,12 +45,10 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
       'WorkshopOperationsRepositoryService',
       [
         'getOperationalState',
-        'listRescheduleResponses',
         'transitionOccurrence',
         'cancelOccurrence',
-        'beginReschedule',
-        'expireRescheduleResponses',
-        'resolveRescheduleNonresponse',
+        'rescheduleOccurrenceSchedule',
+        'completeAndArchiveOccurrence',
       ],
     );
     operations.getOperationalState.and.resolveTo({
@@ -64,20 +61,6 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
       hasWaitingCustomers: false,
       completionReviewRequired: false,
     });
-    operations.listRescheduleResponses.and.resolveTo([{
-      workshop_reschedule_response_id: 'response-expired',
-      workshop_booking_id: 'booking-1',
-      source_occurrence_id: 'occurrence-1',
-      replacement_occurrence_id: 'occurrence-2',
-      replacement_hold_id: 'hold-1',
-      protected_quantity: 2,
-      response: 'expired',
-      response_token_expires_at: '2026-08-10T12:00:00Z',
-      responded_at: '2026-08-10T12:00:00Z',
-      resolved_by: null,
-      resolution_command_key: null,
-      created_at: '2026-08-01T12:00:00Z',
-    }]);
     operations.transitionOccurrence.and.resolveTo({
       replayed: false,
       occurrenceId: 'occurrence-1',
@@ -98,42 +81,32 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
       checkoutExpirationsQueued: 1,
       affectedBookings: 1,
       customerNoticesQueued: 1,
-      refundReviews: 1,
+      refundRequestsQueued: 1,
       raceReviews: 0,
       closedWaitlistEntries: 0,
     });
-    operations.beginReschedule.and.resolveTo({
+    operations.rescheduleOccurrenceSchedule.and.resolveTo({
       replayed: false,
-      affectedBookings: 1,
-      protectedQuantity: 2,
+      occurrenceId: 'occurrence-1',
+      previousStartAt: '2026-08-15T17:00:00Z',
+      previousEndAt: '2026-08-15T19:00:00Z',
+      startAt: '2026-10-15T17:00:00Z',
+      endAt: '2026-10-15T19:00:00Z',
+      customerNoticesQueued: 1,
     });
-    operations.expireRescheduleResponses.and.resolveTo({
+    operations.completeAndArchiveOccurrence.and.resolveTo({
       replayed: false,
-      expiredResponses: 1,
+      occurrenceId: 'occurrence-1',
+      lifecycle: 'archived',
+      customerThankYousQueued: 1,
+      recommendationCount: 3,
     });
-    operations.resolveRescheduleNonresponse.and.resolveTo({
-      replayed: false,
-      state: 'staff_resolved',
-      responseId: 'response-expired',
-    });
-    const catalog = jasmine.createSpyObj<WorkshopCatalogRepositoryService>(
-      'WorkshopCatalogRepositoryService', ['listOccurrences'],
-    );
-    catalog.listOccurrences.and.resolveTo([
-      workshopOccurrenceFixture(),
-      workshopOccurrenceFixture({
-        workshop_occurrence_id: 'occurrence-2',
-        slug: 'replacement-workshop',
-        start_at: '2099-09-15T17:00:00.000Z',
-      }),
-    ]);
     spyOn(window, 'confirm').and.returnValue(true);
     await TestBed.configureTestingModule({
       imports: [WorkshopOccurrenceDetailComponent],
       providers: [
         { provide: WorkshopAdminFacadeService, useValue: facade },
         { provide: WorkshopOperationsRepositoryService, useValue: operations },
-        { provide: WorkshopCatalogRepositoryService, useValue: catalog },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => 'occurrence-1' } } },
@@ -145,6 +118,34 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('renders one full-width CRM page shell while retaining the focused form', () => {
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
+  });
+
+  it('consumes the shared CRM light and dark theme tokens', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.setProperty('--crm-page-bg', '#0b0f14');
+    host.style.setProperty('--crm-surface', '#12171d');
+    host.style.setProperty('--crm-surface-elevated', '#1a2028');
+    host.style.setProperty('--crm-text', '#edf2f7');
+    host.style.setProperty('--crm-text-strong', '#f8fbff');
+    host.style.setProperty('--crm-border', '#2a333e');
+    fixture.detectChanges();
+
+    const page = host.querySelector('.detail-page') as HTMLElement;
+    const section = host.querySelector('section') as HTMLElement;
+    const heading = host.querySelector('h1') as HTMLElement;
+    const input = host.querySelector('input') as HTMLElement;
+
+    expect(getComputedStyle(page).backgroundColor).toBe('rgb(11, 15, 20)');
+    expect(getComputedStyle(section).backgroundColor).toBe('rgb(18, 23, 29)');
+    expect(getComputedStyle(heading).color).toBe('rgb(248, 251, 255)');
+    expect(getComputedStyle(input).backgroundColor).toBe('rgb(26, 32, 40)');
   });
 
   it('deduplicates booking quantities while presenting roster operations', () => {
@@ -163,7 +164,7 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
     expect(operations.transitionOccurrence).toHaveBeenCalledWith(
       'occurrence-1', 'registration_closed', jasmine.any(String),
     );
-    expect(component.actionMessage()).toContain('lifecycle updated');
+    expect(component.actionMessage()).toContain('registration closed');
   });
 
   it('previews affected bookings and seats before cancellation', async () => {
@@ -177,23 +178,29 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
     );
   });
 
-  it('tracks expired reschedule responses and resolves them only with confirmation', async () => {
-    expect(component.followUpCount()).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('Resolve as cancellation');
+  it('reschedules the same occurrence and queues customer confirmation emails', async () => {
+    component.rescheduleForm.setValue({
+      date: '2026-10-15',
+      localStartTime: '13:00',
+      localEndTime: '15:00',
+      registrationCloseDate: '2026-10-14',
+    });
 
-    await component.resolveNonresponse('response-expired');
+    await component.rescheduleOccurrence();
 
-    expect(operations.resolveRescheduleNonresponse).toHaveBeenCalledWith(
-      'response-expired', jasmine.any(String),
+    expect(operations.rescheduleOccurrenceSchedule).toHaveBeenCalledWith(
+      'occurrence-1', '2026-10-15T13:00', '2026-10-15T15:00', -240,
+      jasmine.any(String), jasmine.any(String),
     );
+    expect(component.actionMessage()).toContain('confirmation email');
   });
 
   it('presents a safe invalid-state message for unavailable completion review', async () => {
-    operations.transitionOccurrence.and.rejectWith(
+    operations.completeAndArchiveOccurrence.and.rejectWith(
       new Error('completion review is not yet available'),
     );
 
-    await component.transition('completed');
+    await component.completeAndArchive();
 
     expect(component.actionError()).toBe(
       'This workshop is not ready for completion review.',
@@ -214,8 +221,8 @@ describe('WorkshopOccurrenceDetailComponent operational summary', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'requires completion review',
+      'ready to complete and archive',
     );
-    expect(fixture.nativeElement.textContent).toContain('Complete after review');
+    expect(fixture.nativeElement.textContent).toContain('Complete & Archive');
   });
 });

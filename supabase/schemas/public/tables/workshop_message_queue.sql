@@ -6,7 +6,8 @@ create table public.workshop_message_queue (
   communication_type text not null check (communication_type in (
     'booking_confirmation','replacement_status_access','waitlist_offer',
     'current_address_privacy_verification','proposed_email_confirmation',
-    'cancellation_notice','reschedule_prompt','refund_notice'
+    'cancellation_notice','reschedule_prompt','refund_notice',
+    'reschedule_confirmation','refund_confirmation','workshop_thank_you'
   )),
   recipient_source text not null check (recipient_source in (
     'booking_contact','waitlist_contact','proposed_correction_email'
@@ -30,6 +31,7 @@ create table public.workshop_message_queue (
   command_key uuid not null unique,
   token_registration_key uuid null unique,
   outcome_command_key uuid null unique,
+  message_context jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   resolved_at timestamptz null,
   constraint workshop_message_queue_owner check (

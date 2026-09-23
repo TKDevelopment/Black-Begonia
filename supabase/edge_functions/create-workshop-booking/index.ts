@@ -299,9 +299,7 @@ serve(async (request) => {
         p_status_token_digest: await digest(bookingToken),
         p_method: "stripe",
         p_command_key: commandKey,
-        p_venmo_target: null,
         p_stripe_hold_minutes: 30,
-        p_venmo_hold_hours: 24,
       });
       if (attempt.error) {
         return respond(origin, 400, {

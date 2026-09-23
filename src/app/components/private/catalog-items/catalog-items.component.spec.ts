@@ -62,12 +62,17 @@ describe('CatalogItemsComponent', () => {
         { provide: CatalogItemService, useValue: service },
         { provide: ToastService, useValue: toast },
       ],
-    })
-      .overrideComponent(CatalogItemsComponent, { set: { template: '' } })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(CatalogItemsComponent);
     component = fixture.componentInstance;
+  });
+
+  it('renders one full-width CRM page shell for the active route branch', () => {
+    fixture.detectChanges();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
   });
 
   it('loads catalog items and handles empty list results', async () => {

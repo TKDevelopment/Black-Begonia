@@ -1,7 +1,7 @@
 import { Project } from '../../models/project';
 import { ProjectProposalDocumentVersion } from '../../models/project-proposal-document-version';
 import { ProjectProposalInvoiceSnapshot } from '../../models/project-proposal-invoice-snapshot';
-import { EditableProposalSnapshotV2, ProjectProposalRevisionWorkspace } from '../../models/project-proposal-revision-workspace';
+import { EditableProposalSnapshotV3, ProjectProposalRevisionWorkspace } from '../../models/project-proposal-revision-workspace';
 import { ProjectProposalRevisionService } from './project-proposal-revision.service';
 
 describe('ProjectProposalRevisionService', () => {
@@ -10,12 +10,14 @@ describe('ProjectProposalRevisionService', () => {
     event_date: '2026-10-10', active_proposal_invoice_snapshot_id: 'snapshot-1',
     active_proposal_document_version_id: 'document-1', created_at: '', updated_at: '',
   };
-  const draft: EditableProposalSnapshotV2 = {
-    schema_version: 2, proposal_status: 'draft', tax_region: { tax_region_id: 'tax-1', tax_rate: .06 },
-    default_markup_percent: 300, labor_percent: 0,
+  const draft: EditableProposalSnapshotV3 = {
+    schema_version: 3, proposal_status: 'draft', tax_region: { tax_region_id: 'tax-1', tax_rate: .06 },
+    default_markup_percent: 300,
     financial_terms: { retainer_amount: 30, final_balance_amount: 106 },
-    line_items: [{ local_id: 'line-1', display_order: 0, line_item_type: 'product', item_name: 'Bouquet', quantity: 1, unit_price: 100, subtotal: 100, components: [] }],
-    shopping_list: [], totals: { subtotal: 100, taxAmount: 6, totalAmount: 106 }, breakdown: {},
+    line_items: [{ local_id: 'line-1', display_order: 0, line_item_type: 'product', item_name: 'Bouquet', quantity: 1, calculated_unit_price: 100, actual_unit_price_override: null, unit_price: 100, subtotal: 100, components: [] }],
+    shopping_list: [], totals: { subtotal: 100, taxAmount: 6, totalAmount: 106 },
+    breakdown: { productsTotal: 100, laborTotal: 0, manualLaborTotal: 0, feesTotal: 0, discountsTotal: 0, subtotal: 100, taxAmount: 6, totalAmount: 106 },
+    legacy_labor_conversion: null,
   };
   const snapshot: ProjectProposalInvoiceSnapshot = {
     project_proposal_invoice_snapshot_id: 'snapshot-1', project_id: 'project-1', version: 1,
@@ -29,10 +31,10 @@ describe('ProjectProposalRevisionService', () => {
   };
   const workspace: ProjectProposalRevisionWorkspace = {
     project_proposal_revision_workspace_id: 'workspace-1', project_id: 'project-1', baseline_invoice_snapshot_id: 'snapshot-1',
-    schema_version: 2, draft_snapshot: draft, subtotal: 100, tax_rate: .06, tax_amount: 6, total_amount: 106,
+    schema_version: 3, draft_snapshot: draft, subtotal: 100, tax_rate: .06, tax_amount: 6, total_amount: 106,
     retainer_amount: 30, final_balance_amount: 106, created_at: '', updated_at: '',
   };
-  const pricingDraft: EditableProposalSnapshotV2 = {
+  const pricingDraft: EditableProposalSnapshotV3 = {
     ...draft,
     line_items: [{
       ...draft.line_items[0],
@@ -46,7 +48,7 @@ describe('ProjectProposalRevisionService', () => {
         applied_markup_percent: 300,
         sell_unit_price: 11.67,
         subtotal: 116.70,
-        reserve_percent: 10,
+        reserve_units: 1,
         pack_quantity: 12,
         effective_pack_cost: 35,
         purchase_unit_cost: 35,
@@ -109,6 +111,80 @@ describe('ProjectProposalRevisionService', () => {
     expect(existingRepo.createOrGet).not.toHaveBeenCalled();
   });
 
+  it('adapts and immediately persists an existing V2 workspace without changing its immutable baseline', async () => {
+    const v2Draft = {
+      ...draft,
+      schema_version: 2,
+      labor_percent: 0,
+      line_items: [
+        {
+          ...draft.line_items[0],
+          calculated_unit_price: undefined,
+          actual_unit_price_override: undefined,
+        },
+      ],
+    };
+    const v2Workspace = {
+      ...workspace,
+      schema_version: 2,
+      draft_snapshot: v2Draft,
+    } as unknown as ProjectProposalRevisionWorkspace;
+    const update = jasmine.createSpy().and.callFake(
+      (_id: string, _projectId: string, changes: object) =>
+        Promise.resolve({ ...workspace, ...changes })
+    );
+    const workspaceRepository = {
+      getForProject: jasmine.createSpy().and.resolveTo(v2Workspace),
+      createOrGet: jasmine.createSpy(),
+      update,
+      discard: jasmine.createSpy(),
+    };
+    const { service, deps } = createService({ workspaceRepository });
+
+    const result = await service.loadOrInitialize(project.project_id);
+
+    expect(deps.builderService.adaptProjectSnapshot).toHaveBeenCalledWith(
+      v2Draft,
+      jasmine.any(Object)
+    );
+    expect(update).toHaveBeenCalledOnceWith(
+      'workspace-1',
+      'project-1',
+      jasmine.objectContaining({
+        schema_version: 3,
+        draft_snapshot: draft,
+        pending_submission_key: null,
+      })
+    );
+    expect(result.workspace.schema_version).toBe(3);
+    expect(result.activeSnapshot).toBe(snapshot);
+    expect(result.activeSnapshot.snapshot).toBe(snapshot.snapshot);
+  });
+
+  it('blocks an unsafe workspace repair without persisting it', async () => {
+    const existingRepo = {
+      getForProject: jasmine.createSpy().and.resolveTo({ ...workspace, schema_version: 2 }),
+      createOrGet: jasmine.createSpy(),
+      update: jasmine.createSpy(),
+      discard: jasmine.createSpy(),
+    };
+    const builderService = {
+      adaptProjectSnapshot: jasmine.createSpy().and.returnValue({
+        valid: false,
+        repairMessage: 'Legacy labor does not reconcile to the recorded total.',
+      }),
+    };
+    const { service } = createService({
+      workspaceRepository: existingRepo,
+      builderService,
+    });
+
+    await expectAsync(service.loadOrInitialize(project.project_id)).toBeRejectedWithError(
+      'Legacy labor does not reconcile to the recorded total.'
+    );
+    expect(existingRepo.update).not.toHaveBeenCalled();
+  });
+
   it('debounces autosave, persists only the last payload, resets pending metadata, and exposes save state', async () => {
     jasmine.clock().install();
     try {
@@ -138,12 +214,12 @@ describe('ProjectProposalRevisionService', () => {
 
       const saved = await service.flushAutosave();
       const persistedDraft = deps.workspaceRepository.update.calls.mostRecent().args[2]
-        .draft_snapshot as EditableProposalSnapshotV2;
+        .draft_snapshot as EditableProposalSnapshotV3;
       const persistedComponent = persistedDraft.line_items[0].components[0];
 
       expect(saved).not.toBeNull();
-      expect(saved!.draft_snapshot.schema_version).toBe(2);
-      expect(persistedDraft.schema_version).toBe(2);
+      expect(saved!.draft_snapshot.schema_version).toBe(3);
+      expect(persistedDraft.schema_version).toBe(3);
       expect(persistedComponent.base_unit_cost).toBe(2.9167);
       expect(persistedComponent.pack_quantity).toBe(12);
       expect(persistedComponent.effective_pack_cost).toBe(35);
@@ -180,5 +256,34 @@ describe('ProjectProposalRevisionService', () => {
         pack_quantity: 12,
         effective_pack_cost: 35,
       }));
+  });
+
+  it('rejects an inconsistent V3 autosave before the workspace repository is called', async () => {
+    const update = jasmine.createSpy();
+    const repo = {
+      getForProject: jasmine.createSpy(),
+      createOrGet: jasmine.createSpy(),
+      update,
+      discard: jasmine.createSpy(),
+    };
+    const { service } = createService({ workspaceRepository: repo });
+    const invalidDraft = {
+      ...draft,
+      line_items: [
+        {
+          ...draft.line_items[0],
+          actual_unit_price_override: 125,
+          unit_price: 100,
+        },
+      ],
+    } as EditableProposalSnapshotV3;
+
+    service.queueAutosave(workspace, invalidDraft);
+
+    await expectAsync(service.flushAutosave()).toBeRejectedWithError(
+      /proposal revision pricing is inconsistent/i
+    );
+    expect(update).not.toHaveBeenCalled();
+    expect(service.saveState()).toBe('error');
   });
 });

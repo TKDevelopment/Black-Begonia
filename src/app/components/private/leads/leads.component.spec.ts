@@ -59,6 +59,13 @@ describe('LeadsComponent', () => {
     consoleErrorSpy = spyOn(console, 'error');
   });
 
+  it('renders one full-width CRM page shell', () => {
+    createComponent();
+    const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
+    expect(shells.length).toBe(1);
+    expect(shells[0].classList).toContain('crm-page-frame');
+  });
+
   it('loads leads, proposals, and proposal responses on init', async () => {
     createComponent();
 
@@ -72,6 +79,23 @@ describe('LeadsComponent', () => {
     expect(leadRepository.getLeads).toHaveBeenCalled();
     expect(proposalRepository.getAllProposals).toHaveBeenCalled();
     expect(activityRepository.getProposalResponseActivities).toHaveBeenCalled();
+  });
+
+  it('shows inquiry date instead of proposal and client response columns', async () => {
+    createComponent();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const headers = Array.from(
+      fixture.nativeElement.querySelectorAll('th')
+    ).map((header) => (header as HTMLElement).textContent?.trim());
+
+    expect(headers).toContain('Inquiry Date');
+    expect(headers).not.toContain('Proposal');
+    expect(headers).not.toContain('Client Response');
+    expect(fixture.nativeElement.textContent).toContain(
+      component.formatCreatedAt(testLead.created_at)
+    );
   });
 
   it('shows loading while lead data is pending', () => {
@@ -167,6 +191,86 @@ describe('LeadsComponent', () => {
     expect(serviceFilter?.options.map((option) => option.value)).toContain(
       'custom-installation'
     );
+  });
+
+  it('sorts the visible leads by name or event date from table header controls', async () => {
+    const laterLead = {
+      ...testLead,
+      lead_id: 'lead-zeta',
+      first_name: 'Zeta',
+      last_name: 'Rose',
+      email: 'zeta@example.test',
+      event_date: '2026-12-20',
+      created_at: '2026-03-01T12:00:00.000Z',
+    } as Lead;
+    const earlierLead = {
+      ...testLead,
+      lead_id: 'lead-alpha',
+      first_name: 'Alpha',
+      last_name: 'Bloom',
+      email: 'alpha@example.test',
+      event_date: '2026-01-10',
+      created_at: '2026-01-01T12:00:00.000Z',
+    } as Lead;
+    const undatedLead = {
+      ...testLead,
+      lead_id: 'lead-middle',
+      first_name: 'Middle',
+      last_name: 'Stem',
+      email: 'middle@example.test',
+      event_date: null,
+      created_at: '2026-02-01T12:00:00.000Z',
+    } as Lead;
+    leadRepository.getLeads.and.resolveTo([laterLead, undatedLead, earlierLead]);
+
+    createComponent();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const sortableHeaders = fixture.nativeElement.querySelectorAll('[data-sort-key]');
+    expect(sortableHeaders.length).toBe(3);
+
+    component.onSortChange({ key: 'lead', direction: 'asc' });
+    expect(component.filteredLeads().map((lead) => lead.lead_id)).toEqual([
+      'lead-alpha',
+      'lead-middle',
+      'lead-zeta',
+    ]);
+
+    component.onSortChange({ key: 'lead', direction: 'desc' });
+    expect(component.filteredLeads().map((lead) => lead.lead_id)).toEqual([
+      'lead-zeta',
+      'lead-middle',
+      'lead-alpha',
+    ]);
+
+    component.onSortChange({ key: 'inquiry_date', direction: 'asc' });
+    expect(component.filteredLeads().map((lead) => lead.lead_id)).toEqual([
+      'lead-alpha',
+      'lead-middle',
+      'lead-zeta',
+    ]);
+
+    component.onSortChange({ key: 'inquiry_date', direction: 'desc' });
+    expect(component.filteredLeads().map((lead) => lead.lead_id)).toEqual([
+      'lead-zeta',
+      'lead-middle',
+      'lead-alpha',
+    ]);
+
+    component.onSortChange({ key: 'event_date', direction: 'asc' });
+    expect(component.filteredLeads().map((lead) => lead.lead_id)).toEqual([
+      'lead-alpha',
+      'lead-zeta',
+      'lead-middle',
+    ]);
+
+    component.onSortChange({ key: 'event_date', direction: 'desc' });
+    expect(component.filteredLeads().map((lead) => lead.lead_id)).toEqual([
+      'lead-zeta',
+      'lead-alpha',
+      'lead-middle',
+    ]);
   });
 
   it('selects the active or newest proposal for each lead', async () => {

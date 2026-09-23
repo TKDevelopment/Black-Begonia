@@ -56,7 +56,7 @@ export type AnalyticsInquiryType = 'general' | 'wedding';
 export type AnalyticsOriginContext = 'workshop';
 export type AnalyticsSocialPlatform = 'instagram' | 'facebook';
 export type WorkshopAnalyticsPlacement = 'carousel' | 'list';
-export type WorkshopAnalyticsProvider = 'stripe' | 'direct_venmo';
+export type WorkshopAnalyticsProvider = 'stripe';
 export type WorkshopAnalyticsQuantityBand = 'one' | 'two' | 'three_plus';
 
 export interface AnalyticsPreferenceRecord {
