@@ -35,6 +35,32 @@
   box-shadow: 0 28px 80px rgba(35, 22, 19, .4), inset 0 1px 0 #fff;
 }
 
+.payment-card.check-card {
+  width: min(100%, 46rem);
+}
+
+.check-card .confirmation-heading .heading-copy {
+  margin-bottom: 1rem;
+}
+
+.check-mailing-address {
+  display: grid;
+  gap: .3rem;
+  margin-top: .7rem;
+  padding: .75rem .9rem;
+  border: 1px solid #ead7d0;
+  border-radius: .85rem;
+  background: rgba(255, 255, 255, .72);
+  color: #5a4039;
+  font-size: .82rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.check-mailing-address address {
+  font-style: normal;
+}
+
 .payment-card::before {
   content: '';
   position: absolute;

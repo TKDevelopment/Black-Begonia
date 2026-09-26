@@ -263,3 +263,8 @@ migration, deploy the updated checkout Edge Function and Angular app, then run
 `supabase/tests/payment_method_switch.sql` and a Stripe sandbox cancel/switch
 smoke test. The provider key must permit retrieving and expiring Checkout
 Sessions.
+
+The follow-up migration `20260926040000_accept_account_venmo_profiles.sql`
+also accepts `https://account.venmo.com/u/<handle>` as an approved Venmo
+destination. Deploy it with the matching `create-payment-checkout` Edge
+Function so the customer projection and handoff recognize the same target.

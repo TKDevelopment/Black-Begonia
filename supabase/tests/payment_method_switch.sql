@@ -26,9 +26,9 @@ begin
   values(v_project_id,v_contact_id,'client',true);
   insert into public.payment_collection_settings(
     settings_id,collection_enabled,venmo_enabled,venmo_business_target
-  ) values(true,true,true,'https://www.venmo.com/u/black-begonia')
+  ) values(true,true,true,'https://account.venmo.com/u/blackbegoniaflorist')
   on conflict(settings_id) do update set collection_enabled=true,
-    venmo_enabled=true,venmo_business_target='https://www.venmo.com/u/black-begonia';
+    venmo_enabled=true,venmo_business_target='https://account.venmo.com/u/blackbegoniaflorist';
   insert into public.project_payment_records(
     project_payment_record_id,project_id,payment_kind,status,amount_due,amount_paid,
     due_date,target_amount,credited_principal,outstanding_amount,fulfillment_state
@@ -68,6 +68,7 @@ begin
     'venmo_business_profile','venmo-repeat-command'
   );
   if v_venmo->>'method'<>'venmo_business_profile'
+    or v_venmo->>'instruction_snapshot'<>'https://account.venmo.com/u/blackbegoniaflorist'
     or v_venmo->>'pause_ends_at'<>v_cash->>'pause_ends_at'
     or v_repeat->>'payment_intention_id'<>v_venmo->>'payment_intention_id'
     or (v_repeat->>'amount_cents')::bigint<>10000 then

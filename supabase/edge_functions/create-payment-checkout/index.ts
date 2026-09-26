@@ -48,8 +48,8 @@ const approvedVenmoTarget = (value: unknown) => {
   if (/^@[A-Za-z0-9_-]{2,64}$/.test(target)) {
     return `https://venmo.com/u/${target.slice(1)}`;
   }
-  const profile = /^https:\/\/(?:www\.)?venmo\.com\/u\/([A-Za-z0-9_-]{2,64})\/?$/i.exec(target);
-  return profile ? `https://venmo.com/u/${profile[1]}` : "";
+  const profile = /^https:\/\/((?:www\.)?venmo\.com|account\.venmo\.com)\/u\/([A-Za-z0-9_-]{2,64})\/?$/i.exec(target);
+  return profile ? `https://${profile[1].toLowerCase()}/u/${profile[2]}` : "";
 };
 serve(async (req) => {
   const origin = req.headers.get("origin") ?? "";
@@ -73,7 +73,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } },
     );
-    const releaseActiveCardCheckout = async () => {
+    const releaseActiveCardCheckout = async (expectedAttemptId?: string) => {
       const paymentRequest = await db.from("payment_requests")
         .select("payment_request_id")
         .eq("token_digest", digest)
@@ -91,6 +91,7 @@ serve(async (req) => {
       if (activeAttempt.error) throw activeAttempt.error;
       if (!activeAttempt.data) return;
       const attempt = activeAttempt.data;
+      if (expectedAttemptId && attempt.payment_checkout_attempt_id !== expectedAttemptId) return;
       if (attempt.status === "processing") throw new Error("PAYMENT_PROCESSING");
       if (!attempt.provider_session_id) throw new Error("CHECKOUT_STILL_STARTING");
 
@@ -144,6 +145,14 @@ serve(async (req) => {
         }
       }
     };
+    if (method === "cancel_card") {
+      const canceledAttempt = String(b.attempt ?? "");
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canceledAttempt)) {
+        return out(origin, 400, { error: "Invalid card checkout attempt" });
+      }
+      await releaseActiveCardCheckout(canceledAttempt);
+      return out(origin, 200, { canceled: true });
+    }
     if (method === "cash" || method === "check") {
       await releaseActiveCardCheckout();
       const { data, error } = await db.rpc("record_payment_intention", {
@@ -229,7 +238,7 @@ serve(async (req) => {
         }/status?attempt=${attemptId}`,
         cancel_url: `${Deno.env.get("PAYMENT_PUBLIC_ORIGIN")}/pay/${
           encodeURIComponent(token)
-        }`,
+        }?cancel_attempt=${attemptId}`,
         "expires_at": String(
           Math.floor(new Date(a.expires_at).getTime() / 1000),
         ),
@@ -245,7 +254,7 @@ serve(async (req) => {
     });
     if (!sr.ok) throw new Error("Stripe checkout failed");
     const session = await sr.json();
-    await db.rpc("finalize_payment_checkout", {
+    const finalized = await db.rpc("finalize_payment_checkout", {
         p_attempt_id: attemptId,
         p_state: "active",
         p_provider_id: session.id,
@@ -253,6 +262,9 @@ serve(async (req) => {
         p_client_token: null,
         p_error: null,
     });
+    if (finalized.error || finalized.data?.status !== "active") {
+      throw new Error("Card checkout could not be finalized");
+    }
     return out(origin, 200, {
       kind: "redirect",
       url: session.url,

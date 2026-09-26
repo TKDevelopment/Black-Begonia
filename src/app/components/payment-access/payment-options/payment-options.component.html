@@ -28,21 +28,12 @@
 
     <ng-container *ngIf="!loading() && projection().state !== 'unavailable'; else unavailable">
       <ng-container *ngIf="confirmationMethod() as selectedMethod; else paymentChooser">
-        <p class="project">
+        <p *ngIf="selectedMethod !== 'check'" class="project">
           {{ projection().projectLabel }}
           <span *ngIf="projection().eventDate">• {{ projection().eventDate | date }}</span>
         </p>
 
         <section *ngIf="selectedMethod === 'check'" class="check-confirmation">
-          <div class="payee-callout">
-            <span>Most important</span>
-            Make the check payable to <strong>Black Begonia Floral Designs, LLC</strong>
-          </div>
-
-          <p class="check-deadline">
-            Please mail or drop off your check promptly so this payment can be recorded for your event.
-          </p>
-
           <div class="demo-check" role="img" aria-label="Example completed check showing the payee, amount, date, memo, and signature fields">
             <div class="check-topline">
               <div class="demo-bank"><strong>Your Bank</strong><span>123 Main Street</span></div>
@@ -74,7 +65,11 @@
             In the memo line, write your event date<span *ngIf="formattedEventDate() as eventDate">: <strong>{{ eventDate }}</strong></span>.
           </p>
           <div *ngIf="intentionInstructions()" class="next-step"><strong>Florist instructions</strong><span>{{ intentionInstructions() }}</span></div>
-          <p class="pending-note">Your preference is recorded, but the payment has not yet been marked as paid. Black Begonia will confirm it after receiving your check.</p>
+          <p class="pending-note">Your preference is recorded, but the payment has not yet been marked as paid. Please mail or drop off your check promptly so this payment can be recorded for your event. Black Begonia will confirm it after receiving your check.</p>
+          <div class="check-mailing-address">
+            <strong>Send your check to:</strong>
+            <address>Becca Shappy<br />23 Gilman Rd<br />Hope Valley, RI 02832</address>
+          </div>
         </section>
 
         <section *ngIf="selectedMethod === 'cash'" class="cash-confirmation">
@@ -106,9 +101,8 @@
           <span>Final payment {{ money(projection().finalCents) }}</span>
         </div>
 
-        <p *ngIf="projection().activeAttempt" class="notice">Your card checkout is still open. Choosing another method will close it first; a payment already processing must finish before you can switch.</p>
-        <p *ngIf="projection().intention" class="notice">Your plan to pay by {{ projection().intention?.method?.replace('_',' ') }} was recorded. Reminders are paused for seven days.</p>
-        <p *ngIf="intentionInstructions()" class="notice"><strong>Payment instructions:</strong> {{ intentionInstructions() }}</p>
+        <p *ngIf="projection().activeAttempt" class="notice">If you left card checkout without paying, choose a payment method below. We'll close the open checkout first.</p>
+        <p *ngIf="projection().intention" class="notice">Your plan to pay by {{ projection().intention?.method?.replace('_',' ') }} was recorded. Reminders are paused for seven days to allow for the florist to confirm payment.</p>
 
         <div class="methods">
           <button class="method-button" (click)="choose('venmo')" [disabled]="busy() || !enabled('venmo')">

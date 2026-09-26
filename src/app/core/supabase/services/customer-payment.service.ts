@@ -25,6 +25,20 @@ export class CustomerPaymentService {
     return data as CheckoutHandoff;
   }
 
+  async cancelCardCheckout(token: string, attempt: string): Promise<void> {
+    const { error } = await this.supabase.getClient().functions.invoke('create-payment-checkout', {
+      body: { token, method: 'cancel_card', attempt },
+    });
+    if (error) {
+      const response = error.context;
+      if (response instanceof Response) {
+        const detail = await response.clone().json().catch(() => null);
+        if (typeof detail?.error === 'string' && detail.error.trim()) throw new Error(detail.error);
+      }
+      throw new Error(error.message || 'We could not close the card checkout yet.');
+    }
+  }
+
   async poll(token: string, attempt: string | null, maxAttempts = 8, intervalMs = 1500): Promise<CustomerPaymentProjection> {
     let state = await this.resolve(token, attempt);
     for (let index = 1; index < maxAttempts && state.state === 'processing'; index += 1) {

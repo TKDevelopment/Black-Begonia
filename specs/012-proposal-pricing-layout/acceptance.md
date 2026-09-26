@@ -336,3 +336,37 @@ Apply `20260926030000_payment_method_switch.sql` after the installment-email
 migration. Deploy `create-payment-checkout` and Angular together, run
 `supabase/tests/payment_method_switch.sql`, and verify card cancel to Venmo,
 cash, check, and card again in Stripe sandbox before production acceptance.
+
+### Venmo profile URL follow-up (2026-09-26)
+
+The florist's saved business link uses `account.venmo.com/u/`, which the
+initial validation omitted. Migration
+`20260926040000_accept_account_venmo_profiles.sql` permits that host in
+settings, customer method projection, and intention recording. The checkout
+Edge Function retains the account-domain link for the customer handoff.
+The SQL fixture now covers this target. Apply the migration and deploy the
+matching Edge Function before retesting the Venmo button and handoff.
+
+### Abandoned card checkout and payment-page copy follow-up (2026-09-26)
+
+Stripe's cancel URL now identifies the checkout attempt. Returning through
+Stripe Cancel or the browser Back button expires an open Stripe session before
+the payment page refreshes. The existing method-choice path also closes an
+open session before recording a different method. A completed or provider
+processing payment remains protected from switching. The payment chooser no
+longer shows the payment-instructions notice, and the reminder notice explains
+that the seven-day pause allows the florist to confirm payment. The check
+confirmation retains its specific florist instructions.
+
+| Check | Result | Notes |
+|---|---|
+| Focused payment-page/service Angular suites | PASS, 21/21 | Cancel return, browser Back restore, method choices, and reminder copy. |
+| Development build | PASS | Angular browser/server bundles and 24 prerendered routes; placeholder data fetches hit sandbox `EACCES`. |
+| Checkout Edge Function syntax | PASS | Parsed locally with esbuild. |
+| `git diff --check` | PASS | Line-ending notices only. |
+| Live Stripe cancel/Back flow | Not run | Requires deployed Angular/Edge Function and Stripe sandbox. |
+
+Deploy `create-payment-checkout` and Angular together, then verify Stripe
+Cancel and browser Back from an unpaid card checkout both restore payment
+choices and allow Venmo, cash, or check. Confirm completed card payments still
+cannot be switched.

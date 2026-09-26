@@ -17,7 +17,7 @@ returns jsonb language plpgsql security definer set search_path='' as $$ declare
  select * into s from public.payment_collection_settings where settings_id;
  if p_method='venmo_business_profile' and (
    not s.collection_enabled or not s.venmo_enabled
-   or not coalesce(btrim(s.venmo_business_target) ~* '^(@[A-Za-z0-9_-]{2,64}|https://(www\.)?venmo\.com/u/[A-Za-z0-9_-]{2,64}/?)$',false)
+   or not coalesce(btrim(s.venmo_business_target) ~* '^(@[A-Za-z0-9_-]{2,64}|https://((www\.)?venmo\.com|account\.venmo\.com)/u/[A-Za-z0-9_-]{2,64}/?)$',false)
  ) then raise exception 'Provider unavailable'; end if;
  if exists(select 1 from public.payment_checkout_attempts where payment_request_id=r.payment_request_id and status in ('creating','active','processing')) then raise exception 'PAYMENT_METHOD_LOCKED'; end if;
  select * into i from public.payment_intentions where payment_request_id=r.payment_request_id and state='active' and pause_ends_at>now();

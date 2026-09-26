@@ -24,7 +24,7 @@ begin
  return jsonb_build_object('state',case when a.status='paid' then 'confirmed' when a.status in ('creating','active','processing') then 'processing' else 'active' end,
    'brand','Black Begonia Florals','purpose',r.request_kind,'projectLabel',p.project_name,'eventDate',p.event_date,'currency','USD','principalCents',round(r.principal_amount*100)::bigint,
    'depositCents',round(r.deposit_amount*100)::bigint,'finalCents',round(r.final_amount*100)::bigint,
-   'methods',to_jsonb(array_remove(array[case when s.collection_enabled and s.stripe_enabled then 'stripe_card' end,case when s.collection_enabled and s.venmo_enabled and btrim(s.venmo_business_target) ~* '^(@[A-Za-z0-9_-]{2,64}|https://(www\.)?venmo\.com/u/[A-Za-z0-9_-]{2,64}/?)$' then 'venmo' end,'cash','check'],null)),
+   'methods',to_jsonb(array_remove(array[case when s.collection_enabled and s.stripe_enabled then 'stripe_card' end,case when s.collection_enabled and s.venmo_enabled and btrim(s.venmo_business_target) ~* '^(@[A-Za-z0-9_-]{2,64}|https://((www\.)?venmo\.com|account\.venmo\.com)/u/[A-Za-z0-9_-]{2,64}/?)$' then 'venmo' end,'cash','check'],null)),
    'activeAttempt',case when a.status in ('creating','active','processing') then a.payment_checkout_attempt_id end,
    'intention',case when i.payment_intention_id is not null then jsonb_build_object('method',i.method,'pauseEndsAt',i.pause_ends_at) end,
    'instructionSnapshots',jsonb_build_object('cash',r.cash_instructions,'check',r.check_instructions));
