@@ -14,8 +14,25 @@ describe('ProjectWorkflowService payment commands', () => {
     });
     expect(rpc).toHaveBeenCalledWith('record_manual_payment', jasmine.objectContaining({
       p_amount_cents: 1234, p_command_key: 'command', p_confirm_spillover: true, p_confirm_overpayment: false,
+      p_send_confirmation_email: true,
     }));
     expect(result.result.state).toBe('spillover_warning');
+  });
+
+  it('passes an unchecked confirmation choice to the payment RPC', async () => {
+    const rpc = jasmine.createSpy().and.resolveTo({ data: { state: 'recorded', affectedObligationIds: [] }, error: null });
+    const repository: any = { client: { rpc }, getProjectById: jasmine.createSpy().and.resolveTo(project) };
+    const service = new ProjectWorkflowService(repository, {} as any);
+
+    await service.recordPayment(project, {
+      obligation_id: 'deposit', payment_kind: 'deposit', amount: 12.34,
+      received_at: '2026-01-01T12:00:00Z', payment_method: 'cash',
+      send_confirmation_email: false,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('record_manual_payment', jasmine.objectContaining({
+      p_send_confirmation_email: false,
+    }));
   });
 
   it('maps affected installment ids from a recorded result', async () => {

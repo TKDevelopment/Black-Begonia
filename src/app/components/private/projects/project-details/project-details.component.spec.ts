@@ -12,22 +12,20 @@ import { ProjectWorkflowService } from '../../../../core/supabase/services/proje
 import { PaymentDeliveryService } from '../../../../core/supabase/services/payment-delivery.service';
 import { ProjectDetailsComponent } from './project-details.component';
 import { ToastService } from '../../../../core/services/toast.service';
-import { LeadConversionService } from '../../../../core/supabase/services/lead-conversion.service';
 
 describe('ProjectDetailsComponent active proposal contracts', () => {
   let component: ProjectDetailsComponent;
   let fixture: ComponentFixture<ProjectDetailsComponent>;
   const resolver = new ProjectProposalRevisionService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
-  const paymentRepository = jasmine.createSpyObj('ProjectPaymentRecordRepositoryService', ['getProjectPaymentRecords','getProjectFinancialSummary']);
+  const paymentRepository = jasmine.createSpyObj('ProjectPaymentRecordRepositoryService', ['getProjectPaymentRecords','getProjectFinancialSummary','createRevisionInstallment']);
   const activityRepository = jasmine.createSpyObj('ActivityRepositoryService', ['getProjectActivity']);
-  const deliveryService = jasmine.createSpyObj('PaymentDeliveryService', ['getProjectDeliveries','setReminderControl','retry']);
+  const deliveryService = jasmine.createSpyObj('PaymentDeliveryService', ['getProjectDeliveries','setReminderControl','retry','sendInstallmentPaymentEmail']);
   const documentRepository = jasmine.createSpyObj('ProjectProposalDocumentVersionRepositoryService', ['getProjectDocumentVersions']);
   const snapshotRepository = jasmine.createSpyObj('ProjectProposalInvoiceSnapshotRepositoryService', ['getProjectSnapshots']);
   const projectRepository = jasmine.createSpyObj('ProjectRepositoryService', ['getProjectById', 'cascadeDeleteProjectTestData']);
   const leadRepository = jasmine.createSpyObj('LeadRepositoryService', ['getLeadById']);
   const router = jasmine.createSpyObj('Router', ['navigate']);
   const toast = jasmine.createSpyObj('ToastService', ['showToast']);
-  const leadConversion = jasmine.createSpyObj('LeadConversionService', ['issueDepositRequest']);
   const workflowService = jasmine.createSpyObj('ProjectWorkflowService', ['recordPayment']);
   const project = {
     project_id: 'project-1', project_name: 'Wedding', service_type: 'wedding', status: 'booked',
@@ -47,6 +45,7 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
 
   beforeEach(async () => {
     paymentRepository.getProjectPaymentRecords.and.resolveTo([]);
+    paymentRepository.createRevisionInstallment.and.resolveTo();
     paymentRepository.getProjectFinancialSummary.and.resolveTo({available:true,proposalTotal:106,depositTarget:31.8,finalTarget:74.2,creditedPrincipal:0,outstanding:106,customerFees:0,merchantFees:0,overpayment:0,obligations:[],needsAttention:[]});
     activityRepository.getProjectActivity.and.resolveTo([]);deliveryService.getProjectDeliveries.and.resolveTo([]);deliveryService.setReminderControl.and.resolveTo();deliveryService.retry.and.resolveTo({} as any);documentRepository.getProjectDocumentVersions.and.resolveTo([]);snapshotRepository.getProjectSnapshots.and.resolveTo([]);
     projectRepository.cascadeDeleteProjectTestData.and.resolveTo({
@@ -57,7 +56,7 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
     projectRepository.getProjectById.and.resolveTo(project);
     leadRepository.getLeadById.and.resolveTo(null);
     router.navigate.and.resolveTo(true);
-    leadConversion.issueDepositRequest.and.resolveTo('queued');
+    deliveryService.sendInstallmentPaymentEmail.and.resolveTo('sent');
     await TestBed.configureTestingModule({
       imports: [ProjectDetailsComponent],
       providers: [
@@ -71,7 +70,6 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
         { provide: PaymentDeliveryService, useValue: deliveryService },
         { provide: ProjectProposalRevisionService, useValue: resolver },
         { provide: ToastService, useValue: toast },
-        { provide: LeadConversionService, useValue: leadConversion },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ProjectDetailsComponent);
@@ -171,16 +169,59 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
     expect(component.paymentModalOpen()).toBeFalse();
   });
 
-  it('shows planned methods without treating them as received', () => {
-    const payment:any={methodSummary:{state:'planned',label:'Cash (planned)'},credited_principal:0,status:'due'};
-    expect(component.paymentMethodSummary(payment)).toBe('Cash (planned)');
-    expect(payment.credited_principal).toBe(0);
-  });
-
   it('keeps zero-dollar installments visible as Not Required and ineligible', () => {
     const payment:any={status:'not_due',displayStatus:'not_required',target_amount:0,outstanding_amount:0};
     expect(component.paymentStatus(payment)).toBe('Not Required');
     expect(component.canRecordPayment(payment)).toBeFalse();
+  });
+
+  it('can schedule the $1,290 increase while preserving the $3,210 already paid', async () => {
+    component.snapshots.set([
+      { ...snapshot, project_proposal_invoice_snapshot_id: 'snapshot-1', version: 1, total_amount: 3210, is_active: false },
+      { ...snapshot, total_amount: 4500 },
+    ]);
+    component.payments.set([
+      { project_payment_record_id: 'deposit', payment_kind: 'deposit', status: 'paid', target_amount: 963, credited_principal: 963, outstanding_amount: 0 } as any,
+      { project_payment_record_id: 'final', payment_kind: 'final_payment', status: 'partially_paid', target_amount: 3537, credited_principal: 2247, outstanding_amount: 1290 } as any,
+    ]);
+    expect(component.revisionInstallmentAvailable()).toBe(1290);
+    component.project.set({ ...project, status: 'completed' });
+    expect(component.canCreateRevisionInstallment()).toBeFalse();
+    component.project.set(project);
+    component.openInstallmentModal();
+    expect(component.installmentAmount()).toBe('1290.00');
+    component.installmentDueDate.set('2099-01-01');
+    await component.createRevisionInstallment();
+    expect(paymentRepository.createRevisionInstallment).toHaveBeenCalledWith('project-1', 129000, '2099-01-01');
+    expect(component.installmentModalOpen()).toBeFalse();
+  });
+
+  it('does not offer a second installment once the revision increase is scheduled', () => {
+    component.snapshots.set([
+      { ...snapshot, project_proposal_invoice_snapshot_id: 'snapshot-1', version: 1, total_amount: 3210, is_active: false },
+      { ...snapshot, total_amount: 4500 },
+    ]);
+    component.payments.set([
+      { project_payment_record_id: 'final', payment_kind: 'final_payment', status: 'paid', target_amount: 2247, credited_principal: 2247, outstanding_amount: 0 } as any,
+      { project_payment_record_id: 'revision', payment_kind: 'revision_balance', status: 'due', target_amount: 1290, outstanding_amount: 1290, origin_snapshot_id: 'snapshot-2' } as any,
+    ]);
+    expect(component.canCreateRevisionInstallment()).toBeFalse();
+  });
+
+  it('shows no further action for a paid installment with no outstanding balance', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.payments.set([{
+      project_payment_record_id: 'deposit', project_id: 'project-1', payment_kind: 'deposit',
+      status: 'paid', target_amount: 30, credited_principal: 30, outstanding_amount: 0,
+      reminder_enabled: true,
+    } as any]);
+    fixture.detectChanges();
+
+    const actions = (fixture.nativeElement as HTMLElement).querySelector('.installment-row td:last-child');
+    expect(actions?.textContent?.trim()).toBe('No Further Action');
+    expect(actions?.querySelector('button')).toBeNull();
+    expect(component.isInstallmentSettled({ status: 'paid', outstanding_amount: 1 } as any)).toBeFalse();
   });
 
   it('uses an audited obligation reminder command without changing financial state locally', async () => {
@@ -190,17 +231,43 @@ describe('ProjectDetailsComponent active proposal contracts', () => {
     expect(deliveryService.setReminderControl).toHaveBeenCalledWith('project-1','deposit',false,null,'Customer requested pause');
   });
 
-  it('can recover a conversion request failure when no initial delivery exists', async () => {
-    component.payments.set([{
+  it('offers a payment email beside Record Payment and requests only that installment balance', async () => {
+    deliveryService.sendInstallmentPaymentEmail.calls.reset();
+    const deposit = {
       project_payment_record_id: 'deposit-1', project_id: 'project-1',
-      payment_kind: 'deposit', status: 'due', outstanding_amount: 31.8,
-    } as any]);
-    component.paymentDeliveries.set([]);
+      payment_kind: 'deposit', status: 'partially_paid', target_amount: 50,
+      credited_principal: 18.2, outstanding_amount: 31.8,
+    } as any;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    component.payments.set([deposit]);
+    fixture.detectChanges();
+    const actions = (fixture.nativeElement as HTMLElement).querySelector('.installment-row td:last-child');
+    expect(actions?.textContent).toContain('Record Payment');
+    expect(actions?.textContent).toContain('Send Payment Email');
+    expect(actions?.querySelectorAll('button')[1]?.textContent?.trim()).toBe('Send Payment Email');
 
-    await component.sendDepositRequest();
+    await component.sendPaymentEmail(deposit);
 
-    expect(leadConversion.issueDepositRequest).toHaveBeenCalledWith('deposit-1', 3180);
-    expect(toast.showToast).toHaveBeenCalledWith('The secure deposit payment email was queued.');
+    expect(deliveryService.sendInstallmentPaymentEmail).toHaveBeenCalledOnceWith('deposit-1', 3180);
+    expect(toast.showToast).toHaveBeenCalledWith('The installment payment email was sent.');
+  });
+
+  it('targets a revised installment and blocks settled or review-required balances', async () => {
+    deliveryService.sendInstallmentPaymentEmail.calls.reset();
+    const revision = {
+      project_payment_record_id: 'revision-1', project_id: 'project-1',
+      payment_kind: 'revision_balance', status: 'due', target_amount: 1290,
+      credited_principal: 0, outstanding_amount: 1290,
+    } as any;
+    component.payments.set([revision]);
+    expect(component.canSendPaymentEmail(revision)).toBeTrue();
+    expect(component.canSendPaymentEmail({ ...revision, status: 'paid', outstanding_amount: 0 })).toBeFalse();
+    expect(component.canSendPaymentEmail({ ...revision, status: 'review_required' })).toBeFalse();
+
+    await component.sendPaymentEmail(revision);
+
+    expect(deliveryService.sendInstallmentPaymentEmail).toHaveBeenCalledOnceWith('revision-1', 129000);
   });
 
   it('requires both acknowledgement and the exact project name before deletion', () => {

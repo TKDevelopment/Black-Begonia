@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { ProjectActivityPanelComponent } from './project-activity-panel.component';
 
 describe('ProjectActivityPanelComponent', () => {
@@ -31,5 +32,32 @@ describe('ProjectActivityPanelComponent', () => {
     expect(component.activityCountLabel()).toBe('1 update');
     component.activities = [activity, { ...activity, activity_log_id: 'a2' }];
     expect(component.activityCountLabel()).toBe('2 updates');
+  });
+
+  it('shows payment email and recorded payment activity without delivery badges or references', async () => {
+    await TestBed.configureTestingModule({ imports: [ProjectActivityPanelComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ProjectActivityPanelComponent);
+    fixture.componentInstance.activities = [
+      {
+        ...activity, activity_log_id: 'email', activity_type: 'payment_recorded', activity_label: 'Payment email accepted',
+        description: 'The payment email provider accepted the message.',
+        metadata: { outcome: 'accepted', delivery_kind: 'initial_request' },
+      },
+      {
+        ...activity, activity_log_id: 'payment', activity_type: 'payment_recorded', activity_label: 'Payment recorded',
+        description: 'Deposit payment BBP-2026-0001 was recorded.',
+        payment_reference: 'BBP-2026-0001',
+        metadata: { payment_reference: 'BBP-2026-0001', payment_kind: 'deposit' },
+      },
+    ];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Payment email sent');
+    expect(text).toContain('Mailgun has successfully sent the payment email to the client.');
+    expect(text).toContain('Deposit payment was recorded.');
+    expect(text).not.toContain('BBP-2026-0001');
+    expect(text).not.toContain('Delivery Kind');
+    expect(text).not.toContain('Outcome');
   });
 });

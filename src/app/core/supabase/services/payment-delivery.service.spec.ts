@@ -1,6 +1,24 @@
 import { PaymentDeliveryService } from './payment-delivery.service';
 
 describe('PaymentDeliveryService', () => {
+  it('issues a checkout link for one installment and reports dispatch failures', async () => {
+    const invoke = jasmine.createSpy().and.resolveTo({ data: { paymentRequestId: 'request-1', deliveryDispatch: 'processed' }, error: null });
+    const service = new PaymentDeliveryService({ getClient: () => ({ functions: { invoke } }) } as any);
+
+    expect(await service.sendInstallmentPaymentEmail('installment-1', 129000)).toBe('sent');
+    expect(invoke).toHaveBeenCalledWith('issue-payment-request', {
+      body: jasmine.objectContaining({
+        obligationIds: ['installment-1'], principalCents: 129000, kind: 'installment',
+        commandKey: jasmine.any(String),
+      }),
+    });
+
+    invoke.and.resolveTo({ data: { deliveryDispatch: 'failed', deliveryError: 'Email unavailable' }, error: null });
+    await expectAsync(service.sendInstallmentPaymentEmail('installment-1', 129000))
+      .toBeRejectedWithError('Email unavailable');
+    await expectAsync(service.sendInstallmentPaymentEmail('', 0)).toBeRejected();
+  });
+
   it('uses audited reminder controls without changing finance or project status', async () => {
     const rpc = jasmine.createSpy().and.resolveTo({ data: { updated: 1 }, error: null });
     const service = new PaymentDeliveryService({ getClient: () => ({ rpc }) } as any);

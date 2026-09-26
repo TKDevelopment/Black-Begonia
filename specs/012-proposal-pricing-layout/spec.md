@@ -183,3 +183,80 @@ On the florist's 34-inch ultrawide monitor, authenticated CRM pages expand their
 - The ultrawide audit covers all authenticated CRM routes registered when this specification is approved. Public pages and task-focused overlays are not required to fill the display.
 - The 3440-by-1440 viewport represents the florist's 34-inch ultrawide workstation; 1366, 1920, and 2560 pixel widths provide regression coverage for common desktop layouts.
 - Existing roles and permissions are sufficient. This feature does not introduce a new user role or authorization boundary.
+
+## Revision financial reconciliation amendment (2026-09-26)
+
+The florist reported that an active V2 proposal for $4,500 left a project showing
+its prior $3,210 total and zero balance after $963 deposit and $2,247 final
+payment receipts. The active submitted snapshot is the project quote; receipt
+history remains immutable.
+
+- **FR-027**: Revision submission MUST persist the builder's current totals and
+  atomically reconcile active installment targets against the newly active
+  invoice snapshot. The financial summary MUST show the active quote and the
+  collectible balance after existing credited principal for unpaid, partially
+  paid, and fully paid projects.
+- **FR-028**: Previously recorded receipts and allocations MUST remain attached
+  to their installments. A higher quote can reopen a paid final installment;
+  a later lower quote MUST release unpaid scheduled amounts before reducing
+  amounts backed by receipts. Receipts above the current quote MUST be shown
+  as an overpayment with no further collectible balance.
+- **FR-029**: An internal CRM user MAY split an unscheduled increase caused by
+  the active revision into a new installment with a chosen future due date.
+  Scheduling MUST transfer principal from the final installment, preserve the
+  project's total obligation and credited principal, and reject an amount
+  above the unscheduled increase.
+- **FR-030**: The project financial summary MUST show the active proposal total
+  and outstanding balance. Deposit and final payment amounts remain visible
+  in the installment section and do not need duplicate summary cards.
+
+**Acceptance example**: With a $3,210 V1 quote and $3,210 credited across the
+deposit and final installments, submitting a $4,500 V2 quote yields a $4,500
+summary total and $1,290 outstanding. Scheduling a $1,290 revision installment
+keeps that outstanding balance unchanged and leaves both original installments
+paid. The same reconciliation is tested with only $963 credited and with no
+receipts.
+
+## Revision draft compatibility amendment (2026-09-26)
+
+- **FR-031**: Reopening a project revision MUST tolerate unused, unnamed zero
+  amount editor rows in a saved draft. The adapter removes those rows when
+  named lines exist, preserves recorded totals, and leaves immutable submitted
+  proposal snapshots unchanged.
+- **FR-032**: An unnamed line with a price or other saved customer content MUST
+  remain available for the florist to name. The revision MUST block persistence
+  and finalization until the line is named; it must not silently discard or
+  zero that content.
+- **FR-033**: New revision drafts MUST omit inert unnamed rows when named lines
+  exist. A draft containing only blank editor rows remains reopenable while
+  the florist begins the proposal.
+
+## Installment payment email amendment (2026-09-26)
+
+- **FR-034**: Each payable installment row MUST offer **Send Payment Email**
+  immediately after **Record Payment**. Paid, waived, canceled, and review
+  required rows MUST NOT offer the email action. Project Details action
+  button text is 15% larger than the initially reduced style, with tighter
+  button padding.
+- **FR-035**: The email MUST tell the billing recipient that the selected
+  installment is due and include a secure checkout link for that installment's
+  current outstanding amount. Sending a replacement link for one installment
+  MUST leave unrelated installment links active.
+- **FR-036**: A checkout for an installment link MUST credit that installment,
+  even if another installment is also unpaid. A stale link MUST stop accepting
+  payment when its obligation falls below the requested amount. An in-progress
+  checkout MUST block replacement of its link.
+
+## Customer payment-method switching amendment (2026-09-26)
+
+- **FR-037**: A customer returning to `/pay/` after opening card checkout MUST
+  be able to choose Venmo, card, check, or cash. Switching away from card MUST
+  expire only an open provider checkout before the new method is recorded;
+  a completed or processing payment MUST remain protected from a second choice.
+- **FR-038**: Cash and check confirmation screens MUST offer a way back to the
+  method list. Changing between cash, check, and Venmo MUST update the active
+  intention without extending its seven-day reminder pause. Repeating the same
+  method MUST reuse the existing intention.
+- **FR-039**: Venmo MUST appear only when the stored business-profile target
+  matches an approved handle or Venmo profile URL. Invalid targets MUST be
+  rejected when settings are saved and reported clearly if checkout is tried.

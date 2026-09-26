@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CheckoutHandoff, CustomerPaymentProjection, PaymentMethodChoice } from '../../../core/models/payment-request';
 import { CustomerPaymentService } from '../../../core/supabase/services/customer-payment.service';
@@ -61,12 +61,38 @@ export class PaymentOptionsComponent implements OnInit {
   readonly token = this.route.snapshot.paramMap.get('token') ?? '';
 
   async ngOnInit() {
+    const canceledAttempt = this.route.snapshot.queryParamMap?.get('cancel_attempt');
+    if (canceledAttempt) await this.releaseReturnedCheckout(canceledAttempt);
     const projection = await this.payments.resolve(this.token);
     this.projection.set(projection);
-    if (projection.intention?.method === 'cash' || projection.intention?.method === 'check') {
+    if (!projection.activeAttempt && (projection.intention?.method === 'cash' || projection.intention?.method === 'check')) {
       this.confirmationMethod.set(projection.intention.method);
     }
     this.loading.set(false);
+  }
+
+  @HostListener('window:pageshow', ['$event'])
+  async onPageShow(event: PageTransitionEvent): Promise<void> {
+    if (!event.persisted) return;
+    const canceledAttempt = new URL(window.location.href).searchParams.get('cancel_attempt');
+    if (!canceledAttempt) return;
+    this.loading.set(true);
+    await this.releaseReturnedCheckout(canceledAttempt);
+    this.projection.set(await this.payments.resolve(this.token));
+    this.loading.set(false);
+  }
+
+  private async releaseReturnedCheckout(attempt: string): Promise<void> {
+    try {
+      await this.payments.cancelCardCheckout(this.token, attempt);
+      if (typeof window !== 'undefined') {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('cancel_attempt');
+        window.history.replaceState(window.history.state, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+      }
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'We could not close the card checkout yet.');
+    }
   }
 
   money(cents: number | undefined) {
@@ -85,13 +111,8 @@ export class PaymentOptionsComponent implements OnInit {
   }
 
   checkMemo(): string {
-    const purpose = this.projection().purpose === 'deposit'
-      ? 'Project deposit'
-      : this.projection().purpose === 'final_payment'
-        ? 'Final project payment'
-        : 'Project payment';
     const eventDate = this.formattedEventDate();
-    return eventDate ? `${purpose} - Event ${eventDate}` : `${purpose} - Event date`;
+    return eventDate ? `Event Installment - ${eventDate}` : 'Event Installment - Event date';
   }
 
   formattedEventDate(): string | null {
@@ -111,6 +132,12 @@ export class PaymentOptionsComponent implements OnInit {
     return this.projection().methods?.includes(method) ?? false;
   }
 
+  showMethods(): void {
+    this.confirmationMethod.set(null);
+    this.intentionInstructions.set(null);
+    this.error.set(null);
+  }
+
   async choose(method: PaymentMethodChoice) {
     if (this.busy()) return;
     this.busy.set(true);
@@ -120,6 +147,8 @@ export class PaymentOptionsComponent implements OnInit {
       await this.handle(handoff);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Payment option is unavailable.');
+      const refreshed = await this.payments.resolve(this.token);
+      if (refreshed.state !== 'unavailable') this.projection.set(refreshed);
     } finally {
       this.busy.set(false);
     }
@@ -127,6 +156,9 @@ export class PaymentOptionsComponent implements OnInit {
 
   private async handle(handoff: CheckoutHandoff) {
     if (handoff.kind === 'redirect') {
+      const backUrl = new URL(window.location.href);
+      backUrl.searchParams.set('cancel_attempt', handoff.attempt);
+      window.history.replaceState(window.history.state, '', backUrl.pathname + backUrl.search + backUrl.hash);
       location.assign(handoff.url);
       return;
     }
@@ -135,6 +167,8 @@ export class PaymentOptionsComponent implements OnInit {
       if (handoff.approvedTarget) window.open(handoff.approvedTarget, '_blank', 'noopener,noreferrer');
       this.projection.set({
         ...this.projection(),
+        state: 'active',
+        activeAttempt: null,
         intention: {
           method: 'venmo_business_profile',
           pauseEndsAt: handoff.pauseEndsAt,
@@ -147,6 +181,8 @@ export class PaymentOptionsComponent implements OnInit {
       this.confirmationMethod.set(handoff.method);
       this.projection.set({
         ...this.projection(),
+        state: 'active',
+        activeAttempt: null,
         intention: { method: handoff.method, pauseEndsAt: handoff.pauseEndsAt },
       });
       return;

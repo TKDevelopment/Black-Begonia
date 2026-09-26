@@ -4,6 +4,8 @@
 
 **Input**: Feature specification from `/specs/012-proposal-pricing-layout/spec.md`
 
+**Approved amendment (2026-09-26)**: The revision financial reconciliation section below supersedes the original one-migration and unchanged-payment-table assumptions where they conflict. It responds to the reported stale project balance after a submitted revision.
+
 ## Summary
 
 Retire percentage-derived labor while preserving optional manual labor lines, add a product-only Actual Unit Price override without changing catalog composition or shopping-list math, and standardize authenticated CRM page shells for useful 34-inch ultrawide expansion. The implementation keeps the existing `unit_price` field as the effective/customer quote for compatibility, stores a nullable product override plus calculated benchmark in private editor snapshots, upgrades mutable proposal state to schema version 3, and lazily converts legacy percentage labor into one idempotently tagged manual line. Submitted history remains immutable. One additive SQL migration updates revision schema defaults and revision-finalization validation; no Edge Function source, storage policy, provider, route, or external dependency changes.
@@ -186,3 +188,83 @@ See [research.md](./research.md) for decisions, rationale, and alternatives.
 ## Complexity Tracking
 
 No constitution violations require justification.
+
+## Implementation amendment: revised project balances (2026-09-26)
+
+The original V3 pricing migration validates the revised snapshot, but an
+already paid final obligation can retain an obsolete target after submission.
+The additional `20260926010000_reconcile_revision_finances.sql` migration
+updates the obligation-kind constraint and active-kind index, replaces the
+reconciliation and financial-summary functions, adds an authenticated internal
+CRM command for scheduling a revision installment, and repairs existing active
+revisions whose obligation basis or target sum is stale. Matching declarative
+function and table definitions accompany it. Existing receipt transactions,
+allocations, and immutable proposal snapshots are never rewritten.
+
+The builder saves and checks its current V3 totals immediately before PDF
+submission. Project details reads the active snapshot and one financial-summary
+RPC, displays the current total and outstanding balance, and offers a dated
+revision installment only for an unscheduled increase. The deposit and final
+amount cards are removed from the summary because the installment table shows
+those amounts with status and receipt history.
+
+The PostgreSQL regression fixture covers $3,210 fully paid, $963 partially
+paid, and $0 paid against a $4,500 revision; installment scheduling; a later
+lower quote; and overpayment after a quote drops below receipts. The migration
+must follow the original V3 migration and precede deploying the updated CRM.
+The database suite and preflight/hash comparison remain release gates when an
+isolated PostgreSQL runtime is available.
+
+## Implementation amendment: reopening revisions with blank lines (2026-09-26)
+
+The builder's draft serializer previously retained unused blank editor rows,
+while the revision adapter rejected every unnamed line. The V3 adapter now
+removes only inert, zero amount unnamed rows when named lines exist, and
+reconciles the remaining rows to the recorded subtotal. A priced or populated
+unnamed row stays editable with a repair warning; validation blocks autosave
+and submission until it is named. Existing workspaces are upgraded and saved
+when valid, while one needing a line name remains an in-memory editable copy
+until the florist repairs it. New draft serialization applies the same blank
+row rule. Immutable submitted snapshots are not modified.
+
+## Implementation amendment: installment payment email (2026-09-26)
+
+Project Details issues an installment-specific request through the existing
+authenticated payment request Edge Function. The service-role SQL command
+validates the selected obligation and outstanding cents, stores its obligation
+ID on the request, and keeps unrelated active installment requests intact.
+Immediate delivery uses the existing payment message processor and secure
+`/pay/<token>` checkout route with installment-due email copy. Checkout
+resolution and reservation reject stale balances; provider receipt allocation
+targets the request's obligation. The function verifies the caller is an active
+internal CRM user before using the service-role client.
+
+Apply `20260926020000_installment_payment_email.sql` after the revision-finance
+migration and deploy the matching Edge Functions and Angular app together. Run
+`supabase/tests/installment_payment_requests.sql` and a customer/provider smoke
+payment before enabling the action in production. This amendment supersedes the
+original plan's unchanged email and Edge Function assumptions for this follow-up.
+
+## Implementation amendment: customer payment-method switching (2026-09-26)
+
+`create-payment-checkout` now checks for an active Stripe Checkout Session when
+the customer chooses Venmo, cash, or check. It reads the provider session,
+expires it only while open, and then conditionally marks the local attempt
+canceled. A completed session leaves the payment locked for reconciliation. The
+card choice can reuse its current session. The `/pay/` component keeps the
+method list available after a card return and offers a return button from cash
+and check confirmations. The customer service surfaces safe Edge Function error
+messages.
+
+`20260926030000_payment_method_switch.sql` preserves a reminder pause when a
+manual intention changes, validates Venmo targets in settings, and projects
+Venmo only for a usable destination. Apply it after the installment-email
+migration, deploy the updated checkout Edge Function and Angular app, then run
+`supabase/tests/payment_method_switch.sql` and a Stripe sandbox cancel/switch
+smoke test. The provider key must permit retrieving and expiring Checkout
+Sessions.
+
+The follow-up migration `20260926040000_accept_account_venmo_profiles.sql`
+also accepts `https://account.venmo.com/u/<handle>` as an approved Venmo
+destination. Deploy it with the matching `create-payment-checkout` Edge
+Function so the customer projection and handoff recognize the same target.

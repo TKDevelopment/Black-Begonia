@@ -86,6 +86,29 @@ describe('FloralProposalWorkflowService V3 snapshot projection', () => {
     });
   });
 
+  it('allows an unfinished zero-dollar editor row but rejects unnamed priced content', () => {
+    const snapshot = createService().buildProposalSnapshot({ renderPayload: followingPayload });
+    const placeholder = {
+      line_item_type: 'product', item_name: '', quantity: 1,
+      calculated_unit_price: 0, actual_unit_price_override: null,
+      unit_price: 0, subtotal: 0, components: [],
+    };
+    const draft = {
+      ...snapshot,
+      line_items: [...(snapshot['line_items'] as object[]), placeholder],
+    };
+    expect(validateEditableProposalSnapshotV3(draft).valid).toBeTrue();
+
+    const unsafe = {
+      ...draft,
+      line_items: [...(snapshot['line_items'] as object[]), {
+        ...placeholder, calculated_unit_price: 25, unit_price: 25, subtotal: 25,
+      }],
+      totals: { subtotal: 275, taxAmount: 17.5, totalAmount: 292.5 },
+    };
+    expect(validateEditableProposalSnapshotV3(unsafe).errors.join(' ')).toContain('no name');
+  });
+
   it('accepts a zero override as an explicit effective product price', () => {
     const snapshot = createService().buildProposalSnapshot({
       renderPayload: {

@@ -576,18 +576,13 @@ select,
 // scoped so this richer public-page artwork does not inflate the component budget.
 app-payment-options {
   .confirmation-card { width: min(100%, 36rem); }
-  .check-card { width: min(100%, 47rem); }
   .confirmation-heading { display: grid; justify-items: center; gap: .25rem; }
   .confirmation-heading h1 { font-size: clamp(2.5rem, 6vw, 3.4rem); }
   .confirmation-heading .heading-copy { max-width: 31rem; line-height: 1.55; }
   .confirmation-heading strong { color: #9c5d57; text-transform: capitalize; }
   .confirmation-mark { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; margin-bottom: .35rem; border-radius: 50%; background: #e7f1e9; color: #4f805d; }
   .confirmation-mark svg { width: 1.5rem; height: 1.5rem; }
-  .payee-callout { display: grid; gap: .2rem; margin: 1rem 0; padding: .8rem 1rem; border: 1px solid #e6c5bc; border-radius: 1rem; background: #fff1ed; color: #5a4039; font-size: .84rem; text-align: center; }
-  .payee-callout span { color: #a84f48; font-size: .64rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-  .payee-callout strong { color: #7f302b; font-size: 1rem; }
-  .check-deadline, .memo-reminder { margin: .7rem 0; padding: .72rem .9rem; border-radius: .85rem; font-size: .78rem; line-height: 1.5; text-align: center; }
-  .check-deadline { border: 1px solid #e6c5bc; background: #fff8f5; color: #694943; }
+  .memo-reminder { margin: .7rem 0; padding: .72rem .9rem; border-radius: .85rem; font-size: .78rem; line-height: 1.5; text-align: center; }
   .memo-reminder { border: 1px solid #cad8ce; background: #f5faf5; color: #435a49; }
   .demo-check { position: relative; display: grid; gap: .8rem; padding: 1.2rem 1.35rem .9rem; border: 1px solid #9aa9a6; border-radius: .45rem; background: linear-gradient(135deg, #fbfdf7, #f1f5e9); box-shadow: 0 12px 30px rgba(42, 54, 49, .16); color: #263632; font-family: Georgia, serif; }
   .demo-check::after { content: 'DEMO'; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%) rotate(-12deg); color: rgba(157, 75, 68, .08); font: 700 5rem/1 Arial, sans-serif; letter-spacing: .08em; pointer-events: none; }

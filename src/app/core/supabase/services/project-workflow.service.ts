@@ -62,6 +62,7 @@ export class ProjectWorkflowService {
       p_command_key: payload.command_key || crypto.randomUUID(),
       p_confirm_overpayment: payload.confirm_overpayment ?? false,
       p_confirm_spillover: payload.confirm_spillover ?? false,
+      p_send_confirmation_email: payload.send_confirmation_email ?? true,
     });
     if (error) {
       const message = typeof error.message === 'string' ? error.message : '';

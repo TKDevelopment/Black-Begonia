@@ -10,9 +10,9 @@
         <div class="activity-marker" aria-hidden="true"></div>
         <article class="crm-detail-list-item activity-card rounded-xl border border-black/10 bg-[#fcfaf8]">
           <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-semibold text-stone-900">{{ activity.activity_label }}</h3>
-            <p *ngIf="activity.description" class="text-sm leading-6 text-stone-600">
-              {{ activity.description }}
+            <h3 class="text-sm font-semibold text-stone-900">{{ activityLabel(activity) }}</h3>
+            <p *ngIf="activityDescription(activity) as description" class="text-sm leading-6 text-stone-600">
+              {{ description }}
             </p>
             <dl *ngIf="metadataEntries(activity).length" class="metadata-list">
               <div *ngFor="let entry of metadataEntries(activity)" class="metadata-chip">
@@ -24,7 +24,7 @@
               <span>{{ actorName(activity) }}</span>
               <span aria-hidden="true">·</span>
               <time>{{ formatDateTime(activity.created_at) }}</time>
-              <ng-container *ngIf="activity.payment_reference">
+              <ng-container *ngIf="activity.payment_reference && activity.activity_label !== 'Payment recorded'">
                 <span aria-hidden="true">·</span>
                 <span>{{ activity.payment_reference }}</span>
               </ng-container>

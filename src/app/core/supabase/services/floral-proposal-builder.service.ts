@@ -141,6 +141,52 @@ export interface ProjectSnapshotAdaptationResult {
   repairMessage?: string;
 }
 
+/** A blank editor row carries no quoted value or customer content. */
+export function isInertUnnamedProposalLine(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const line = value as Record<string, unknown>;
+  if (line['snapshot'] != null && (typeof line['snapshot'] !== 'object' || Array.isArray(line['snapshot']))) {
+    return false;
+  }
+  const snapshot = line['snapshot'] && typeof line['snapshot'] === 'object' && !Array.isArray(line['snapshot'])
+    ? line['snapshot'] as Record<string, unknown> : {};
+  const neutralSnapshotKeys = new Set([
+    'expanded', 'description', 'calculated_unit_price', 'actual_unit_price_override',
+  ]);
+  const neutralLineKeys = new Set([
+    'local_id', 'display_order', 'line_item_type', 'item_name', 'description',
+    'quantity', 'unit_price', 'calculated_unit_price', 'actual_unit_price_override',
+    'actual_unit_price_input', 'actual_unit_price_error', 'subtotal',
+    'image_storage_path', 'image_alt_text', 'image_caption', 'image_signed_url',
+    'expanded', 'components', 'snapshot',
+  ]);
+  const blank = (item: unknown) => item == null || (typeof item === 'string' && !item.trim());
+  const zeroOrAbsent = (item: unknown) => item == null || item === 0;
+  const zeroInput = (item: unknown) => item == null
+    || (typeof item === 'string' && /^\s*0*(?:\.0*)?\s*$/.test(item));
+  const type = line['line_item_type'];
+  return blank(line['item_name'])
+    && (type === 'product' || type === 'fee' || type === 'discount' || type === 'labor')
+    && line['quantity'] === 1
+    && line['unit_price'] === 0
+    && line['subtotal'] === 0
+    && zeroOrAbsent(line['calculated_unit_price'])
+    && zeroOrAbsent(snapshot['calculated_unit_price'])
+    && line['actual_unit_price_override'] == null
+    && snapshot['actual_unit_price_override'] == null
+    && zeroInput(line['actual_unit_price_input'])
+    && blank(line['actual_unit_price_error'])
+    && blank(line['description'])
+    && blank(snapshot['description'])
+    && blank(line['image_storage_path'])
+    && blank(line['image_alt_text'])
+    && blank(line['image_caption'])
+    && blank(snapshot['conversion_key'])
+    && Array.isArray(line['components']) && line['components'].length === 0
+    && Object.keys(snapshot).every((key) => neutralSnapshotKeys.has(key))
+    && Object.keys(line).every((key) => neutralLineKeys.has(key));
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -165,8 +211,30 @@ export class FloralProposalBuilderService {
         repairMessage: 'The active proposal snapshot does not contain editable line-item data.',
       };
     }
+    if (sourceLines.some((rawLine) => {
+      const line = this.asRecord(rawLine);
+      const type = line['line_item_type'];
+      return !this.stringValue(line['item_name']).trim()
+        && type !== 'product' && type !== 'fee' && type !== 'discount' && type !== 'labor';
+    })) {
+      return {
+        valid: false,
+        repairMessage: 'The active proposal snapshot contains a line item without a supported type.',
+      };
+    }
 
-    const lines = sourceLines.map((rawLine, lineIndex) => {
+    const hasNamedLine = sourceLines.some((rawLine) =>
+      this.stringValue(this.asRecord(rawLine)['item_name']).trim().length > 0
+    );
+    const allInert = sourceLines.every(isInertUnnamedProposalLine);
+    const editableSourceLines = hasNamedLine
+      ? sourceLines.filter((rawLine) => !isInertUnnamedProposalLine(rawLine))
+      : source['proposal_status'] === 'draft' && allInert
+        ? sourceLines.slice(0, 1)
+        : sourceLines;
+    const removedBlankRows = sourceLines.length - editableSourceLines.length;
+
+    const lines = editableSourceLines.map((rawLine, lineIndex) => {
       const line = this.asRecord(rawLine);
       const components = Array.isArray(line['components']) ? line['components'] : [];
       const lineType = this.lineTypeValue(line['line_item_type']);
@@ -249,12 +317,15 @@ export class FloralProposalBuilderService {
       };
     }) as EditableProposalLineSnapshot[];
 
-    if (lines.some((line) => !line.item_name.trim())) {
+    if (!hasNamedLine && allInert && source['proposal_status'] !== 'draft') {
       return {
         valid: false,
-        repairMessage: 'The active proposal snapshot contains a line item without a name.',
+        repairMessage: 'The active proposal snapshot does not contain a named line item.',
       };
     }
+    const unnamedDataRows = lines.flatMap((line, index) =>
+      !line.item_name.trim() && !isInertUnnamedProposalLine(line) ? [index + 1] : []
+    );
 
     const sourceSchema = this.numberValue(source['schema_version'], 1);
     const sourceBreakdown = this.numericRecord(source['breakdown']);
@@ -436,9 +507,17 @@ export class FloralProposalBuilderService {
     return {
       valid: true,
       draft,
-      warning: sourceSchema < PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION
-        ? 'This proposal was created with an older snapshot format. Recorded values were preserved and missing optional fields use neutral defaults.'
-        : null,
+      warning: [
+        sourceSchema < PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION
+          ? 'This proposal was created with an older snapshot format. Recorded values were preserved and missing optional fields use neutral defaults.'
+          : null,
+        removedBlankRows > 0
+          ? 'Unused blank line items were removed from the editable revision; the recorded totals were preserved.'
+          : null,
+        unnamedDataRows.length > 0
+          ? `Line ${unnamedDataRows.join(', ')} has no name but contains saved data. Name it before saving or finalizing this revision.`
+          : null,
+      ].filter(Boolean).join(' ') || null,
     };
   }
 
@@ -455,6 +534,10 @@ export class FloralProposalBuilderService {
       labor_percent: _laborPercent,
       ...compatibleExisting
     } = args.existing ?? {};
+    const hasNamedLine = args.lines.some((line) => line.item_name.trim().length > 0);
+    const lines = hasNamedLine
+      ? args.lines.filter((line) => !isInertUnnamedProposalLine(line))
+      : args.lines;
     return {
       ...compatibleExisting,
       schema_version: PROJECT_PROPOSAL_REVISION_SCHEMA_VERSION,
@@ -472,7 +555,7 @@ export class FloralProposalBuilderService {
         retainer_due_date: args.retainerDueDate ?? null,
         final_balance_due_date: args.finalBalanceDueDate ?? null,
       },
-      line_items: args.lines.map((line, lineIndex) => ({
+      line_items: lines.map((line, lineIndex) => ({
         ...(line.line_item_type === 'product'
           ? {
               line_item_type: 'product' as const,

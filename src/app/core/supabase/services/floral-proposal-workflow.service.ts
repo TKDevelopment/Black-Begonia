@@ -7,7 +7,10 @@ import {
 } from '../../models/floral-proposal';
 import { SupabaseService } from '../clients/supabase.service';
 import { FloralProposalRepositoryService } from '../repositories/floral-proposal-repository.service';
-import { FloralProposalRenderPayload } from './floral-proposal-builder.service';
+import {
+  FloralProposalRenderPayload,
+  isInertUnnamedProposalLine,
+} from './floral-proposal-builder.service';
 
 export interface ProposalSnapshotValidationResult {
   valid: boolean;
@@ -38,6 +41,10 @@ export function validateEditableProposalSnapshotV3(
   let subtotal = 0;
   lines.forEach((rawLine, index) => {
     const line = record(rawLine);
+    if ((typeof line['item_name'] !== 'string' || !line['item_name'].trim())
+      && !isInertUnnamedProposalLine(line)) {
+      errors.push(`Line ${index + 1} has no name but contains proposal data.`);
+    }
     const type = line['line_item_type'];
     const quantity = line['quantity'];
     const unitPrice = line['unit_price'];

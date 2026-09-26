@@ -1,4 +1,4 @@
-export type PaymentRequestKind = 'deposit' | 'final_payment' | 'consolidated';
+export type PaymentRequestKind = 'deposit' | 'final_payment' | 'consolidated' | 'installment';
 export type PaymentRequestState = 'draft' | 'active' | 'fulfilled' | 'superseded' | 'revoked' | 'canceled';
 export type PaymentMethodChoice = 'stripe_card' | 'venmo' | 'cash' | 'check';
 

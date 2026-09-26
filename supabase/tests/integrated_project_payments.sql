@@ -11,7 +11,7 @@ select ok(to_regclass('public.payment_requests') is not null, 'payment requests 
 select ok(to_regclass('public.payment_checkout_attempts') is not null, 'checkout attempts exist');
 select ok(to_regclass('public.payment_message_delivery_events') is not null, 'normalized delivery events exist');
 select ok(to_regclass('public.payment_legal_holds') is not null, 'legal hold history exists');
-select has_index('public','project_payment_records','uq_project_payment_records_active_kind','one canonical active obligation per kind');
+select has_index('public','project_payment_records','uq_project_payment_records_active_kind','one canonical active deposit and final obligation per project');
 select has_index('public','payment_transaction_allocations','idx_payment_transaction_allocations_obligation','installment allocation history is indexed');
 select has_index('public','payment_transactions','idx_payment_transactions_project_occurred','project transaction history is indexed');
 select has_index('public','payment_transaction_relationships','uq_payment_transaction_relationships_adjustment','one original receipt per adjustment');
@@ -31,6 +31,7 @@ select unlike(
 select has_function('public','reserve_payment_checkout',array['text','text','text'],'checkout reservation boundary exists');
 select has_function('public','record_payment_intention',array['text','text','text'],'cash/check/Venmo fallback intention boundary exists');
 select has_function('public','record_manual_payment',array['uuid','uuid','bigint','text','timestamptz','text','text','text','uuid','boolean','boolean'],'selected-first manual receipt boundary exists');
+select has_function('public','record_manual_payment',array['uuid','uuid','bigint','text','timestamptz','text','boolean','text','text','uuid','boolean','boolean'],'manual receipt supports a confirmation email choice');
 select has_function('public','reconcile_payment_event',array['uuid','jsonb'],'provider reconciliation boundary exists');
 select has_function('public','claim_payment_deliveries',array['integer'],'bounded reminder claim boundary exists');
 select has_function('public','claim_specific_payment_delivery',array['uuid'],'immediate delivery claim boundary exists');
@@ -44,6 +45,7 @@ select unlike(
 select has_function('public','set_payment_reminder_control',array['uuid','uuid','boolean','timestamptz','text'],'audited reminder control exists');
 select has_function('public','set_payment_legal_hold',array['uuid','text','text','text','uuid'],'idempotent legal hold command exists');
 select has_function('public','recalculate_project_obligations_for_snapshot',array['uuid','uuid'],'proposal revision obligation recalculation exists');
+select has_function('public','create_revision_payment_installment',array['uuid','bigint','date'],'revised balances can be split into scheduled installments');
 select like(
   pg_get_functiondef('public.finalize_project_proposal_revision(uuid,uuid,uuid,uuid,text,text,text,text,bigint,uuid,timestamp with time zone)'::regprocedure),
   '%schema_version <> 3%',
@@ -102,14 +104,24 @@ select unlike(
   'paid-state integrity does not require one legacy paid date'
 );
 select like(
-  pg_get_functiondef('public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,text,text,uuid,boolean,boolean)'::regprocedure),
+  pg_get_functiondef('public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,boolean,text,text,uuid,boolean,boolean)'::regprocedure),
   '%spillover_warning%',
   'manual receipt command returns a no-write spillover proposal'
 );
 select like(
-  pg_get_functiondef('public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,text,text,uuid,boolean,boolean)'::regprocedure),
+  pg_get_functiondef('public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,boolean,text,text,uuid,boolean,boolean)'::regprocedure),
   '%affectedObligationIds%',
   'manual receipt result identifies every affected installment'
+);
+select like(
+  pg_get_functiondef('public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,boolean,text,text,uuid,boolean,boolean)'::regprocedure),
+  '%if v_send_confirmation_email then%',
+  'manual receipt queues a confirmation delivery only when selected'
+);
+select like(
+  pg_get_functiondef('public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,boolean,text,text,uuid,boolean,boolean)'::regprocedure),
+  '%case when v_send_confirmation_email then ''queued'' else ''not_queued'' end%',
+  'manual receipt records the unsent notice state when confirmation is unchecked'
 );
 select like(
   pg_get_functiondef('public.recompute_project_payment_obligations(uuid)'::regprocedure),
