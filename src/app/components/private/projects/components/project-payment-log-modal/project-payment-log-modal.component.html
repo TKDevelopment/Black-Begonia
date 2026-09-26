@@ -6,7 +6,11 @@
         <h2 id="record-payment-title" class="font-cormorant text-2xl">Record Payment</h2>
         <p class="mt-1 text-sm text-muted">Apply a received payment to one of this project's invoice installments.</p>
       </div>
-      <button type="button" class="icon-button" (click)="close.emit()" aria-label="Close Record Payment">&times;</button>
+      <button type="button" class="icon-button" (click)="close.emit()" aria-label="Close Record Payment">
+        <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6 18 18M18 6 6 18" />
+        </svg>
+      </button>
     </div>
 
     <form class="mt-5 grid gap-4" (ngSubmit)="submit()">
@@ -24,7 +28,19 @@
       <div class="grid gap-4 sm:grid-cols-2">
         <label>
           <span>Amount Received</span>
-          <input name="amount" type="number" min="0.01" step="0.01" [(ngModel)]="amount" />
+          <div class="currency-input">
+            <span class="currency-prefix" aria-hidden="true">$</span>
+            <input
+              name="amount"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              aria-label="Amount received in US dollars"
+              [value]="amountDisplay"
+              (input)="onAmountInput($any($event.target).value)"
+              (blur)="formatAmountDisplay()"
+            />
+          </div>
         </label>
         <label>
           <span>Received Date</span>
@@ -42,6 +58,11 @@
           <option value="other">Other</option>
         </select>
         <small>The customer's planned method is preselected when available, but you can record what was actually received.</small>
+      </label>
+
+      <label class="confirmation-email-option">
+        <input name="send_confirmation_email" type="checkbox" [(ngModel)]="send_confirmation_email" />
+        <span>Send a payment confirmation email to the customer</span>
       </label>
 
       <label>

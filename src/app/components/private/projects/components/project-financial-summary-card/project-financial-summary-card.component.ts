@@ -1,10 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
-import {
-  ProjectFinancialSummary,
-  ProjectPaymentKind,
-} from '../../../../../core/models/project-payment-record';
+import { ProjectFinancialSummary } from '../../../../../core/models/project-payment-record';
 import { ProjectProposalInvoiceSnapshot } from '../../../../../core/models/project-proposal-invoice-snapshot';
 
 @Component({
@@ -29,21 +26,4 @@ export class ProjectFinancialSummaryCardComponent {
     }).format(value);
   }
 
-  formatStatus(value: string | null | undefined): string {
-    if (!value) {
-      return 'Unavailable';
-    }
-
-    return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  paymentStatus(kind: ProjectPaymentKind): 'Paid' | 'Unpaid' {
-    const obligation = this.summary?.obligations.find(
-      (candidate) => candidate.payment_kind === kind,
-    );
-
-    return obligation?.status === 'paid' || obligation?.status === 'overpaid'
-      ? 'Paid'
-      : 'Unpaid';
-  }
 }

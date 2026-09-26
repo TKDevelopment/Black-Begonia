@@ -10,6 +10,12 @@ begin
    return jsonb_build_object('state','confirmed','brand','Black Begonia Florals','purpose',r.request_kind,'projectLabel',p.project_name,'eventDate',p.event_date,'currency','USD','principalCents',round(r.principal_amount*100)::bigint);
  end if;
  if r.status<>'active' or r.invalidated_at is not null then return jsonb_build_object('state','unavailable'); end if;
+ if r.request_kind='installment' and not exists (
+   select 1 from public.project_payment_records o
+   where o.project_payment_record_id=r.installment_obligation_id
+     and o.project_id=r.project_id and o.outstanding_amount>=r.principal_amount
+     and o.status not in ('paid','waived','canceled','review_required')
+ ) then return jsonb_build_object('state','unavailable'); end if;
  select * into p from public.projects where project_id=r.project_id and status not in ('completed','canceled');
  if not found then return jsonb_build_object('state','unavailable'); end if;
  select * into a from public.payment_checkout_attempts where payment_request_id=r.payment_request_id and (p_attempt_id is null or payment_checkout_attempt_id=p_attempt_id) order by created_at desc limit 1;
@@ -18,7 +24,7 @@ begin
  return jsonb_build_object('state',case when a.status='paid' then 'confirmed' when a.status in ('creating','active','processing') then 'processing' else 'active' end,
    'brand','Black Begonia Florals','purpose',r.request_kind,'projectLabel',p.project_name,'eventDate',p.event_date,'currency','USD','principalCents',round(r.principal_amount*100)::bigint,
    'depositCents',round(r.deposit_amount*100)::bigint,'finalCents',round(r.final_amount*100)::bigint,
-   'methods',to_jsonb(array_remove(array[case when s.collection_enabled and s.stripe_enabled then 'stripe_card' end,case when s.collection_enabled and s.venmo_enabled and nullif(btrim(s.venmo_business_target),'') is not null then 'venmo' end,'cash','check'],null)),
+   'methods',to_jsonb(array_remove(array[case when s.collection_enabled and s.stripe_enabled then 'stripe_card' end,case when s.collection_enabled and s.venmo_enabled and btrim(s.venmo_business_target) ~* '^(@[A-Za-z0-9_-]{2,64}|https://(www\.)?venmo\.com/u/[A-Za-z0-9_-]{2,64}/?)$' then 'venmo' end,'cash','check'],null)),
    'activeAttempt',case when a.status in ('creating','active','processing') then a.payment_checkout_attempt_id end,
    'intention',case when i.payment_intention_id is not null then jsonb_build_object('method',i.method,'pauseEndsAt',i.pause_ends_at) end,
    'instructionSnapshots',jsonb_build_object('cash',r.cash_instructions,'check',r.check_instructions));

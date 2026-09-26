@@ -26,11 +26,21 @@ const money = (cents: number) =>
 
 function buildPaymentEmail(
   kind: string,
+  requestKind: string,
   principalCents: number,
   customerFeeCents: number,
   paymentUrl: string,
 ) {
-  const copy = kind === "initial_request"
+  const copy = kind === "initial_request" && requestKind === "installment"
+    ? {
+      subject: "Your Black Begonia installment is due",
+      eyebrow: "Installment due",
+      heading: "Your installment is due",
+      introduction:
+        "An installment for your Black Begonia floral event is due. Use the secure link below to pay this installment.",
+      amountLabel: "Installment due",
+    }
+    : kind === "initial_request"
     ? {
       subject: "Your Black Begonia payment request",
       eyebrow: "Payment request",
@@ -343,7 +353,10 @@ serve(async (request) => {
         if (activation.error || !activation.data?.eligible) continue;
         const active = await db.from("payment_requests").select(
           "payment_request_id,request_kind,principal_amount",
-        ).eq("project_id", project.project_id).eq("status", "active").order(
+        ).eq("project_id", project.project_id).eq("status", "active").eq(
+          "request_kind",
+          activation.data.kind,
+        ).order(
           "created_at",
           { ascending: false },
         ).limit(1);
@@ -428,6 +441,7 @@ serve(async (request) => {
         }
         const email = buildPaymentEmail(
           String(delivery.kind ?? ""),
+          String(delivery.requestKind ?? ""),
           Number(delivery.principalCents ?? 0),
           Number(delivery.customerFeeCents ?? 0),
           paymentUrl,

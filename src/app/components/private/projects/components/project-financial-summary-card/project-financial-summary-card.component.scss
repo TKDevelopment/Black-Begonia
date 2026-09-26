@@ -18,9 +18,12 @@
 
 .summary-cell dd {
   color: var(--crm-text-strong, #1c1917);
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.546875rem;
+  font-weight: 400;
+  line-height: 1.25;
   margin-top: 0.35rem;
+  overflow-wrap: anywhere;
 }
 
 .summary-cell p {

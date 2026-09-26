@@ -1,3 +1,13 @@
+.proposal-finalizing-status {
+  background: #fff5f3;
+  border-color: #e4c1bd;
+}
+
+.proposal-modal-overlay.crm-dark .proposal-finalizing-status {
+  background: var(--crm-surface-highlight, #1f3046);
+  border-color: var(--crm-border-strong, #375471);
+}
+
 .proposal-modal-overlay.crm-dark .proposal-modal-shell,
 .proposal-modal-overlay.crm-dark .proposal-modal-header,
 .proposal-modal-overlay.crm-dark .proposal-modal-footer {

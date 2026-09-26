@@ -246,3 +246,93 @@ run.
 - run the target-backed preflight and pgTAP evidence before migration/deployment;
 - complete the unavailable interactive browser geometry/accessibility matrix;
 - have the human operator perform commit, push, migration, and deployment actions.
+
+### Revision financial reconciliation addendum (2026-09-26)
+
+The reported $3,210 fully paid to $4,500 revised quote now uses the active
+invoice snapshot as the financial-summary total. Reconciliation preserves the
+$963 deposit and $2,247 final receipts, reopens $1,290 as collectible, and can
+transfer up to that increase into a dated revision installment. Deposit and
+final amounts remain in the installment table; their duplicate summary cards
+were removed. The builder saves and checks current revision totals before
+submitting the PDF. A lower later quote releases unpaid scheduled principal;
+receipts above the new quote are shown as overpayment.
+
+| Check | Result | Notes |
+|---|---|---|
+| Project/revision/builder Angular slice | PASS, 62/62 | Includes current-draft persistence, summary rendering, installment availability, and completed-project guard. |
+| Payment workflow/modal/activity/list slice | PASS, 23/23 | Includes manual receipt selection and the payments list that now exposes revision balances. |
+| Development build | PASS | Angular browser/server bundles and 24 prerendered routes generated. Placeholder remote data fetches reported expected network errors. |
+| Production build retry | BLOCKED by network | Font inlining could not reach `fonts.googleapis.com` (`EACCES`). The prior production build above passed before this amendment; the updated production build remains unverified. |
+| SQL migration and fixture | Prepared, not executed | Docker Desktop Linux engine is unavailable; `docker info` could not connect to its named pipe. The fixture covers $3,210, $963, and $0 credited against $4,500, authorization, scheduling, a later $4,000 quote, and a $3,000 quote below receipts. |
+| `git diff --check` | PASS | Line-ending conversion notices only; no whitespace errors. |
+
+Before deployment, export active snapshot totals, payment target/credit/outstanding
+values, and immutable snapshot hashes; run the V3 migration followed by
+`20260926010000_reconcile_revision_finances.sql` in the authorized maintenance
+window; run `supabase/tests/revision_financial_reconciliation.sql` alongside the
+existing proposal/payment suites; compare receipts, allocations, and snapshot
+hashes; then deploy the matching Angular build. Retest the reported project on
+the project details page and schedule the $1,290 revision installment. The
+database execution, target-backed smoke test, and production build with font
+access are open release gates.
+
+### Revision draft reopen addendum (2026-09-26)
+
+The reported `loadProjectRevision` error occurs when an unnamed line appears in
+the snapshot being adapted. The builder can retain an unused blank editor row
+in a draft workspace; the former adapter rejected it alongside any populated
+unnamed row. The adapter now removes only inert rows with zero quoted value,
+then checks that the remaining line subtotals match the recorded subtotal.
+Rows with a price or saved content remain editable and require a name before
+autosave or submission. Named legacy rows retain the existing type fallback.
+
+| Check | Result | Notes |
+|---|---|---|
+| Proposal builder, workflow snapshot, revision service, and builder component suites | PASS, 79/79 | Covers reopening and cleaning a saved workspace, retaining a populated unnamed row for repair, the blank-only draft, autosave repair, and builder serialization. |
+| Development build | PASS | Browser/server bundles generated and 24 routes prerendered. Remote placeholder data fetches reported network `EACCES` in this sandbox. |
+| `git diff --check` | PASS | Line-ending notices only. |
+| Reported live project | Not connected | Reopen the affected revision after deployment, confirm the quote is unchanged, and verify any populated unnamed line is named before finalization. |
+
+### Installment payment email addendum (2026-09-26)
+
+The payment/installment table offers **Send Payment Email** after **Record
+Payment** for each payable row. The email says the installment is due and links
+to the existing secure checkout route for its outstanding amount. The SQL
+request records the selected obligation, supports simultaneous links for
+different installments, and allocates a provider receipt to the selected row.
+Stale balances make a link unavailable, and an active checkout blocks resending
+an overlapping request. Project Details action-button text is 15% larger than
+the initially reduced style, and button padding is smaller. The redundant
+header deposit-email action was removed.
+
+| Check | Result | Notes |
+|---|---|---|
+| Focused Angular suites | PASS, 30/30 | Project row action, installment request payload, dispatch errors, and checkout copy. |
+| Development build | PASS | Angular browser/server bundles and prerender generated. |
+| SQL fixture | Prepared, not executed | Local PostgreSQL and Supabase runtimes are unavailable. |
+
+Apply `20260926020000_installment_payment_email.sql` after the earlier payment
+migrations, deploy `issue-payment-request` and `process-payment-messages`, then
+deploy Angular. Run `supabase/tests/installment_payment_requests.sql` and a
+customer checkout/provider receipt smoke test before production acceptance.
+
+### Customer payment-method switching addendum (2026-09-26)
+
+Returning from card checkout leaves all four methods selectable. Choosing a
+manual method closes an open Stripe session before changing the local attempt;
+a completed or processing session remains locked. Cash/check confirmations
+offer **Choose another payment method**. Changing manual methods preserves the
+original reminder-pause end. Venmo appears only for a valid business-profile
+target, and checkout displays a clear error if that option is unavailable.
+
+| Check | Result | Notes |
+|---|---|---|
+| Focused payment-page/service Angular suites | PASS, 18/18 | Return path, manual-method choice, and server error copy. |
+| Checkout Edge Function syntax | PASS | Parsed locally with esbuild. |
+| SQL fixture and provider switch | Prepared, not executed | No local PostgreSQL/Supabase runtime or Stripe sandbox credentials. |
+
+Apply `20260926030000_payment_method_switch.sql` after the installment-email
+migration. Deploy `create-payment-checkout` and Angular together, run
+`supabase/tests/payment_method_switch.sql`, and verify card cancel to Venmo,
+cash, check, and card again in Stripe sandbox before production acceptance.

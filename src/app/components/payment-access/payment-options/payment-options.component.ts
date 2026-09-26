@@ -63,7 +63,7 @@ export class PaymentOptionsComponent implements OnInit {
   async ngOnInit() {
     const projection = await this.payments.resolve(this.token);
     this.projection.set(projection);
-    if (projection.intention?.method === 'cash' || projection.intention?.method === 'check') {
+    if (!projection.activeAttempt && (projection.intention?.method === 'cash' || projection.intention?.method === 'check')) {
       this.confirmationMethod.set(projection.intention.method);
     }
     this.loading.set(false);
@@ -89,6 +89,8 @@ export class PaymentOptionsComponent implements OnInit {
       ? 'Project deposit'
       : this.projection().purpose === 'final_payment'
         ? 'Final project payment'
+        : this.projection().purpose === 'installment'
+          ? 'Project installment'
         : 'Project payment';
     const eventDate = this.formattedEventDate();
     return eventDate ? `${purpose} - Event ${eventDate}` : `${purpose} - Event date`;
@@ -111,6 +113,12 @@ export class PaymentOptionsComponent implements OnInit {
     return this.projection().methods?.includes(method) ?? false;
   }
 
+  showMethods(): void {
+    this.confirmationMethod.set(null);
+    this.intentionInstructions.set(null);
+    this.error.set(null);
+  }
+
   async choose(method: PaymentMethodChoice) {
     if (this.busy()) return;
     this.busy.set(true);
@@ -120,6 +128,8 @@ export class PaymentOptionsComponent implements OnInit {
       await this.handle(handoff);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Payment option is unavailable.');
+      const refreshed = await this.payments.resolve(this.token);
+      if (refreshed.state !== 'unavailable') this.projection.set(refreshed);
     } finally {
       this.busy.set(false);
     }
@@ -135,6 +145,8 @@ export class PaymentOptionsComponent implements OnInit {
       if (handoff.approvedTarget) window.open(handoff.approvedTarget, '_blank', 'noopener,noreferrer');
       this.projection.set({
         ...this.projection(),
+        state: 'active',
+        activeAttempt: null,
         intention: {
           method: 'venmo_business_profile',
           pauseEndsAt: handoff.pauseEndsAt,
@@ -147,6 +159,8 @@ export class PaymentOptionsComponent implements OnInit {
       this.confirmationMethod.set(handoff.method);
       this.projection.set({
         ...this.projection(),
+        state: 'active',
+        activeAttempt: null,
         intention: { method: handoff.method, pauseEndsAt: handoff.pauseEndsAt },
       });
       return;

@@ -855,7 +855,7 @@ describe('FloralProposalBuilderComponent', () => {
     expect(component.saving()).toBeFalse();
   });
 
-  it('flushes and reuses the pending project revision attempt before navigating to project details', async () => {
+  it('saves current revision pricing before activating the PDF and navigating to project details', async () => {
     createSubmittableComponent();
     const workspace = {
       project_proposal_revision_workspace_id: 'workspace-001', project_id: 'project-test-001',
@@ -871,7 +871,7 @@ describe('FloralProposalBuilderComponent', () => {
     component.activeProjectId.set('project-test-001');
     component.revisionProject.set({ project_id: 'project-test-001', project_name: 'Wedding', service_type: 'wedding', status: 'booked', event_date: testLead.event_date, created_at: '', updated_at: '' } as any);
     component.revisionWorkspace.set(workspace);
-    spyOn(component.projectProposalRevision, 'flushAutosave').and.resolveTo(workspace);
+    const saveNow = spyOn(component.projectProposalRevision, 'saveNow').and.resolveTo(workspace);
     spyOn(component.projectProposalRevision, 'prepareSubmission').and.resolveTo(pending);
     const file = new File(['%PDF-test'], 'revision.pdf', { type: 'application/pdf' });
     component.onSubmissionFileSelected(file);
@@ -879,7 +879,10 @@ describe('FloralProposalBuilderComponent', () => {
     await component.submitProposalDocument();
 
     expect(proposalRepository.createFloralProposal).not.toHaveBeenCalled();
-    expect(component.projectProposalRevision.flushAutosave).toHaveBeenCalled();
+    expect(saveNow).toHaveBeenCalledWith(workspace, jasmine.objectContaining({
+      totals: jasmine.objectContaining({ totalAmount: component.renderPayload().totals.totalAmount }),
+      line_items: jasmine.arrayContaining([jasmine.objectContaining({ item_name: component.lineItems()[0].item_name })]),
+    }));
     expect(component.projectProposalRevision.prepareSubmission).toHaveBeenCalledWith(workspace, 'revision.pdf');
     expect(proposalWorkflow.submitProposal).toHaveBeenCalledWith(jasmine.objectContaining({
       mode: 'project_revision', revisionWorkspaceId: 'workspace-001', baselineSnapshotId: 'snapshot-001',
@@ -887,6 +890,34 @@ describe('FloralProposalBuilderComponent', () => {
     }));
     expect(toast.showToast).toHaveBeenCalledWith('Revised proposal activated.', 'success');
     expect(router.navigate).toHaveBeenCalledWith(['/admin/projects', 'project-test-001']);
+  });
+
+  it('queues revision autosave when a workspace opens and when pricing changes', () => {
+    createSubmittableComponent();
+    const queue = spyOn(component.projectProposalRevision, 'queueAutosave');
+    fixture.detectChanges();
+    component.loading.set(false);
+    const workspace = {
+      project_proposal_revision_workspace_id: 'workspace-001', project_id: 'project-test-001',
+      baseline_invoice_snapshot_id: 'snapshot-001', draft_snapshot: {},
+      retainer_due_date: null, final_balance_due_date: null,
+    } as any;
+    component.revisionWorkspace.set(workspace);
+    fixture.detectChanges();
+    expect(queue).toHaveBeenCalled();
+    const previousTotal = queue.calls.mostRecent().args[1].totals.totalAmount;
+
+    component.updateLineQuantity(component.lineItems()[0].local_id, '2');
+    fixture.detectChanges();
+
+    expect(queue.calls.count()).toBeGreaterThan(1);
+    expect(queue.calls.mostRecent().args[1].totals.totalAmount).toBeGreaterThan(previousTotal);
+
+    const queuedBeforeSubmission = queue.calls.count();
+    component.saving.set(true);
+    component.revisionWorkspace.set({ ...workspace, pending_submission_key: 'submission-001' });
+    fixture.detectChanges();
+    expect(queue.calls.count()).toBe(queuedBeforeSubmission);
   });
 
   it('keeps a revision when discard is canceled and deletes only after explicit confirmation', async () => {

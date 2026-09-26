@@ -71,6 +71,12 @@ serve(async (request) => {
     if (!userData.user) {
       return respond(origin, 401, { error: "Request unavailable" });
     }
+    const { data: isInternal, error: roleError } = await caller.rpc(
+      "is_internal_crm_user",
+    );
+    if (roleError || isInternal !== true) {
+      return respond(origin, 403, { error: "Request unavailable" });
+    }
     if (!withinIssueLimit(userData.user.id)) {
       return respond(origin, 429, { error: "Payment request could not be created" });
     }

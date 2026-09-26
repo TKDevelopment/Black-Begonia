@@ -134,6 +134,21 @@ describe('ProposalDocumentSubmissionModalComponent', () => {
     expect(textContent()).not.toContain('I confirm this PDF');
   });
 
+  it('uses theme-specific colors for the finalization progress panel', () => {
+    component.open = true;
+    component.saving = true;
+    fixture.detectChanges();
+    const light = fixture.nativeElement.querySelector('.proposal-finalizing-status') as HTMLElement;
+    const lightBackground = getComputedStyle(light).backgroundColor;
+    const lightHeadingColor = getComputedStyle(light.querySelector('p')!).color;
+
+    component.darkMode = true;
+    fixture.detectChanges();
+    const dark = fixture.nativeElement.querySelector('.proposal-finalizing-status') as HTMLElement;
+    expect(getComputedStyle(dark).backgroundColor).not.toBe(lightBackground);
+    expect(getComputedStyle(dark.querySelector('p')!).color).not.toBe(lightHeadingColor);
+  });
+
   it('renders revision-specific activation copy without initial booking language', () => {
     component.open = true;
     component.mode = 'project_revision';

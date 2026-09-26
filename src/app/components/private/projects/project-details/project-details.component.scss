@@ -18,17 +18,20 @@
 
 .detail-cell dd {
   color: var(--crm-text-strong, #1c1917);
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.29375rem;
+  font-weight: 400;
+  line-height: 1.35;
   margin-top: 0.3rem;
+  overflow-wrap: anywhere;
 }
 
 .primary-button,
 .secondary-button {
   border-radius: 0.75rem;
-  font-size: 0.85rem;
+  font-size: 0.733125rem;
   font-weight: 600;
-  padding: 0.6rem 0.9rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .primary-button {
@@ -70,9 +73,9 @@
   background: #b91c1c;
   border-radius: 0.75rem;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.733125rem;
   font-weight: 700;
-  padding: 0.65rem 0.95rem;
+  padding: 0.5rem 0.75rem;
   transition: background 150ms ease, opacity 150ms ease;
 }
 
@@ -123,6 +126,18 @@
   outline-offset: 1px;
 }
 
+.installment-input {
+  background: var(--crm-surface-muted, #faf8f5);
+  border-color: var(--crm-border-strong, rgba(0, 0, 0, 0.12));
+  color: var(--crm-text-strong, #1c1917);
+}
+
+.installment-input:focus {
+  border-color: var(--crm-accent, #ea938c);
+  outline: 2px solid color-mix(in srgb, var(--crm-accent, #ea938c) 25%, transparent);
+  outline-offset: 1px;
+}
+
 .delete-error {
   background: rgba(220, 38, 38, 0.1);
   color: #b91c1c;
@@ -152,11 +167,9 @@
   outline-offset: 2px;
 }
 
-.installment-toggle > span[aria-hidden='true'] {
-  display: block;
-  line-height: 1;
-  position: relative;
-  top: -0.08rem;
+  .installment-toggle > svg {
+    display: block;
+    flex: none;
 }
 
 .installment-history-row td {
@@ -187,14 +200,17 @@
 .receipt-main {
   display: grid;
   gap: 0.65rem;
-  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  grid-template-columns: repeat(4, minmax(100px, 1fr));
 }
 
 .receipt-main strong,
 .adjustment-row strong {
   color: var(--crm-text-strong, #292524);
   display: block;
-  font-size: 0.78rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.21875rem;
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 .history-label {
@@ -218,9 +234,10 @@
   align-items: center;
   color: var(--crm-text-muted, #57534e);
   display: grid;
-  font-size: 0.72rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.125rem;
   gap: 0.6rem;
-  grid-template-columns: repeat(5, minmax(90px, 1fr));
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
 }
 
 .payment-attention {

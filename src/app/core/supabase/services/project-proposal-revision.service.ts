@@ -160,8 +160,24 @@ export class ProjectProposalRevisionService {
       const requiresPersistence =
         existingWorkspace.schema_version !== adaptation.draft.schema_version ||
         JSON.stringify(existingDraft) !== JSON.stringify(adaptation.draft);
+      const validation = validateEditableProposalSnapshotV3(
+        adaptation.draft as unknown as Record<string, unknown>
+      );
+      const needsNameRepair = !validation.valid && validation.errors.every((error) =>
+        error.includes('has no name but contains proposal data')
+      );
       const workspace = requiresPersistence
-        ? await this.saveWorkspace(existingWorkspace, adaptation.draft, existingWorkspace.updated_by ?? null)
+        ? needsNameRepair
+          ? {
+              ...existingWorkspace,
+              schema_version: adaptation.draft.schema_version,
+              draft_snapshot: adaptation.draft,
+              subtotal: adaptation.draft.totals.subtotal,
+              tax_rate: adaptation.draft.tax_region.tax_rate,
+              tax_amount: adaptation.draft.totals.taxAmount,
+              total_amount: adaptation.draft.totals.totalAmount,
+            }
+          : await this.saveWorkspace(existingWorkspace, adaptation.draft, existingWorkspace.updated_by ?? null)
         : existingWorkspace;
       return {
         project,
@@ -207,7 +223,19 @@ export class ProjectProposalRevisionService {
     draft: EditableProposalSnapshotV3,
     updatedBy?: string | null
   ): void {
-    if (this.autosaveTimer) clearTimeout(this.autosaveTimer);
+    if (this.autosaveTimer) {
+      clearTimeout(this.autosaveTimer);
+      this.autosaveTimer = null;
+    }
+    const validation = validateEditableProposalSnapshotV3(
+      draft as unknown as Record<string, unknown>
+    );
+    if (!validation.valid) {
+      this.pendingSave = null;
+      this.saveState.set('error');
+      this.saveError.set(validation.errors.join(' '));
+      return;
+    }
     this.saveState.set('saving');
     this.saveError.set(null);
     this.pendingSave = () => this.saveWorkspace(workspace, draft, updatedBy ?? null);
@@ -248,6 +276,38 @@ export class ProjectProposalRevisionService {
     this.saveState.set('saving');
     this.saveError.set(null);
     return this.flushAutosave();
+  }
+
+  async saveNow(
+    workspace: ProjectProposalRevisionWorkspace,
+    draft: EditableProposalSnapshotV3,
+    updatedBy?: string | null
+  ): Promise<ProjectProposalRevisionWorkspace> {
+    // Submission must persist the builder's current state even when the effect
+    // that queues debounced autosave has not run yet.
+    this.pendingSave = () => this.saveWorkspace(workspace, draft, updatedBy ?? null);
+    this.saveState.set('saving');
+    this.saveError.set(null);
+    const saved = await this.flushAutosave();
+    if (!saved) throw new Error('The current proposal revision could not be saved.');
+    const expected = draft.totals;
+    const actual = saved.draft_snapshot?.totals;
+    const cents = (value: unknown) => Math.round(Number(value) * 100);
+    if (
+      !actual ||
+      cents(saved.subtotal) !== cents(expected.subtotal) ||
+      cents(saved.tax_amount) !== cents(expected.taxAmount) ||
+      cents(saved.total_amount) !== cents(expected.totalAmount) ||
+      cents(actual.subtotal) !== cents(expected.subtotal) ||
+      cents(actual.taxAmount) !== cents(expected.taxAmount) ||
+      cents(actual.totalAmount) !== cents(expected.totalAmount)
+    ) {
+      const message = 'The revised proposal totals did not save correctly. The PDF was not submitted.';
+      this.saveState.set('error');
+      this.saveError.set(message);
+      throw new Error(message);
+    }
+    return saved;
   }
 
   async prepareSubmission(

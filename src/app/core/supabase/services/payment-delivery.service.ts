@@ -7,5 +7,26 @@ export class PaymentDeliveryService {
   constructor(private readonly supabase:SupabaseService){}
   async getProjectDeliveries(projectId:string):Promise<PaymentDelivery[]>{const{data,error}=await this.supabase.getClient().from('payment_message_deliveries').select('*').eq('project_id',projectId).order('created_at',{ascending:false});if(error)throw error;return(data??[])as PaymentDelivery[];}
   async retry(deliveryId:string,reason:string):Promise<PaymentDelivery>{const{data,error}=await this.supabase.getClient().functions.invoke('retry-payment-delivery',{body:{deliveryId,reason:reason.trim()}});if(error)throw error;if(data?.deliveryDispatch==='failed')throw new Error(data.deliveryError||'The payment provider rejected the retry.');return data as PaymentDelivery;}
+  async sendInstallmentPaymentEmail(obligationId: string, principalCents: number): Promise<'sent' | 'queued'> {
+    if (!obligationId || !Number.isSafeInteger(principalCents) || principalCents <= 0) {
+      throw new Error('This installment has no payable balance.');
+    }
+    const { data, error } = await this.supabase.getClient().functions.invoke('issue-payment-request', {
+      body: {
+        obligationIds: [obligationId],
+        principalCents,
+        kind: 'installment',
+        commandKey: crypto.randomUUID(),
+      },
+    });
+    if (error) throw error;
+    if (data?.deliveryDispatch === 'failed') {
+      throw new Error(data.deliveryError || 'The installment email could not be delivered. Review its delivery record before retrying.');
+    }
+    if (!data?.paymentRequestId || !['processed', 'queued'].includes(data.deliveryDispatch)) {
+      throw new Error('The installment payment email could not be queued.');
+    }
+    return data?.deliveryDispatch === 'processed' ? 'sent' : 'queued';
+  }
   async setReminderControl(projectId:string,obligationId:string|null,enabled:boolean,pausedUntil:string|null,reason:string):Promise<void>{const{error}=await this.supabase.getClient().rpc('set_payment_reminder_control',{p_project_id:projectId,p_obligation_id:obligationId,p_enabled:enabled,p_paused_until:pausedUntil,p_reason:reason.trim()});if(error)throw error;}
 }

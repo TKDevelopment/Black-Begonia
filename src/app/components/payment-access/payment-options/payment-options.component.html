@@ -40,7 +40,7 @@
           </div>
 
           <p class="check-deadline">
-            Please plan to mail or drop off your check within one week of signing your agreement so your event date can continue to be held.
+            Please mail or drop off your check promptly so this payment can be recorded for your event.
           </p>
 
           <div class="demo-check" role="img" aria-label="Example completed check showing the payee, amount, date, memo, and signature fields">
@@ -82,10 +82,11 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 9.5A2.5 2.5 0 0 1 5.5 11M17 14.5a2.5 2.5 0 0 1 1.5-1.5"/></svg>
           </span>
           <h2>Cash payment requested</h2>
-          <p>The florist will reach out to arrange a preferred date, time, and location to meet and collect your deposit in cash.</p>
+          <p>The florist will reach out to arrange a preferred date, time, and location to collect your payment in cash.</p>
           <div class="cash-amount"><span>Amount due</span><strong>{{ money(projection().principalCents) }}</strong></div>
-          <p class="pending-note">Your preference is recorded, but the deposit has not yet been marked as paid. It will be confirmed after the florist receives the cash.</p>
+          <p class="pending-note">Your preference is recorded, but the payment has not yet been marked as paid. It will be confirmed after the florist receives the cash.</p>
         </section>
+        <button type="button" class="change-method-button" (click)="showMethods()">Choose another payment method</button>
       </ng-container>
 
       <ng-template #paymentChooser>
@@ -95,7 +96,7 @@
         </p>
 
         <div class="amount">
-          <span>Amount Due</span>
+          <span>{{ projection().purpose === 'installment' ? 'Installment Due' : 'Amount Due' }}</span>
           <strong>{{ money(projection().principalCents) }}</strong>
           <small>Card processing fees are absorbed by Black Begonia.</small>
         </div>
@@ -105,7 +106,7 @@
           <span>Final payment {{ money(projection().finalCents) }}</span>
         </div>
 
-        <p *ngIf="projection().activeAttempt" class="notice">A payment is processing. Other methods are locked until it resolves.</p>
+        <p *ngIf="projection().activeAttempt" class="notice">Your card checkout is still open. Choosing another method will close it first; a payment already processing must finish before you can switch.</p>
         <p *ngIf="projection().intention" class="notice">Your plan to pay by {{ projection().intention?.method?.replace('_',' ') }} was recorded. Reminders are paused for seven days.</p>
         <p *ngIf="intentionInstructions()" class="notice"><strong>Payment instructions:</strong> {{ intentionInstructions() }}</p>
 

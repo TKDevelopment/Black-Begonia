@@ -14,7 +14,14 @@ export class CustomerPaymentService {
 
   async choose(token: string, method: PaymentMethodChoice): Promise<CheckoutHandoff> {
     const { data, error } = await this.supabase.getClient().functions.invoke('create-payment-checkout', { body: { token, method } });
-    if (error) throw new Error(error.message || 'Payment option is temporarily unavailable.');
+    if (error) {
+      const response = error.context;
+      if (response instanceof Response) {
+        const detail = await response.clone().json().catch(() => null);
+        if (typeof detail?.error === 'string' && detail.error.trim()) throw new Error(detail.error);
+      }
+      throw new Error(error.message || 'Payment option is temporarily unavailable.');
+    }
     return data as CheckoutHandoff;
   }
 

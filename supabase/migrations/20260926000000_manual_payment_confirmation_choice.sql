@@ -290,3 +290,5 @@ $$;
 
 revoke all on function public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,text,text,uuid,boolean,boolean) from public, anon;
 grant execute on function public.record_manual_payment(uuid,uuid,bigint,text,timestamptz,text,text,text,uuid,boolean,boolean) to authenticated;
+
+notify pgrst, 'reload schema';
