@@ -1,6 +1,6 @@
 import { InstallmentReceiptProjection } from './payment-transaction';
 
-export type ProjectPaymentKind = 'deposit' | 'final_payment';
+export type ProjectPaymentKind = 'deposit' | 'final_payment' | 'revision_balance';
 
 export type ProjectPaymentStatus =
   | 'not_due'
@@ -56,6 +56,7 @@ export interface ProjectPaymentRecord {
   created_at: string;
   updated_at: string;
   basis_snapshot_id?: string | null;
+  origin_snapshot_id?: string | null;
   basis_version?: number | null;
   basis_total?: number | null;
   target_amount?: number;
@@ -84,6 +85,7 @@ export interface ManualPaymentInput {
   amount: number;
   received_at: string;
   payment_method: ProjectPaymentMethod;
+  send_confirmation_email?: boolean;
   notes?: string | null;
   suspected_reference?: string | null;
   duplicate_override_reason?: string | null;

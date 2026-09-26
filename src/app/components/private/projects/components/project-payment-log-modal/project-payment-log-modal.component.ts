@@ -17,6 +17,7 @@ export interface ProjectPaymentLogPayload {
   amount: number;
   received_at: string;
   payment_method: ProjectPaymentMethod;
+  send_confirmation_email?: boolean;
   notes?: string | null;
   suspected_reference?: string | null;
   duplicate_override_reason?: string | null;
@@ -45,8 +46,10 @@ export class ProjectPaymentLogModalComponent implements OnChanges {
   obligation_id = '';
   payment_kind: ProjectPaymentKind = 'deposit';
   amount: number | null = null;
+  amountDisplay = '';
   received_at = new Date().toISOString().slice(0, 10);
   payment_method: ProjectPaymentMethod = 'cash';
+  send_confirmation_email = true;
   notes = '';
   suspected_reference = '';
   duplicate_override_reason = '';
@@ -73,8 +76,8 @@ export class ProjectPaymentLogModalComponent implements OnChanges {
       this.error = 'Choose an installment with an outstanding balance.';
       return;
     }
-    if (!this.amount || this.amount <= 0) {
-      this.error = 'Enter an amount paid greater than zero.';
+    if (this.amount === null || !Number.isFinite(this.amount) || this.amount <= 0) {
+      this.error = 'Enter an amount greater than zero with no more than two decimal places.';
       return;
     }
     const receivedDate = new Date(`${this.received_at}T12:00:00`);
@@ -105,6 +108,7 @@ export class ProjectPaymentLogModalComponent implements OnChanges {
       amount: this.amount,
       received_at: receivedDate.toISOString(),
       payment_method: this.payment_method,
+      send_confirmation_email: this.send_confirmation_email,
       notes: this.notes.trim() || null,
       suspected_reference: this.suspected_reference || null,
       duplicate_override_reason: this.duplicate_override_reason.trim() || null,
@@ -117,12 +121,32 @@ export class ProjectPaymentLogModalComponent implements OnChanges {
   selectObligation(id: string): void {
     this.obligation_id = id;
     const obligation = this.obligations.find((item) => item.project_payment_record_id === id);
-    if (!obligation) return;
+    if (!obligation) {
+      this.amount = null;
+      this.amountDisplay = '';
+      return;
+    }
     this.payment_kind = obligation.payment_kind;
     this.amount = Number(obligation.outstanding_amount ?? obligation.amount_due ?? 0);
+    this.formatAmountDisplay();
     if (obligation.plannedMethod === 'cash' || obligation.plannedMethod === 'check') {
       this.payment_method = obligation.plannedMethod;
     }
+  }
+
+  onAmountInput(value: string): void {
+    this.amountDisplay = value.replace(/^\s*\$/, '');
+    const entered = this.amountDisplay.trim();
+    const validCurrency = /^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{0,2})?$/.test(entered);
+    this.amount = validCurrency ? Number(entered.replace(/,/g, '')) : null;
+  }
+
+  formatAmountDisplay(): void {
+    if (this.amount === null || !Number.isFinite(this.amount)) return;
+    this.amountDisplay = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(this.amount);
   }
 
   canRecord(obligation: ProjectPaymentRecord): boolean {
@@ -132,7 +156,7 @@ export class ProjectPaymentLogModalComponent implements OnChanges {
   }
 
   formatPaymentKind(kind: ProjectPaymentKind): string {
-    return kind === 'deposit' ? 'Deposit' : 'Final Payment';
+    return kind === 'deposit' ? 'Deposit' : kind === 'final_payment' ? 'Final Payment' : 'Revision Balance';
   }
 
   private initializeForm(): void {
@@ -143,6 +167,7 @@ export class ProjectPaymentLogModalComponent implements OnChanges {
     this.confirm_overpayment = false;
     this.confirm_spillover = false;
     this.payment_method = 'cash';
+    this.send_confirmation_email = true;
     this.command_key = crypto.randomUUID();
     this.received_at = new Date().toISOString().slice(0, 10);
     const selected = this.obligations.find((item) => item.project_payment_record_id === this.selectedObligationId && this.canRecord(item))

@@ -17,11 +17,9 @@ export class ProjectActivityPanelComponent {
     const metadata = activity.metadata ?? {};
     const visibleKeys = new Set([
       'amount',
-      'delivery_kind',
       'method',
       'new_version',
       'next_status',
-      'outcome',
       'payment_kind',
       'principal_amount',
       'reason',
@@ -36,6 +34,26 @@ export class ProjectActivityPanelComponent {
         value: this.formatActivityValue(key, value),
       }))
       .slice(0, 4);
+  }
+
+  activityLabel(activity: ActivityLogEntry): string {
+    return activity.activity_label === 'Payment email accepted'
+      ? 'Payment email sent'
+      : activity.activity_label;
+  }
+
+  activityDescription(activity: ActivityLogEntry): string | null {
+    if (activity.activity_label === 'Payment email accepted') {
+      return 'Mailgun has successfully sent the payment email to the client.';
+    }
+
+    const description = activity.description ?? null;
+    if (activity.activity_label !== 'Payment recorded' || !description) return description;
+
+    const metadataReference = activity.metadata?.['payment_reference'];
+    const reference = activity.payment_reference
+      ?? (typeof metadataReference === 'string' ? metadataReference : null);
+    return reference ? description.replace(reference, '').replace(/\s+/g, ' ').trim() : description;
   }
 
   actorName(activity: ActivityLogEntry): string {

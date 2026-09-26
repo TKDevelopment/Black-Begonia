@@ -23,7 +23,7 @@ export class PaymentsComponent implements OnInit {
   readonly selectedObligationId = signal<string | null>(null); readonly settingsOpen = signal(false);
   readonly columns: AdminTableColumn[] = [{key:'project',label:'Project / Customer'},{key:'kind',label:'Payment'},{key:'amount',label:'Balance'},{key:'due',label:'Due / Event'},{key:'method',label:'Method'},{key:'status',label:'Status'}];
   readonly filters = computed<SearchFilterGroup[]>(() => [
-    {key:'kind',label:'Payment',value:this.kind(),options:[{label:'All Payments',value:'all'},{label:'Deposit',value:'deposit'},{label:'Final Payment',value:'final_payment'}]},
+    {key:'kind',label:'Payment',value:this.kind(),options:[{label:'All Payments',value:'all'},{label:'Deposit',value:'deposit'},{label:'Final Payment',value:'final_payment'},{label:'Revision Balance',value:'revision_balance'}]},
     {key:'state',label:'Status',value:this.state(),options:[{label:'All Statuses',value:'all'},{label:'Due',value:'due'},{label:'Partially Paid',value:'partially_paid'},{label:'Paid',value:'paid'},{label:'Review Required',value:'review_required'}]},
     {key:'method',label:'Method',value:this.method(),options:[{label:'All Methods',value:'all'},{label:'Card',value:'stripe'},{label:'Venmo',value:'venmo'},{label:'Cash',value:'cash'},{label:'Check',value:'check'}]},
     {key:'dueTiming',label:'Timing',value:this.dueTiming(),options:[{label:'All Dates',value:'all'},{label:'Overdue',value:'overdue'},{label:'Upcoming',value:'upcoming'}]},

@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { Project, ProjectStatus } from '../../../../core/models/project';
+import { Project } from '../../../../core/models/project';
 import { Lead } from '../../../../core/models/lead';
 import { ActivityLogEntry } from '../../../../core/models/activity-log';
 import { ProjectFinancialSummary, ProjectPaymentRecord } from '../../../../core/models/project-payment-record';
@@ -18,14 +18,12 @@ import { ProjectWorkflowService } from '../../../../core/supabase/services/proje
 import { PaymentDeliveryService } from '../../../../core/supabase/services/payment-delivery.service';
 import { PaymentDelivery } from '../../../../core/models/payment-delivery';
 import { ProjectProposalRevisionService } from '../../../../core/supabase/services/project-proposal-revision.service';
-import { LeadConversionService } from '../../../../core/supabase/services/lead-conversion.service';
 import { SupabaseService } from '../../../../core/supabase/clients/supabase.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { formatDateOnlyForDisplay } from '../../../../core/utils/date-only';
 import { CrmPageHeaderComponent } from '../../../../shared/components/private/crm-page-header/crm-page-header.component';
 import { ErrorStateBlockComponent } from '../../../../shared/components/private/error-state-block/error-state-block.component';
 import { LoadingStateBlockComponent } from '../../../../shared/components/private/loading-state-block/loading-state-block.component';
-import { StatusBadgeComponent } from '../../../../shared/components/private/status-badge/status-badge.component';
 import { ProjectFinancialSummaryCardComponent } from '../components/project-financial-summary-card/project-financial-summary-card.component';
 import { ManualPaymentWarning, ProjectPaymentLogModalComponent, ProjectPaymentLogPayload } from '../components/project-payment-log-modal/project-payment-log-modal.component';
 import { ProjectActivityPanelComponent } from '../components/project-activity-panel/project-activity-panel.component';
@@ -43,7 +41,6 @@ import {
     CrmPageHeaderComponent,
     ErrorStateBlockComponent,
     LoadingStateBlockComponent,
-    StatusBadgeComponent,
     ProjectFinancialSummaryCardComponent,
     ProjectPaymentLogModalComponent,
     ProjectActivityPanelComponent,
@@ -65,15 +62,19 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly projectWorkflow = inject(ProjectWorkflowService);
   private readonly paymentDelivery = inject(PaymentDeliveryService);
   private readonly proposalRevision = inject(ProjectProposalRevisionService);
-  private readonly leadConversion = inject(LeadConversionService);
   private readonly supabaseService = inject(SupabaseService);
   private readonly toast = inject(ToastService);
 
   readonly loading = signal(true);
   readonly documentsLoading = signal(false);
   readonly savingPayment = signal(false);
+  readonly installmentModalOpen = signal(false);
+  readonly savingInstallment = signal(false);
+  readonly installmentAmount = signal('');
+  readonly installmentDueDate = signal('');
+  readonly installmentError = signal<string | null>(null);
   readonly savingProject = signal(false);
-  readonly sendingDepositRequest = signal(false);
+  readonly sendingPaymentEmailId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly sectionError = signal<string | null>(null);
   readonly editModalOpen = signal(false);
@@ -94,6 +95,9 @@ export class ProjectDetailsComponent implements OnInit {
   readonly financialSummary = signal<ProjectFinancialSummary | null>(null);
   readonly activities = signal<ActivityLogEntry[]>([]);
   readonly paymentDeliveries = signal<PaymentDelivery[]>([]);
+  readonly visiblePaymentDeliveries = computed(() =>
+    this.paymentDeliveries().filter((delivery) => delivery.delivery_kind !== 'receipt')
+  );
   readonly documents = signal<ProjectProposalDocumentVersion[]>([]);
   readonly snapshots = signal<ProjectProposalInvoiceSnapshot[]>([]);
 
@@ -135,23 +139,33 @@ export class ProjectDetailsComponent implements OnInit {
 
   readonly sortedPayments = computed(() => {
     return [...this.payments()].sort((a, b) =>
-      (a.payment_kind === 'deposit' ? 0 : 1) - (b.payment_kind === 'deposit' ? 0 : 1)
+      (a.payment_kind === 'deposit' ? 0 : a.payment_kind === 'final_payment' ? 1 : 2)
+      - (b.payment_kind === 'deposit' ? 0 : b.payment_kind === 'final_payment' ? 1 : 2)
+      || (a.created_at ?? '').localeCompare(b.created_at ?? '')
     );
   });
 
-  readonly depositRequestCandidate = computed(() => {
-    const hasInitialDelivery = this.paymentDeliveries().some(
-      (delivery) => delivery.delivery_kind === 'initial_request'
-        && delivery.status !== 'canceled'
-    );
-    if (hasInitialDelivery) return null;
-
-    return this.payments().find(
-      (payment) => payment.payment_kind === 'deposit'
-        && !['paid', 'waived', 'canceled'].includes(payment.status)
-        && Number(payment.outstanding_amount ?? 0) > 0
-    ) ?? null;
+  readonly revisionInstallmentAvailable = computed(() => {
+    const active = this.activeSnapshot();
+    if (!active || active.version < 2) return 0;
+    const previous = [...this.snapshots()]
+      .filter((item) => item.version < active.version)
+      .sort((a, b) => b.version - a.version)[0];
+    const final = this.payments().find((item) => item.payment_kind === 'final_payment');
+    if (!previous || !final) return 0;
+    const alreadyScheduled = this.payments()
+      .filter((item) => item.payment_kind === 'revision_balance'
+        && item.origin_snapshot_id === active.project_proposal_invoice_snapshot_id)
+      .reduce((sum, item) => sum + Number(item.target_amount ?? 0), 0);
+    return Math.max(0, Math.min(
+      Math.round((Number(active.total_amount) - Number(previous.total_amount) - alreadyScheduled) * 100) / 100,
+      Number(final.outstanding_amount ?? 0),
+    ));
   });
+  readonly canCreateRevisionInstallment = computed(() =>
+    this.revisionInstallmentAvailable() > 0
+    && !['completed', 'canceled'].includes(this.project()?.status ?? '')
+  );
 
   readonly hasRecordablePayment = computed(() => this.payments().some((payment) => this.canRecordPayment(payment)));
 
@@ -260,32 +274,39 @@ export class ProjectDetailsComponent implements OnInit {
     try{await this.paymentDelivery.retry(delivery.payment_message_delivery_id,reason);await this.loadSections(project.project_id);}catch(error){this.sectionError.set(error instanceof Error?error.message:'The payment email could not be retried.');}
   }
 
-  async sendDepositRequest(): Promise<void> {
-    const project = this.project();
-    const obligation = this.depositRequestCandidate();
-    if (!project || !obligation || this.sendingDepositRequest()) return;
+  canSendPaymentEmail(payment: ProjectPaymentRecord): boolean {
+    return this.canRecordPayment(payment)
+      && payment.status !== 'review_required'
+      && Number.isFinite(Number(payment.outstanding_amount ?? payment.amount_due))
+      && !['completed', 'canceled'].includes(this.project()?.status ?? '');
+  }
 
-    this.sendingDepositRequest.set(true);
+  async sendPaymentEmail(payment: ProjectPaymentRecord): Promise<void> {
+    const project = this.project();
+    const current = this.payments().find((item) =>
+      item.project_payment_record_id === payment.project_payment_record_id
+    );
+    if (!project || !current || !this.canSendPaymentEmail(current) || this.sendingPaymentEmailId()) return;
+
+    this.sendingPaymentEmailId.set(current.project_payment_record_id);
     this.sectionError.set(null);
     try {
-      const result = await this.leadConversion.issueDepositRequest(
-        obligation.project_payment_record_id,
-        Math.round(Number(obligation.outstanding_amount) * 100)
+      const delivery = await this.paymentDelivery.sendInstallmentPaymentEmail(
+        current.project_payment_record_id,
+        Math.round(Number(current.outstanding_amount ?? current.amount_due) * 100)
       );
-      if (result === 'failed') {
-        this.sectionError.set('The deposit request was created, but email delivery failed. Use Retry email after reviewing the delivery record.');
-        this.toast.showToast('The deposit email could not be delivered.', 'error');
-      } else {
-        this.toast.showToast('The secure deposit payment email was queued.');
-      }
+      this.toast.showToast(delivery === 'sent'
+        ? 'The installment payment email was sent.'
+        : 'The installment payment email was queued.');
       await this.loadSections(project.project_id);
     } catch (error) {
-      console.error('[ProjectDetailsComponent] sendDepositRequest error:', error);
+      console.error('[ProjectDetailsComponent] sendPaymentEmail error:', error);
+      await this.loadSections(project.project_id);
       this.sectionError.set(
-        error instanceof Error ? error.message : 'The deposit email could not be sent.'
+        error instanceof Error ? error.message : 'The installment payment email could not be sent.'
       );
     } finally {
-      this.sendingDepositRequest.set(false);
+      this.sendingPaymentEmailId.set(null);
     }
   }
 
@@ -358,15 +379,62 @@ export class ProjectDetailsComponent implements OnInit {
       && Number(payment.outstanding_amount ?? payment.amount_due ?? 0) > 0;
   }
 
+  openInstallmentModal(): void {
+    if (!this.canCreateRevisionInstallment()) return;
+    this.installmentAmount.set(this.revisionInstallmentAvailable().toFixed(2));
+    this.installmentDueDate.set('');
+    this.installmentError.set(null);
+    this.installmentModalOpen.set(true);
+  }
+
+  closeInstallmentModal(): void {
+    if (!this.savingInstallment()) this.installmentModalOpen.set(false);
+  }
+
+  updateInstallmentAmount(event: Event): void {
+    this.installmentAmount.set((event.target as HTMLInputElement).value);
+  }
+
+  updateInstallmentDueDate(event: Event): void {
+    this.installmentDueDate.set((event.target as HTMLInputElement).value);
+  }
+
+  async createRevisionInstallment(): Promise<void> {
+    const project = this.project();
+    const amount = Number(this.installmentAmount());
+    const dueDate = this.installmentDueDate();
+    if (!project || this.savingInstallment()) return;
+    if (!Number.isFinite(amount) || amount <= 0 || Math.round(amount * 100) / 100 !== amount
+      || amount > this.revisionInstallmentAvailable() || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+      this.installmentError.set('Enter a valid amount within the revised balance and a due date.');
+      return;
+    }
+    this.savingInstallment.set(true);
+    this.installmentError.set(null);
+    try {
+      await this.paymentRepository.createRevisionInstallment(project.project_id, Math.round(amount * 100), dueDate);
+      await this.loadSections(project.project_id);
+      this.installmentModalOpen.set(false);
+      this.toast.showToast('The revision installment was scheduled.');
+    } catch (error) {
+      this.installmentError.set(error instanceof Error ? error.message : 'The installment could not be created.');
+    } finally {
+      this.savingInstallment.set(false);
+    }
+  }
+
+  isInstallmentSettled(payment: ProjectPaymentRecord): boolean {
+    return ['paid', 'overpaid'].some((status) =>
+      payment.status === status || payment.displayStatus === status
+    ) && payment.outstanding_amount !== null
+      && payment.outstanding_amount !== undefined
+      && Number(payment.outstanding_amount) === 0;
+  }
+
   paymentStatus(payment: ProjectPaymentRecord): string {
     return payment.displayStatus === 'not_required' || Number(payment.target_amount ?? payment.amount_due ?? 0) === 0
       ? 'Not Required'
       : this.formatDisplayValue(payment.displayStatus ?? payment.status);
-  }
-
-  paymentMethodSummary(payment: ProjectPaymentRecord): string {
-    return payment.methodSummary?.label
-      ?? this.formatPaymentMethod(payment.last_method || payment.last_intention_method || payment.payment_method);
   }
 
   async saveProject(updates: ProjectEditPayload): Promise<void> {
@@ -553,6 +621,9 @@ export class ProjectDetailsComponent implements OnInit {
     if (value === 'final_payment') {
       return 'Final Payment';
     }
+    if (value === 'revision_balance') {
+      return 'Revision Balance';
+    }
 
     return this.formatDisplayValue(value);
   }
@@ -616,26 +687,6 @@ export class ProjectDetailsComponent implements OnInit {
   formatDisplayValue(value: string | null | undefined): string {
     if (!value) return 'Not set';
     return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  getProjectStatusTone(
-    status: ProjectStatus
-  ): 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'purple' {
-    switch (status) {
-      case 'awaiting_deposit':
-        return 'warning';
-      case 'booked':
-        return 'success';
-      case 'awaiting_final_payment':
-        return 'danger';
-      case 'final_prep':
-        return 'purple';
-      case 'completed':
-        return 'success';
-      case 'canceled':
-      default:
-        return 'neutral';
-    }
   }
 
   private paymentSortDate(payment: ProjectPaymentRecord): number {

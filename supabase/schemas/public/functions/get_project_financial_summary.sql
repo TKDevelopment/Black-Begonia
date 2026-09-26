@@ -93,7 +93,7 @@ begin
             limit 250
           )
       ), '[]'::jsonb)
-    ) order by case o.payment_kind when 'deposit' then 1 else 2 end), '[]'::jsonb)
+    ) order by case o.payment_kind when 'deposit' then 1 when 'final_payment' then 2 else 3 end, o.created_at, o.project_payment_record_id), '[]'::jsonb)
   into v_obligations
   from public.project_payment_records o
   left join lateral (
@@ -145,7 +145,9 @@ begin
     'outstanding', coalesce((select sum(o.outstanding_amount) from public.project_payment_records o where o.project_id=p_project_id and o.status<>'canceled'),0),
     'customerFees', coalesce((select sum(t.customer_fee) from public.payment_transactions t where t.project_id=p_project_id and t.status in ('confirmed','resolved')),0),
     'merchantFees', (select sum(t.merchant_fee) from public.payment_transactions t where t.project_id=p_project_id and t.status in ('confirmed','resolved')),
-    'overpayment', coalesce((select sum(e.amount) from public.payment_exceptions e where e.project_id=p_project_id and e.exception_type='overpayment' and e.state<>'resolved'),0),
+    'overpayment', coalesce((select sum(e.amount) from public.payment_exceptions e where e.project_id=p_project_id and e.exception_type='overpayment' and e.state<>'resolved'),0)
+      + coalesce(greatest((select sum(o.credited_principal) from public.project_payment_records o
+          where o.project_id=p_project_id and o.status<>'canceled') - v_snapshot.total_amount, 0), 0),
     'obligations', v_obligations,
     'needsAttention', v_needs_attention
   );

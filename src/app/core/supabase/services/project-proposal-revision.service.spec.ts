@@ -3,6 +3,7 @@ import { ProjectProposalDocumentVersion } from '../../models/project-proposal-do
 import { ProjectProposalInvoiceSnapshot } from '../../models/project-proposal-invoice-snapshot';
 import { EditableProposalSnapshotV3, ProjectProposalRevisionWorkspace } from '../../models/project-proposal-revision-workspace';
 import { ProjectProposalRevisionService } from './project-proposal-revision.service';
+import { FloralProposalBuilderService } from './floral-proposal-builder.service';
 
 describe('ProjectProposalRevisionService', () => {
   const project: Project = {
@@ -19,6 +20,7 @@ describe('ProjectProposalRevisionService', () => {
     breakdown: { productsTotal: 100, laborTotal: 0, manualLaborTotal: 0, feesTotal: 0, discountsTotal: 0, subtotal: 100, taxAmount: 6, totalAmount: 106 },
     legacy_labor_conversion: null,
   };
+  const productLine = draft.line_items[0] as Extract<EditableProposalSnapshotV3['line_items'][number], { line_item_type: 'product' }>;
   const snapshot: ProjectProposalInvoiceSnapshot = {
     project_proposal_invoice_snapshot_id: 'snapshot-1', project_id: 'project-1', version: 1,
     snapshot: draft, subtotal: 100, tax_rate: .06, tax_amount: 6, total_amount: 106,
@@ -161,6 +163,72 @@ describe('ProjectProposalRevisionService', () => {
     expect(result.activeSnapshot.snapshot).toBe(snapshot.snapshot);
   });
 
+  it('reopens a saved revision containing an unused blank line and persists the clean draft', async () => {
+    const blank = {
+      local_id: 'empty-line', display_order: 1, line_item_type: 'product',
+      item_name: '', quantity: 1, calculated_unit_price: 0,
+      actual_unit_price_override: null, unit_price: 0, subtotal: 0, components: [],
+    };
+    const saved = {
+      ...workspace,
+      draft_snapshot: { ...draft, line_items: [...draft.line_items, blank] },
+    } as unknown as ProjectProposalRevisionWorkspace;
+    const update = jasmine.createSpy().and.callFake(
+      (_id: string, _projectId: string, changes: object) => Promise.resolve({ ...saved, ...changes })
+    );
+    const workspaceRepository = {
+      getForProject: jasmine.createSpy().and.resolveTo(saved),
+      createOrGet: jasmine.createSpy(), update,
+      discard: jasmine.createSpy(),
+    };
+    const { service } = createService({
+      workspaceRepository, builderService: new FloralProposalBuilderService(),
+    });
+
+    const loaded = await service.loadOrInitialize(project.project_id);
+
+    expect(loaded.workspace.draft_snapshot.line_items).toHaveSize(1);
+    expect(loaded.workspace.draft_snapshot.totals.totalAmount).toBe(106);
+    expect(loaded.compatibilityWarning).toContain('blank');
+    expect(update).toHaveBeenCalled();
+    expect(saved.draft_snapshot.line_items).toHaveSize(2);
+  });
+
+  it('opens an unnamed priced row for repair without dropping its value or autosaving it', async () => {
+    const unnamed = {
+      local_id: 'needs-name', display_order: 1, line_item_type: 'product',
+      item_name: '', quantity: 1, calculated_unit_price: 25,
+      actual_unit_price_override: null, unit_price: 25, subtotal: 25, components: [],
+    };
+    const repairDraft = {
+      ...draft,
+      schema_version: 2,
+      tax_region: { tax_region_id: null, tax_rate: 0 },
+      line_items: [...draft.line_items, unnamed],
+      totals: { subtotal: 125, taxAmount: 0, totalAmount: 125 },
+    };
+    const saved = {
+      ...workspace, schema_version: 2, draft_snapshot: repairDraft,
+      subtotal: 125, tax_rate: 0, tax_amount: 0, total_amount: 125,
+    } as unknown as ProjectProposalRevisionWorkspace;
+    const update = jasmine.createSpy();
+    const workspaceRepository = {
+      getForProject: jasmine.createSpy().and.resolveTo(saved),
+      createOrGet: jasmine.createSpy(), update, discard: jasmine.createSpy(),
+    };
+    const { service } = createService({
+      workspaceRepository, builderService: new FloralProposalBuilderService(),
+    });
+
+    const loaded = await service.loadOrInitialize(project.project_id);
+
+    expect(loaded.workspace.draft_snapshot.line_items[1]).toEqual(
+      jasmine.objectContaining({ item_name: '', subtotal: 25 })
+    );
+    expect(loaded.compatibilityWarning).toContain('name');
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('blocks an unsafe workspace repair without persisting it', async () => {
     const existingRepo = {
       getForProject: jasmine.createSpy().and.resolveTo({ ...workspace, schema_version: 2 }),
@@ -258,7 +326,64 @@ describe('ProjectProposalRevisionService', () => {
       }));
   });
 
-  it('rejects an inconsistent V3 autosave before the workspace repository is called', async () => {
+  it('persists the exact submission draft even when a stale autosave is queued', async () => {
+    const { service, deps } = createService();
+    const currentDraft: EditableProposalSnapshotV3 = {
+      ...draft,
+      financial_terms: { ...draft.financial_terms, retainer_amount: 1599.9, final_balance_amount: 5333 },
+      line_items: [{
+        ...productLine,
+        calculated_unit_price: 5031.13,
+        unit_price: 5031.13,
+        subtotal: 5031.13,
+      }],
+      totals: { subtotal: 5031.13, taxAmount: 301.87, totalAmount: 5333 },
+      breakdown: {
+        ...draft.breakdown,
+        productsTotal: 5031.13,
+        subtotal: 5031.13,
+        taxAmount: 301.87,
+        totalAmount: 5333,
+      },
+    };
+    service.queueAutosave(workspace, draft);
+
+    const saved = await service.saveNow(workspace, currentDraft);
+
+    expect(deps.workspaceRepository.update).toHaveBeenCalledTimes(1);
+    expect(deps.workspaceRepository.update).toHaveBeenCalledWith(
+      'workspace-1', 'project-1', jasmine.objectContaining({
+        total_amount: 5333,
+        subtotal: 5031.13,
+        tax_amount: 301.87,
+        draft_snapshot: currentDraft,
+      })
+    );
+    expect(saved.total_amount).toBe(5333);
+  });
+
+  it('stops submission when storage returns totals different from the current draft', async () => {
+    const staleRepository = {
+      getForProject: jasmine.createSpy(),
+      createOrGet: jasmine.createSpy(),
+      update: jasmine.createSpy().and.resolveTo(workspace),
+      discard: jasmine.createSpy(),
+    };
+    const { service } = createService({ workspaceRepository: staleRepository });
+    const revised: EditableProposalSnapshotV3 = {
+      ...draft,
+      line_items: [{ ...productLine, calculated_unit_price: 200, unit_price: 200, subtotal: 200 }],
+      financial_terms: { ...draft.financial_terms, retainer_amount: 63.6, final_balance_amount: 212 },
+      totals: { subtotal: 200, taxAmount: 12, totalAmount: 212 },
+      breakdown: { ...draft.breakdown, productsTotal: 200, subtotal: 200, taxAmount: 12, totalAmount: 212 },
+    };
+
+    await expectAsync(service.saveNow(workspace, revised)).toBeRejectedWithError(
+      'The revised proposal totals did not save correctly. The PDF was not submitted.'
+    );
+  });
+
+  it('reports an inconsistent V3 autosave before the workspace repository is called', async () => {
     const update = jasmine.createSpy();
     const repo = {
       getForProject: jasmine.createSpy(),
@@ -280,10 +405,28 @@ describe('ProjectProposalRevisionService', () => {
 
     service.queueAutosave(workspace, invalidDraft);
 
-    await expectAsync(service.flushAutosave()).toBeRejectedWithError(
-      /proposal revision pricing is inconsistent/i
-    );
+    expect(await service.flushAutosave()).toBeNull();
     expect(update).not.toHaveBeenCalled();
     expect(service.saveState()).toBe('error');
+    expect(service.saveError()).toContain('effective unit price');
+  });
+
+  it('keeps a priced unnamed row for repair, then saves it after it is named', async () => {
+    const { service, deps } = createService();
+    const unnamedDraft: EditableProposalSnapshotV3 = {
+      ...draft,
+      line_items: [{ ...productLine, item_name: '' }],
+    };
+
+    service.queueAutosave(workspace, unnamedDraft);
+    expect(service.saveState()).toBe('error');
+    expect(service.saveError()).toContain('has no name');
+    expect(await service.flushAutosave()).toBeNull();
+    expect(deps.workspaceRepository.update).not.toHaveBeenCalled();
+
+    service.queueAutosave(workspace, { ...unnamedDraft, line_items: [{ ...productLine, item_name: 'Bouquet' }] });
+    await service.flushAutosave();
+    expect(service.saveState()).toBe('saved');
+    expect(deps.workspaceRepository.update).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,7 @@
 create or replace function public.activate_project_final_collection(p_project_id uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_project public.projects; v_deposit uuid; v_final uuid; v_deposit_due numeric(12,2); v_final_due numeric(12,2);
+v_deposit_covered boolean:=false; v_final_covered boolean:=false;
 begin
   if auth.role()<>'service_role' then raise exception 'service role required'; end if;
   perform public.refresh_project_payment_statuses(p_project_id);
@@ -12,6 +13,20 @@ begin
          coalesce(sum(outstanding_amount) filter(where payment_kind='final_payment' and status not in ('waived','canceled')),0)
   into v_deposit,v_final,v_deposit_due,v_final_due from public.project_payment_records where project_id=p_project_id;
   if v_deposit_due+v_final_due<=0 then return jsonb_build_object('eligible',false); end if;
+  select exists (
+    select 1 from public.payment_requests r
+    where r.project_id=p_project_id and r.status='active' and r.request_kind='installment'
+      and r.installment_obligation_id=v_deposit and r.principal_amount=v_deposit_due
+  ), exists (
+    select 1 from public.payment_requests r
+    where r.project_id=p_project_id and r.status='active' and r.request_kind='installment'
+      and r.installment_obligation_id=v_final and r.principal_amount=v_final_due
+  ) into v_deposit_covered,v_final_covered;
+  if v_deposit_covered then v_deposit_due:=0; end if;
+  if v_final_covered then v_final_due:=0; end if;
+  if v_deposit_due+v_final_due<=0 then
+    return jsonb_build_object('eligible',false,'reason','installment_requests_active');
+  end if;
   return jsonb_build_object('eligible',true,'projectId',p_project_id,'kind',case when v_deposit_due>0 and v_final_due>0 then 'consolidated' when v_deposit_due>0 then 'deposit' else 'final_payment' end,
     'obligationIds',case when v_deposit_due>0 and v_final_due>0 then jsonb_build_array(v_deposit,v_final) when v_deposit_due>0 then jsonb_build_array(v_deposit) else jsonb_build_array(v_final) end,
     'principalCents',round((v_deposit_due+v_final_due)*100)::bigint);

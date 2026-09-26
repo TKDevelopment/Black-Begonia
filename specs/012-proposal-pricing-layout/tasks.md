@@ -217,6 +217,22 @@ human deployment handoff.
 
 ---
 
+## Phase 8: Revision financial reconciliation amendment (2026-09-26)
+
+- [X] T072 Persist the builder's current revision totals immediately before submission and verify saved scalar parity in `src/app/components/private/floral-proposal-builder/floral-proposal-builder.component.ts` and `src/app/core/supabase/services/project-proposal-revision.service.ts`.
+- [X] T073 Reconcile active snapshot targets while preserving receipt allocations, support scheduled revision installments, and repair stale revised projects in `supabase/migrations/20260926010000_reconcile_revision_finances.sql` and matching declarative schemas.
+- [X] T074 Show active total and outstanding balance without duplicate deposit/final summary cards, and expose a due-dated installment action in `src/app/components/private/projects/`.
+- [X] T075 Add Angular and PostgreSQL regression cases for fully, partially, and unpaid revisions, installment scheduling, later lower quotes, and overpayment in project/revision specs and `supabase/tests/revision_financial_reconciliation.sql`.
+- [ ] T076 Run the revision reconciliation PostgreSQL fixture in an isolated database and verify target-backed history, authorization, and summary values against the preflight record in `specs/012-proposal-pricing-layout/acceptance.md`.
+
+## Phase 9: Revision draft compatibility amendment (2026-09-26)
+
+- [X] T077 Adapt saved revision snapshots containing inert unnamed rows while preserving recorded totals and leaving populated unnamed rows editable for repair in `src/app/core/supabase/services/floral-proposal-builder.service.ts`.
+- [X] T078 Prevent new revision drafts from saving inert rows alongside named lines and block invalid autosaves before queuing persistence in the builder, workflow, and revision services.
+- [X] T079 Cover blank-row reopen, meaningful unnamed-row repair, serialization, and autosave validation in focused Angular specs.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -334,3 +350,29 @@ Then: T056 proposal builder frame after pricing template work -> T063 full audit
   declarative schema files.
 - AI agents must not run `git commit`, `git push`, or commit/push-capable
   automation. The human operator owns publication and deployment.
+
+## Installment payment email follow-up (2026-09-26)
+
+- [x] Add the payable-row email action beside Record Payment, then increase
+  Project Details action-button text by 15% from its reduced size and tighten
+  button padding.
+- [x] Send installment-due copy with a secure checkout link for the selected
+  outstanding balance using the existing payment delivery pipeline.
+- [x] Add per-obligation active request identity, stale-link checks, and
+  provider receipt allocation to the selected installment.
+- [x] Add focused Angular tests and a transactional PostgreSQL regression
+  fixture; keep migration and declarative SQL in sync.
+- [ ] Run the PostgreSQL fixture and a customer/provider smoke checkout against
+  the deployed migration and Edge Functions.
+
+## Customer payment-method switching follow-up (2026-09-26)
+
+- [x] Keep the `/pay/` method list usable after a card return and add a way
+  back from cash/check confirmations.
+- [x] Expire an open Stripe card session before switching to a manual method;
+  preserve completed or processing payments.
+- [x] Replace manual intentions without stacking the reminder pause and align
+  Venmo availability with approved target validation.
+- [x] Add focused Angular coverage and a transactional SQL regression fixture.
+- [ ] Run the SQL fixture and Stripe sandbox cancel/switch scenarios after
+  deploying the migration and checkout Edge Function.

@@ -48,9 +48,8 @@ const approvedVenmoTarget = (value: unknown) => {
   if (/^@[A-Za-z0-9_-]{2,64}$/.test(target)) {
     return `https://venmo.com/u/${target.slice(1)}`;
   }
-  return /^https:\/\/venmo\.com\/u\/[A-Za-z0-9_-]{2,64}\/?$/.test(target)
-    ? target.replace(/\/$/, "")
-    : "";
+  const profile = /^https:\/\/((?:www\.)?venmo\.com|account\.venmo\.com)\/u\/([A-Za-z0-9_-]{2,64})\/?$/i.exec(target);
+  return profile ? `https://${profile[1].toLowerCase()}/u/${profile[2]}` : "";
 };
 serve(async (req) => {
   const origin = req.headers.get("origin") ?? "";
@@ -74,7 +73,88 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } },
     );
+    const releaseActiveCardCheckout = async (expectedAttemptId?: string) => {
+      const paymentRequest = await db.from("payment_requests")
+        .select("payment_request_id")
+        .eq("token_digest", digest)
+        .eq("status", "active")
+        .is("invalidated_at", null)
+        .maybeSingle();
+      if (paymentRequest.error) throw paymentRequest.error;
+      if (!paymentRequest.data) return;
+
+      const activeAttempt = await db.from("payment_checkout_attempts")
+        .select("payment_checkout_attempt_id,status,provider_session_id")
+        .eq("payment_request_id", paymentRequest.data.payment_request_id)
+        .in("status", ["creating", "active", "processing"])
+        .maybeSingle();
+      if (activeAttempt.error) throw activeAttempt.error;
+      if (!activeAttempt.data) return;
+      const attempt = activeAttempt.data;
+      if (expectedAttemptId && attempt.payment_checkout_attempt_id !== expectedAttemptId) return;
+      if (attempt.status === "processing") throw new Error("PAYMENT_PROCESSING");
+      if (!attempt.provider_session_id) throw new Error("CHECKOUT_STILL_STARTING");
+
+      const sessionUrl = `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(attempt.provider_session_id)}`;
+      const stripeHeaders = {
+        Authorization: `Bearer ${Deno.env.get("STRIPE_RESTRICTED_KEY")}`,
+      };
+      const statusResponse = await fetch(sessionUrl, { headers: stripeHeaders });
+      if (!statusResponse.ok) throw new Error("CARD_CHECKOUT_RELEASE_FAILED");
+      const session = await statusResponse.json();
+      if (session.status === "complete") throw new Error("PAYMENT_PROCESSING");
+      if (session.status === "open") {
+        const expired = await fetch(`${sessionUrl}/expire`, {
+          method: "POST",
+          headers: stripeHeaders,
+        });
+        if (!expired.ok) {
+          const refreshed = await fetch(sessionUrl, { headers: stripeHeaders });
+          if (!refreshed.ok) throw new Error("CARD_CHECKOUT_RELEASE_FAILED");
+          const currentSession = await refreshed.json();
+          if (currentSession.status === "complete") throw new Error("PAYMENT_PROCESSING");
+          if (currentSession.status !== "expired") throw new Error("CARD_CHECKOUT_RELEASE_FAILED");
+        }
+      } else if (session.status !== "expired") {
+        throw new Error("CARD_CHECKOUT_RELEASE_FAILED");
+      }
+
+      const canceled = await db.from("payment_checkout_attempts")
+        .update({
+          status: "canceled",
+          canceled_at: new Date().toISOString(),
+          canceled_reason: "customer_changed_payment_method",
+          resolved_at: new Date().toISOString(),
+          last_verified_state: "stripe_session_expired_for_method_switch",
+        })
+        .eq("payment_checkout_attempt_id", attempt.payment_checkout_attempt_id)
+        .eq("provider_session_id", attempt.provider_session_id)
+        .in("status", ["active", "processing"])
+        .select("payment_checkout_attempt_id")
+        .maybeSingle();
+      if (canceled.error) throw canceled.error;
+      if (!canceled.data) {
+        const current = await db.from("payment_checkout_attempts")
+          .select("status")
+          .eq("payment_checkout_attempt_id", attempt.payment_checkout_attempt_id)
+          .maybeSingle();
+        if (current.error) throw current.error;
+        if (current.data?.status === "paid") throw new Error("PAYMENT_PROCESSING");
+        if (["creating", "active", "processing"].includes(current.data?.status ?? "")) {
+          throw new Error("CARD_CHECKOUT_RELEASE_FAILED");
+        }
+      }
+    };
+    if (method === "cancel_card") {
+      const canceledAttempt = String(b.attempt ?? "");
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canceledAttempt)) {
+        return out(origin, 400, { error: "Invalid card checkout attempt" });
+      }
+      await releaseActiveCardCheckout(canceledAttempt);
+      return out(origin, 200, { canceled: true });
+    }
     if (method === "cash" || method === "check") {
+      await releaseActiveCardCheckout();
       const { data, error } = await db.rpc("record_payment_intention", {
         p_token_digest: digest,
         p_method: method,
@@ -95,9 +175,11 @@ serve(async (req) => {
       const target = approvedVenmoTarget(settings?.venmo_business_target);
       if (!settings?.collection_enabled || !settings?.venmo_enabled || !target) {
         return out(origin, 400, {
-          error: "Payment option is temporarily unavailable",
+          code: "VENMO_UNAVAILABLE",
+          error: "Venmo is unavailable right now. Please choose another payment method.",
         });
       }
+      await releaseActiveCardCheckout();
       const { data, error } = await db.rpc("record_payment_intention", {
         p_token_digest: digest,
         p_method: "venmo_business_profile",
@@ -156,7 +238,7 @@ serve(async (req) => {
         }/status?attempt=${attemptId}`,
         cancel_url: `${Deno.env.get("PAYMENT_PUBLIC_ORIGIN")}/pay/${
           encodeURIComponent(token)
-        }`,
+        }?cancel_attempt=${attemptId}`,
         "expires_at": String(
           Math.floor(new Date(a.expires_at).getTime() / 1000),
         ),
@@ -172,7 +254,7 @@ serve(async (req) => {
     });
     if (!sr.ok) throw new Error("Stripe checkout failed");
     const session = await sr.json();
-    await db.rpc("finalize_payment_checkout", {
+    const finalized = await db.rpc("finalize_payment_checkout", {
         p_attempt_id: attemptId,
         p_state: "active",
         p_provider_id: session.id,
@@ -180,12 +262,16 @@ serve(async (req) => {
         p_client_token: null,
         p_error: null,
     });
+    if (finalized.error || finalized.data?.status !== "active") {
+      throw new Error("Card checkout could not be finalized");
+    }
     return out(origin, 200, {
       kind: "redirect",
       url: session.url,
       attempt: attemptId,
     });
   } catch (error) {
+    const code = error instanceof Error ? error.message : "";
     console.error(
       JSON.stringify({
         function: "create-payment-checkout",
@@ -207,8 +293,15 @@ serve(async (req) => {
         p_error: "provider_unavailable",
       });
     }
-    return out(origin, 400, {
-      error: "Payment option is temporarily unavailable",
-    });
+    if (code === "CHECKOUT_STILL_STARTING") {
+      return out(origin, 409, { code, error: "Card checkout is still opening. Please try again in a moment." });
+    }
+    if (code === "PAYMENT_PROCESSING" || code === "PAYMENT_METHOD_LOCKED") {
+      return out(origin, 409, { code, error: "The card payment is processing. Please wait for its result before choosing another method." });
+    }
+    if (code === "CARD_CHECKOUT_RELEASE_FAILED") {
+      return out(origin, 503, { code, error: "We could not close the card checkout yet. Please try again shortly." });
+    }
+    return out(origin, 400, { error: "Payment option is temporarily unavailable" });
   }
 });

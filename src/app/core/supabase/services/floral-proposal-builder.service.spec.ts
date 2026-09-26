@@ -699,6 +699,91 @@ describe('FloralProposalBuilderService', () => {
     expect(adapted.draft?.line_items[0].description).toBe('Recorded');
   });
 
+  it('recovers an active proposal with an unused blank editor row without changing its quote', () => {
+    const named = {
+      line_item_type: 'fee', item_name: 'Delivery', quantity: 1,
+      unit_price: 50, subtotal: 50, components: [],
+    };
+    const placeholder = {
+      line_item_type: 'product', item_name: '', quantity: 1,
+      unit_price: 0, calculated_unit_price: 0,
+      actual_unit_price_override: null, subtotal: 0, components: [],
+    };
+    const source = { schema_version: 3, proposal_status: 'finalized', line_items: [named, placeholder] };
+    const financials = { subtotal: 50, taxRate: 0, taxAmount: 0, totalAmount: 50, retainerAmount: 15, finalBalanceAmount: 50 };
+
+    const adapted = service.adaptProjectSnapshot(source, financials);
+
+    expect(adapted.valid).toBeTrue();
+    expect(adapted.draft?.line_items.map((line) => line.item_name)).toEqual(['Delivery']);
+    expect(adapted.draft?.totals.totalAmount).toBe(50);
+    expect(source.line_items).toHaveSize(2);
+    expect(adapted.warning).toContain('blank');
+
+    const unsafe = service.adaptProjectSnapshot({
+      ...source,
+      line_items: [named, { ...placeholder, calculated_unit_price: 25, unit_price: 25, subtotal: 25 }],
+    }, { ...financials, subtotal: 75, totalAmount: 75 });
+    expect(unsafe.valid).toBeTrue();
+    expect(unsafe.draft?.line_items).toHaveSize(2);
+    expect(unsafe.draft?.line_items[1].subtotal).toBe(25);
+    expect(unsafe.warning).toContain('name');
+  });
+
+  it('keeps one empty row in an unfinished revision draft so it can be named after reload', () => {
+    const placeholder = {
+      line_item_type: 'product', item_name: '', quantity: 1,
+      unit_price: 0, calculated_unit_price: 0,
+      actual_unit_price_override: null, subtotal: 0, components: [],
+    };
+    const financials = { subtotal: 0, taxRate: 0, taxAmount: 0, totalAmount: 0, retainerAmount: 0, finalBalanceAmount: 0 };
+    const adapted = service.adaptProjectSnapshot({
+      schema_version: 3, proposal_status: 'draft', line_items: [placeholder, placeholder],
+    }, financials);
+    expect(adapted.valid).toBeTrue();
+    expect(adapted.draft?.line_items).toHaveSize(1);
+  });
+
+  it('omits unused blank rows from saved revisions while retaining unnamed rows with entered amounts for validation', () => {
+    const named = service.createFeeLine(0, 'Delivery', 1, 50);
+    const placeholder = service.createEmptyLine(1);
+    const renderPayload = service.buildRenderPayload({
+      lines: [named, placeholder], taxRegion: null,
+      defaultMarkupPercent: 300, shoppingList: [],
+    });
+    const input = {
+      renderPayload, retainerAmount: 15, finalBalanceAmount: 50,
+      lines: [named, placeholder],
+    };
+    const saved = service.buildEditableProjectSnapshot(input);
+    expect(saved.line_items.map((line) => line.item_name)).toEqual(['Delivery']);
+    expect(saved.totals.totalAmount).toBe(50);
+
+    const pricedWithoutName = {
+      ...placeholder, unit_price: 25, calculated_unit_price: 25,
+      subtotal: 25,
+    };
+    const unsafe = service.buildEditableProjectSnapshot({
+      ...input, lines: [named, pricedWithoutName],
+    });
+    expect(unsafe.line_items).toHaveSize(2);
+
+    const typedWithoutName = service.buildEditableProjectSnapshot({
+      ...input, lines: [named, { ...placeholder, actual_unit_price_input: '25.00' }],
+    });
+    expect(typedWithoutName.line_items).toHaveSize(2);
+
+    const unknownMetadata = service.adaptProjectSnapshot({
+      schema_version: 3, proposal_status: 'draft',
+      line_items: [
+        { line_item_type: 'fee', item_name: 'Delivery', quantity: 1, unit_price: 50, subtotal: 50, components: [] },
+        { line_item_type: 'product', item_name: '', quantity: 1, unit_price: 0, subtotal: 0,
+          calculated_unit_price: 0, actual_unit_price_override: null, components: [], snapshot: { custom_note: 'Keep this' } },
+      ],
+    }, { subtotal: 50, taxRate: 0, taxAmount: 0, totalAmount: 50, retainerAmount: 15, finalBalanceAmount: 50 });
+    expect(unknownMetadata.draft?.line_items).toHaveSize(2);
+  });
+
   it('follows calculated product pricing, preserves explicit zero/equal overrides, and clears to reset', () => {
     const calculated = service.recalculateLine({
       ...service.createEmptyLine(0),

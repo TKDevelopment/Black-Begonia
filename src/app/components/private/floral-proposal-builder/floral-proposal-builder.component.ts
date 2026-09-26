@@ -83,6 +83,7 @@ export class FloralProposalBuilderComponent implements OnInit {
   readonly revisionProject = signal<Project | null>(null);
   readonly revisionWorkspace = signal<ProjectProposalRevisionWorkspace | null>(null);
   readonly revisionWarning = signal<string | null>(null);
+  private lastQueuedRevisionDraft: string | null = null;
   readonly lead = signal<Lead | null>(null);
   readonly proposals = signal<FloralProposal[]>([]);
   readonly activeProposal = signal<FloralProposal | null>(null);
@@ -181,9 +182,15 @@ export class FloralProposalBuilderComponent implements OnInit {
     )}`;
   });
   private readonly revisionAutosave = effect(() => {
-    const workspace = untracked(this.revisionWorkspace);
-    if (!workspace || this.loading() || this.hasComponentPriceErrors()) return;
-    this.projectProposalRevision.queueAutosave(workspace, this.buildRevisionDraft(workspace));
+    // Track workspace creation; edits are not observable until the first draft is built.
+    const workspace = this.revisionWorkspace();
+    if (!workspace || this.loading() || this.saving() || this.hasComponentPriceErrors()) return;
+    const draft = this.buildRevisionDraft(workspace);
+    const signature = JSON.stringify([workspace.project_proposal_revision_workspace_id, draft]);
+    // Replacing the workspace with the saved row should not enqueue the same draft again.
+    if (signature === this.lastQueuedRevisionDraft) return;
+    this.lastQueuedRevisionDraft = signature;
+    untracked(() => this.projectProposalRevision.queueAutosave(workspace, draft));
   });
 
   ngOnInit(): void {
@@ -871,9 +878,10 @@ export class FloralProposalBuilderComponent implements OnInit {
       const revisionWorkspace = this.revisionWorkspace();
       if (revisionWorkspace) {
         this.submissionProgress.set('Saving the latest revision draft...');
-        const saved = await this.projectProposalRevision.flushAutosave();
+        const currentDraft = this.buildRevisionDraft(revisionWorkspace);
+        const saved = await this.projectProposalRevision.saveNow(revisionWorkspace, currentDraft);
         const prepared = await this.projectProposalRevision.prepareSubmission(
-          saved ?? revisionWorkspace,
+          saved,
           file.name
         );
         this.revisionWorkspace.set(prepared);
@@ -1455,7 +1463,7 @@ export class FloralProposalBuilderComponent implements OnInit {
     const total = Number(renderPayload.totals.totalAmount.toFixed(2));
     return this.floralProposalBuilderService.buildEditableProjectSnapshot({
       renderPayload,
-      lines: this.lineItems(),
+      lines: this.normalizeLinesForPersistence(),
       retainerAmount: Number((total * 0.3).toFixed(2)),
       finalBalanceAmount: total,
       retainerDueDate: workspace.retainer_due_date ?? null,

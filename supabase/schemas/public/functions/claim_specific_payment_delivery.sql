@@ -7,7 +7,7 @@ begin
   if not found then raise exception 'Payment collection settings are unavailable'; end if;
   v_local_date := (now() at time zone v_settings.business_timezone)::date;
   v_local_time := (now() at time zone v_settings.business_timezone)::time;
-  select d.*,r.token_ciphertext,r.token_iv,r.token_key_version into v_row
+  select d.*,r.request_kind,r.token_ciphertext,r.token_iv,r.token_key_version into v_row
   from public.payment_message_deliveries d
   left join public.payment_requests r on r.payment_request_id=d.payment_request_id
   left join public.project_payment_records o on o.project_payment_record_id=d.obligation_id
@@ -28,7 +28,7 @@ begin
     return null;
   end if;
   update public.payment_message_deliveries set status='claimed',claimed_at=now(),recipient_contact_id=(v_recipient->>'contact_id')::uuid,recipient_email=v_recipient->>'email',recipient_fallback_used=(v_recipient->>'fallback_used')::boolean where payment_message_delivery_id=v_row.payment_message_delivery_id;
-  return jsonb_build_object('deliveryId',v_row.payment_message_delivery_id,'projectId',v_row.project_id,'obligationId',v_row.obligation_id,'requestId',v_row.payment_request_id,'transactionId',v_row.payment_transaction_id,'kind',v_row.delivery_kind,'recipientEmail',v_recipient->>'email','principalCents',round(v_row.principal_amount*100)::bigint,'customerFeeCents',round(v_row.customer_fee*100)::bigint,'tokenCiphertext',v_row.token_ciphertext,'tokenIv',v_row.token_iv,'tokenKeyVersion',v_row.token_key_version);
+  return jsonb_build_object('deliveryId',v_row.payment_message_delivery_id,'projectId',v_row.project_id,'obligationId',v_row.obligation_id,'requestId',v_row.payment_request_id,'requestKind',v_row.request_kind,'transactionId',v_row.payment_transaction_id,'kind',v_row.delivery_kind,'recipientEmail',v_recipient->>'email','principalCents',round(v_row.principal_amount*100)::bigint,'customerFeeCents',round(v_row.customer_fee*100)::bigint,'tokenCiphertext',v_row.token_ciphertext,'tokenIv',v_row.token_iv,'tokenKeyVersion',v_row.token_key_version);
 end; $$;
 revoke all on function public.claim_specific_payment_delivery(uuid) from public,anon,authenticated;
 grant execute on function public.claim_specific_payment_delivery(uuid) to service_role;

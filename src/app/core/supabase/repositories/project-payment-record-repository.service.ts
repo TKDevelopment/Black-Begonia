@@ -29,6 +29,7 @@ export class ProjectPaymentRecordRepositoryService {
     created_at,
     updated_at
     ,basis_snapshot_id
+    ,origin_snapshot_id
     ,basis_version
     ,basis_total
     ,target_amount
@@ -92,6 +93,15 @@ export class ProjectPaymentRecordRepositoryService {
         ? this.redactProjection(raw.needsAttention)
         : [],
     };
+  }
+
+  async createRevisionInstallment(projectId: string, amountCents: number, dueDate: string): Promise<void> {
+    const { error } = await this.supabaseService.getClient().rpc('create_revision_payment_installment', {
+      p_project_id: projectId,
+      p_amount_cents: amountCents,
+      p_due_date: dueDate,
+    });
+    if (error) throw new Error(error.message || 'The installment could not be created.');
   }
 
   private redactProjection<T>(value: T): T {

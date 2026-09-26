@@ -27,6 +27,15 @@ describe('CustomerPaymentService', () => {
     await expectAsync(service.choose('token','check')).toBeRejectedWithError('PAYMENT_METHOD_LOCKED');
     expect(invoke).toHaveBeenCalledWith('create-payment-checkout',{body:{token:'token',method:'check'}});
   });
+  it('shows the server explanation when a payment method cannot be changed', async () => {
+    invoke.and.resolveTo({data:null,error:{message:'Edge Function returned a non-2xx status code',context:new Response(JSON.stringify({code:'PAYMENT_PROCESSING',error:'The card payment is processing. Please wait for its result before choosing another method.'}),{status:409})}});
+    await expectAsync(service.choose('token','venmo')).toBeRejectedWithError('The card payment is processing. Please wait for its result before choosing another method.');
+  });
+  it('requests cancellation of the specific abandoned card checkout', async () => {
+    invoke.and.resolveTo({data:{canceled:true},error:null});
+    await service.cancelCardCheckout('opaque-token','attempt-id');
+    expect(invoke).toHaveBeenCalledWith('create-payment-checkout',{body:{token:'opaque-token',method:'cancel_card',attempt:'attempt-id'}});
+  });
   it('polls until the server reports confirmed', async () => {
     spyOn(service,'resolve').and.returnValues(Promise.resolve({state:'processing'}),Promise.resolve({state:'confirmed'}));
     expect((await service.poll('token','attempt',3,0)).state).toBe('confirmed');

@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ProjectPaymentRecord } from '../../../../../core/models/project-payment-record';
 import { ProjectFinancialSummaryCardComponent } from './project-financial-summary-card.component';
 
 describe('ProjectFinancialSummaryCardComponent', () => {
@@ -10,7 +9,7 @@ describe('ProjectFinancialSummaryCardComponent', () => {
     expect(component.formatCurrency(0)).toBe('$0.00');
   });
 
-  it('renders friendly financial labels and obligation payment statuses', async () => {
+  it('shows the revised total and outstanding balance without duplicate installment cards', async () => {
     await TestBed.configureTestingModule({
       imports: [ProjectFinancialSummaryCardComponent],
     }).compileComponents();
@@ -31,69 +30,30 @@ describe('ProjectFinancialSummaryCardComponent', () => {
     };
     fixture.componentInstance.summary = {
       available: true,
-      proposalTotal: 1000,
+      proposalTotal: 4500,
       depositTarget: 300,
       finalTarget: 700,
-      creditedPrincipal: 300,
-      outstanding: 700,
+      creditedPrincipal: 3210,
+      outstanding: 1290,
       customerFees: 0,
       merchantFees: 3.25,
       overpayment: 0,
       needsAttention: [],
-      obligations: [
-        obligation('deposit', 'paid'),
-        obligation('final_payment', 'due'),
-      ],
+      obligations: [],
     };
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Total Amount Due');
-    expect(text).toContain('Deposit Amount');
-    expect(text).toContain('Final Payment Amount');
+    expect(text).toContain('$4,500.00');
+    expect(text).toContain('$1,290.00');
     expect(text).toContain('Outstanding Balance');
-    expect(text).toContain('Paid');
-    expect(text).toContain('Unpaid');
+    expect(text).not.toContain('Deposit Amount');
+    expect(text).not.toContain('Final Payment Amount');
     expect(text).not.toContain('Active Proposal');
     expect(text).not.toContain('Deposit Target');
     expect(text).not.toContain('Final Target');
     expect(text).not.toContain('total principal credited');
   });
 
-  it('treats an overpaid obligation as paid and a missing obligation as unpaid', () => {
-    const component = new ProjectFinancialSummaryCardComponent();
-    component.summary = {
-      available: true,
-      proposalTotal: 1000,
-      depositTarget: 300,
-      finalTarget: 700,
-      creditedPrincipal: 1000,
-      outstanding: 0,
-      customerFees: 0,
-      merchantFees: 0,
-      overpayment: 10,
-      needsAttention: [],
-      obligations: [obligation('deposit', 'overpaid')],
-    };
-
-    expect(component.paymentStatus('deposit')).toBe('Paid');
-    expect(component.paymentStatus('final_payment')).toBe('Unpaid');
-  });
 });
-
-function obligation(
-  paymentKind: ProjectPaymentRecord['payment_kind'],
-  status: ProjectPaymentRecord['status'],
-): ProjectPaymentRecord {
-  return {
-    project_payment_record_id: `${paymentKind}-id`,
-    project_id: 'project',
-    payment_kind: paymentKind,
-    status,
-    amount_due: paymentKind === 'deposit' ? 300 : 700,
-    amount_paid: status === 'paid' || status === 'overpaid' ? 300 : 0,
-    payment_source: 'manual',
-    created_at: '',
-    updated_at: '',
-  };
-}

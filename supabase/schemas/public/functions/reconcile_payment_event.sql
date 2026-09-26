@@ -30,9 +30,25 @@ begin
    from public.project_payment_records
    where project_id = a.project_id
      and status not in ('waived', 'canceled');
-   v_remaining:=least(v_amount,v_project_outstanding);
-   for o in select * from public.project_payment_records where project_id=a.project_id and status not in ('waived','canceled') order by case payment_kind when 'deposit' then 1 else 2 end for update loop exit when v_remaining<=0;v_alloc:=least(v_remaining,o.outstanding_amount);if v_alloc>0 then v_seq:=v_seq+1;insert into public.payment_transaction_allocations(payment_transaction_id,obligation_id,allocated_principal,sequence) values(t.payment_transaction_id,o.project_payment_record_id,v_alloc,v_seq);v_remaining:=v_remaining-v_alloc;end if;end loop;
-   if v_amount>v_project_outstanding then insert into public.payment_exceptions(project_id,payment_transaction_id,payment_provider_event_id,exception_type,urgency,amount,summary) values(a.project_id,t.payment_transaction_id,e.payment_provider_event_id,'overpayment','urgent',v_amount-v_project_outstanding,'Provider payment exceeds the complete project balance');end if;
+   if r.request_kind='installment' then
+     select * into o from public.project_payment_records
+     where project_payment_record_id=r.installment_obligation_id and project_id=a.project_id
+     for update;
+     if not found then raise exception 'Installment obligation is unavailable'; end if;
+     v_alloc:=least(v_amount,greatest(o.outstanding_amount,0));
+     if v_alloc>0 then
+       insert into public.payment_transaction_allocations(payment_transaction_id,obligation_id,allocated_principal,sequence)
+       values(t.payment_transaction_id,o.project_payment_record_id,v_alloc,1);
+     end if;
+     if v_amount>v_alloc then
+       insert into public.payment_exceptions(project_id,obligation_id,payment_request_id,payment_transaction_id,payment_provider_event_id,exception_type,urgency,amount,summary)
+       values(a.project_id,o.project_payment_record_id,r.payment_request_id,t.payment_transaction_id,e.payment_provider_event_id,'overpayment','urgent',v_amount-v_alloc,'Provider payment exceeds the selected installment balance');
+     end if;
+   else
+     v_remaining:=least(v_amount,v_project_outstanding);
+     for o in select * from public.project_payment_records where project_id=a.project_id and status not in ('waived','canceled') order by case payment_kind when 'deposit' then 1 else 2 end for update loop exit when v_remaining<=0;v_alloc:=least(v_remaining,o.outstanding_amount);if v_alloc>0 then v_seq:=v_seq+1;insert into public.payment_transaction_allocations(payment_transaction_id,obligation_id,allocated_principal,sequence) values(t.payment_transaction_id,o.project_payment_record_id,v_alloc,v_seq);v_remaining:=v_remaining-v_alloc;end if;end loop;
+     if v_amount>v_project_outstanding then insert into public.payment_exceptions(project_id,payment_transaction_id,payment_provider_event_id,exception_type,urgency,amount,summary) values(a.project_id,t.payment_transaction_id,e.payment_provider_event_id,'overpayment','urgent',v_amount-v_project_outstanding,'Provider payment exceeds the complete project balance');end if;
+   end if;
    update public.payment_checkout_attempts set status='paid',resolved_at=now(),last_verified_state=e.event_type where payment_checkout_attempt_id=a.payment_checkout_attempt_id;
    update public.payment_requests set status='fulfilled',fulfilled_at=now(),invalidated_at=now(),token_ciphertext=null,token_iv=null,token_key_version=null where payment_request_id=r.payment_request_id;
    update public.payment_intentions set state='fulfilled',fulfilled_at=now() where payment_request_id=r.payment_request_id and state='active';

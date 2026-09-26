@@ -4,24 +4,12 @@
     <p class="text-sm text-stone-600">Project totals and payment status.</p>
   </div>
 
-  <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  <dl class="mt-5 grid gap-3 sm:grid-cols-2">
     <div class="crm-stat-card summary-cell">
       <dt>Total Amount Due</dt>
-      <dd>{{ formatCurrency(snapshot?.total_amount) }}</dd>
+      <dd>{{ formatCurrency(summary?.proposalTotal ?? snapshot?.total_amount) }}</dd>
       <p *ngIf="snapshot">Version {{ snapshot.version }}</p>
       <p *ngIf="!snapshot">No active snapshot</p>
-    </div>
-
-    <div class="crm-stat-card summary-cell">
-      <dt>Deposit Amount</dt>
-      <dd>{{ formatCurrency(summary?.depositTarget) }}</dd>
-      <p>{{ paymentStatus('deposit') }}</p>
-    </div>
-
-    <div class="crm-stat-card summary-cell">
-      <dt>Final Payment Amount</dt>
-      <dd>{{ formatCurrency(summary?.finalTarget) }}</dd>
-      <p>{{ paymentStatus('final_payment') }}</p>
     </div>
 
     <div class="crm-stat-card summary-cell">
