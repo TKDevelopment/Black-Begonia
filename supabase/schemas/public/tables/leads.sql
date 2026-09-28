@@ -67,3 +67,5 @@ execute FUNCTION log_new_lead_activity ();
 create trigger trg_leads_set_updated_at BEFORE
 update on leads for EACH row
 execute FUNCTION set_updated_at ();
+create trigger trg_crm_calendar_leads after insert or update or delete on public.leads
+  for each row execute function public.enqueue_crm_calendar_source_change();

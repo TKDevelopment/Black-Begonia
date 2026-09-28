@@ -1,5 +1,16 @@
 project_id = "black-begonia"
 
+[functions.crm-m365-calendar-admin]
+entrypoint = "./edge_functions/crm-m365-calendar-admin/index.ts"
+# Browser preflight is unauthenticated; the standalone function validates the
+# caller JWT and internal/admin role before touching service-owned state.
+verify_jwt = false
+
+[functions.crm-m365-calendar-sync]
+entrypoint = "./edge_functions/crm-m365-calendar-sync/index.ts"
+# Invoked only with the dedicated scheduler secret from Vault or the admin function.
+verify_jwt = false
+
 [functions.manage-workshop-catalog]
 entrypoint = "./edge_functions/manage-workshop-catalog/index.ts"
 # Browser preflight has no bearer token. The function authenticates the caller,

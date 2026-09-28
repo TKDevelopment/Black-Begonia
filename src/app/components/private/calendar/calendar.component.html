@@ -1,1 +1,45 @@
-<p>calendar works!</p>
+<main class="crm-calendar-page" [class.crm-calendar-dark]="isDarkMode" data-crm-page-shell>
+  <header class="crm-calendar-header">
+    <div><p class="eyebrow">Black Begonia CRM</p><h1>Calendar</h1></div>
+    <div class="calendar-controls" aria-label="Calendar controls">
+      <button type="button" class="calendar-nav-button" (click)="previous()" aria-label="Previous month">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5-7 7 7 7" /></svg>
+      </button>
+      <strong aria-live="polite">{{ monthLabel }}</strong>
+      <button type="button" class="calendar-nav-button" (click)="next()" aria-label="Next month">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 5 7 7-7 7" /></svg>
+      </button>
+      <button type="button" (click)="today()" [disabled]="isCurrentMonth()">Today</button>
+      <div class="view-switch" role="group" aria-label="Calendar view">
+        <button type="button" [attr.aria-pressed]="view() === 'dayGridMonth'" (click)="setView('dayGridMonth')">Month</button>
+        <button type="button" [attr.aria-pressed]="view() === 'listMonth'" (click)="setView('listMonth')">List</button>
+      </div>
+    </div>
+  </header>
+  <div class="calendar-overview-row">
+    <div class="calendar-legend" aria-label="Calendar item types">
+      <span *ngFor="let kind of kinds"><i [style.background]="kind.color"></i>{{ kind.label }}</span>
+    </div>
+    <div class="calendar-sync-status" *ngIf="syncHealth() as health">
+      <span *ngIf="health.connectionStatus === 'connected'">Microsoft 365: {{ health.monthImportStatus | titlecase }}</span>
+      <span *ngIf="health.connectionStatus === 'action_required'">Microsoft 365 needs administrator attention.</span>
+      <span *ngIf="health.connectionStatus === 'disconnected'">Microsoft 365 is disconnected. CRM dates are still available.</span>
+      <span *ngIf="health.lastSuccessfulSyncAt">Last synced {{ health.lastSuccessfulSyncAt | date:'short' }}</span>
+      <span *ngIf="health.openConflictCount">{{ health.openConflictCount }} conflict{{ health.openConflictCount === 1 ? '' : 's' }}</span>
+      <button type="button" (click)="showConnectionPanel.set(!showConnectionPanel())">{{ showConnectionPanel() ? 'Hide connection' : 'Connection details' }}</button>
+    </div>
+  </div>
+  <div class="calendar-sync-status" *ngIf="syncError()" role="alert">
+    {{ syncError() }}
+    <span *ngIf="retryAt()">Retry after {{ retryAt() | date:'short' }}.</span>
+    <button type="button" (click)="retryMonth()" [disabled]="retryWaiting">Retry</button>
+  </div>
+  <div class="calendar-sync-status" *ngIf="syncHealth()?.monthImportStatus === 'delayed' || syncHealth()?.monthImportStatus === 'failed'" role="status">
+    Microsoft items are {{ syncHealth()?.monthImportStatus }} for this month. Cached items may be out of date.
+    <button type="button" (click)="retryMonth()" [disabled]="retryWaiting">Retry</button>
+  </div>
+  <app-calendar-connection-panel *ngIf="showConnectionPanel()" [health]="syncHealth()" [isAdmin]="isAdmin"
+    (changed)="refreshSyncForMonth(); load()"></app-calendar-connection-panel>
+  <div *ngIf="error()" class="calendar-message" role="alert">{{ error() }} <button type="button" (click)="load()">Retry</button></div>
+  <full-calendar [options]="calendarOptions"></full-calendar>
+</main>

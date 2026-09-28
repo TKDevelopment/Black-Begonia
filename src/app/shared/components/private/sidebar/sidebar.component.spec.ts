@@ -38,6 +38,12 @@ describe('SidebarComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('places Calendar directly below Dashboard', () => {
+    expect(component.navItems[0].route).toBe('/admin/dashboard');
+    expect(component.navItems[1].route).toBe('/admin/calendar');
+    expect(fixture.nativeElement.textContent).toContain('Calendar');
+  });
+
   it('should expose the user display name from the auth snapshot', () => {
     expect(component.userDisplayName).toBe('Test Admin');
   });

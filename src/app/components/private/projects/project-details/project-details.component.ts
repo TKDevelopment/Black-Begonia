@@ -208,6 +208,10 @@ export class ProjectDetailsComponent implements OnInit {
       this.error.set('We could not load this project right now.');
     } finally {
       this.loading.set(false);
+      if (this.route.snapshot.fragment === 'payments-installments' &&
+        typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => document.getElementById('payments-installments')?.scrollIntoView({ block: 'start' }));
+      }
     }
   }
 

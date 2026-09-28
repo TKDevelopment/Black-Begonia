@@ -1,0 +1,37 @@
+<section class="calendar-detail" role="dialog" aria-modal="true" aria-labelledby="calendar-detail-title">
+  <div class="calendar-detail-head">
+    <div>
+      <p class="calendar-detail-kicker">Calendar details</p>
+      <h2 id="calendar-detail-title">{{ displayTitle }}</h2>
+    </div>
+    <button type="button" class="calendar-detail-close" (click)="dialogRef.close()" aria-label="Close details">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  <dl>
+    <div><dt>Date</dt><dd>{{ displayDate | date:'fullDate' }}</dd></div>
+    <div *ngIf="!item.allDay"><dt>Time</dt><dd>{{ displayTime }}</dd></div>
+    <div *ngIf="!item.isPrivate && item.status"><dt>Status</dt><dd>{{ item.status | titlecase }}</dd></div>
+    <div *ngIf="!item.isPrivate && item.serviceType"><dt>Service</dt><dd>{{ item.serviceType | titlecase }}</dd></div>
+    <div *ngIf="!item.isPrivate && item.guestCount != null"><dt>Guests</dt><dd>{{ item.guestCount }}</dd></div>
+    <div *ngIf="!item.isPrivate && item.venueName"><dt>Venue</dt><dd>{{ item.venueName }}</dd></div>
+    <div *ngIf="!item.isPrivate && item.venueAddress"><dt>Address</dt><dd>{{ item.venueAddress }}</dd></div>
+    <ng-container *ngIf="item.sourceType === 'installment'">
+      <div><dt>Amount due</dt><dd>{{ item.targetAmount | currency }}</dd></div>
+      <div><dt>Credited</dt><dd>{{ item.creditedAmount | currency }}</dd></div>
+      <div><dt>Outstanding</dt><dd>{{ item.outstandingAmount | currency }}</dd></div>
+      <div *ngIf="item.paidDate"><dt>Paid</dt><dd>{{ item.paidDate | date:'mediumDate' }}</dd></div>
+      <div *ngIf="item.paymentMethod"><dt>Method</dt><dd>{{ item.paymentMethod | titlecase }}</dd></div>
+    </ng-container>
+    <div *ngIf="!item.isPrivate && item.capacity != null"><dt>Capacity</dt><dd>{{ item.capacity }}</dd></div>
+    <div *ngIf="!item.isPrivate && item.timezone"><dt>Timezone</dt><dd>{{ item.timezone }}</dd></div>
+  </dl>
+  <div class="calendar-detail-actions">
+    <a *ngIf="item.destination" [routerLink]="item.destination"
+      [fragment]="item.sourceType === 'installment' ? 'payments-installments' : undefined"
+      (click)="dialogRef.close()">Open CRM record</a>
+    <a *ngIf="safeOutlookUrl" [href]="safeOutlookUrl" target="_blank" rel="noopener noreferrer">Open in Outlook</a>
+  </div>
+</section>

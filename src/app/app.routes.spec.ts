@@ -1,6 +1,13 @@
 import { routes } from './app.routes';
 
 describe('app routes', () => {
+  it('keeps Calendar lazy loaded immediately after Dashboard in the guarded CRM', () => {
+    const admin = routes.find(route => route.path === 'admin');
+    const paths = admin?.children?.map(route => route.path) ?? [];
+    expect(paths.indexOf('calendar')).toBe(paths.indexOf('dashboard') + 1);
+    expect(typeof admin?.children?.find(route => route.path === 'calendar')?.loadComponent).toBe('function');
+    expect(admin?.canActivate?.length).toBeGreaterThan(0);
+  });
   it('does not expose retired proposal template admin routes', () => {
     const adminRoutes = routes.find((route) => route.path === 'admin')?.children ?? [];
     const adminPaths = adminRoutes.map((route) => route.path);
