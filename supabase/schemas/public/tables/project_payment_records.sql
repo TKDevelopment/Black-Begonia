@@ -60,3 +60,5 @@ create unique index if not exists uq_project_payment_records_active_kind on publ
 create trigger trg_project_payment_records_set_updated_at before
 update on project_payment_records for each row
 execute function set_updated_at ();
+create trigger trg_crm_calendar_installments after insert or update or delete on public.project_payment_records
+  for each row execute function public.enqueue_crm_calendar_source_change();

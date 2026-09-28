@@ -37,6 +37,7 @@ export class SidebarComponent {
 
   readonly navItems: SidebarNavItem[] = [
     { label: 'Dashboard', route: '/admin/dashboard', exact: true },
+    { label: 'Calendar', route: '/admin/calendar', exact: true },
     { label: 'Leads', route: '/admin/leads' },
     { label: 'Contacts', route: '/admin/contacts' },
     { label: 'Organizations', route: '/admin/organizations' },

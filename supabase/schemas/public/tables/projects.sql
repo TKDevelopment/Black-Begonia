@@ -54,3 +54,5 @@ create index IF not exists idx_projects_active_proposal_document_version_id on p
 create trigger trg_projects_set_updated_at BEFORE
 update on projects for EACH row
 execute FUNCTION set_updated_at ();
+create trigger trg_crm_calendar_projects after insert or update or delete on public.projects
+  for each row execute function public.enqueue_crm_calendar_source_change();

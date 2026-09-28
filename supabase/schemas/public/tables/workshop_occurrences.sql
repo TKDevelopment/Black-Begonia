@@ -76,8 +76,11 @@ create table public.workshop_occurrences (
 create index idx_workshop_occurrences_public on public.workshop_occurrences (status, start_at);
 create index idx_workshop_occurrences_series on public.workshop_occurrences (workshop_series_id, start_at);
 create index idx_workshop_occurrences_featured on public.workshop_occurrences (is_featured, featured_order, start_at);
+create index crm_calendar_workshop_local_range on public.workshop_occurrences (local_start, local_end);
 create trigger trg_workshop_occurrences_updated_at before update on public.workshop_occurrences
 for each row execute function public.set_updated_at();
+create trigger trg_crm_calendar_workshops after insert or update or delete on public.workshop_occurrences
+  for each row execute function public.enqueue_crm_calendar_source_change();
 alter table public.workshop_occurrences enable row level security;
 create policy workshop_occurrences_internal_select on public.workshop_occurrences for select to authenticated using (public.is_internal_crm_user());
 
