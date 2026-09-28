@@ -14,3 +14,5 @@ create table public.project_contacts (
 create index IF not exists idx_project_contacts_project_id on public.project_contacts using btree (project_id) TABLESPACE pg_default;
 
 create index IF not exists idx_project_contacts_contact_id on public.project_contacts using btree (contact_id) TABLESPACE pg_default;
+create trigger trg_crm_calendar_project_contacts after insert or update or delete on public.project_contacts
+  for each row execute function public.enqueue_crm_calendar_source_change();

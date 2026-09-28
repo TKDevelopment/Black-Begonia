@@ -229,6 +229,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'calendar',
+        loadComponent: () =>
+          import('./components/private/calendar/calendar.component').then(
+            m => m.CalendarComponent
+          ),
+      },
+      {
         path: 'leads',
         pathMatch: 'full',
         loadComponent: () =>

@@ -1,0 +1,16 @@
+<section class="mini-calendar" aria-label="Current month calendar preview">
+  <div class="mini-header"><h2>{{ monthLabel }}</h2><a [routerLink]="['/admin/calendar']" [queryParams]="{ month: monthKey }">Open calendar →</a></div>
+  <div class="mini-grid" role="grid" [attr.aria-label]="monthLabel">
+    <span *ngFor="let weekday of weekdays" class="weekday" role="columnheader">{{ weekday }}</span>
+    <a *ngFor="let day of days" [routerLink]="['/admin/calendar']" [queryParams]="{ month: monthKey }"
+      class="mini-day" role="gridcell" [class.outside]="!day.currentMonth"
+      [attr.aria-label]="day.date + (day.count ? ', ' + day.count + ' items' : day.hasPrivateOnly ? ', activity' : ', no items')">
+      <span>{{ day.day }}</span>
+      <span class="dots" *ngIf="day.count || day.hasPrivateOnly">
+        <i *ngFor="let kind of day.kinds" [style.background]="colors[kind]"></i>
+        <i *ngIf="day.hasPrivateOnly" class="private-activity"></i>
+        <small *ngIf="day.count > 3">+{{ day.count - 3 }}</small>
+      </span>
+    </a>
+  </div>
+</section>

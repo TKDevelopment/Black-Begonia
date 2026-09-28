@@ -1,0 +1,40 @@
+:host { display: block; min-width: 0; }
+.crm-calendar-page { box-sizing: border-box; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; padding: clamp(1rem, 2.5vw, 2.5rem); background: var(--crm-page-bg); color: var(--crm-text); }
+.crm-calendar-header { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.calendar-overview-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: 1rem; }
+:host .calendar-overview-row .calendar-legend { margin: 0; justify-content: flex-start; }
+:host .calendar-overview-row .calendar-sync-status { margin: 0 0 0 auto; justify-content: flex-end; }
+.eyebrow { text-transform: uppercase; letter-spacing: .18em; color: var(--crm-text-muted); font-size: .7rem; }
+h1 { font: 600 clamp(2.2rem, 4vw, 3.4rem)/1.05 Georgia, serif; margin: .25rem 0 0; }
+.calendar-controls, .view-switch { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.calendar-controls button, .calendar-message button { border: 1px solid var(--crm-border-strong); border-radius: .65rem; padding: .45rem .75rem; background: var(--crm-surface); color: var(--crm-text); cursor: pointer; }
+.calendar-controls .calendar-nav-button { display: inline-grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; aspect-ratio: 1; padding: 0; }
+.calendar-nav-button svg { display: block; width: 1.2rem; height: 1.2rem; }
+.calendar-controls button:hover, .calendar-message button:hover { background: var(--crm-surface-highlight); }
+.calendar-controls button:disabled { opacity: .45; cursor: default; }
+.calendar-controls button[aria-pressed="true"] { background: var(--crm-text-strong); color: var(--crm-surface); }
+.calendar-controls strong { min-width: 9rem; text-align: center; }
+.view-switch { margin-left: .6rem; }
+full-calendar { box-sizing: border-box; display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; max-width: 100%; overflow-x: auto; background: var(--crm-surface); border: 1px solid var(--crm-border); border-radius: 1rem; padding: clamp(.4rem, 1vw, 1rem); color: var(--crm-text); }
+:host ::ng-deep .fc-theme-standard td, :host ::ng-deep .fc-theme-standard th, :host ::ng-deep .fc-scrollgrid { border-color: var(--crm-border); }
+:host ::ng-deep .fc-day-today { background: var(--crm-surface-highlight) !important; }
+:host ::ng-deep .fc-col-header-cell, :host ::ng-deep .fc-list-day-cushion { background: var(--crm-surface-muted); }
+:host ::ng-deep .fc-event { cursor: pointer; overflow: hidden; border-radius: .3rem; padding: .08rem .2rem; }
+:host ::ng-deep .fc-event-main { min-width: 0; }
+:host ::ng-deep .calendar-event-content { display: flex; align-items: center; gap: .25rem; min-width: 0; width: 100%; overflow: hidden; }
+:host ::ng-deep .calendar-event-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:host ::ng-deep .calendar-kind-label { flex: 0 1 auto; max-width: 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: #0002; border-radius: .2rem; padding: .04rem .2rem; }
+:host ::ng-deep .fc-daygrid-event .fc-event-main { color: var(--crm-calendar-item-ink) !important; }
+:host ::ng-deep .crm-calendar-inactive { opacity: .58; text-decoration: line-through; }
+:host ::ng-deep .crm-calendar-stale { opacity: .7; border-style: dashed; }
+:host ::ng-deep .fc-list-event:hover td { background: var(--crm-surface-highlight); }
+:host ::ng-deep .fc-popover, :host ::ng-deep .fc-list-empty { background: var(--crm-surface); color: var(--crm-text); border-color: var(--crm-border); }
+:host ::ng-deep .fc-popover-header { background: var(--crm-surface-muted); color: var(--crm-text); }
+:host ::ng-deep .fc-daygrid-day-number, :host ::ng-deep .fc-daygrid-more-link { color: var(--crm-text); }
+:host ::ng-deep .fc-event:focus-visible, :host ::ng-deep .fc-daygrid-more-link:focus-visible,
+:host ::ng-deep .fc-popover-close:focus-visible, .crm-calendar-page button:focus-visible {
+  outline: 3px solid var(--crm-text-strong); outline-offset: 2px;
+}
+@media (max-width: 700px) { .calendar-controls { width: 100%; } .view-switch { margin-left: 0; } }
+@media (max-width: 900px) { :host .calendar-overview-row .calendar-sync-status { margin-left: 0; justify-content: flex-start; } }
+@media (max-width: 1023px) { .crm-calendar-page { min-height: calc(100vh - 64px); min-height: calc(100dvh - 64px); } }

@@ -1,0 +1,6 @@
+:host { display: block; min-height: 100vh; background: var(--crm-page-bg); color: var(--crm-text); }
+.dashboard-heading { margin-bottom: 1.5rem; }
+.dashboard-heading p { text-transform: uppercase; letter-spacing: .18em; font-size: .7rem; color: var(--crm-text-muted); }
+h1 { font: 600 clamp(2.2rem, 4vw, 3.4rem)/1.05 Georgia, serif; margin: .2rem 0 0; }
+.dashboard-widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: 1.5rem; }
+.dashboard-sync { max-width: 36rem; margin-top: .75rem; color: var(--crm-text-muted); font-size: .8rem; }

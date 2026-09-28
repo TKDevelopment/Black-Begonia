@@ -1,0 +1,33 @@
+<section class="connection-panel" aria-label="Microsoft 365 calendar connection">
+  <div class="connection-heading">
+    <div><p class="eyebrow">Microsoft 365</p><h2>{{ health?.calendarDisplayName || 'Business calendar' }}</h2></div>
+    <span class="connection-status">{{ health?.connectionStatus === 'action_required' ? 'Action required' : ((health?.connectionStatus || 'disconnected') | titlecase) }}</span>
+  </div>
+  <p *ngIf="health?.lastSuccessfulSyncAt">Last successful sync: {{ health?.lastSuccessfulSyncAt | date:'medium' }}</p>
+  <p *ngIf="health?.lastErrorCode" role="status">Sync needs attention: {{ health?.lastErrorCode }}</p>
+  <p *ngIf="health?.staleMirrorWarning" role="status">The connection is off. Existing Outlook copies may be out of date.</p>
+  <p *ngIf="!isAdmin">Only an administrator can manage the Microsoft connection and conflicts.</p>
+  <div *ngIf="isAdmin" class="connection-actions">
+    <button type="button" [disabled]="busy()" (click)="loadCalendars()">Choose calendar</button>
+    <ng-container *ngIf="calendars().length">
+      <label for="business-calendar-choice">Business calendar</label>
+      <select id="business-calendar-choice" [(ngModel)]="selectedCalendarId" [disabled]="busy()">
+        <option *ngFor="let calendar of calendars()" [value]="calendar.id">{{ calendar.name }}{{ calendar.isDefaultCalendar ? ' (primary)' : '' }}</option>
+      </select>
+      <button type="button" [disabled]="busy() || !selectedCalendarId" (click)="connect()">Connect</button>
+    </ng-container>
+    <button type="button" [disabled]="busy() || health?.connectionStatus !== 'connected'" (click)="refresh()">Refresh now</button>
+    <button type="button" [disabled]="busy() || health?.connectionStatus === 'disconnected'" (click)="disconnect()">Disconnect</button>
+    <button type="button" [disabled]="busy()" (click)="loadConflicts()">Review conflicts <span *ngIf="health?.openConflictCount">({{ health?.openConflictCount }})</span></button>
+  </div>
+  <p *ngIf="message()" role="status">{{ message() }}</p>
+  <p *ngIf="error()" role="alert">{{ error() }}</p>
+  <ul *ngIf="isAdmin && conflicts().length" class="conflicts">
+    <li *ngFor="let conflict of conflicts()">
+      <strong>{{ conflict.sourceTitle }}</strong>
+      <span>Changed in Outlook: {{ conflict.changedFields.join(', ') }}</span>
+      <span *ngIf="!conflict.isRemotePrivate && conflict.remoteTitle">Remote title: {{ conflict.remoteTitle }}</span>
+      <button type="button" [disabled]="busy() || conflict.status === 'restoring'" (click)="restore(conflict.conflictId)">Restore CRM version</button>
+    </li>
+  </ul>
+</section>

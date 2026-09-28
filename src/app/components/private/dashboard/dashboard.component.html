@@ -1,3 +1,13 @@
 <main class="crm-page-frame py-5 md:py-8" data-crm-page-shell>
-  <p>dashboard works!</p>
+  <header class="dashboard-heading"><p>Black Begonia CRM</p><h1>Dashboard</h1></header>
+  <div class="dashboard-widgets">
+    <div>
+      <p *ngIf="loading()" role="status">Loading this month…</p>
+      <p *ngIf="calendarError()" role="alert">Calendar preview is unavailable. <button type="button" (click)="loadCalendar()">Retry</button></p>
+      <app-calendar-mini [month]="month" [items]="items()"></app-calendar-mini>
+      <p class="dashboard-sync" *ngIf="syncHealth()?.lastSuccessfulSyncAt">Microsoft last synced {{ syncHealth()?.lastSuccessfulSyncAt | date:'short' }}</p>
+      <p class="dashboard-sync" *ngIf="syncHealth()?.connectionStatus === 'action_required' || syncHealth()?.lastErrorCode">Microsoft sync needs attention. CRM dates remain available.</p>
+      <p class="dashboard-sync" *ngIf="syncError()">Microsoft sync status is temporarily unavailable.</p>
+    </div>
+  </div>
 </main>

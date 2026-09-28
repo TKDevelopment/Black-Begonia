@@ -30,6 +30,16 @@ automation. Committing local changes and pushing to origin are human operator
 responsibilities; agents may provide source-control summaries and suggested
 commit messages for review.
 
+## CRM calendar and Microsoft 365 sync
+
+The Admin CRM calendar combines lead, project, consultation, installment, and
+workshop dates with sanitized events from one scoped Microsoft 365 business
+calendar. Its migration, standalone Edge functions, scheduler setup, sandbox
+validation matrix, and disconnect procedure are documented in
+`specs/013-crm-m365-calendar/quickstart.md`. Apply the SQL migration before
+deploying the Edge functions and Angular UI. Keep Microsoft credentials and
+the scheduler secret in Edge/Vault settings, never in Angular environment files.
+
 ## Development server
 
 To start a local development server, run:

@@ -165,7 +165,7 @@
             [summary]="financialSummary()"
           />
 
-          <div class="payment-installments-card crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+          <div id="payments-installments" class="payment-installments-card crm-detail-card rounded-xl border border-black/10 bg-white p-5 shadow-sm">
             <aside *ngIf="financialSummary()?.needsAttention?.length" class="payment-attention mb-4" role="alert" aria-labelledby="payment-attention-title">
               <strong id="payment-attention-title">Payment balance needs attention</strong>
               <p>{{ financialSummary()!.needsAttention[0].summary }}</p>

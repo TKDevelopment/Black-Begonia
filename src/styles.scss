@@ -80,6 +80,15 @@ select,
   padding-inline: clamp(0.75rem, 1.5vw, 2rem);
 }
 
+app-calendar .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; margin: 0 0 1rem; gap: .6rem 1rem; font-size: .8rem; }
+app-calendar .calendar-legend span { display: inline-flex; align-items: center; gap: .3rem; }
+app-calendar .calendar-legend i { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; }
+app-calendar .calendar-sync-status { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin: .65rem 0; font-size: .8rem; color: var(--crm-text-muted); }
+app-calendar .calendar-sync-status button { padding: .25rem .5rem; border: 1px solid var(--crm-border); border-radius: .5rem; background: var(--crm-surface); color: var(--crm-text); cursor: pointer; }
+app-calendar .calendar-sync-status button:hover { background: var(--crm-surface-highlight); }
+app-calendar .calendar-sync-status button:disabled { opacity: .5; cursor: default; }
+app-calendar .calendar-message { padding: 1rem; border-radius: .75rem; background: var(--crm-surface-muted); margin-bottom: 1rem; }
+
 .carousel-fade {
   /* Fade out left/right edges at ~15% */
   -webkit-mask-image: linear-gradient(
@@ -98,7 +107,27 @@ select,
   );
 }
 
-.crm-shell {
+:root {
+  --crm-calendar-lead: #fde68a;
+  --crm-calendar-project: #93c5fd;
+  --crm-calendar-consultation: #d8b4fe;
+  --crm-calendar-installment: #86efac;
+  --crm-calendar-workshop: #fda4af;
+  --crm-calendar-microsoft: #cbd5e1;
+  --crm-calendar-item-ink: #24324a;
+}
+
+.crm-shell.crm-theme-dark, .crm-calendar-page.crm-calendar-dark {
+  --crm-calendar-lead: #9d6500;
+  --crm-calendar-project: #215ca8;
+  --crm-calendar-consultation: #7640a6;
+  --crm-calendar-installment: #277047;
+  --crm-calendar-workshop: #ae3f42;
+  --crm-calendar-microsoft: #64748b;
+  --crm-calendar-item-ink: #ffffff;
+}
+
+.crm-shell, .crm-calendar-dialog-panel {
   --crm-page-bg: #f4ede6;
   --crm-surface: #ffffff;
   --crm-surface-elevated: #fffdfa;
@@ -113,9 +142,10 @@ select,
   --crm-text-soft: #89766a;
   --crm-accent: #ea938c;
   --crm-accent-hover: #f0a69d;
-  background: var(--crm-page-bg);
   color: var(--crm-text);
 }
+
+.crm-shell { background: var(--crm-page-bg); }
 
 .crm-shell:not(.crm-theme-dark) .bg-\[\#f7f4f1\],
 .crm-shell:not(.crm-theme-dark) .bg-\[\#f4ede6\] {
@@ -223,7 +253,7 @@ select,
   background-color: #f1e5da !important;
 }
 
-.crm-shell.crm-theme-dark {
+.crm-shell.crm-theme-dark, .crm-calendar-dialog-panel.crm-theme-dark {
   --crm-page-bg: #0b0f14;
   --crm-surface: #12171d;
   --crm-surface-elevated: #1a2028;
@@ -238,9 +268,10 @@ select,
   --crm-text-soft: #94a0ad;
   --crm-accent: #f0a69d;
   --crm-accent-hover: #f4b2a9;
-  background: var(--crm-page-bg);
   color: var(--crm-text);
 }
+
+.crm-shell.crm-theme-dark { background: var(--crm-page-bg); }
 
 .crm-shell.crm-theme-dark .bg-\[\#f7f4f1\] {
   background-color: var(--crm-page-bg) !important;

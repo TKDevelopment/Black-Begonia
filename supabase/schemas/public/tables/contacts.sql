@@ -32,3 +32,5 @@ create index IF not exists idx_contacts_created_from_lead_id on public.contacts 
 create trigger trg_contacts_set_updated_at BEFORE
 update on contacts for EACH row
 execute FUNCTION set_updated_at ();
+create trigger trg_crm_calendar_contacts after update of first_name, last_name or delete on public.contacts
+  for each row execute function public.enqueue_crm_calendar_source_change();
