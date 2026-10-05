@@ -112,6 +112,38 @@ describe('WorkshopBookingService', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
+  it('reuses an unexpired hold after checkout fails so retry does not reserve seats twice', async () => {
+    const held = {
+      ...heldFixture(),
+      effectiveExpiresAt: '2099-10-01T16:30:00Z',
+    };
+    repository.createHold.and.resolveTo(held);
+    repository.choosePayment.and.rejectWith(new Error('checkout unavailable'));
+    const request = {
+      occurrenceSlug: 'garden-workshop',
+      quantity: 2,
+      contactName: 'Customer',
+      contactEmail: 'customer@example.test',
+      contactPhone: '(555) 555-0100',
+      acceptedTermsVersion: 3,
+    };
+
+    await expectAsync(service.startReservation(request)).toBeRejected();
+    repository.choosePayment.and.resolveTo({
+      state: 'redirect',
+      method: 'stripe',
+      url: 'https://checkout.stripe.com/c/pay/cs_test',
+      effectiveExpiresAt: held.effectiveExpiresAt,
+    });
+    await expectAsync(service.startReservation(request))
+      .toBeResolvedTo(jasmine.objectContaining({ held }));
+
+    expect(repository.createHold).toHaveBeenCalledTimes(1);
+    expect(repository.choosePayment).toHaveBeenCalledTimes(2);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+  });
+
   it('stores only the single-purpose analytics outcome grant in session storage', async () => {
     repository.getStatus.and.resolveTo({
       ...confirmedStatus(),

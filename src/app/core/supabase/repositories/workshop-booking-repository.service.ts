@@ -30,6 +30,7 @@ export class WorkshopBookingApiError extends Error {
   constructor(
     readonly code: string,
     message = 'We could not complete that workshop booking request.',
+    readonly status: number | null = null,
   ) {
     super(message);
     this.name = 'WorkshopBookingApiError';
@@ -191,19 +192,37 @@ export class WorkshopBookingRepositoryService implements WorkshopBookingReposito
       { body },
     );
     if (error) {
-      throw await toSafeError(error, fallbackMessage);
+      const safeError = await toSafeError(error, fallbackMessage);
+      console.warn('Workshop booking request failed', {
+        command: body['command'],
+        code: safeError.code,
+        status: safeError.status,
+      });
+      throw safeError;
+    }
+    if (body['command'] === 'create_hold' || body['command'] === 'choose_payment') {
+      console.info('Workshop booking request completed', {
+        command: body['command'],
+      });
     }
     return data;
   }
 }
 
-async function toSafeError(error: unknown, fallbackMessage: string): Promise<Error> {
+async function toSafeError(
+  error: unknown,
+  fallbackMessage: string,
+): Promise<WorkshopBookingApiError> {
   let code = 'request_failed';
-  if (isRecord(error) && isRecord(error['context'])) {
-    const json = error['context']['json'];
+  const context = isRecord(error) ? error['context'] : null;
+  const status = isRecord(context) && typeof context['status'] === 'number'
+    ? context['status']
+    : null;
+  if (isRecord(context)) {
+    const json = context['json'];
     if (typeof json === 'function') {
       try {
-        const payload = await json.call(error['context']);
+        const payload = await json.call(context);
         if (
           isRecord(payload)
           && typeof payload['code'] === 'string'
@@ -216,7 +235,7 @@ async function toSafeError(error: unknown, fallbackMessage: string): Promise<Err
       }
     }
   }
-  return new WorkshopBookingApiError(code, fallbackMessage);
+  return new WorkshopBookingApiError(code, fallbackMessage, status);
 }
 
 function isHeldBooking(value: unknown): value is WorkshopHeldBooking {
