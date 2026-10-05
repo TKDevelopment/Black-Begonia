@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { PublicWorkshopOccurrence } from '../../../core/models/workshop';
 import { WebsiteAnalyticsService } from '../../../core/analytics/website-analytics.service';
 import { WorkshopPublicRepositoryService } from '../../../core/supabase/repositories/workshop-public-repository.service';
+import { WorkshopBookingApiError } from '../../../core/supabase/repositories/workshop-booking-repository.service';
 import { WorkshopBookingService } from '../../../core/supabase/services/workshop-booking.service';
 
 type ReservationControlName =
@@ -121,10 +122,8 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
         value.quantity,
       );
       this.redirectToStripe(result.handoff.url);
-    } catch {
-      this.error.set(
-        'We could not reserve those seats. Please review the form and try again.',
-      );
+    } catch (error) {
+      this.error.set(reservationErrorMessage(error));
     } finally {
       this.submitting.set(false);
     }
@@ -203,5 +202,27 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
   private hideInvalidTooltips(): void {
     (Object.keys(this.invalidTooltips) as ReservationControlName[])
       .forEach((name) => this.invalidTooltips[name] = 'hidden');
+  }
+}
+
+function reservationErrorMessage(error: unknown): string {
+  if (!(error instanceof WorkshopBookingApiError)) {
+    return 'We could not start secure checkout. Please try again.';
+  }
+  switch (error.code) {
+    case 'registration_closed':
+      return 'Registration has closed for this workshop.';
+    case 'quantity_changed':
+      return 'The seat limit has changed. Refresh the page and choose your seats again.';
+    case 'terms_changed':
+      return 'The workshop terms have changed. Refresh the page and review them before continuing.';
+    case 'payment_method_unavailable':
+      return 'Secure checkout is temporarily unavailable. Please try again later.';
+    case 'rate_limited':
+      return 'Too many reservation attempts. Please wait a few minutes and try again.';
+    case 'unavailable':
+      return 'Those seats or secure checkout are unavailable right now. Please refresh and try again.';
+    default:
+      return 'We could not start secure checkout. Please refresh the page and try again.';
   }
 }

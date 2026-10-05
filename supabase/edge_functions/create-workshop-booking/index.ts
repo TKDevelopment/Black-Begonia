@@ -80,8 +80,32 @@ const safeDatabaseCode = (error: unknown) => {
   const message = error && typeof error === "object" && "message" in error
     ? String((error as { message: unknown }).message)
     : "";
-  return [...safeCodes].find((code) => message.includes(code)) ??
-    "invalid_request";
+  const exactCode = message.trim();
+  if (safeCodes.has(exactCode)) return exactCode;
+  return [...safeCodes].sort((left, right) => right.length - left.length)
+    .find((code) => message.includes(code)) ?? null;
+};
+const logDatabaseError = (operation: string, error: unknown) => {
+  const rawCode = error && typeof error === "object" && "code" in error
+    ? String((error as { code: unknown }).code)
+    : "";
+  console.error(JSON.stringify({
+    function: "create-workshop-booking",
+    operation,
+    code: "database_request_failed",
+    resultCode: safeDatabaseCode(error) ?? "unavailable",
+    dbCode: /^(?:[0-9A-Z]{5}|PGRST[0-9]{3})$/.test(rawCode)
+      ? rawCode
+      : "unknown",
+  }));
+};
+const logValidationError = (operation: string, failedFields: string[]) => {
+  console.warn(JSON.stringify({
+    function: "create-workshop-booking",
+    operation,
+    code: "request_validation_failed",
+    failedFields,
+  }));
 };
 const asSafeString = (value: unknown, fallback: string, maxLength = 500) => {
   const text = typeof value === "string" && value.trim()
@@ -219,9 +243,13 @@ serve(async (request) => {
     return respond(origin, 429, { code: "rate_limited" });
   }
 
+  let operation = "unknown";
   try {
     const body = await request.json() as Record<string, unknown>;
     const command = String(body["command"] ?? "");
+    operation = command === "create_hold" || command === "choose_payment"
+      ? command
+      : "unsupported_command";
     const db = createClient<any>(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -247,6 +275,20 @@ serve(async (request) => {
         contact["phone"].trim().length < 1 ||
         contact["phone"].trim().length > 40
       ) {
+        logValidationError("create_hold", [
+          ...(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? ["occurrenceSlug"] : []),
+          ...(!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 20 ? ["quantity"] : []),
+          ...(!Number.isSafeInteger(termsVersion) || termsVersion < 1 ? ["termsVersion"] : []),
+          ...(!isUuid(commandKey) ? ["commandKey"] : []),
+          ...(!contact ? ["contact"] : []),
+          ...(contact && (typeof contact["name"] !== "string" ||
+            contact["name"].trim().length < 1 || contact["name"].trim().length > 160)
+            ? ["contact.name"] : []),
+          ...(contact && !isEmail(contact["email"]) ? ["contact.email"] : []),
+          ...(contact && (typeof contact["phone"] !== "string" ||
+            contact["phone"].trim().length < 1 || contact["phone"].trim().length > 40)
+            ? ["contact.phone"] : []),
+        ]);
         return respond(origin, 400, { code: "invalid_request" });
       }
       const bookingToken = await tokenForCommand(String(commandKey));
@@ -262,10 +304,12 @@ serve(async (request) => {
         p_hold_minutes: 15,
       });
       if (result.error) {
+        logDatabaseError("create_hold", result.error);
         const code = safeDatabaseCode(result.error);
-        const status = code === "insufficient_capacity" ? 409 : 400;
+        const status = code === null ? 502
+          : code === "insufficient_capacity" ? 409 : 400;
         return respond(origin, status, {
-          code: code === "insufficient_capacity" ? "unavailable" : code,
+          code: code === "insufficient_capacity" ? "unavailable" : code ?? "unavailable",
         });
       }
       return respond(origin, 200, {
@@ -293,6 +337,12 @@ serve(async (request) => {
         bookingToken.length < 32 || bookingToken.length > 256 ||
         method !== "stripe" || !isUuid(commandKey)
       ) {
+        logValidationError("choose_payment", [
+          ...(bookingToken.length < 32 || bookingToken.length > 256
+            ? ["bookingToken"] : []),
+          ...(method !== "stripe" ? ["method"] : []),
+          ...(!isUuid(commandKey) ? ["commandKey"] : []),
+        ]);
         return respond(origin, 400, { code: "invalid_request" });
       }
       const attempt = await db.rpc("switch_workshop_payment_method", {
@@ -302,8 +352,10 @@ serve(async (request) => {
         p_stripe_hold_minutes: 30,
       });
       if (attempt.error) {
-        return respond(origin, 400, {
-          code: safeDatabaseCode(attempt.error),
+        logDatabaseError("choose_payment", attempt.error);
+        const code = safeDatabaseCode(attempt.error);
+        return respond(origin, code === null ? 502 : 400, {
+          code: code ?? "unavailable",
         });
       }
       const session = await createStripeSession(attempt.data, String(commandKey));
@@ -313,6 +365,7 @@ serve(async (request) => {
         p_command_key: crypto.randomUUID(),
       });
       if (attached.error) {
+        logDatabaseError("attach_checkout", attached.error);
         await fetch(
           `https://api.stripe.com/v1/checkout/sessions/${
             encodeURIComponent(String(session["id"]))
@@ -336,10 +389,17 @@ serve(async (request) => {
     }
 
     return respond(origin, 400, { code: "invalid_request" });
-  } catch {
+  } catch (error) {
+    const rawCode = error instanceof Error ? error.message : "";
     console.error(JSON.stringify({
       function: "create-workshop-booking",
-      code: "request_failed",
+      operation,
+      code: [
+        "token_signing_unavailable",
+        "stripe_attempt_unavailable",
+        "workshop_public_origin_unavailable",
+        "stripe_checkout_unavailable",
+      ].includes(rawCode) ? rawCode : "request_failed",
     }));
     return respond(origin, 502, { code: "unavailable" });
   }
