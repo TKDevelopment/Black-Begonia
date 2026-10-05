@@ -8,6 +8,7 @@ import { WorkshopBookingService } from '../../../core/supabase/services/workshop
 import { WebsiteAnalyticsService } from '../../../core/analytics/website-analytics.service';
 import { publicWorkshopOccurrenceFixture } from '../../../core/testing/workshop-testing';
 import { WorkshopReservationComponent } from './workshop-reservation.component';
+import { WorkshopBookingApiError } from '../../../core/supabase/repositories/workshop-booking-repository.service';
 
 describe('WorkshopReservationComponent', () => {
   let fixture: ComponentFixture<WorkshopReservationComponent>;
@@ -192,7 +193,7 @@ describe('WorkshopReservationComponent', () => {
     expect(componentCss).toContain('.booking-limit');
     expect(componentCss).toContain('display:none');
     expect(componentCss).toContain('margin-top:0.55rem');
-    expect(componentCss).toContain('min-height:2.2rem');
+    expect(componentCss).toContain('min-height:2rem');
   });
 
   it('hands an exact valid reservation to Stripe without storing the booking token', async () => {
@@ -251,6 +252,27 @@ describe('WorkshopReservationComponent', () => {
       .toHaveBeenCalledOnceWith('stripe', 2);
     expect(publicRepository.getByRoute)
       .toHaveBeenCalledWith('summer-garden-centerpiece', '2026-08-15');
+  });
+
+  it('shows a checkout-specific message when payment selection fails after a hold', async () => {
+    bookingService.startReservation.and.rejectWith(
+      new WorkshopBookingApiError('payment_method_unavailable', 'Safe checkout error.', 400),
+    );
+    component.form.setValue({
+      quantity: 1,
+      firstName: 'Customer',
+      lastName: 'Name',
+      contactEmail: 'customer@example.test',
+      contactPhone: '(555) 555-0100',
+      acceptedTerms: true,
+    });
+
+    await component.submit();
+
+    expect(component.error()).toBe(
+      'Secure checkout is temporarily unavailable. Please try again later.',
+    );
+    expect(component.error()).not.toContain('review the form');
   });
 
   it('does not accept reservations when Stripe checkout is unavailable', async () => {

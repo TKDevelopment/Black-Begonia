@@ -31,6 +31,10 @@ export interface StartedWorkshopReservation {
 @Injectable({ providedIn: 'root' })
 export class WorkshopBookingService {
   private activeBookingToken: string | null = null;
+  private pendingReservation: {
+    request: StartWorkshopReservationRequest;
+    held: WorkshopHeldBooking;
+  } | null = null;
 
   constructor(
     private readonly repository: WorkshopBookingRepositoryService,
@@ -40,21 +44,22 @@ export class WorkshopBookingService {
   async startReservation(
     request: StartWorkshopReservationRequest,
   ): Promise<StartedWorkshopReservation> {
-    const held = await this.repository.createHold({
-      occurrenceSlug: request.occurrenceSlug,
-      quantity: request.quantity,
-      contactName: request.contactName,
-      contactEmail: request.contactEmail,
-      contactPhone: request.contactPhone,
-      acceptedTermsVersion: request.acceptedTermsVersion,
+    const pending = this.pendingReservation;
+    const canReuse = pending !== null
+      && sameReservation(pending.request, request)
+      && Date.parse(pending.held.effectiveExpiresAt) > Date.now() + 5_000;
+    const held = canReuse ? pending.held : await this.repository.createHold({
+      ...request,
       commandKey: crypto.randomUUID(),
     });
+    this.pendingReservation = { request: { ...request }, held };
     this.activeBookingToken = held.bookingToken;
 
     const handoff = await this.repository.choosePayment(
       held.bookingToken,
       crypto.randomUUID(),
     );
+    this.pendingReservation = null;
     return { held, handoff };
   }
 
@@ -66,6 +71,7 @@ export class WorkshopBookingService {
     }
     if (isTerminalStatus(status.state)) {
       this.activeBookingToken = null;
+      this.pendingReservation = null;
     }
     return status;
   }
@@ -145,6 +151,7 @@ export class WorkshopBookingService {
 
   clearActiveBooking(): void {
     this.activeBookingToken = null;
+    this.pendingReservation = null;
   }
 
   private storePendingAnalyticsOutcome(grant: string): void {
@@ -158,6 +165,18 @@ export class WorkshopBookingService {
     }
     return this.activeBookingToken;
   }
+}
+
+function sameReservation(
+  left: StartWorkshopReservationRequest,
+  right: StartWorkshopReservationRequest,
+): boolean {
+  return left.occurrenceSlug === right.occurrenceSlug
+    && left.quantity === right.quantity
+    && left.contactName === right.contactName
+    && left.contactEmail === right.contactEmail
+    && left.contactPhone === right.contactPhone
+    && left.acceptedTermsVersion === right.acceptedTermsVersion;
 }
 
 function getSessionStorage(): Storage | null {

@@ -272,12 +272,14 @@ describe('WorkshopBookingRepositoryService', () => {
 
   it('redacts provider, SQL, and stack details from public errors', async () => {
     const consoleError = spyOn(console, 'error');
+    const consoleWarn = spyOn(console, 'warn');
     invoke.and.resolveTo({
       data: null,
       error: {
         message: 'duplicate key violates workshop_bookings_status_token_digest_key',
         stack: 'sensitive provider stack',
         context: {
+          status: 400,
           json: async () => ({
             code: 'registration_closed',
             detail: 'select * from workshop_bookings',
@@ -300,6 +302,7 @@ describe('WorkshopBookingRepositoryService', () => {
     } catch (error) {
       expect(error).toEqual(jasmine.any(WorkshopBookingApiError));
       expect((error as WorkshopBookingApiError).code).toBe('registration_closed');
+      expect((error as WorkshopBookingApiError).status).toBe(400);
       expect((error as Error).message).toBe(
         'We could not reserve those workshop seats.',
       );
@@ -307,6 +310,12 @@ describe('WorkshopBookingRepositoryService', () => {
       expect(JSON.stringify(error)).not.toContain('select *');
     }
     expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleWarn).toHaveBeenCalledOnceWith(
+      'Workshop booking request failed',
+      { command: 'create_hold', code: 'registration_closed', status: 400 },
+    );
+    expect(JSON.stringify(consoleWarn.calls.allArgs())).not.toContain('duplicate key');
+    expect(JSON.stringify(consoleWarn.calls.allArgs())).not.toContain('customer@example.test');
   });
 });
 
