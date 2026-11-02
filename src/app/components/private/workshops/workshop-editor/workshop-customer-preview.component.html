@@ -19,6 +19,7 @@
       </header>
 
       <div class="preview-body">
+        <p *ngIf="externalCheckoutUrl.trim()">Reserve seats opens {{ externalCheckoutUrl.trim() }}. Reservations and payment are handled by {{ venueName }}.</p>
         <dl class="details-grid">
           <div><dt>When</dt><dd class="when"><span>{{ dateLabel }}</span><span>{{ timeLabel }}</span></dd></div>
           <div><dt>Where</dt><dd>{{ venueName || 'Venue not set' }}<br />{{ locality }}<span *ngIf="locality && region">, </span>{{ region }}</dd></div>

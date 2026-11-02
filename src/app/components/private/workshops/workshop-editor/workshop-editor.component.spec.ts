@@ -73,6 +73,75 @@ describe('WorkshopEditorComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('saves and publishes venue checkout without configuring Stripe', async () => {
+    repository.publishOccurrence.and.resolveTo(workshopOccurrenceFixture({
+      external_checkout_url: 'https://venue.com/tickets', stripe_enabled: false,
+    }));
+    component.form.patchValue({ ...component.validExample(), externalCheckoutUrl: '  https://venue.com/tickets  ' });
+    await component.save(true);
+    expect(repository.syncStripeCatalog).not.toHaveBeenCalled();
+    expect(repository.saveOccurrence).toHaveBeenCalledWith(jasmine.objectContaining({
+      externalCheckoutUrl: 'https://venue.com/tickets', stripeEnabled: false,
+      waitlistEnabled: false, stripePriceVersionId: null,
+    }), jasmine.any(String));
+    expect(repository.publishOccurrence).toHaveBeenCalled();
+  });
+
+  it('restores venue checkout when editing and allows returning to Stripe', async () => {
+    repository.getOccurrence.and.resolveTo(workshopOccurrenceFixture({
+      external_checkout_url: 'https://venue.com/tickets', stripe_enabled: false,
+    }));
+    await component.initialize('occurrence-1');
+    expect(component.form.controls.externalCheckoutUrl.value).toBe('https://venue.com/tickets');
+    component.form.patchValue({ ...component.validExample(), externalCheckoutUrl: '' });
+    await component.save(false);
+    expect(repository.syncStripeCatalog).toHaveBeenCalled();
+    expect(repository.saveOccurrence).toHaveBeenCalledWith(jasmine.objectContaining({
+      externalCheckoutUrl: null, stripeEnabled: true,
+    }), jasmine.any(String));
+  });
+
+  it('rejects an invalid external URL before any workshop is saved', async () => {
+    component.form.patchValue({ ...component.validExample(), externalCheckoutUrl: 'javascript:alert(1)' });
+    await component.save(false);
+    expect(component.form.controls.externalCheckoutUrl.invalid).toBeTrue();
+    expect(repository.saveOccurrence).not.toHaveBeenCalled();
+  });
+
+  it('uses venue checkout for every generated date without Stripe setup', async () => {
+    component.form.patchValue({ ...component.validExample(), externalCheckoutUrl: 'https://venue.com/tickets' });
+    component.addOccurrence();
+    component.occurrenceSchedules.at(1).patchValue({ date: '2026-08-22', registrationStartDate: '2026-07-29', registrationCloseDate: '2026-08-21' });
+    component.seriesLabel.set('Venue workshops');
+    repository.createSeries.and.resolveTo(workshopSeriesFixture());
+    repository.generateSeries.and.resolveTo([workshopOccurrenceFixture()]);
+    await component.generateSeries(false);
+    expect(repository.syncStripeCatalog).not.toHaveBeenCalled();
+    expect(repository.generateSeries).toHaveBeenCalled();
+    const drafts = repository.generateSeries.calls.mostRecent().args[1];
+    expect(drafts.length).toBe(2);
+    drafts.forEach(draft => {
+      expect(draft.externalCheckoutUrl).toBe('https://venue.com/tickets');
+      expect(draft.stripeEnabled).toBeFalse();
+    });
+  });
+
+  it('applies venue checkout to selected series dates without Stripe setup', async () => {
+    component.form.patchValue({ ...component.validExample(), externalCheckoutUrl: 'https://venue.com/tickets' });
+    const series = workshopSeriesFixture();
+    const current = workshopOccurrenceFixture({ workshop_series_id: series.workshop_series_id });
+    component.series.set([series]);
+    component.currentOccurrence.set(current);
+    component.seriesUpdatePreview.set({ occurrenceIds: [current.workshop_occurrence_id], bookedOccurrenceIds: [] });
+    repository.applySeriesUpdate.and.resolveTo({ occurrenceIds: [current.workshop_occurrence_id], bookedOccurrenceIds: [] });
+    await component.applyBulkUpdate();
+    expect(repository.syncStripeCatalog).not.toHaveBeenCalled();
+    expect(repository.applySeriesUpdate).toHaveBeenCalledWith(series.workshop_series_id,
+      [current.workshop_occurrence_id], jasmine.objectContaining({
+        externalCheckoutUrl: 'https://venue.com/tickets', stripeEnabled: false, stripePriceVersionId: null,
+      }), jasmine.any(String));
+  });
+
   it('renders one full-width CRM page shell', () => {
     fixture.detectChanges();
     const shells = fixture.nativeElement.querySelectorAll('[data-crm-page-shell]');
@@ -571,6 +640,7 @@ describe('WorkshopEditorComponent', () => {
   });
 
   it('requires explicit confirmation before applying changes to booked dates', async () => {
+    component.form.patchValue(component.validExample());
     spyOn(window, 'confirm').and.returnValue(true);
     const series = workshopSeriesFixture();
     const current = workshopOccurrenceFixture({

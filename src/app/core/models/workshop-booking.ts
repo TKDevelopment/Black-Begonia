@@ -136,6 +136,7 @@ export interface WorkshopRescheduleResponse {
 }
 
 export interface WorkshopOccurrenceOperationalState {
+  externalCheckoutUrl?: string | null;
   occurrenceId: string;
   lifecycle:
     | 'draft'

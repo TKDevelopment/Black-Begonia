@@ -20,6 +20,7 @@ export class WorkshopCustomerPreviewComponent {
   @Input() locality = '';
   @Input() region = '';
   @Input() priceMajor = 0;
+  @Input() externalCheckoutUrl = '';
   @Input() dateLabel = 'Date not set';
   @Input() timeLabel = 'Time not set';
   @Input() hero: WorkshopMedia | null = null;

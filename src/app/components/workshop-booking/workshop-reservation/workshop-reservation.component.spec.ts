@@ -67,6 +67,32 @@ describe('WorkshopReservationComponent', () => {
     localStorage.clear();
   });
 
+  it('redirects old reserve links to venue checkout without creating a local booking', async () => {
+    publicRepository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
+      externalCheckoutUrl: 'https://venue.com/tickets', stripeEnabled: false,
+    }));
+    const redirect = spyOn(component, 'redirectToExternalCheckout');
+    await component.load('summer-garden-centerpiece', '2026-08-15');
+    await component.submit();
+    fixture.detectChanges();
+    expect(redirect).toHaveBeenCalledOnceWith('https://venue.com/tickets');
+    expect(component.workshop()).toBeNull();
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a[href="https://venue.com/tickets"]')).not.toBeNull();
+    expect(bookingService.startReservation).not.toHaveBeenCalled();
+    expect(analytics.trackWorkshopCheckoutStart).not.toHaveBeenCalled();
+  });
+
+  it('keeps closed venue workshops unavailable', async () => {
+    publicRepository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
+      externalCheckoutUrl: 'https://venue.com/tickets', lifecycleStatus: 'registration_closed',
+    }));
+    const redirect = spyOn(component, 'redirectToExternalCheckout');
+    await component.load('summer-garden-centerpiece', '2026-08-15');
+    expect(redirect).not.toHaveBeenCalled();
+    expect(component.workshop()).toBeNull();
+  });
+
   it('validates quantity, contact, and accepted terms before booking', async () => {
     const termsLink = fixture.nativeElement.querySelector('.terms a') as HTMLAnchorElement;
     expect(termsLink.getAttribute('href')).toBe(

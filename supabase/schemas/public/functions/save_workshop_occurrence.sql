@@ -17,6 +17,7 @@ declare
   v_offset smallint := (p_draft->>'utcOffsetMinutes')::smallint;
   v_tax_region text := upper(btrim(coalesce(p_draft->>'taxRegion', 'RI')));
   v_tax_rate_basis_points integer;
+  v_external_checkout_url text := nullif(btrim(p_draft->>'externalCheckoutUrl'),'');
   v_start_at timestamptz;
   v_end_at timestamptz;
   v_occurrence public.workshop_occurrences;
@@ -71,7 +72,7 @@ begin
       postal_code, country, timezone, local_start, local_end,
       utc_offset_minutes, start_at, end_at, registration_opens_at,
       registration_closes_at, capacity, per_booking_limit, price_minor,
-      tax_region, tax_rate_basis_points, currency, stripe_price_version_id, stripe_enabled, venmo_enabled,
+      tax_region, tax_rate_basis_points, currency, stripe_price_version_id, external_checkout_url, stripe_enabled, venmo_enabled,
       waitlist_enabled, is_featured, featured_order, created_by, updated_by
     ) values (
       v_definition_id, v_series_id, lower(btrim(p_draft->>'slug')),
@@ -89,9 +90,10 @@ begin
       (p_draft->>'priceMinor')::bigint, v_tax_region, v_tax_rate_basis_points,
       upper(p_draft->>'currency'),
       nullif(p_draft->>'stripePriceVersionId','')::uuid,
-      coalesce((p_draft->>'stripeEnabled')::boolean,false),
+      v_external_checkout_url,
+      v_external_checkout_url is null and coalesce((p_draft->>'stripeEnabled')::boolean,false),
       false,
-      coalesce((p_draft->>'waitlistEnabled')::boolean,false),
+      v_external_checkout_url is null and coalesce((p_draft->>'waitlistEnabled')::boolean,false),
       coalesce((p_draft->>'isFeatured')::boolean,false),
       nullif(p_draft->>'featuredOrder','')::smallint, auth.uid(), auth.uid()
     ) returning * into v_occurrence;
@@ -123,9 +125,10 @@ begin
       tax_rate_basis_points = v_tax_rate_basis_points,
       currency = upper(p_draft->>'currency'),
       stripe_price_version_id = nullif(p_draft->>'stripePriceVersionId','')::uuid,
-      stripe_enabled = coalesce((p_draft->>'stripeEnabled')::boolean,false),
+      external_checkout_url = v_external_checkout_url,
+      stripe_enabled = v_external_checkout_url is null and coalesce((p_draft->>'stripeEnabled')::boolean,false),
       venmo_enabled = false,
-      waitlist_enabled = coalesce((p_draft->>'waitlistEnabled')::boolean,false),
+      waitlist_enabled = v_external_checkout_url is null and coalesce((p_draft->>'waitlistEnabled')::boolean,false),
       is_featured = coalesce((p_draft->>'isFeatured')::boolean,false),
       featured_order = nullif(p_draft->>'featuredOrder','')::smallint,
       updated_by = auth.uid()
