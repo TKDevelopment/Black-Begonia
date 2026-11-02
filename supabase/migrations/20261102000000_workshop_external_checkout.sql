@@ -1,7 +1,14 @@
 -- Optional venue checkout; NULL preserves existing Stripe behavior.
-alter table public.workshop_occurrences add column external_checkout_url text null;
+-- Keep the RPC parameter names established by the September lifecycle migration.
+-- The transaction and repeatable DDL also support retrying a failed SQL-editor run.
+begin;
+
+alter table public.workshop_occurrences add column if not exists external_checkout_url text null;
 alter table public.workshop_occurrences
-  drop constraint workshop_occurrences_open_requires_stripe,
+  drop constraint if exists workshop_occurrences_open_requires_stripe,
+  drop constraint if exists workshop_occurrences_external_checkout_url,
+  drop constraint if exists workshop_occurrences_external_checkout_mode;
+alter table public.workshop_occurrences
   add constraint workshop_occurrences_open_requires_stripe check (
     status <> 'published_open' or stripe_enabled or external_checkout_url is not null
   ),
@@ -31,6 +38,7 @@ begin
 end;
 $$;
 revoke all on function public.guard_workshop_checkout_mode_change() from public;
+drop trigger if exists guard_workshop_checkout_mode_change on public.workshop_occurrences;
 create trigger guard_workshop_checkout_mode_change
 before update of external_checkout_url on public.workshop_occurrences
 for each row execute function public.guard_workshop_checkout_mode_change();
@@ -69,7 +77,7 @@ $$;
 
 revoke all on function public.get_workshop_public_availability(uuid) from public;
 
-drop function public.get_public_workshop_listing();
+drop function if exists public.get_public_workshop_listing();
 create or replace function public.save_workshop_occurrence(
   p_draft jsonb,
   p_command_key uuid
@@ -315,60 +323,8 @@ begin
 end;
 $$;
 
-create or replace function public.archive_workshop_occurrence(
-  p_workshop_occurrence_id uuid,
-  p_command_key uuid
-) returns jsonb
-language plpgsql security definer set search_path='' as $$
-declare v_occurrence public.workshop_occurrences;
-begin
-  if not public.is_internal_crm_user() then raise exception 'not authorized' using errcode='42501'; end if;
-  select * into v_occurrence from public.workshop_occurrences
-    where workshop_occurrence_id=p_workshop_occurrence_id for update;
-  if not found then raise exception 'workshop occurrence not found' using errcode='P0002'; end if;
-  if v_occurrence.status not in ('cancelled','rescheduled','completed') then
-    raise exception 'only terminal workshop occurrences can be archived' using errcode='55000';
-  end if;
-  update public.workshop_occurrences set status='archived',archived_at=now(),updated_by=auth.uid()
-    where workshop_occurrence_id=p_workshop_occurrence_id returning * into v_occurrence;
-  insert into public.workshop_audit_events(workshop_definition_id,workshop_occurrence_id,event_type,actor_type,actor_id,command_key,safe_metadata)
-  values(v_occurrence.workshop_definition_id,v_occurrence.workshop_occurrence_id,'occurrence_archived','internal',auth.uid(),p_command_key,jsonb_build_object('occurrenceId',v_occurrence.workshop_occurrence_id));
-  return to_jsonb(v_occurrence);
-end; $$;
-
-create or replace function public.delete_workshop_occurrence(
-  p_workshop_occurrence_id uuid,
-  p_command_key uuid
-) returns jsonb
-language plpgsql security definer set search_path='' as $$
-declare
-  v_occurrence public.workshop_occurrences;
-  v_booking_count bigint;
-begin
-  if not public.is_internal_crm_user() then raise exception 'not authorized' using errcode='42501'; end if;
-  if p_command_key is null then raise exception 'invalid request' using errcode='22023'; end if;
-  select * into v_occurrence from public.workshop_occurrences
-    where workshop_occurrence_id=p_workshop_occurrence_id for update;
-  if not found then return jsonb_build_object('deleted',true); end if;
-  select count(*) into v_booking_count
-  from public.workshop_bookings
-  where workshop_occurrence_id=p_workshop_occurrence_id;
-  if v_booking_count > 0 then
-    raise exception 'workshop occurrence has booked reservations'
-      using errcode='55000', detail=v_booking_count::text;
-  end if;
-  delete from public.workshop_media where workshop_occurrence_id=p_workshop_occurrence_id;
-  delete from public.workshop_audit_events where workshop_occurrence_id=p_workshop_occurrence_id;
-  delete from public.workshop_occurrences where workshop_occurrence_id=p_workshop_occurrence_id;
-  return jsonb_build_object('deleted',true,'commandKey',p_command_key);
-end; $$;
-
 revoke all on function public.publish_workshop_occurrence(uuid,uuid) from public;
-revoke all on function public.archive_workshop_occurrence(uuid,uuid) from public;
-revoke all on function public.delete_workshop_occurrence(uuid,uuid) from public;
 grant execute on function public.publish_workshop_occurrence(uuid,uuid) to authenticated;
-grant execute on function public.archive_workshop_occurrence(uuid,uuid) to authenticated;
-grant execute on function public.delete_workshop_occurrence(uuid,uuid) to authenticated;
 
 create or replace function public.apply_workshop_series_update(
   p_workshop_series_id uuid,
@@ -620,7 +576,7 @@ $$;
 revoke all on function public.get_public_workshop_listing() from public;
 grant execute on function public.get_public_workshop_listing() to anon, authenticated;
 
-create or replace function public.get_public_workshop_occurrence(p_slug text)
+create or replace function public.get_public_workshop_occurrence(p_occurrence_slug text)
 returns jsonb language sql stable security definer set search_path = ''
 as $$
   select jsonb_build_object(
@@ -705,7 +661,7 @@ as $$
   ) hero on true
   left join public.workshop_occurrences replacement
     on replacement.workshop_occurrence_id = o.replacement_occurrence_id
-  where o.slug = p_slug
+  where o.slug = p_occurrence_slug
     and o.status in (
       'published_open','registration_closed','cancelled','rescheduled','completed'
     );
@@ -753,7 +709,7 @@ begin
     where workshop_occurrence_id = v_booking.workshop_occurrence_id;
 
     if v_occurrence.external_checkout_url is not null then
-      raise exception 'external_checkout_required' using errcode = '55000';
+      raise exception 'payment_method_unavailable' using errcode = '55000';
     end if;
 
     if v_occurrence.slug is distinct from p_occurrence_slug
@@ -820,7 +776,7 @@ begin
   end if;
 
   if v_occurrence.external_checkout_url is not null then
-    raise exception 'external_checkout_required' using errcode = '55000';
+    raise exception 'payment_method_unavailable' using errcode = '55000';
   end if;
   if not v_occurrence.stripe_enabled then
     raise exception 'payment_method_unavailable';
@@ -983,7 +939,7 @@ begin
     from public.workshop_occurrences
     where workshop_occurrence_id = v_booking.workshop_occurrence_id;
     if v_occurrence.external_checkout_url is not null then
-      raise exception 'external_checkout_required' using errcode = '55000';
+      raise exception 'payment_method_unavailable' using errcode = '55000';
     end if;
     return jsonb_build_object(
       'replayed', true,
@@ -1039,7 +995,7 @@ begin
   end if;
 
   if v_occurrence.external_checkout_url is not null then
-    raise exception 'external_checkout_required' using errcode = '55000';
+    raise exception 'payment_method_unavailable' using errcode = '55000';
   end if;
   if not v_occurrence.stripe_enabled then
     raise exception 'payment_method_unavailable';
@@ -1291,7 +1247,7 @@ begin
     select * into v_occurrence from public.workshop_occurrences
     where workshop_occurrence_id=v_offer.workshop_occurrence_id for update;
     if v_occurrence.external_checkout_url is not null then
-      raise exception 'external_checkout_required' using errcode = '55000';
+      raise exception 'payment_method_unavailable' using errcode = '55000';
     end if;
     select * into v_entry from public.workshop_waitlist_entries
     where workshop_waitlist_entry_id=v_offer.workshop_waitlist_entry_id for update;
@@ -1431,101 +1387,8 @@ begin
 end;
 $$;
 
-create or replace function public.transition_workshop_occurrence(
-  p_occurrence_id uuid,
-  p_target_status text,
-  p_command_key uuid
-) returns jsonb
-language plpgsql
-security definer
-set search_path=''
-as $$
-declare
-  v_occurrence public.workshop_occurrences;
-  v_existing public.workshop_audit_events;
-  v_allowed boolean:=false;
-  v_actor uuid:=auth.uid();
-  v_previous_status text;
-begin
-  if not public.is_internal_crm_user() then
-    raise exception 'not authorized' using errcode='42501';
-  end if;
-  if p_command_key is null then
-    raise exception 'invalid command' using errcode='22023';
-  end if;
-
-  select * into v_existing
-  from public.workshop_audit_events
-  where command_key=p_command_key and event_type='occurrence_lifecycle_transition';
-  if found then
-    return public.get_workshop_occurrence_operational_state(
-      v_existing.workshop_occurrence_id
-    )||jsonb_build_object('replayed',true);
-  end if;
-
-  select * into v_occurrence
-  from public.workshop_occurrences
-  where workshop_occurrence_id=p_occurrence_id
-  for update;
-  if not found then
-    raise exception 'occurrence not found' using errcode='P0002';
-  end if;
-  v_previous_status:=v_occurrence.status;
-
-  v_allowed:=case
-    when v_occurrence.status='draft' and p_target_status='published_open'
-      then true
-    when v_occurrence.status='published_open'
-      and p_target_status in('registration_closed','completed') then true
-    when v_occurrence.status='registration_closed'
-      and p_target_status='completed' then true
-    when v_occurrence.status in('rescheduled','cancelled','completed')
-      and p_target_status='archived' then true
-    else false
-  end;
-  if not v_allowed then
-    raise exception 'invalid lifecycle transition' using errcode='P0001';
-  end if;
-  if p_target_status='completed' and v_occurrence.end_at>now() then
-    raise exception 'completion review is not yet available' using errcode='P0001';
-  end if;
-
-  update public.workshop_occurrences
-  set status=p_target_status,
-    published_at=case
-      when p_target_status='published_open' then coalesce(published_at,now())
-      else published_at
-    end,
-    completed_at=case when p_target_status='completed' then now() else completed_at end,
-    archived_at=case when p_target_status='archived' then now() else archived_at end,
-    updated_by=v_actor
-  where workshop_occurrence_id=p_occurrence_id
-  returning * into v_occurrence;
-
-  insert into public.workshop_audit_events(
-    workshop_definition_id,workshop_occurrence_id,event_type,actor_type,
-    actor_id,command_key,safe_metadata
-  ) values(
-    v_occurrence.workshop_definition_id,p_occurrence_id,
-    'occurrence_lifecycle_transition','internal',v_actor,p_command_key,
-    jsonb_build_object(
-      'fromStatus',v_previous_status,
-      'toStatus',p_target_status
-    )
-  );
-
-  return public.get_workshop_occurrence_operational_state(p_occurrence_id)
-    ||jsonb_build_object('replayed',false);
-end;
-$$;
-
-revoke all on function public.get_workshop_occurrence_operational_state(uuid)
-from public;
-revoke all on function public.transition_workshop_occurrence(uuid,text,uuid)
-from public;
-grant execute on function public.get_workshop_occurrence_operational_state(uuid)
-to authenticated;
-grant execute on function public.transition_workshop_occurrence(uuid,text,uuid)
-to authenticated;
+revoke all on function public.get_workshop_occurrence_operational_state(uuid) from public;
+grant execute on function public.get_workshop_occurrence_operational_state(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
+commit;

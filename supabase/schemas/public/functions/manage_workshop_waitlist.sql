@@ -138,7 +138,7 @@ begin
     select * into v_occurrence from public.workshop_occurrences
     where workshop_occurrence_id=v_offer.workshop_occurrence_id for update;
     if v_occurrence.external_checkout_url is not null then
-      raise exception 'external_checkout_required' using errcode = '55000';
+      raise exception 'payment_method_unavailable' using errcode = '55000';
     end if;
     select * into v_entry from public.workshop_waitlist_entries
     where workshop_waitlist_entry_id=v_offer.workshop_waitlist_entry_id for update;

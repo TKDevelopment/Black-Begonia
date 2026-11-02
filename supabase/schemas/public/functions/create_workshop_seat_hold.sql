@@ -37,7 +37,7 @@ begin
     where workshop_occurrence_id = v_booking.workshop_occurrence_id;
 
     if v_occurrence.external_checkout_url is not null then
-      raise exception 'external_checkout_required' using errcode = '55000';
+      raise exception 'payment_method_unavailable' using errcode = '55000';
     end if;
 
     if v_occurrence.slug is distinct from p_occurrence_slug
@@ -104,7 +104,7 @@ begin
   end if;
 
   if v_occurrence.external_checkout_url is not null then
-    raise exception 'external_checkout_required' using errcode = '55000';
+    raise exception 'payment_method_unavailable' using errcode = '55000';
   end if;
   if not v_occurrence.stripe_enabled then
     raise exception 'payment_method_unavailable';

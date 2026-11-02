@@ -40,6 +40,19 @@ deploying the Angular app. It adds the nullable column and constraints and repla
 the affected commands/projections, restoring the public listing function grants
 after its return type changes. No new Edge Function or secret is required.
 
+The migration preserves `get_public_workshop_occurrence(p_occurrence_slug text)`,
+the RPC signature introduced by `20260923020000_workshop_lifecycle_automation.sql`.
+It does not drop that function or overwrite the existing archive, delete, refund,
+reconciliation, or lifecycle transition implementations. Public RPC definitions
+are maintained in the function schema files, rather than duplicated in the
+occurrence table schema file.
+
+If the earlier version failed in SQL Editor with “cannot change name of input
+parameter”, replace the editor contents with the complete corrected migration and
+run it, including `begin` and `commit`. The column, constraints, and trigger support
+retries, including recovery from a partially applied earlier run. No manual function
+drop or CASCADE is needed.
+
 Test on staging with one ordinary Stripe workshop and one venue workshop:
 
 - Create, save, publish, reopen, edit, and clear the external URL.
@@ -54,13 +67,27 @@ Focused Angular suites cover the editor, discovery, detail, reserve, roster,
 preview, URL validation, and unchanged booking services. The SQL integration suite
 is `supabase/tests/workshop_external_checkout.sql`; it exercises publication,
 public projections, manual bookings, URL constraints, series changes, the active
-checkout guard, authorization, and the default Stripe seat-hold path.
+checkout guard, authorization, the deployed named RPC argument, dated public
+routes, calendar outbox writes, Stripe payment selection and attachment,
+reconciliation, confirmation queuing, and preserving payment history.
 
-Local verification: 117 focused Angular tests passed, Angular compilation and
-TypeScript checks passed, and the migration plus transactional SQL assertions
-passed on PostgreSQL 18 using an isolated workshop schema and local Supabase auth
-interfaces. The full Supabase stack and real Stripe/venue checkout remain staging
-release checks; no live database migration or site deployment was performed.
+Local verification: 121 focused Angular tests passed. The PostgreSQL regression
+replays all 33 earlier workshop migrations from this repository, with the actual
+CRM profile/role schemas and calendar outbox integration. It reproduced the
+original parameter-name failure, then verified clean application, retrying a
+partial run, applying twice, atomic rollback on failure, preservation of unrelated
+functions, and the checkout assertions. Supabase auth/storage infrastructure uses
+local interfaces; no Edge Function, provider, or live database is called.
+
+Run the regression with PostgreSQL tools in PATH:
+
+```sh
+node scripts/test-workshop-migrations.cjs
+```
+
+Alternatively set `PGBIN` to the PostgreSQL binary directory (for example,
+`C:/Program Files/PostgreSQL/18/bin`). The script creates and removes a disposable,
+localhost-only cluster. Real Stripe/venue checkout remains a staging release check.
 
 For rollback, clear external URLs through the CRM to reconfigure Stripe before
 reverting the app. Retain the additive database migration so saved venue workshops
