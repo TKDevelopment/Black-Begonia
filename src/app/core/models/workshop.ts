@@ -105,6 +105,7 @@ export interface WorkshopSeriesUpdatePatch {
   taxRegion?: WorkshopTaxRegion;
   taxRateBasisPoints?: number;
   stripePriceVersionId?: string | null;
+  externalCheckoutUrl?: string | null;
   stripeEnabled?: boolean;
   waitlistEnabled?: boolean;
 }
@@ -151,6 +152,7 @@ export interface WorkshopOccurrence {
   tax_rate_basis_points: number;
   currency: WorkshopCurrency;
   stripe_price_version_id: string | null;
+  external_checkout_url?: string | null;
   stripe_enabled: boolean;
   waitlist_enabled: boolean;
   waitlist_offer_duration_minutes: number;
@@ -228,6 +230,7 @@ export interface PublicWorkshopSummary {
   taxRateBasisPoints: number;
   currency: WorkshopCurrency;
   availability: WorkshopAvailability;
+  externalCheckoutUrl?: string | null;
   remainingSeats: number | null;
   isFeatured: boolean;
   featuredOrder: number | null;
@@ -288,6 +291,7 @@ export interface WorkshopOccurrenceDraft {
   taxRateBasisPoints: number;
   currency: WorkshopCurrency;
   stripePriceVersionId?: string | null;
+  externalCheckoutUrl?: string | null;
   stripeEnabled: boolean;
   waitlistEnabled: boolean;
   isFeatured: boolean;

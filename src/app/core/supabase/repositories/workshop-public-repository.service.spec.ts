@@ -38,6 +38,9 @@ describe('WorkshopPublicRepositoryService', () => {
     });
     rpc.and.resolveTo({ data: detail, error: null });
     await expectAsync(service.getBySlug(detail.slug)).toBeResolvedTo(detail);
+    expect(rpc).toHaveBeenCalledWith('get_public_workshop_occurrence', {
+      p_occurrence_slug: detail.slug,
+    });
 
     rpc.and.resolveTo({ data: null, error: null });
     await expectAsync(service.getBySlug('missing')).toBeResolvedTo(null);

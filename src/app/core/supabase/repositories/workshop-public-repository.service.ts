@@ -20,7 +20,7 @@ export class WorkshopPublicRepositoryService implements WorkshopPublicRepository
 
   async getBySlug(slug: string): Promise<PublicWorkshopOccurrence | null> {
     const { data, error } = await this.supabase.getClient().rpc('get_public_workshop_occurrence', {
-      p_slug: slug,
+      p_occurrence_slug: slug,
     });
     if (error) throw error;
     return (data ?? null) as PublicWorkshopOccurrence | null;

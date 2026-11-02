@@ -1,7 +1,8 @@
-create or replace function public.get_public_workshop_occurrence(p_slug text)
+create or replace function public.get_public_workshop_occurrence(p_occurrence_slug text)
 returns jsonb language sql stable security definer set search_path = ''
 as $$
   select jsonb_build_object(
+    'externalCheckoutUrl', o.external_checkout_url,
     'slug', o.slug,
     'seriesSlug', public.workshop_public_series_slug(o.title_snapshot),
     'workshopDate', o.local_start::date::text,
@@ -82,7 +83,7 @@ as $$
   ) hero on true
   left join public.workshop_occurrences replacement
     on replacement.workshop_occurrence_id = o.replacement_occurrence_id
-  where o.slug = p_slug
+  where o.slug = p_occurrence_slug
     and o.status in (
       'published_open','registration_closed','cancelled','rescheduled','completed'
     );

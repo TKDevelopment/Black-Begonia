@@ -175,6 +175,13 @@
 
       <section class="editor-card">
         <h2>Seats, pricing, and terms</h2>
+        <label class="field full">External Checkout URL (optional)
+          <span class="field-control">
+            <input type="url" formControlName="externalCheckoutUrl" placeholder="https://venue.example.com/tickets" aria-describedby="external-checkout-help" [attr.aria-invalid]="fieldInvalid('externalCheckoutUrl')" />
+            <span *ngIf="tooltipVisible('externalCheckoutUrl')" class="validation-tooltip">{{ validationMessage('externalCheckoutUrl') }}</span>
+          </span>
+        </label>
+        <p id="external-checkout-help" class="catalog-state">Leave blank to use Black Begonia's reserve page and Stripe Checkout. Provide the venue's HTTPS ticket link to send customers there instead. Venue bookings must be added manually in the CRM. Local seat counts do not reflect venue availability.</p>
         <p *ngIf="stripeCatalogMessage()" class="catalog-state" role="status">{{ stripeCatalogMessage() }}</p>
         <div class="form-grid pricing-grid">
           <label class="field">Open seats<span class="field-control"><input type="number" formControlName="capacity" min="1" placeholder="12" [attr.aria-invalid]="fieldInvalid('capacity')" /><span *ngIf="tooltipVisible('capacity')" class="validation-tooltip">{{ validationMessage('capacity') }}</span></span></label>
@@ -204,6 +211,7 @@
     [locality]="form.controls.locality.value"
     [region]="form.controls.region.value"
     [priceMajor]="form.controls.priceMajor.value"
+    [externalCheckoutUrl]="form.controls.externalCheckoutUrl.value"
     [dateLabel]="previewDateLabel()"
     [timeLabel]="previewTimeLabel()"
     [hero]="previewHeroMedia()"

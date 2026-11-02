@@ -42,14 +42,16 @@
           <div class="hero-booking">
             <div class="hero-status">
               <p *ngIf="lifecycleMessage(item)" class="lifecycle-note" role="status">{{ lifecycleMessage(item) }}</p>
-              <p *ngIf="item.remainingSeats !== null" class="seat-urgency" role="status">
+              <p *ngIf="!seriesPage() && !item.externalCheckoutUrl && item.remainingSeats !== null" class="seat-urgency" role="status">
                 Only {{ item.remainingSeats }} {{ item.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
               </p>
             </div>
             <div class="hero-actions">
               <button *ngIf="seriesPage()" type="button" class="primary-action hero-upcoming-action" (click)="scrollToUpcomingEvents()">View Upcoming Events</button>
-              <a *ngIf="!seriesPage() && canReserve(item)" class="primary-action" [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']"
+              <a *ngIf="!seriesPage() && canReserve(item) && !item.externalCheckoutUrl" class="primary-action" [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']"
                 [appAnalyticsAction]="{ event: 'cta_select', location: 'workshop_detail_reserve' }">Reserve seats</a>
+              <a *ngIf="!seriesPage() && canReserve(item) && item.externalCheckoutUrl" class="primary-action" [href]="item.externalCheckoutUrl" [appAnalyticsAction]="{ event: 'cta_select', location: 'workshop_detail_reserve' }">Reserve seats</a>
+              <p *ngIf="!seriesPage() && item.externalCheckoutUrl">Reservations and payment are handled by {{ item.venueName }}. Check the venue's checkout page for availability and booking terms.</p>
               <a *ngIf="!seriesPage() && canJoinWaitlist(item)" class="primary-action" [routerLink]="['/workshops', item.seriesSlug, item.workshopDate, 'reserve']">Join the waitlist</a>
               <a *ngIf="item.lifecycleStatus === 'rescheduled' && item.replacementUrl" class="primary-action" [routerLink]="item.replacementUrl">View the new date</a>
             </div>
@@ -72,14 +74,16 @@
               <time [attr.datetime]="occurrence.startAt">{{ formatDate(occurrence.startAt, occurrence.timezone) }}</time>
               <p>{{ occurrence.venueName }}, {{ occurrence.locality }} · {{ formatMoney(occurrence.priceMinor, occurrence.currency) }} before tax</p>
             </div>
-            <p *ngIf="occurrence.remainingSeats !== null" class="seat-urgency">
+            <p *ngIf="!occurrence.externalCheckoutUrl && occurrence.remainingSeats !== null" class="seat-urgency">
               Only {{ occurrence.remainingSeats }} {{ occurrence.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
             </p>
             <div class="series-date-actions">
               <a class="details-button" [routerLink]="['/workshops', occurrence.seriesSlug, occurrence.workshopDate]">
                 See Details <span aria-hidden="true">&rarr;</span>
               </a>
-              <a *ngIf="canReserveSummary(occurrence)" class="primary-action" [routerLink]="['/workshops', occurrence.seriesSlug, occurrence.workshopDate, 'reserve']">Reserve seats</a>
+              <a *ngIf="canReserveSummary(occurrence) && occurrence.externalCheckoutUrl" class="primary-action" [href]="occurrence.externalCheckoutUrl">Reserve seats</a>
+              <p *ngIf="occurrence.externalCheckoutUrl">Reservations and payment are handled by {{ occurrence.venueName }}.</p>
+              <a *ngIf="canReserveSummary(occurrence) && !occurrence.externalCheckoutUrl" class="primary-action" [routerLink]="['/workshops', occurrence.seriesSlug, occurrence.workshopDate, 'reserve']">Reserve seats</a>
             </div>
           </article>
         </section>

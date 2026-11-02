@@ -1,3 +1,4 @@
+import { isExternalCheckoutUrl } from '../../../core/utils/workshop-checkout';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -27,6 +28,7 @@ type ReservationControlName =
 })
 
 export class WorkshopReservationComponent implements OnInit, OnDestroy {
+  readonly externalCheckoutUrl = signal<string | null>(null);
   private readonly route = inject(ActivatedRoute);
   private readonly publicRepository = inject(WorkshopPublicRepositoryService);
   private readonly bookingService = inject(WorkshopBookingService);
@@ -70,10 +72,23 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
   async load(seriesSlug: string, workshopDate: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
+    this.externalCheckoutUrl.set(null);
     try {
       const workshop = seriesSlug && workshopDate
         ? await this.publicRepository.getByRoute(seriesSlug, workshopDate)
         : null;
+      this.workshop.set(null);
+      if (workshop?.externalCheckoutUrl) {
+        if (workshop.lifecycleStatus === 'published_open'
+          && ['available', 'limited'].includes(workshop.availability)
+          && isExternalCheckoutUrl(workshop.externalCheckoutUrl)) {
+          this.externalCheckoutUrl.set(workshop.externalCheckoutUrl);
+          this.redirectToExternalCheckout(workshop.externalCheckoutUrl);
+        } else {
+          this.error.set('This workshop is not currently accepting reservations.');
+        }
+        return;
+      }
       if (!workshop || !this.canReserve(workshop)) {
         this.workshop.set(null);
         this.error.set('This workshop is not currently accepting reservations.');
@@ -92,7 +107,7 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
 
   async submit(): Promise<void> {
     const workshop = this.workshop();
-    if (!workshop || this.submitting()) {
+    if (!workshop || workshop.externalCheckoutUrl || this.submitting()) {
       return;
     }
     if (this.form.invalid) {
@@ -127,6 +142,10 @@ export class WorkshopReservationComponent implements OnInit, OnDestroy {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  redirectToExternalCheckout(url: string): void {
+    if (isExternalCheckoutUrl(url)) this.document.defaultView?.location.assign(url);
   }
 
   redirectToStripe(url: string): void {

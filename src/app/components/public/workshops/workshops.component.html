@@ -62,7 +62,7 @@
             {{ seriesEventCount(workshop.seriesSlug) }} upcoming
             {{ seriesEventCount(workshop.seriesSlug) === 1 ? 'event' : 'events' }}
           </p>
-          <p *ngIf="workshop.remainingSeats !== null" class="seat-urgency">
+          <p *ngIf="!workshop.externalCheckoutUrl && workshop.remainingSeats !== null" class="seat-urgency">
             Only {{ workshop.remainingSeats }} {{ workshop.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
           </p>
           <h2>{{ workshop.title }}</h2>
@@ -114,10 +114,10 @@
             <p class="details">{{ formatDate(workshop.startAt, workshop.timezone) }} · {{ workshop.venueName }}, {{ workshop.locality }}</p>
           </div>
           <div class="workshop-action">
-            <span *ngIf="workshop.remainingSeats !== null" class="seat-urgency">
+            <span *ngIf="!workshop.externalCheckoutUrl && workshop.remainingSeats !== null" class="seat-urgency">
               Only {{ workshop.remainingSeats }} {{ workshop.remainingSeats === 1 ? 'seat' : 'seats' }} remaining
             </span>
-            <span class="availability" [attr.data-state]="workshop.availability">{{ workshop.availability.replaceAll('_', ' ') }}</span>
+            <span class="availability" [attr.data-state]="workshop.availability">{{ workshop.externalCheckoutUrl && workshop.availability !== 'closed' ? 'Book with venue' : workshop.availability.replaceAll('_', ' ') }}</span>
             <strong>{{ formatMoney(workshop.priceMinor, workshop.currency) }} before tax</strong>
             <a class="details-button" [routerLink]="['/workshops', workshop.seriesSlug, workshop.workshopDate]"
               (click)="trackSelection(workshop, 'list')">

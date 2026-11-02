@@ -51,6 +51,7 @@ begin
   end;
 
   return jsonb_build_object(
+    'externalCheckoutUrl',v_occurrence.external_checkout_url,
     'occurrenceId',v_occurrence.workshop_occurrence_id,
     'lifecycle',v_occurrence.status,
     'availability',v_availability,

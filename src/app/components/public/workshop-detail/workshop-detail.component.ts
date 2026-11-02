@@ -102,6 +102,7 @@ export class WorkshopDetailComponent implements OnInit, OnDestroy {
 
   canJoinWaitlist(workshop: PublicWorkshopOccurrence): boolean {
     return workshop.lifecycleStatus === 'published_open'
+      && !workshop.externalCheckoutUrl
       && workshop.waitlistEligible
       && ['sold_out', 'waitlist_available'].includes(workshop.availability);
   }
