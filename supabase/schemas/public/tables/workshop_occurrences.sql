@@ -35,6 +35,16 @@ create table public.workshop_occurrences (
   currency text not null default 'USD' check (currency = 'USD'),
   stripe_price_version_id uuid null references public.workshop_stripe_price_versions(workshop_stripe_price_version_id) on delete restrict,
   stripe_enabled boolean not null default false,
+  external_checkout_url text null,
+  constraint workshop_occurrences_external_checkout_url check (
+    external_checkout_url is null or (
+      char_length(external_checkout_url) between 1 and 2048
+      and external_checkout_url ~* '^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?([/?#][^[:space:]\\]*)?$'
+    )
+  ),
+  constraint workshop_occurrences_external_checkout_mode check (
+    external_checkout_url is null or (not stripe_enabled and not waitlist_enabled)
+  ),
   venmo_enabled boolean not null default false,
   waitlist_enabled boolean not null default false,
   waitlist_offer_duration_minutes integer not null default 1440 check (waitlist_offer_duration_minutes between 60 and 4320),
@@ -62,7 +72,7 @@ create table public.workshop_occurrences (
     not venmo_enabled
   ),
   constraint workshop_occurrences_open_requires_stripe check (
-    status <> 'published_open' or stripe_enabled
+    status <> 'published_open' or stripe_enabled or external_checkout_url is not null
   ),
   constraint workshop_occurrences_tax_region_rate check (
     (tax_region = 'RI' and tax_rate_basis_points = 700)

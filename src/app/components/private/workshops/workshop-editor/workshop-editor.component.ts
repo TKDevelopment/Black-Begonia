@@ -14,6 +14,7 @@ import {
   WorkshopSeriesUpdateScope,
   WorkshopTaxRegion,
 } from '../../../../core/models/workshop';
+import { externalCheckoutUrlValidator } from '../../../../core/utils/workshop-checkout';
 import { ToastService } from '../../../../core/services/toast.service';
 import {
   WorkshopCatalogRepositoryService,
@@ -120,6 +121,9 @@ export class WorkshopEditorComponent implements OnInit {
   }
 
   stripeCatalogMessage(): string | null {
+    if (this.form.controls.externalCheckoutUrl.value.trim()) {
+      return 'The venue handles checkout. Add bookings manually in the CRM; venue reservations do not sync automatically.';
+    }
     const definition = this.selectedDefinition();
     if (!definition) return null;
     if (definition.stripe_catalog_state === 'ready') return 'Stripe Checkout is ready.';
@@ -157,6 +161,7 @@ export class WorkshopEditorComponent implements OnInit {
     perBookingLimit: [4, [Validators.required, Validators.min(1)]],
     priceMajor: [85, [Validators.required, Validators.min(0), Validators.max(1000000)]],
     taxRegion: ['RI' as WorkshopTaxRegion, Validators.required],
+    externalCheckoutUrl: ['', externalCheckoutUrlValidator],
   });
 
   readonly occurrenceSchedules = this.form.controls.occurrences;
@@ -300,6 +305,7 @@ export class WorkshopEditorComponent implements OnInit {
       perBookingLimit: 4,
       priceMajor: 85,
       taxRegion: 'RI',
+      externalCheckoutUrl: '',
     };
   }
 
@@ -378,6 +384,7 @@ export class WorkshopEditorComponent implements OnInit {
   }
 
   validationMessage(name: string): string {
+    if (name === 'externalCheckoutUrl') return 'Enter a full HTTPS URL without a username or password, or leave this blank.';
     if (name === 'seriesLabel') return 'Series label is required';
     const control = this.form.get(name);
     const label = this.fieldLabel(name.replace(/^occurrences\.\d+\./, ''));
@@ -602,7 +609,7 @@ export class WorkshopEditorComponent implements OnInit {
       const value = this.form.getRawValue();
       const existingDefinitionId = value.definitionId || null;
       const definitionId = await this.resolveDefinition();
-      const priceVersionId = (await this.repository.syncStripeCatalog(
+      const priceVersionId = value.externalCheckoutUrl.trim() ? null : (await this.repository.syncStripeCatalog(
         definitionId,
         Math.round(value.priceMajor * 100),
         crypto.randomUUID(),
@@ -683,7 +690,7 @@ export class WorkshopEditorComponent implements OnInit {
     try {
       const definitionId = await this.resolveDefinition();
       const value = this.form.getRawValue();
-      const priceVersionId = (await this.repository.syncStripeCatalog(
+      const priceVersionId = value.externalCheckoutUrl.trim() ? null : (await this.repository.syncStripeCatalog(
         definitionId,
         Math.round(value.priceMajor * 100),
         crypto.randomUUID(),
@@ -765,6 +772,11 @@ export class WorkshopEditorComponent implements OnInit {
   }
 
   async applyBulkUpdate(): Promise<void> {
+    this.form.markAllAsTouched();
+    if (this.form.invalid || this.scheduleErrors().length || this.saving()) {
+      this.showInvalidTooltips();
+      return;
+    }
     const series = this.currentSeries();
     const preview = this.seriesUpdatePreview();
     if (!series || !preview) return;
@@ -776,11 +788,19 @@ export class WorkshopEditorComponent implements OnInit {
     ) return;
     this.saving.set(true);
     try {
+      const value = this.form.getRawValue();
+      const stripePriceVersionId = value.externalCheckoutUrl.trim() ? null
+        : (await this.repository.syncStripeCatalog(
+          this.currentOccurrence()!.workshop_definition_id,
+          Math.round(value.priceMajor * 100),
+          crypto.randomUUID(),
+        )).priceVersionId;
       await this.repository.applySeriesUpdate(
         series.workshop_series_id,
         preview.occurrenceIds,
         {
           ...this.buildSeriesPatch(),
+          stripePriceVersionId,
           confirmedBookedOccurrenceIds: preview.bookedOccurrenceIds,
         },
         crypto.randomUUID(),
@@ -890,8 +910,9 @@ export class WorkshopEditorComponent implements OnInit {
       taxRateBasisPoints: workshopTaxRateBasisPoints(value.taxRegion),
       currency: 'USD',
       stripePriceVersionId,
-      stripeEnabled: true,
-      waitlistEnabled: true,
+      externalCheckoutUrl: value.externalCheckoutUrl.trim() || null,
+      stripeEnabled: !value.externalCheckoutUrl.trim(),
+      waitlistEnabled: !value.externalCheckoutUrl.trim(),
       isFeatured: true,
       featuredOrder: this.currentOccurrence()?.featured_order,
     };
@@ -920,8 +941,9 @@ export class WorkshopEditorComponent implements OnInit {
       taxRegion: value.taxRegion,
       taxRateBasisPoints: workshopTaxRateBasisPoints(value.taxRegion),
       stripePriceVersionId: this.currentOccurrence()?.stripe_price_version_id,
-      stripeEnabled: true,
-      waitlistEnabled: true,
+      externalCheckoutUrl: value.externalCheckoutUrl.trim() || null,
+      stripeEnabled: !value.externalCheckoutUrl.trim(),
+      waitlistEnabled: !value.externalCheckoutUrl.trim(),
     } as const;
   }
 
@@ -952,6 +974,7 @@ export class WorkshopEditorComponent implements OnInit {
       perBookingLimit: occurrence.per_booking_limit,
       priceMajor: occurrence.price_minor / 100,
       taxRegion: occurrence.tax_region,
+      externalCheckoutUrl: occurrence.external_checkout_url ?? '',
     });
   }
 

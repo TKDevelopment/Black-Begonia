@@ -12,6 +12,7 @@
   } @else if (error() && !reservationModalOpen() && !cancellationBooking() && !deletionBooking() && !refundBooking()) {
     <p class="error page-state" role="alert">{{ error() }}</p>
   } @else {
+    <p *ngIf="operationalState()?.externalCheckoutUrl" role="status">The venue handles checkout. Add venue bookings manually; these counts include CRM records only and do not reflect live venue availability.</p>
     <section class="metrics overflow-hidden" aria-label="Roster counts">
       <div><span>Bookings</span><strong>{{ bookings().length }}</strong></div>
       <div><span>Active seats</span><strong>{{ activeSeatCount() }}</strong></div>
@@ -200,7 +201,7 @@
           </label>
           <label>Reservation type
             <select name="manualType" [(ngModel)]="manualType">
-              <option value="manual">Manual payment</option>
+              <option value="manual">{{ operationalState()?.externalCheckoutUrl ? 'Venue booking (record only)' : 'Manual payment' }}</option>
               <option value="complimentary">Complimentary</option>
             </select>
           </label>

@@ -36,6 +36,10 @@ begin
     from public.workshop_occurrences
     where workshop_occurrence_id = v_booking.workshop_occurrence_id;
 
+    if v_occurrence.external_checkout_url is not null then
+      raise exception 'external_checkout_required' using errcode = '55000';
+    end if;
+
     if v_occurrence.slug is distinct from p_occurrence_slug
       or v_booking.purchased_quantity is distinct from p_quantity
       or v_booking.contact_name is distinct from btrim(p_contact_name)
@@ -99,6 +103,9 @@ begin
     raise exception 'registration_closed';
   end if;
 
+  if v_occurrence.external_checkout_url is not null then
+    raise exception 'external_checkout_required' using errcode = '55000';
+  end if;
   if not v_occurrence.stripe_enabled then
     raise exception 'payment_method_unavailable';
   end if;

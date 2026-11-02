@@ -42,6 +42,7 @@ begin
     select * into v_occurrence from public.workshop_occurrences
     where slug=p_payload->>'occurrenceSlug' for update;
     if not found or v_occurrence.status<>'published_open'
+      or v_occurrence.external_checkout_url is not null
       or not v_occurrence.waitlist_enabled
       or now()>=least(v_occurrence.registration_closes_at,v_occurrence.start_at)
     then raise exception 'waitlist unavailable' using errcode='P0001'; end if;
@@ -71,7 +72,8 @@ begin
     then raise exception 'invalid offer' using errcode='22023'; end if;
     select * into v_occurrence from public.workshop_occurrences
     where workshop_occurrence_id=(p_payload->>'occurrenceId')::uuid for update;
-    if not found or not v_occurrence.waitlist_enabled
+    if not found or v_occurrence.external_checkout_url is not null
+      or not v_occurrence.waitlist_enabled
       or v_occurrence.status<>'published_open'
       or now()>=least(v_occurrence.registration_closes_at,v_occurrence.start_at)
     then raise exception 'waitlist unavailable' using errcode='P0001'; end if;
@@ -135,6 +137,9 @@ begin
     end if;
     select * into v_occurrence from public.workshop_occurrences
     where workshop_occurrence_id=v_offer.workshop_occurrence_id for update;
+    if v_occurrence.external_checkout_url is not null then
+      raise exception 'external_checkout_required' using errcode = '55000';
+    end if;
     select * into v_entry from public.workshop_waitlist_entries
     where workshop_waitlist_entry_id=v_offer.workshop_waitlist_entry_id for update;
     if now()>=v_offer.expires_at then

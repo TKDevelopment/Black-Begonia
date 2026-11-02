@@ -74,6 +74,33 @@ describe('WorkshopDetailComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('sends reserve seats directly to the venue and hides local inventory', async () => {
+    repository.getByRoute.and.resolveTo(publicWorkshopOccurrenceFixture({
+      externalCheckoutUrl: 'https://venue.com/tickets', remainingSeats: 2,
+    }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const reserve = fixture.nativeElement.querySelector('a.primary-action') as HTMLAnchorElement;
+    expect(reserve.getAttribute('href')).toBe('https://venue.com/tickets');
+    expect(reserve.textContent).toContain('Reserve seats');
+    expect(fixture.nativeElement.querySelector('.seat-urgency')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Reservations and payment are handled by');
+  });
+
+  it('uses each date’s own venue link on a series page', async () => {
+    repository.listUpcoming.and.resolveTo([publicWorkshopSummaryFixture({
+      externalCheckoutUrl: 'https://venue.com/date-one', remainingSeats: 1,
+    })]);
+    await component.load('summer-garden-centerpiece');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await component.load('summer-garden-centerpiece');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[href="https://venue.com/date-one"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.seat-urgency')).toBeNull();
+  });
+
   it('renders the experience, full venue, gallery, and reserve action without inline terms', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
@@ -98,7 +125,7 @@ describe('WorkshopDetailComponent', () => {
     ).display).toBe('grid');
     expect(getComputedStyle(
       fixture.nativeElement.querySelector('.hero-composition'),
-    ).alignItems).toBe('start');
+    ).alignItems).toBe('stretch');
     expect(getComputedStyle(
       fixture.nativeElement.querySelector('.hero-composition'),
     ).maxWidth).toBe('1440px');

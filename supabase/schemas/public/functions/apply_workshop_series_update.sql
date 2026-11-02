@@ -18,7 +18,7 @@ declare
   ), '{}'::uuid[]);
   v_material boolean := p_patch ?| array[
     'priceMinor','taxRegion','capacity','venueName','addressLine1','addressLine2',
-    'locality','region','postalCode','country','terms'
+    'locality','region','postalCode','country','terms','externalCheckoutUrl'
   ];
   v_tax_region text;
   v_tax_rate_basis_points integer;
@@ -118,9 +118,10 @@ begin
     tax_region = case when p_patch ? 'taxRegion' then v_tax_region else tax_region end,
     tax_rate_basis_points = case when p_patch ? 'taxRegion' then v_tax_rate_basis_points else tax_rate_basis_points end,
     stripe_price_version_id = case when p_patch ? 'stripePriceVersionId' then nullif(p_patch->>'stripePriceVersionId','')::uuid else stripe_price_version_id end,
-    stripe_enabled = case when p_patch ? 'stripeEnabled' then (p_patch->>'stripeEnabled')::boolean else stripe_enabled end,
+    external_checkout_url = case when p_patch ? 'externalCheckoutUrl' then nullif(btrim(p_patch->>'externalCheckoutUrl'),'') else external_checkout_url end,
+    stripe_enabled = case when nullif(btrim(p_patch->>'externalCheckoutUrl'),'') is not null then false else case when p_patch ? 'stripeEnabled' then (p_patch->>'stripeEnabled')::boolean else stripe_enabled end end,
     venmo_enabled = false,
-    waitlist_enabled = case when p_patch ? 'waitlistEnabled' then (p_patch->>'waitlistEnabled')::boolean else waitlist_enabled end,
+    waitlist_enabled = case when nullif(btrim(p_patch->>'externalCheckoutUrl'),'') is not null then false else case when p_patch ? 'waitlistEnabled' then (p_patch->>'waitlistEnabled')::boolean else waitlist_enabled end end,
     updated_by = auth.uid()
   where workshop_occurrence_id = any(v_target_ids);
 

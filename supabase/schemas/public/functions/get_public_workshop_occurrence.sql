@@ -2,6 +2,7 @@ create or replace function public.get_public_workshop_occurrence(p_slug text)
 returns jsonb language sql stable security definer set search_path = ''
 as $$
   select jsonb_build_object(
+    'externalCheckoutUrl', o.external_checkout_url,
     'slug', o.slug,
     'seriesSlug', public.workshop_public_series_slug(o.title_snapshot),
     'workshopDate', o.local_start::date::text,

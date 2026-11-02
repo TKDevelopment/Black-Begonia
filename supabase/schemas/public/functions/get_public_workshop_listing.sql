@@ -33,6 +33,7 @@ as $$
       ), 0), 0)::integer as remaining
     from public.workshop_occurrences o
     where o.workshop_occurrence_id = p_workshop_occurrence_id
+      and o.external_checkout_url is null
   )
   select case
     when remaining > 0 and remaining * 2 <= capacity then remaining
@@ -53,7 +54,7 @@ returns table (
   "taxRegion" text, "taxRateBasisPoints" integer,
   "availability" text, "remainingSeats" integer,
   "isFeatured" boolean, "featuredOrder" smallint,
-  "updatedAt" timestamptz
+  "externalCheckoutUrl" text, "updatedAt" timestamptz
 )
 language sql stable security definer set search_path = ''
 as $$
@@ -64,7 +65,7 @@ as $$
     o.tax_region, o.tax_rate_basis_points,
     public.get_workshop_public_availability(o.workshop_occurrence_id),
     public.get_workshop_public_remaining_seats(o.workshop_occurrence_id),
-    o.is_featured, o.featured_order, o.updated_at
+    o.is_featured, o.featured_order, o.external_checkout_url, o.updated_at
   from public.workshop_occurrences o
   join public.workshop_definitions d using (workshop_definition_id)
   join lateral (

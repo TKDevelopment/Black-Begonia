@@ -5,6 +5,11 @@
     </a>
 
     <p *ngIf="loading()" class="state" aria-live="polite">Loading reservation details&hellip;</p>
+    <section *ngIf="!loading() && externalCheckoutUrl()" class="state" role="status">
+      <h1>Reserve with the venue</h1>
+      <p>The venue handles reservations and payment for this workshop.</p>
+      <a [href]="externalCheckoutUrl()">Continue to venue checkout</a>
+    </section>
     <section *ngIf="!loading() && error() && !workshop()" class="state" role="alert">
       <h1>Reservation unavailable</h1>
       <p>{{ error() }}</p>
